@@ -19,6 +19,22 @@ export interface RegisterResponse {
   user: RegisteredUser;
 }
 
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  user: RegisteredUser;
+  accessToken: string;
+  tokenType: "Bearer";
+  expiresIn: number;
+}
+
+export interface CurrentUserResponse {
+  user: RegisteredUser;
+}
+
 export interface ApiErrorResponse {
   statusCode: number;
   code: string;
