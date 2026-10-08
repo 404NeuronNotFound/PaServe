@@ -39,6 +39,9 @@ it("renders the protected page only after the server verifies the session", asyn
       id: "user-id",
       email: "owner@example.com",
       createdAt: "2026-10-08T00:00:00Z",
+      firstName: null,
+      lastName: null,
+      memberships: [],
     },
   });
   renderRoute();
