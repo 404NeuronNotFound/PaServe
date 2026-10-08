@@ -31,8 +31,28 @@ export interface LoginResponse {
   expiresIn: number;
 }
 
+export type ShopRole = "OWNER" | "ADMIN" | "MANAGER" | "CASHIER" | "KITCHEN";
+
+export interface UserMembership {
+  id: string;
+  shopId: string;
+  role: ShopRole;
+  shop: {
+    id: string;
+    name: string;
+    slug: string;
+    isActive: boolean;
+  };
+}
+
+export interface CurrentUser extends RegisteredUser {
+  firstName: string | null;
+  lastName: string | null;
+  memberships: UserMembership[];
+}
+
 export interface CurrentUserResponse {
-  user: RegisteredUser;
+  user: CurrentUser;
 }
 
 export interface ApiErrorResponse {
