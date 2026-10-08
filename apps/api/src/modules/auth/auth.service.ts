@@ -7,6 +7,7 @@ import type {
   RegisterResponse,
   RegisteredUser,
   LoginResponse,
+  CurrentUser,
 } from '@paserve/contracts';
 import { argon2id, hash, verify } from 'argon2';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -88,11 +89,26 @@ export class AuthService {
     };
   }
 
-  async currentUser(accessToken: string): Promise<RegisteredUser> {
+  async currentUser(accessToken: string): Promise<CurrentUser> {
     const claims = await this.tokens.verify(accessToken, 'access');
     const session = await this.repository.findSession(claims.sid, claims.sub);
     if (!session) throw invalidSession();
-    return this.safeUser(session.user);
+    return {
+      ...this.safeUser(session.user),
+      firstName: session.user.firstName,
+      lastName: session.user.lastName,
+      memberships: session.user.memberships.map((membership) => ({
+        id: membership.id,
+        shopId: membership.shopId,
+        role: membership.role,
+        shop: {
+          id: membership.shop.id,
+          name: membership.shop.name,
+          slug: membership.shop.slug,
+          isActive: membership.shop.isActive,
+        },
+      })),
+    };
   }
 
   async logout(refreshToken: string | undefined) {

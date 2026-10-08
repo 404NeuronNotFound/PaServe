@@ -52,7 +52,28 @@ export class AuthRepository {
         expiresAt: { gt: new Date() },
         user: { isActive: true },
       },
-      include: { user: { select: { id: true, email: true, createdAt: true } } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            createdAt: true,
+            firstName: true,
+            lastName: true,
+            memberships: {
+              orderBy: { id: 'asc' },
+              select: {
+                id: true,
+                shopId: true,
+                role: true,
+                shop: {
+                  select: { id: true, name: true, slug: true, isActive: true },
+                },
+              },
+            },
+          },
+        },
+      },
     });
   }
 

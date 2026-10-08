@@ -20,11 +20,32 @@ describe('Login and session HTTP flow', () => {
     isActive: true,
     passwordHash: '',
     createdAt: new Date('2026-10-08T00:00:00Z'),
+    firstName: null as string | null,
+    lastName: null as string | null,
+    memberships: [] as {
+      id: string;
+      shopId: string;
+      role: 'OWNER' | 'CASHIER';
+      userId: string;
+      shop: {
+        id: string;
+        name: string;
+        slug: string;
+        isActive: boolean;
+        privateData: string;
+      };
+    }[],
   };
   const safeUser = {
     id: account.id,
     email: account.email,
     createdAt: account.createdAt.toISOString(),
+  };
+  const safeCurrentUser = {
+    ...safeUser,
+    firstName: null,
+    lastName: null,
+    memberships: [],
   };
   const sessions = new Map<
     string,
@@ -74,6 +95,9 @@ describe('Login and session HTTP flow', () => {
     vi.resetAllMocks();
     sessions.clear();
     account.isActive = true;
+    account.firstName = null;
+    account.lastName = null;
+    account.memberships = [];
     repository.findLoginAccount.mockResolvedValue(account);
     repository.createSession.mockImplementation(
       (
@@ -175,7 +199,59 @@ describe('Login and session HTTP flow', () => {
     await request(app.getHttpServer())
       .get('/api/v1/auth/me')
       .set('Authorization', `Bearer ${response.body.accessToken}`)
-      .expect(200, { user: safeUser });
+      .expect(200, { user: safeCurrentUser });
+  });
+
+  it('returns the current safe profile and shop memberships without private fields', async () => {
+    const response = await login().expect(200);
+    account.firstName = 'Alex';
+    account.lastName = 'Owner';
+    account.memberships = [
+      {
+        id: 'membership-id',
+        shopId: 'shop-id',
+        role: 'OWNER',
+        userId: account.id,
+        shop: {
+          id: 'shop-id',
+          name: 'Corner Cafe',
+          slug: 'corner-cafe',
+          isActive: true,
+          privateData: 'must stay private',
+        },
+      },
+    ];
+    await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${response.body.accessToken}`)
+      .expect(200, {
+        user: {
+          ...safeUser,
+          firstName: 'Alex',
+          lastName: 'Owner',
+          memberships: [
+            {
+              id: 'membership-id',
+              shopId: 'shop-id',
+              role: 'OWNER',
+              shop: {
+                id: 'shop-id',
+                name: 'Corner Cafe',
+                slug: 'corner-cafe',
+                isActive: true,
+              },
+            },
+          ],
+        },
+      });
+    // Membership changes are read from the database, not stale JWT claims.
+    account.memberships = [];
+    const current = await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${response.body.accessToken}`)
+      .expect(200);
+    expect(current.body.user.memberships).toEqual([]);
+    expect(current.headers['cache-control']).toBe('no-store');
   });
 
   it.each(['missing', 'wrong', 'inactive'])(
@@ -247,12 +323,14 @@ describe('Login and session HTTP flow', () => {
         .get('/api/v1/auth/me')
         .set('Authorization', `Bearer ${response.body.accessToken}`)
         .expect(401);
-      const refreshed = await cookiePost('refresh', cookie(response)).expect(200);
+      const refreshed = await cookiePost('refresh', cookie(response)).expect(
+        200,
+      );
       expect(refreshed.body.accessToken).not.toBe(response.body.accessToken);
       await request(app.getHttpServer())
         .get('/api/v1/auth/me')
         .set('Authorization', `Bearer ${refreshed.body.accessToken}`)
-        .expect(200, { user: safeUser });
+        .expect(200, { user: safeCurrentUser });
     } finally {
       now.mockRestore();
     }

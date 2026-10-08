@@ -4,12 +4,12 @@ import {
   type ExecutionContext,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import type { RegisteredUser } from '@paserve/contracts';
+import type { CurrentUser } from '@paserve/contracts';
 import { AuthService } from '../auth.service.js';
 import { invalidSession } from '../tokens.service.js';
 
 export interface AuthenticatedRequest extends Request {
-  user: RegisteredUser;
+  user: CurrentUser;
 }
 
 @Injectable()
