@@ -1,0 +1,136 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AxiosError, AxiosHeaders } from "axios";
+import { RegistrationForm } from "./RegistrationForm";
+import { registerAccount } from "../api/register";
+
+vi.mock("../api/register", () => ({ registerAccount: vi.fn() }));
+const register = vi.mocked(registerAccount);
+
+function setup() {
+  const success = vi.fn();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <RegistrationForm onSuccess={success} />
+    </QueryClientProvider>,
+  );
+  return { user: userEvent.setup(), success };
+}
+
+async function fill(
+  user: ReturnType<typeof userEvent.setup>,
+  confirm = "a long test passphrase",
+) {
+  await user.type(screen.getByLabelText("Email address"), "Owner@Example.com");
+  await user.type(
+    screen.getByLabelText("Password", { exact: true }),
+    "a long test passphrase",
+  );
+  await user.type(screen.getByLabelText("Confirm password"), confirm);
+}
+
+describe("Registration form", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  it("validates required fields before making a request", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+    expect(
+      screen.getByText("Enter a valid email address."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Confirm your password.")).toBeInTheDocument();
+    expect(register).not.toHaveBeenCalled();
+  });
+  it("blocks mismatched confirmation", async () => {
+    const { user } = setup();
+    await fill(user, "different passphrase");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+    expect(screen.getByText("Passwords do not match.")).toBeInTheDocument();
+    expect(register).not.toHaveBeenCalled();
+  });
+  it("submits only normalized email and password and clears password fields", async () => {
+    const result = {
+      user: {
+        id: "user-id",
+        email: "owner@example.com",
+        createdAt: "2026-10-08T00:00:00.000Z",
+      },
+    };
+    register.mockResolvedValue(result);
+    const { user, success } = setup();
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+    await waitFor(() => expect(success).toHaveBeenCalledWith(result));
+    expect(register.mock.calls[0]?.[0]).toEqual({
+      email: "owner@example.com",
+      password: "a long test passphrase",
+    });
+    expect(screen.getByLabelText("Password", { exact: true })).toHaveValue("");
+    expect(screen.getByLabelText("Confirm password")).toHaveValue("");
+  });
+  it("displays duplicate email feedback from the backend", async () => {
+    const error = new AxiosError("Conflict");
+    error.response = {
+      data: { code: "EMAIL_ALREADY_EXISTS" },
+      status: 409,
+      statusText: "Conflict",
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    };
+    register.mockRejectedValue(error);
+    const { user } = setup();
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+    expect(
+      await screen.findByText("An account with this email already exists."),
+    ).toBeInTheDocument();
+  });
+  it("blocks duplicate submissions while a request is pending", async () => {
+    let finish: (
+      value: Awaited<ReturnType<typeof registerAccount>>,
+    ) => void = () => {};
+    register.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const { user, success } = setup();
+    await fill(user);
+    await user.dblClick(
+      screen.getByRole("button", { name: /create account/i }),
+    );
+    expect(register).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("button", { name: /creating account/i }),
+    ).toBeDisabled();
+    finish({
+      user: {
+        id: "user-id",
+        email: "owner@example.com",
+        createdAt: "2026-10-08T00:00:00.000Z",
+      },
+    });
+    await waitFor(() => expect(success).toHaveBeenCalled());
+  });
+  it("shows a retryable message for network failures without exposing details", async () => {
+    register.mockRejectedValue(new Error("internal network diagnostic"));
+    const { user } = setup();
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+    expect(
+      await screen.findByText(
+        "We couldn’t create your account. Please try again.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("internal network diagnostic"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /create account/i }),
+    ).toBeEnabled();
+  });
+});
