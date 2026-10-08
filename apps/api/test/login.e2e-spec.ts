@@ -239,6 +239,51 @@ describe('Login and session HTTP flow', () => {
     await cookiePost('refresh', cookie(rotated)).expect(200);
   });
 
+  it('refreshes an expired access token and accepts the new access token', async () => {
+    const response = await login().expect(200);
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 901_000);
+    try {
+      await request(app.getHttpServer())
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${response.body.accessToken}`)
+        .expect(401);
+      const refreshed = await cookiePost('refresh', cookie(response)).expect(200);
+      expect(refreshed.body.accessToken).not.toBe(response.body.accessToken);
+      await request(app.getHttpServer())
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${refreshed.body.accessToken}`)
+        .expect(200, { user: safeUser });
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it('rejects forged, expired and wrong-purpose refresh tokens without rotating', async () => {
+    const response = await login().expect(200);
+    const claims = await app
+      .get(TokensService)
+      .verify(response.body.accessToken as string, 'access');
+    const expired = await app.get(JwtService).signAsync(
+      { sub: account.id, sid: claims.sid, type: 'refresh' },
+      {
+        secret: 'test-refresh-secret-with-at-least-32-characters',
+        issuer: 'paserve-api',
+        audience: 'paserve:refresh',
+        expiresIn: -1,
+      },
+    );
+    for (const token of ['forged-token', expired, response.body.accessToken]) {
+      const rejected = await cookiePost(
+        'refresh',
+        `paserve_refresh=${encodeURIComponent(token as string)}`,
+      ).expect(401);
+      expect(rejected.body.code).toBe('INVALID_SESSION');
+      expect(rejected.headers['set-cookie']).toBeUndefined();
+    }
+    expect(repository.rotateSession).not.toHaveBeenCalled();
+    await cookiePost('refresh', cookie(response)).expect(200);
+  });
+
   it('revokes access and refresh on logout and clears the cookie', async () => {
     const response = await login().expect(200);
     const loggedOut = await cookiePost('logout', cookie(response)).expect(204);
