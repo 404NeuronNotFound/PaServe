@@ -305,14 +305,20 @@ describe('Login and session HTTP flow', () => {
     expect(repository.findLoginAccount).not.toHaveBeenCalled();
   });
 
-  it('rotates refresh JWT and rejects reuse of the previous token', async () => {
+  it('rotates refresh JWT and revokes the entire session on reuse', async () => {
     const response = await login().expect(200);
     const oldCookie = cookie(response);
     const rotated = await cookiePost('refresh', oldCookie).expect(200);
     expect(cookie(rotated)).not.toBe(oldCookie);
     expect(rotated.body.user).toEqual(safeUser);
+    const next = await cookiePost('refresh', cookie(rotated)).expect(200);
     await cookiePost('refresh', oldCookie).expect(401);
-    await cookiePost('refresh', cookie(rotated)).expect(200);
+    await cookiePost('refresh', cookie(rotated)).expect(401);
+    await cookiePost('refresh', cookie(next)).expect(401);
+    await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${next.body.accessToken}`)
+      .expect(401);
   });
 
   it('refreshes an expired access token and accepts the new access token', async () => {
@@ -384,6 +390,8 @@ describe('Login and session HTTP flow', () => {
     expect(
       results.map((result) => result.status).sort((a, b) => a - b),
     ).toEqual([200, 401]);
+    const winner = results.find((result) => result.status === 200)!;
+    await cookiePost('refresh', cookie(winner)).expect(401);
   });
 
   it('rejects access and refresh after account deactivation', async () => {

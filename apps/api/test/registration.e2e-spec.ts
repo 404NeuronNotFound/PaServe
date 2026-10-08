@@ -5,6 +5,7 @@ import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
 import { AuthRepository } from '../src/modules/auth/auth.repository.js';
 import { PrismaService } from '../src/database/prisma.service.js';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 describe('POST /api/v1/auth/register', () => {
   let app: INestApplication<App>;
@@ -20,6 +21,8 @@ describe('POST /api/v1/auth/register', () => {
       .useValue(repository)
       .overrideProvider(PrismaService)
       .useValue({})
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
       .compile();
     app = module.createNestApplication();
     app.setGlobalPrefix('api/v1');
@@ -122,4 +125,33 @@ describe('POST /api/v1/auth/register', () => {
     expect(response.text).not.toContain(input.password);
     expect(repository.createAccount).not.toHaveBeenCalled();
   });
+});
+
+it('throttles registration before querying accounts or hashing passwords', async () => {
+  const repository = { findAccountByEmail: vi.fn(), createAccount: vi.fn() };
+  const module = await Test.createTestingModule({ imports: [AppModule] })
+    .overrideProvider(PrismaService)
+    .useValue({})
+    .overrideProvider(AuthRepository)
+    .useValue(repository)
+    .compile();
+  const app = module.createNestApplication();
+  app.setGlobalPrefix('api/v1');
+  await app.init();
+  try {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send({})
+        .expect(400);
+    }
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({ email: 'owner@example.com', password: 'a valid long passphrase' })
+      .expect(429);
+    expect(repository.findAccountByEmail).not.toHaveBeenCalled();
+    expect(repository.createAccount).not.toHaveBeenCalled();
+  } finally {
+    await app.close();
+  }
 });

@@ -68,8 +68,12 @@ export class AuthService {
     const claims = await this.tokens.verify(refreshToken, 'refresh');
     const session = await this.repository.findSession(claims.sid, claims.sub);
     const previousHash = this.tokens.digest(refreshToken);
-    if (!session || session.refreshTokenHash !== previousHash)
+    if (!session) throw invalidSession();
+    if (session.refreshTokenHash !== previousHash) {
+      // A signed token for this session was already rotated: possible theft.
+      await this.repository.revokeSession(claims.sid, claims.sub);
       throw invalidSession();
+    }
     const pair = await this.tokens.issue(
       claims.sub,
       claims.sid,
@@ -81,7 +85,11 @@ export class AuthService {
       previousHash,
       this.tokens.digest(pair.refreshToken),
     );
-    if (updated.count !== 1) throw invalidSession();
+    if (updated.count !== 1) {
+      // Concurrent reuse must invalidate the winning token's session too.
+      await this.repository.revokeSession(claims.sid, claims.sub);
+      throw invalidSession();
+    }
     return {
       response: this.loginResponse(session.user, pair.accessToken),
       refreshToken: pair.refreshToken,
