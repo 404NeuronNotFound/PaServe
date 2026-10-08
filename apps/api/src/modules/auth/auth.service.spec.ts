@@ -4,6 +4,7 @@ import { verify } from 'argon2';
 import { AuthService } from './auth.service.js';
 import { AuthRepository } from './auth.repository.js';
 import { Prisma } from '../../generated/prisma/client.js';
+import { TokensService } from './tokens.service.js';
 
 describe('AuthService registration', () => {
   const repository = { findAccountByEmail: vi.fn(), createAccount: vi.fn() };
@@ -16,6 +17,7 @@ describe('AuthService registration', () => {
       providers: [
         AuthService,
         { provide: AuthRepository, useValue: repository },
+        { provide: TokensService, useValue: {} },
       ],
     }).compile();
 

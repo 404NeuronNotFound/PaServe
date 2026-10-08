@@ -25,14 +25,29 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String
+  isActive     Boolean  @default(true)
   firstName    String?
   lastName     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   memberships ShopMember[]
+  sessions    AuthSession[]
 
   @@map("users")
+}
+
+model AuthSession {
+  id               String    @id @default(uuid())
+  userId           String
+  refreshTokenHash String
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
 }
 
 model Shop {
