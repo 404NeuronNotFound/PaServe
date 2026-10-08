@@ -43,6 +43,49 @@ describe("Registration form", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Confirm your password.")).toBeInTheDocument();
     expect(register).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Email address")).toHaveFocus();
+  });
+  it("validates only visited fields and updates feedback while correcting them", async () => {
+    const { user } = setup();
+    await user.type(screen.getByLabelText("Email address"), "wrong");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await user.tab();
+    expect(
+      screen.getByText("Enter a valid email address."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Confirm your password."),
+    ).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Email address"), "@example.com");
+    expect(
+      screen.queryByText("Enter a valid email address."),
+    ).not.toBeInTheDocument();
+  });
+  it("rechecks confirmation when the original password changes", async () => {
+    const { user } = setup();
+    await fill(user);
+    await user.tab();
+    await user.type(
+      screen.getByLabelText("Password", { exact: true }),
+      "changed",
+    );
+    expect(screen.getByText("Passwords do not match.")).toBeInTheDocument();
+  });
+  it("allows keyboard users to reveal passwords without losing their values", async () => {
+    const { user } = setup();
+    await fill(user);
+    screen.getByRole("button", { name: "Show passwords" }).focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByLabelText("Password", { exact: true })).toHaveAttribute(
+      "type",
+      "text",
+    );
+    expect(screen.getByLabelText("Confirm password")).toHaveValue(
+      "a long test passphrase",
+    );
+    expect(
+      screen.getByRole("button", { name: "Hide passwords" }),
+    ).toHaveFocus();
   });
   it("blocks mismatched confirmation", async () => {
     const { user } = setup();
@@ -87,6 +130,9 @@ describe("Registration form", () => {
     expect(
       await screen.findByText("An account with this email already exists."),
     ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Email address")).toHaveFocus(),
+    );
   });
   it("blocks duplicate submissions while a request is pending", async () => {
     let finish: (
@@ -107,6 +153,9 @@ describe("Registration form", () => {
     expect(
       screen.getByRole("button", { name: /creating account/i }),
     ).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Creating your account. Please wait.",
+    );
     finish({
       user: {
         id: "user-id",

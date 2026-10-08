@@ -1,72 +1,82 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { FiCheckCircle, FiCoffee } from "react-icons/fi";
 import type { RegisteredUser } from "@paserve/contracts";
 import { RegistrationForm } from "../../features/auth/components/RegistrationForm";
 
 export function RegisterPage() {
   const [user, setUser] = useState<RegisteredUser | null>(null);
+  const successHeading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (user) successHeading.current?.focus();
+  }, [user]);
+
   return (
-    <main className="auth-page">
-      <aside className="brand-panel" aria-label="About PaServe">
-        <a className="wordmark" href="/" aria-label="PaServe home">
-          <span className="brand-symbol" aria-hidden="true">
-            p.
-          </span>
-          PaServe
-        </a>
-        <div className="brand-story">
-          <p className="eyebrow">A LITTLE LESS BUSYWORK.</p>
-          <h1>
-            More time{" "}
-            <br />
-            for the good{" "}
-            <br />
-            <em>you serve.</em>
-          </h1>
-          <p className="brand-description">
-            A simpler way to run your café, coffee shop, or restaurant. It
-            starts with your account.
-          </p>
-        </div>
-        <div className="brand-footer">
-          <span className="small-star" aria-hidden="true">
-            ✳
-          </span>
-          <span>Made for the people behind the counter.</span>
-        </div>
-        <div className="brand-rings" aria-hidden="true" />
-      </aside>
-      <section className="form-panel" aria-labelledby="registration-heading">
-        <div className="form-content">
-          <p className="eyebrow">WELCOME TO PASERVE</p>
-          {user ? (
-            <div className="registration-success" role="status">
-              <div className="success-mark" aria-hidden="true">
-                ✓
+    <>
+      <a className="skip-link" href="#registration-content">
+        Skip to account creation
+      </a>
+      <main className="auth-page">
+        <aside className="welcome-panel" aria-label="About PaServe">
+          <Link className="wordmark" to="/" aria-label="PaServe home">
+            <FiCoffee className="brand-icon" aria-hidden="true" />
+            <span>PaServe</span>
+          </Link>
+          <div className="welcome-content">
+            <p className="section-label">For your shop</p>
+            <h2>
+              Less admin. <br />
+              More service.
+            </h2>
+            <p className="welcome-description">
+              A simpler way to run your cafe, coffee shop, or restaurant.
+            </p>
+          </div>
+        </aside>
+
+        <section
+          id="registration-content"
+          tabIndex={-1}
+          className="form-panel"
+          aria-labelledby="registration-heading"
+        >
+          <div className="form-content">
+            {user ? (
+              <div className="registration-success" role="status">
+                <FiCheckCircle className="success-icon" aria-hidden="true" />
+                <h1
+                  ref={successHeading}
+                  tabIndex={-1}
+                  id="registration-heading"
+                >
+                  Account created.
+                </h1>
+                <p>
+                  Your PaServe account is ready for{" "}
+                  <strong>{user.email}</strong>.
+                </p>
+                <p>Welcome aboard.</p>
               </div>
-              <h2 id="registration-heading">You’re registered.</h2>
-              <p>
-                Your account has been created for <strong>{user.email}</strong>.
-              </p>
-              <p>Welcome to PaServe.</p>
-            </div>
-          ) : (
-            <>
-              <h2 id="registration-heading">Create your account.</h2>
-              <p className="form-intro">Your next chapter starts here.</p>
-              <RegistrationForm onSuccess={(result) => setUser(result.user)} />
-              <p className="account-note">
-                Setting up a shop? Start with your account.
-                <br />
-                Ordering as a customer? No account needed.
-              </p>
-            </>
-          )}
-        </div>
-        <footer className="form-footer">
-          PaServe <span aria-hidden="true">·</span> A smoother day, from the
-          first order.
-        </footer>
-      </section>
-    </main>
+            ) : (
+              <>
+                <p className="section-label">Welcome to PaServe</p>
+                <h1 id="registration-heading">Create your account</h1>
+                <p className="form-intro">
+                  Just your email and a password to get started.
+                </p>
+                <RegistrationForm
+                  onSuccess={(result) => setUser(result.user)}
+                />
+                <p className="account-note">
+                  For owners and staff. Customers can order without an account.
+                </p>
+              </>
+            )}
+          </div>
+          <footer className="form-footer">Simple tools. Better service.</footer>
+        </section>
+      </main>
+    </>
   );
 }
