@@ -1,4 +1,10 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+} from "react-router-dom";
 import { RegisterPage } from "../../pages/public/RegisterPage";
 import { ConnectionPage } from "../../pages/public/ConnectionPage";
 import { LoginPage } from "../../pages/public/LoginPage";
@@ -13,13 +19,16 @@ export function AppRouter() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route
-          path="/app/account"
+          path="/app"
           element={
             <ProtectedRoute>
-              <AccountPage />
+              <Outlet />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="account" replace />} />
+          <Route path="account" element={<AccountPage />} />
+        </Route>
         <Route path="/connection" element={<ConnectionPage />} />
         <Route
           path="*"
