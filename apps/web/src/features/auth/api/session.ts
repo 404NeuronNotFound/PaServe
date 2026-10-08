@@ -10,6 +10,7 @@ import { useSessionStore } from "../stores/session";
 const cookieHeaders = { "X-PaServe-Client": "web" };
 export const currentUserKey = ["auth", "me"] as const;
 let refreshPromise: Promise<LoginResponse> | null = null;
+let logoutPromise: Promise<void> | null = null;
 
 export async function loginAccount(
   input: LoginRequest,
@@ -22,6 +23,9 @@ export async function loginAccount(
 }
 
 export function refreshSession(): Promise<LoginResponse> {
+  if (logoutPromise) {
+    return Promise.reject(new Error("Sign-out is in progress."));
+  }
   if (!refreshPromise) {
     refreshPromise = api
       .post<LoginResponse>("/auth/refresh", {}, { headers: cookieHeaders })
@@ -85,7 +89,16 @@ export async function getCurrentUser(): Promise<CurrentUserResponse> {
   return data;
 }
 
-export async function logoutAccount(): Promise<void> {
-  await api.post("/auth/logout", {}, { headers: cookieHeaders });
-  useSessionStore.getState().setAccessToken(null);
+export function logoutAccount(): Promise<void> {
+  if (!logoutPromise) {
+    logoutPromise = (async () => {
+      // Finish rotation before logout so the server revokes the current cookie.
+      if (refreshPromise) await refreshPromise.catch(() => undefined);
+      await api.post("/auth/logout", {}, { headers: cookieHeaders });
+      useSessionStore.getState().setAccessToken(null);
+    })().finally(() => {
+      logoutPromise = null;
+    });
+  }
+  return logoutPromise;
 }
