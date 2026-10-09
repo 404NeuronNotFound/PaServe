@@ -5,6 +5,7 @@ import { Link, Navigate, Outlet, useParams } from "react-router-dom";
 import type { CurrentUserResponse } from "@paserve/contracts";
 import { currentUserKey } from "../auth/api/session";
 import { getShopMembership } from "./api/context";
+import { DashboardFrame } from "../../components/layout/OwnerDashboardLayout";
 import {
   ActiveShopContext,
   activeShopKey,
@@ -45,32 +46,38 @@ export function ActiveShopRoute() {
   ]);
   if (context.isPending || context.isFetching)
     return (
-      <main className="connection-page" role="status">
-        Checking shop access…
-      </main>
+      <DashboardFrame membership={null}>
+        <section className="dashboard-status" role="status">
+          Checking shop access…
+        </section>
+      </DashboardFrame>
     );
   if (status === 401) return <Navigate to="/login" replace />;
   if (context.isError)
     return (
-      <main className="connection-page shop-context-error">
-        <h1>{unavailable ? "Shop unavailable" : "Unable to open this shop"}</h1>
-        <p role="alert">
-          {unavailable
-            ? "This shop is unavailable or you no longer have access."
-            : "Please check your connection and try again."}
-        </p>
-        {!unavailable && (
-          <button
-            className="primary-button"
-            onClick={() => void context.refetch()}
-          >
-            Try again
-          </button>
-        )}
-        <Link className="secondary-button" to="/app/shops">
-          Choose another shop
-        </Link>
-      </main>
+      <DashboardFrame membership={null}>
+        <section className="dashboard-status shop-context-error">
+          <h1>
+            {unavailable ? "Shop unavailable" : "Unable to open this shop"}
+          </h1>
+          <p role="alert">
+            {unavailable
+              ? "This shop is unavailable or you no longer have access."
+              : "Please check your connection and try again."}
+          </p>
+          {!unavailable && (
+            <button
+              className="primary-button"
+              onClick={() => void context.refetch()}
+            >
+              Try again
+            </button>
+          )}
+          <Link className="secondary-button" to="/app/shops">
+            Choose another shop
+          </Link>
+        </section>
+      </DashboardFrame>
     );
   return (
     <ActiveShopContext.Provider value={context.data}>

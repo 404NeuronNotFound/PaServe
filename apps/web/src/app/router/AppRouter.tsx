@@ -18,6 +18,7 @@ import {
 } from "../../pages/owner/ShopSelectionPage";
 import { ActiveShopPage } from "../../pages/owner/ActiveShopPage";
 import { ShopSettingsPage } from "../../pages/owner/ShopSettingsPage";
+import { OwnerDashboardLayout } from "../../components/layout/OwnerDashboardLayout";
 
 export function AppRouter() {
   return (
@@ -37,8 +38,10 @@ export function AppRouter() {
           <Route index element={<ResolveActiveShop />} />
           <Route path="shops" element={<ShopSelectionPage />} />
           <Route path="shops/:shopId" element={<ActiveShopRoute />}>
-            <Route index element={<ActiveShopPage />} />
-            <Route path="settings" element={<ShopSettingsPage />} />
+            <Route element={<OwnerDashboardLayout />}>
+              <Route index element={<ActiveShopPage />} />
+              <Route path="settings" element={<ShopSettingsPage />} />
+            </Route>
           </Route>
           <Route path="account" element={<AccountPage />} />
           <Route path="onboarding/create-shop" element={<CreateShopPage />} />

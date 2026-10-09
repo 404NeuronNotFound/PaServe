@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import { isAxiosError } from "axios";
 import isEmail from "validator/lib/isEmail";
 import isURL from "validator/lib/isURL";
-import { FiCoffee } from "react-icons/fi";
 import {
   SHOP_LIMITS,
   SHOP_SETTINGS_LIMITS,
@@ -20,7 +19,6 @@ import {
 } from "../../features/shops/active-shop";
 import { getShopSettings, updateShop } from "../../features/shops/api/context";
 import { currentUserKey } from "../../features/auth/api/session";
-import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { feedback } from "../../app/stores/feedback";
 
@@ -104,9 +102,9 @@ export function ShopSettingsPage() {
     );
   if (settings.isPending)
     return (
-      <main className="connection-page" role="status">
+      <section className="dashboard-status" role="status">
         Loading shop settings…
-      </main>
+      </section>
     );
   if (settings.isError) {
     const status = isAxiosError(settings.error)
@@ -139,7 +137,7 @@ function SettingsState({
 }) {
   const membership = useActiveShop();
   return (
-    <main className="connection-page shop-context-error">
+    <section className="dashboard-status shop-context-error">
       <h1>{title}</h1>
       <p role="alert">{message}</p>
       {retry && (
@@ -150,7 +148,7 @@ function SettingsState({
       <Link className="secondary-button" to={shopPath(membership.shopId)}>
         Back to shop
       </Link>
-    </main>
+    </section>
   );
 }
 
@@ -273,116 +271,108 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
     }
   }
   return (
-    <main className="account-page shop-context-page">
-      <header className="workspace-header">
-        <Link className="wordmark" to={shopPath(shop.id)}>
-          <FiCoffee aria-hidden="true" /> PaServe.
-        </Link>
-        <AppearanceToggle />
-      </header>
-      <section
-        className="shop-context-content profile-card shop-create-card shop-settings-card"
-        aria-labelledby="settings-heading"
+    <section
+      className="shop-context-content profile-card shop-create-card shop-settings-card"
+      aria-labelledby="settings-heading"
+    >
+      <p className="section-label">{membership.shop.name}</p>
+      <h1 id="settings-heading" ref={heading} tabIndex={-1}>
+        Shop settings
+      </h1>
+      <p className="form-intro">
+        Keep your business details up to date. Contact and operating details are
+        optional.
+      </p>
+      <p className="field-hint">
+        Menu slug: <strong>{shop.slug}</strong>. Changing your name keeps this
+        address.
+      </p>
+      <form
+        ref={form}
+        className="registration-form"
+        noValidate
+        aria-busy={mutation.isPending}
+        onSubmit={(event) => void submit(event)}
       >
-        <p className="section-label">{membership.shop.name}</p>
-        <h1 id="settings-heading" ref={heading} tabIndex={-1}>
-          Shop settings
-        </h1>
-        <p className="form-intro">
-          Keep your business details up to date. Contact and operating details
-          are optional.
-        </p>
-        <p className="field-hint">
-          Menu slug: <strong>{shop.slug}</strong>. Changing your name keeps this
-          address.
-        </p>
-        <form
-          ref={form}
-          className="registration-form"
-          noValidate
-          aria-busy={mutation.isPending}
-          onSubmit={(event) => void submit(event)}
-        >
-          {fields.map((field) => (
-            <div key={field.key}>
-              {"section" in field && <h2>{field.section}</h2>}
-              <div className="field">
-                <label htmlFor={`settings-${field.key}`}>
-                  {field.label}
-                  {field.key === "name" ? " (required)" : ""}
-                </label>
-                {"multiline" in field ? (
-                  <textarea
-                    id={`settings-${field.key}`}
-                    name={field.key}
-                    rows={3}
-                    maxLength={field.max}
-                    value={values[field.key]}
-                    disabled={mutation.isPending}
-                    aria-invalid={Boolean(errors[field.key])}
-                    aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
-                    onChange={(event) => {
-                      setValues({ ...values, [field.key]: event.target.value });
-                      setErrors({ ...errors, [field.key]: undefined });
-                    }}
-                  />
-                ) : (
-                  <input
-                    id={`settings-${field.key}`}
-                    name={field.key}
-                    type={"type" in field ? field.type : "text"}
-                    required={field.key === "name"}
-                    maxLength={field.max}
-                    value={values[field.key]}
-                    disabled={mutation.isPending}
-                    aria-invalid={Boolean(errors[field.key])}
-                    aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
-                    onChange={(event) => {
-                      setValues({ ...values, [field.key]: event.target.value });
-                      setErrors({ ...errors, [field.key]: undefined });
-                    }}
-                  />
-                )}
-                <p className="field-hint" id={`settings-${field.key}-hint`}>
-                  {"hint" in field
-                    ? field.hint
-                    : `Up to ${field.max} characters.`}
-                </p>
-                {errors[field.key] && (
-                  <InlineMessage
-                    id={`settings-${field.key}-error`}
-                    className="field-error"
-                  >
-                    {errors[field.key]}
-                  </InlineMessage>
-                )}
-              </div>
+        {fields.map((field) => (
+          <div key={field.key}>
+            {"section" in field && <h2>{field.section}</h2>}
+            <div className="field">
+              <label htmlFor={`settings-${field.key}`}>
+                {field.label}
+                {field.key === "name" ? " (required)" : ""}
+              </label>
+              {"multiline" in field ? (
+                <textarea
+                  id={`settings-${field.key}`}
+                  name={field.key}
+                  rows={3}
+                  maxLength={field.max}
+                  value={values[field.key]}
+                  disabled={mutation.isPending}
+                  aria-invalid={Boolean(errors[field.key])}
+                  aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
+                  onChange={(event) => {
+                    setValues({ ...values, [field.key]: event.target.value });
+                    setErrors({ ...errors, [field.key]: undefined });
+                  }}
+                />
+              ) : (
+                <input
+                  id={`settings-${field.key}`}
+                  name={field.key}
+                  type={"type" in field ? field.type : "text"}
+                  required={field.key === "name"}
+                  maxLength={field.max}
+                  value={values[field.key]}
+                  disabled={mutation.isPending}
+                  aria-invalid={Boolean(errors[field.key])}
+                  aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
+                  onChange={(event) => {
+                    setValues({ ...values, [field.key]: event.target.value });
+                    setErrors({ ...errors, [field.key]: undefined });
+                  }}
+                />
+              )}
+              <p className="field-hint" id={`settings-${field.key}-hint`}>
+                {"hint" in field
+                  ? field.hint
+                  : `Up to ${field.max} characters.`}
+              </p>
+              {errors[field.key] && (
+                <InlineMessage
+                  id={`settings-${field.key}-error`}
+                  className="field-error"
+                >
+                  {errors[field.key]}
+                </InlineMessage>
+              )}
             </div>
-          ))}
-          <section aria-labelledby="branding-heading">
-            <h2 id="branding-heading">Branding</h2>
-            <p className="field-hint">
-              Logo and banner customization are planned for a future update.
-            </p>
-          </section>
-          {error && <InlineMessage>{error}</InlineMessage>}
-          <p role="status" className="sr-only">
-            {mutation.isPending ? "Saving shop settings. Please wait." : ""}
-          </p>
-          <div className="shop-context-actions">
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={mutation.isPending || !dirty}
-            >
-              {mutation.isPending ? "Saving…" : "Save settings"}
-            </button>
-            <Link className="shop-create-cancel" to={shopPath(shop.id)}>
-              Back to shop
-            </Link>
           </div>
-        </form>
-      </section>
-    </main>
+        ))}
+        <section aria-labelledby="branding-heading">
+          <h2 id="branding-heading">Branding</h2>
+          <p className="field-hint">
+            Logo and banner customization are planned for a future update.
+          </p>
+        </section>
+        {error && <InlineMessage>{error}</InlineMessage>}
+        <p role="status" className="sr-only">
+          {mutation.isPending ? "Saving shop settings. Please wait." : ""}
+        </p>
+        <div className="shop-context-actions">
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={mutation.isPending || !dirty}
+          >
+            {mutation.isPending ? "Saving…" : "Save settings"}
+          </button>
+          <Link className="shop-create-cancel" to={shopPath(shop.id)}>
+            Back to shop
+          </Link>
+        </div>
+      </form>
+    </section>
   );
 }
