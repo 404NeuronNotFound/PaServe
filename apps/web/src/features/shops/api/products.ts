@@ -1,0 +1,31 @@
+import type {
+  CreateProductRequest,
+  CreateProductResponse,
+  ProductsResponse,
+} from "@paserve/contracts";
+import { api } from "../../../lib/api/client";
+import "../../auth/api/session";
+export const productsKey = (userId: string, shopId: string) =>
+  ["products", userId, shopId] as const;
+export async function listProducts(
+  shopId: string,
+  signal?: AbortSignal,
+): Promise<ProductsResponse> {
+  return (
+    await api.get<ProductsResponse>(
+      `/shops/${encodeURIComponent(shopId)}/products`,
+      { signal },
+    )
+  ).data;
+}
+export async function createProduct(
+  shopId: string,
+  input: CreateProductRequest,
+): Promise<CreateProductResponse> {
+  return (
+    await api.post<CreateProductResponse>(
+      `/shops/${encodeURIComponent(shopId)}/products`,
+      input,
+    )
+  ).data;
+}
