@@ -1,16 +1,24 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { FiCoffee, FiPlus, FiStar, FiImage, FiRefreshCw } from "react-icons/fi";
+import {
+  FiCoffee,
+  FiPlus,
+  FiStar,
+  FiImage,
+  FiRefreshCw,
+  FiEdit2,
+} from "react-icons/fi";
 import {
   hasShopPermission,
   type CurrentUserResponse,
+  type MenuProduct,
 } from "@paserve/contracts";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { productsKey, listProducts } from "../../features/shops/api/products";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
-import { ProductCreateDialog } from "./ProductCreateDialog";
+import { ProductEditor } from "./ProductEditor";
 import "./categories.css";
 import "./products.css";
 
@@ -25,6 +33,7 @@ export function ProductsPage() {
 function ProductWorkspace({ userId }: { userId: string }) {
   const membership = useActiveShop();
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<MenuProduct | null>(null);
   const allowed = hasShopPermission(membership.role, "shop.menu.manage");
   const query = useQuery({
     queryKey: productsKey(userId, membership.shopId),
@@ -61,7 +70,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
           id="create-product-button"
           className="primary-button"
           type="button"
-          disabled={creating || denied}
+          disabled={creating || Boolean(editing) || denied}
           onClick={() => setCreating(true)}
         >
           <FiPlus aria-hidden="true" />
@@ -77,7 +86,9 @@ function ProductWorkspace({ userId }: { userId: string }) {
           <button
             className="secondary-button"
             type="button"
-            disabled={query.isFetching || denied || creating}
+            disabled={
+              query.isFetching || denied || creating || Boolean(editing)
+            }
             onClick={() => void query.refetch()}
           >
             <FiRefreshCw aria-hidden="true" />
@@ -128,7 +139,20 @@ function ProductWorkspace({ userId }: { userId: string }) {
                     )}
                   </div>
                 </div>
-                <strong className="product-price">{product.price}</strong>
+                <div className="product-card-actions">
+                  <strong className="product-price">{product.price}</strong>
+                  <button
+                    id={`edit-product-${product.id}`}
+                    className="secondary-button"
+                    type="button"
+                    aria-label={`Edit ${product.name}`}
+                    disabled={creating || Boolean(editing) || denied}
+                    onClick={() => setEditing(product)}
+                  >
+                    <FiEdit2 aria-hidden="true" />
+                    Edit
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -140,11 +164,15 @@ function ProductWorkspace({ userId }: { userId: string }) {
           </div>
         )}
       </section>
-      {creating && (
-        <ProductCreateDialog
+      {(creating || editing) && (
+        <ProductEditor
           userId={userId}
           shopId={membership.shopId}
-          onClose={() => setCreating(false)}
+          product={editing ?? undefined}
+          onClose={() => {
+            setCreating(false);
+            setEditing(null);
+          }}
         />
       )}
     </section>

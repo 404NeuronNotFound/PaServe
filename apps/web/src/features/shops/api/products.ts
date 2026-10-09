@@ -2,11 +2,25 @@ import type {
   CreateProductRequest,
   CreateProductResponse,
   ProductsResponse,
+  UpdateProductRequest,
+  UpdateProductResponse,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
 export const productsKey = (userId: string, shopId: string) =>
   ["products", userId, shopId] as const;
+export async function updateProduct(
+  shopId: string,
+  productId: string,
+  input: UpdateProductRequest,
+): Promise<UpdateProductResponse> {
+  return (
+    await api.patch<UpdateProductResponse>(
+      `/shops/${encodeURIComponent(shopId)}/products/${encodeURIComponent(productId)}`,
+      input,
+    )
+  ).data;
+}
 export async function listProducts(
   shopId: string,
   signal?: AbortSignal,

@@ -118,6 +118,17 @@
     serif;
   overflow-wrap: anywhere;
 }
+.product-card-actions {
+  display: grid;
+  justify-items: end;
+  gap: 16px;
+  min-width: 0;
+}
+.product-card-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
 .product-create-dialog {
   width: min(660px, calc(100vw - 32px));
 }
@@ -185,8 +196,11 @@
     flex-wrap: wrap;
     padding: 16px;
   }
-  .product-price {
+  .product-card-actions {
     flex-basis: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding-left: 60px;
   }
   .product-create-dialog {
