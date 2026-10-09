@@ -33,6 +33,32 @@ export interface LoginResponse {
 
 export type ShopRole = "OWNER" | "ADMIN" | "MANAGER" | "CASHIER" | "KITCHEN";
 
+/** Shop-scoped authority. Ownership/billing permissions are reserved for future flows. */
+export const SHOP_PERMISSIONS = [
+  "shop.operations.manage",
+  "shop.settings.manage",
+  "shop.ownership.manage",
+  "shop.billing.manage",
+] as const;
+export type ShopPermission = (typeof SHOP_PERMISSIONS)[number];
+
+export function isShopOwner(role: ShopRole): boolean {
+  return role === "OWNER";
+}
+
+/**
+ * OWNER is the highest shop-level role, not a global account role.
+ * Call only with the role from a validated membership for the target shop.
+ * Other roles receive explicit grants in their respective authorization steps;
+ * a numeric role ranking must never grant owner-sensitive permissions.
+ */
+export function hasShopPermission(
+  role: ShopRole,
+  permission: ShopPermission,
+): boolean {
+  return isShopOwner(role) && SHOP_PERMISSIONS.includes(permission);
+}
+
 export interface UserMembership {
   id: string;
   shopId: string;
