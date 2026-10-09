@@ -153,3 +153,87 @@ it("redirects an expired session to sign in", async () => {
     await screen.findByRole("heading", { name: "Sign in" }),
   ).toBeInTheDocument();
 });
+
+it("distinguishes duplicate shop names by slug and opens the validated matching shop", async () => {
+  const a = {
+    ...member("a"),
+    shop: { ...member("a").shop, name: "Same Cafe" },
+  };
+  const b = {
+    ...member("b"),
+    shop: { ...member("b").shop, name: "Same Cafe" },
+  };
+  vi.mocked(getShopMembership).mockResolvedValue(b);
+  setup("/app/shops", [a, b]);
+  const user = userEvent.setup();
+  expect(screen.getAllByRole("link", { name: /Same Cafe/ })).toHaveLength(2);
+  await user.type(
+    screen.getByRole("searchbox", { name: "Search shops" }),
+    "CAFE-B",
+  );
+  expect(screen.getAllByRole("link", { name: /Same Cafe/ })).toHaveLength(1);
+  await user.click(screen.getByRole("link", { name: /Same Cafe/ }));
+  expect(getShopMembership).toHaveBeenCalledWith("b", expect.any(AbortSignal));
+  expect(
+    await screen.findByRole("heading", { name: "Same Cafe" }),
+  ).toBeInTheDocument();
+});
+
+it("searches roles, recovers from no results, and restores search focus", async () => {
+  setup("/app/shops", [member("a"), member("b", "KITCHEN")]);
+  const user = userEvent.setup();
+  const search = screen.getByRole("searchbox", { name: "Search shops" });
+  await user.type(search, "kitchen");
+  expect(
+    screen.queryByRole("link", { name: /Cafe a/ }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Cafe b/ })).toBeInTheDocument();
+  await user.clear(search);
+  await user.type(search, "no-such-place");
+  expect(
+    screen.getByRole("heading", { name: "No shops found" }),
+  ).toBeInTheDocument();
+  await user.click(
+    screen.getByRole("button", { name: "Show all shops" }),
+  );
+  expect(search).toHaveFocus();
+  expect(search).toHaveValue("");
+  expect(screen.getByRole("link", { name: /Cafe a/ })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Cafe b/ })).toBeInTheDocument();
+});
+
+it("shows a last-visited hint without changing the active shop or exposing inactive shops", () => {
+  rememberShop("user-a", "b");
+  setup("/app/shops", [
+    member("a"),
+    member("b"),
+    {
+      ...member("hidden"),
+      shop: { ...member("hidden").shop, isActive: false },
+    },
+  ]);
+  expect(screen.getByRole("link", { name: /Cafe b/ })).toHaveTextContent(
+    "Last visited",
+  );
+  expect(screen.getByRole("link", { name: /Cafe a/ })).not.toHaveTextContent(
+    "Last visited",
+  );
+  expect(
+    screen.queryByRole("link", { name: /Cafe hidden/ }),
+  ).not.toBeInTheDocument();
+  expect(getShopMembership).not.toHaveBeenCalled();
+  expect(rememberedShop("user-a")).toBe("b");
+  expect(screen.getAllByRole("link", { name: "Create shop" })).toHaveLength(1);
+});
+
+it("keeps a truthful empty state with one onboarding action", () => {
+  setup("/app/shops", []);
+  expect(
+    screen.getByText("No available shops yet. Create a shop to get started."),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Create shop" })).toHaveAttribute(
+    "href",
+    "/app/onboarding/create-shop",
+  );
+});
