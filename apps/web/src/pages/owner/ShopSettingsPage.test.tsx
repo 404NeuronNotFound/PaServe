@@ -1,5 +1,5 @@
-import { afterEach, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -9,6 +9,24 @@ import { getShopSettings, updateShop } from "../../features/shops/api/context";
 import { ShopSettingsPage } from "./ShopSettingsPage";
 import { useFeedbackStore } from "../../app/stores/feedback";
 import { activeShopKey } from "../../features/shops/active-shop";
+import { FeedbackHost } from "../../components/feedback/FeedbackHost";
+
+const modalDescriptor = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "showModal");
+const closeDescriptor = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "close");
+beforeEach(() => {
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+    configurable: true,
+    value: vi.fn(function (this: HTMLDialogElement) {
+      this.open = true;
+    }),
+  });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", {
+    configurable: true,
+    value: vi.fn(function (this: HTMLDialogElement) {
+      this.open = false;
+    }),
+  });
+});
 
 vi.mock("../../features/shops/api/context", () => ({
   getShopSettings: vi.fn(),
@@ -22,7 +40,7 @@ const shop: ShopSettings = {
   isActive: true,
   createdAt: "2026-10-09",
   displayName: null,
-  phone: "+63 123",
+  phone: "+63 9123456789",
   contactEmail: null,
   website: null,
   address: null,
@@ -35,7 +53,13 @@ const membership: UserMembership = {
   shop: { id: shop.id, name: shop.name, slug: shop.slug, isActive: true },
 };
 afterEach(() => {
+  cleanup();
   vi.resetAllMocks();
+  vi.restoreAllMocks();
+  if (modalDescriptor) Object.defineProperty(HTMLDialogElement.prototype, "showModal", modalDescriptor);
+  else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+  if (closeDescriptor) Object.defineProperty(HTMLDialogElement.prototype, "close", closeDescriptor);
+  else Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
   useFeedbackStore.getState().clear();
 });
 function setup(role: UserMembership["role"] = "OWNER") {
@@ -45,6 +69,7 @@ function setup(role: UserMembership["role"] = "OWNER") {
   });
   render(
     <QueryClientProvider client={client}>
+      <FeedbackHost />
       <MemoryRouter>
         <ActiveShopContext.Provider value={{ ...membership, role }}>
           <ShopSettingsPage />
@@ -61,7 +86,7 @@ it("loads current values and saves only changed fields to the active shop", asyn
   });
   const client = setup();
   const user = userEvent.setup();
-  expect(await screen.findByLabelText("Phone")).toHaveValue("+63 123");
+  expect(await screen.findByLabelText("Phone")).toHaveValue("+63 9123456789");
   expect(screen.getByRole("button", { name: "Save settings" })).toBeDisabled();
   await user.clear(screen.getByLabelText("Business name (required)"));
   await user.type(
@@ -137,7 +162,7 @@ it("recovers from a failed settings load", async () => {
     await screen.findByRole("heading", { name: "Unable to load settings" }),
   ).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Try again" }));
-  expect(await screen.findByLabelText("Phone")).toHaveValue("+63 123");
+  expect(await screen.findByLabelText("Phone")).toHaveValue("+63 9123456789");
 });
 
 it("does not populate another account's caches when an earlier save finishes", async () => {
@@ -167,4 +192,70 @@ it("does not populate another account's caches when an earlier save finishes", a
     client.getQueryData(activeShopKey("other-user", shop.id)),
   ).toBeUndefined();
   expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+
+it("uses phone/email keyboards and rejects phone letters without losing leading zeroes", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  setup();
+  const user = userEvent.setup();
+  const phone = await screen.findByLabelText("Phone");
+  expect(phone).toHaveAttribute("type", "tel");
+  expect(phone).toHaveAttribute("inputmode", "tel");
+  expect(screen.getByLabelText("Contact email")).toHaveAttribute(
+    "type",
+    "email",
+  );
+  await user.clear(phone);
+  await user.type(phone, "09123456789a");
+  expect(phone).toHaveValue("09123456789");
+  expect(
+    await screen.findByText(
+      "Use digits for your phone number; letters are not allowed.",
+    ),
+  ).toBeInTheDocument();
+});
+
+it("requires confirmation to reset a draft and offers a working Undo snackbar", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  setup();
+  const user = userEvent.setup();
+  const name = await screen.findByLabelText("Business name (required)");
+  await user.clear(name);
+  await user.type(name, "Changed Cafe");
+  await user.click(screen.getByRole("button", { name: "Reset changes" }));
+  const dialog = await screen.findByRole("dialog", {
+    name: "Discard unsaved changes?",
+  });
+  await user.click(
+    within(dialog).getByRole("button", { name: "Keep editing" }),
+  );
+  expect(name).toHaveValue("Changed Cafe");
+  await user.click(screen.getByRole("button", { name: "Reset changes" }));
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Reset changes",
+    }),
+  );
+  expect(name).toHaveValue("Cafe A");
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  expect(name).toHaveValue("Changed Cafe");
+  expect(updateShop).not.toHaveBeenCalled();
+});
+
+it("asks before leaving via the form's back action and preserves a cancelled draft", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  setup();
+  const user = userEvent.setup();
+  const name = await screen.findByLabelText("Business name (required)");
+  await user.type(name, " edited");
+  await user.click(screen.getByRole("link", { name: "Back to shop" }));
+  expect(
+    await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
+  ).toBeInTheDocument();
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Keep editing",
+    }),
+  );
+  expect(name).toHaveValue("Cafe A edited");
 });

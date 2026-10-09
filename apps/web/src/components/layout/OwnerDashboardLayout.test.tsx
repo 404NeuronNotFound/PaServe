@@ -149,7 +149,8 @@ it("switches to an admin's shop and updates navigation and the page context", as
   const user = userEvent.setup();
   await screen.findByRole("heading", { name: "Cafe A" });
   const switcher = await screen.findByLabelText("Active shop");
-  await user.selectOptions(switcher, "b");
+  await user.click(switcher);
+  await user.click(within(switcher.parentElement!).getByRole("button", { name: /Cafe B/ }));
   expect(
     await screen.findByRole("heading", { name: "Cafe B" }),
   ).toBeInTheDocument();
@@ -171,6 +172,33 @@ it("omits the switcher when there is only one available shop", async () => {
     await screen.findByRole("heading", { name: "Cafe A" }),
   ).toBeInTheDocument();
   expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Active shop")).not.toBeInTheDocument();
+});
+it("marks only the exact sidebar destination as current", async () => {
+  setup();
+  await screen.findByRole("heading", { name: "Cafe A" });
+  const nav = screen.getByRole("navigation", { name: "Shop navigation" });
+  expect(within(nav).getByRole("link", { name: "Your shops" })).not.toHaveAttribute("aria-current");
+  expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+});
+it("supports keyboard shop choices, Escape and outside dismissal", async () => {
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: "Cafe A" });
+  const trigger = screen.getByLabelText("Active shop");
+  trigger.focus();
+  await user.keyboard("{ArrowDown}");
+  const first = within(trigger.parentElement!).getByRole("button", { name: /Cafe A/ });
+  expect(first).toHaveFocus();
+  expect(first).toHaveAttribute("aria-current", "true");
+  await user.keyboard("{End}");
+  expect(within(trigger.parentElement!).getByRole("button", { name: /Cafe B/ })).toHaveFocus();
+  await user.keyboard("{Escape}");
+  expect(trigger.parentElement).not.toHaveAttribute("open");
+  expect(trigger).toHaveFocus();
+  await user.click(trigger);
+  await user.click(screen.getByRole("heading", { name: "Cafe A" }));
+  expect(trigger.parentElement).not.toHaveAttribute("open");
 });
 it("supports account-menu keyboard dismissal and account navigation", async () => {
   setup();

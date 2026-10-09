@@ -40,48 +40,48 @@ export function ActiveShopPage() {
       </div>
       <nav className="shop-overview-actions" aria-label="Shop actions">
         {membership.role === "OWNER" && (
-          <Link
-            className="shop-action-card"
-            aria-label="Shop settings"
-            to={`${shopPath(membership.shopId)}/settings`}
-          >
+          <article className="shop-action-card">
             <span className="shop-action-icon">
               <FiSettings aria-hidden="true" />
             </span>
             <span className="section-label">MAKE IT YOURS</span>
-            <strong>Shop settings</strong>
+            <strong>Business details</strong>
             <span>
               Business details, contact information, and operating hours.
             </span>
-            <FiArrowUpRight className="shop-action-arrow" aria-hidden="true" />
-          </Link>
+            <Link
+              className="primary-button"
+              to={`${shopPath(membership.shopId)}/settings`}
+            >
+              Shop settings
+              <FiArrowUpRight aria-hidden="true" />
+            </Link>
+          </article>
         )}
-        <Link
-          className="shop-action-card"
-          to="/app/shops"
-          aria-label="Switch shop"
-        >
+        <article className="shop-action-card">
           <span className="shop-action-icon">
             <FiUsers aria-hidden="true" />
           </span>
           <span className="section-label">YOUR PEOPLE & PLACES</span>
-          <strong>Switch shop</strong>
+          <strong>Your places</strong>
           <span>Choose the place you want to manage next.</span>
-          <FiArrowUpRight className="shop-action-arrow" aria-hidden="true" />
-        </Link>
-        <Link
-          className="shop-action-card"
-          to="/app/account"
-          aria-label="Your account"
-        >
+          <Link className="secondary-button" to="/app/shops">
+            Switch shop
+            <FiArrowUpRight aria-hidden="true" />
+          </Link>
+        </article>
+        <article className="shop-action-card">
           <span className="shop-action-icon">
             <FiUser aria-hidden="true" />
           </span>
           <span className="section-label">YOUR PERSONAL SPACE</span>
-          <strong>Your account</strong>
+          <strong>Your profile</strong>
           <span>See your profile and all your shop memberships.</span>
-          <FiArrowUpRight className="shop-action-arrow" aria-hidden="true" />
-        </Link>
+          <Link className="secondary-button" to="/app/account">
+            Your account
+            <FiArrowUpRight aria-hidden="true" />
+          </Link>
+        </article>
       </nav>
     </section>
   );

@@ -80,3 +80,21 @@ it("finishes an in-flight refresh before logout and blocks further refresh attem
   await loggingOut;
   expect(useSessionStore.getState().accessToken).toBeNull();
 });
+
+it("offers a single Create shop action in the account's shop section", () => {
+  const client = new QueryClient();
+  client.setQueryData(currentUserKey, {
+    user: { id: "u", email: "owner@example.com", memberships: [] },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <AccountPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(screen.getAllByRole("link", { name: "Create shop" })).toHaveLength(1);
+  expect(
+    screen.queryByRole("link", { name: /Add a new shop/i }),
+  ).not.toBeInTheDocument();
+});

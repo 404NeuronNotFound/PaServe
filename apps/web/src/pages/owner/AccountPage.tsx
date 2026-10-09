@@ -7,7 +7,6 @@ import {
   FiLogOut,
   FiMail,
   FiShield,
-  FiUsers,
   FiGrid,
   FiUser,
 } from "react-icons/fi";
@@ -120,9 +119,6 @@ export function AccountPage() {
                 <br />
                 <em>A place of your own.</em>
               </p>
-              <Link className="primary-button" to="/app/onboarding/create-shop">
-                Add a new shop <FiArrowUpRight aria-hidden="true" />
-              </Link>
             </div>
           </div>
           <div className="workspace-summary">
@@ -176,7 +172,14 @@ export function AccountPage() {
             >
               <div className="card-heading">
                 <p className="section-label">02 / YOUR PEOPLE & PLACES</p>
-                <FiUsers aria-hidden="true" />
+                <Link
+                  className="primary-button shop-create-link"
+                  to="/app/onboarding/create-shop"
+                >
+                  <FiCoffee aria-hidden="true" />
+                  Create shop
+                  <FiArrowUpRight aria-hidden="true" />
+                </Link>
               </div>
               <h2 id="shops-heading">Your people. Your places.</h2>
               {createdShopName && (
@@ -227,12 +230,6 @@ export function AccountPage() {
                   <span>Your shop memberships will appear here.</span>
                 </div>
               )}
-              <Link
-                className="secondary-button shop-create-link"
-                to="/app/onboarding/create-shop"
-              >
-                <FiCoffee aria-hidden="true" /> Create shop
-              </Link>
             </section>
           </div>
           <footer className="workspace-footer">

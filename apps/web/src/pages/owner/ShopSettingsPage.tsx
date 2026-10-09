@@ -1,12 +1,14 @@
 import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { isAxiosError } from "axios";
 import isEmail from "validator/lib/isEmail";
 import isURL from "validator/lib/isURL";
 import {
   SHOP_LIMITS,
   SHOP_SETTINGS_LIMITS,
+  isValidShopPhone,
+  SHOP_PHONE_HINT,
   type ShopSettings,
   type UpdateShopRequest,
   type CurrentUserResponse,
@@ -20,7 +22,9 @@ import {
 import { getShopSettings, updateShop } from "../../features/shops/api/context";
 import { currentUserKey } from "../../features/auth/api/session";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
-import { feedback } from "../../app/stores/feedback";
+import { feedback, useFeedbackStore } from "../../app/stores/feedback";
+import { DecisionDialog } from "../../components/feedback/DecisionDialog";
+import { FiSave, FiRotateCcw, FiArrowLeft } from "react-icons/fi";
 
 const fields = [
   {
@@ -46,6 +50,7 @@ const fields = [
     label: "Phone",
     max: SHOP_SETTINGS_LIMITS.phone,
     type: "tel",
+    hint: SHOP_PHONE_HINT,
     section: "Contact and location",
   },
   {
@@ -155,12 +160,14 @@ function SettingsState({
 function SettingsForm({ shop }: { shop: ShopSettings }) {
   const membership = useActiveShop();
   const client = useQueryClient();
+  const navigate = useNavigate();
   const userId =
     client.getQueryData<CurrentUserResponse>(currentUserKey)?.user.id;
   const [values, setValues] = useState(() => valuesFrom(shop));
   const [baseline, setBaseline] = useState(() => valuesFrom(shop));
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [error, setError] = useState("");
+  const [decision, setDecision] = useState<"reset" | "leave" | null>(null);
   const form = useRef<HTMLFormElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const saving = useRef(false);
@@ -169,6 +176,25 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
     retry: false,
   });
   const dirty = fields.some(({ key }) => values[key].trim() !== baseline[key]);
+  const resetNoticeKey = `settings-reset:${shop.id}`;
+  useEffect(
+    () => () => {
+      const store = useFeedbackStore.getState();
+      for (const notice of store.notices)
+        if (notice.key === resetNoticeKey) store.dismiss(notice.id);
+    },
+    [resetNoticeKey],
+  );
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (dirty) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
   useEffect(() => {
     document.title = `Shop settings · ${shop.name} · PaServe`;
     heading.current?.focus();
@@ -184,25 +210,46 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
           ?.focus(),
       );
   }
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (saving.current) return;
-    const next: Partial<Record<Field, string>> = {};
-    for (const { key, max } of fields)
-      if (values[key].trim().length > max)
-        next[key] = `Use no more than ${max} characters.`;
-    if (!values.name.trim()) next.name = "Enter your business name.";
-    if (values.contactEmail.trim() && !isEmail(values.contactEmail.trim()))
-      next.contactEmail = "Enter a valid contact email.";
+  function fieldError(key: Field, value: string): string | undefined {
+    const field = fields.find((item) => item.key === key)!;
+    const trimmed = value.trim();
+    if (trimmed.length > field.max)
+      return `Use no more than ${field.max} characters.`;
+    if (key === "name" && !trimmed) return "Enter your business name.";
+    if (key === "phone" && !isValidShopPhone(value)) return SHOP_PHONE_HINT;
+    if (key === "contactEmail" && trimmed && !isEmail(trimmed))
+      return "Enter a valid contact email.";
     if (
-      values.website.trim() &&
-      !isURL(values.website.trim(), {
+      key === "website" &&
+      trimmed &&
+      !isURL(trimmed, {
         protocols: ["http", "https"],
         require_protocol: true,
         disallow_auth: true,
       })
     )
-      next.website = "Enter a full http:// or https:// website address.";
+      return "Enter a full http:// or https:// website address.";
+  }
+  function changeField(key: Field, value: string) {
+    if (key === "phone" && /[^0-9+ ()-]/.test(value)) {
+      setErrors((current) => ({
+        ...current,
+        phone: "Use digits for your phone number; letters are not allowed.",
+      }));
+      return;
+    }
+    setValues((current) => ({ ...current, [key]: value }));
+    setErrors((current) => ({ ...current, [key]: undefined }));
+    setError("");
+  }
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (saving.current) return;
+    const next: Partial<Record<Field, string>> = {};
+    for (const { key } of fields) {
+      const message = fieldError(key, values[key]);
+      if (message) next[key] = message;
+    }
     setError("");
     showErrors(next);
     if (Object.keys(next).length) return;
@@ -212,6 +259,10 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
         .map(({ key }) => [key, values[key].trim()]),
     ) as UpdateShopRequest;
     if (!Object.keys(changes).length) return;
+    for (const notice of useFeedbackStore.getState().notices) {
+      if (notice.key === resetNoticeKey)
+        useFeedbackStore.getState().dismiss(notice.id);
+    }
     saving.current = true;
     try {
       const saved = await mutation.mutateAsync(changes);
@@ -321,26 +372,68 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                     disabled={mutation.isPending}
                     aria-invalid={Boolean(errors[field.key])}
                     aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
-                    onChange={(event) => {
-                      setValues({ ...values, [field.key]: event.target.value });
-                      setErrors({ ...errors, [field.key]: undefined });
-                    }}
+                    onChange={(event) =>
+                      changeField(field.key, event.target.value)
+                    }
+                    onBlur={() =>
+                      setErrors((current) => ({
+                        ...current,
+                        [field.key]: fieldError(field.key, values[field.key]),
+                      }))
+                    }
                   />
                 ) : (
                   <input
                     id={`settings-${field.key}`}
                     name={field.key}
                     type={"type" in field ? field.type : "text"}
+                    inputMode={
+                      field.key === "phone"
+                        ? "tel"
+                        : field.key === "contactEmail"
+                          ? "email"
+                          : field.key === "website"
+                            ? "url"
+                            : "text"
+                    }
+                    autoComplete={
+                      field.key === "phone"
+                        ? "tel"
+                        : field.key === "contactEmail"
+                          ? "email"
+                          : field.key === "website"
+                            ? "url"
+                            : field.key === "name"
+                              ? "organization"
+                              : "off"
+                    }
+                    autoCapitalize={
+                      field.key === "contactEmail" || field.key === "website"
+                        ? "none"
+                        : undefined
+                    }
+                    spellCheck={
+                      field.key === "phone" ||
+                      field.key === "contactEmail" ||
+                      field.key === "website"
+                        ? false
+                        : undefined
+                    }
                     required={field.key === "name"}
                     maxLength={field.max}
                     value={values[field.key]}
                     disabled={mutation.isPending}
                     aria-invalid={Boolean(errors[field.key])}
                     aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
-                    onChange={(event) => {
-                      setValues({ ...values, [field.key]: event.target.value });
-                      setErrors({ ...errors, [field.key]: undefined });
-                    }}
+                    onChange={(event) =>
+                      changeField(field.key, event.target.value)
+                    }
+                    onBlur={() =>
+                      setErrors((current) => ({
+                        ...current,
+                        [field.key]: fieldError(field.key, values[field.key]),
+                      }))
+                    }
                   />
                 )}
                 <p className="field-hint" id={`settings-${field.key}-hint`}>
@@ -348,6 +441,11 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                     ? field.hint
                     : `Up to ${field.max} characters.`}
                 </p>
+                {"multiline" in field && (
+                  <span className="field-character-count" aria-hidden="true">
+                    {values[field.key].length} / {field.max}
+                  </span>
+                )}
                 {errors[field.key] && (
                   <InlineMessage
                     id={`settings-${field.key}-error`}
@@ -376,19 +474,77 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
           {mutation.isPending ? "Saving shop settings. Please wait." : ""}
         </p>
         <div className="shop-context-actions settings-savebar">
-          <span className="field-hint">Your changes apply to this shop.</span>
+          <span className="field-hint" role="status">
+            {dirty ? "Unsaved changes" : "All changes saved"}
+          </span>
           <button
             type="submit"
             className="primary-button"
             disabled={mutation.isPending || !dirty}
           >
+            <FiSave aria-hidden="true" />
             {mutation.isPending ? "Saving…" : "Save settings"}
           </button>
-          <Link className="shop-create-cancel" to={shopPath(shop.id)}>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={!dirty || mutation.isPending}
+            onClick={() => setDecision("reset")}
+          >
+            <FiRotateCcw aria-hidden="true" />
+            Reset changes
+          </button>
+          <Link
+            className="secondary-button"
+            to={shopPath(shop.id)}
+            onClick={(event) => {
+              if (dirty) {
+                event.preventDefault();
+                setDecision("leave");
+              }
+            }}
+          >
+            <FiArrowLeft aria-hidden="true" />
             Back to shop
           </Link>
         </div>
       </form>
+      <DecisionDialog
+        open={decision !== null}
+        title="Discard unsaved changes?"
+        description={
+          decision === "leave"
+            ? "Your edits have not been saved. Discard them and return to your shop?"
+            : "Reset this form to the last saved settings? Your saved shop details will stay the same."
+        }
+        confirmLabel={
+          decision === "leave" ? "Discard and leave" : "Reset changes"
+        }
+        cancelLabel="Keep editing"
+        destructive
+        onClose={() => setDecision(null)}
+        onConfirm={() => {
+          if (decision === "leave") {
+            void navigate(shopPath(shop.id));
+            return;
+          }
+          const previous = { ...values };
+          setValues({ ...baseline });
+          setErrors({});
+          setError("");
+          feedback.snackbar(
+            "Unsaved edits reset.",
+            {
+              label: "Undo",
+              onClick: () => {
+                setValues(previous);
+                setErrors({});
+              },
+            },
+            { key: resetNoticeKey },
+          );
+        }}
+      />
     </section>
   );
 }
