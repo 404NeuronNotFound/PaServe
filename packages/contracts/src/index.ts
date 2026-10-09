@@ -61,3 +61,22 @@ export interface ApiErrorResponse {
   message: string;
   fieldErrors?: Record<string, string[]>;
 }
+
+export const SHOP_LIMITS = { nameMax: 120, descriptionMax: 1000 } as const;
+
+export interface CreateShopRequest {
+  name: string;
+  description?: string;
+}
+
+export interface CreateShopResponse {
+  shop: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    isActive: boolean;
+    createdAt: string;
+  };
+  membership: UserMembership;
+}
