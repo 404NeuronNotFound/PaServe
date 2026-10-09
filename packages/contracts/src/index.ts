@@ -31,7 +31,14 @@ export interface LoginResponse {
   expiresIn: number;
 }
 
-export type ShopRole = "OWNER" | "ADMIN" | "MANAGER" | "CASHIER" | "KITCHEN";
+export const SHOP_ROLES = [
+  "OWNER",
+  "ADMIN",
+  "MANAGER",
+  "CASHIER",
+  "KITCHEN",
+] as const;
+export type ShopRole = (typeof SHOP_ROLES)[number];
 
 /** Explicit daily operations; these grants do not include role or billing changes. */
 export const SHOP_OPERATIONAL_PERMISSIONS = [
@@ -65,8 +72,10 @@ export function canTransitionPreparationStatus(
   from: PreparationStatus,
   to: PreparationStatus,
 ): boolean {
-  return (from === "QUEUED" && to === "PREPARING") ||
-    (from === "PREPARING" && to === "READY");
+  return (
+    (from === "QUEUED" && to === "PREPARING") ||
+    (from === "PREPARING" && to === "READY")
+  );
 }
 
 /** Shop-scoped authority. Ownership/billing permissions are reserved for future flows. */
@@ -110,8 +119,14 @@ export function hasShopPermission(
     (allowed) => allowed === permission,
   );
   if (role === "ADMIN")
-    return permission === "shop.operations.manage" || dailyOperation || counterAction || preparationAction;
-  if (role === "MANAGER") return dailyOperation || counterAction || preparationAction;
+    return (
+      permission === "shop.operations.manage" ||
+      dailyOperation ||
+      counterAction ||
+      preparationAction
+    );
+  if (role === "MANAGER")
+    return dailyOperation || counterAction || preparationAction;
   if (role === "CASHIER") return counterAction;
   return role === "KITCHEN" && preparationAction;
 }
