@@ -3,7 +3,7 @@ import { ShopsController } from './shops.controller.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { ShopsService } from './shops.service.js';
 import { ShopMembershipGuard } from '../shop-members/guards/shop-membership.guard.js';
-import { ShopOwnerGuard } from '../shop-members/guards/shop-owner.guard.js';
+import { RolesGuard } from '../shop-members/guards/roles.guard.js';
 
 describe('ShopsController', () => {
   let controller: ShopsController;
@@ -17,7 +17,7 @@ describe('ShopsController', () => {
       .useValue({ canActivate: () => true })
       .overrideGuard(ShopMembershipGuard)
       .useValue({ canActivate: () => true })
-      .overrideGuard(ShopOwnerGuard)
+      .overrideGuard(RolesGuard)
       .useValue({ canActivate: () => true })
       .compile();
 

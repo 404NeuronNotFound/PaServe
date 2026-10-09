@@ -17,7 +17,7 @@ import {
 import { ShopsService } from './shops.service.js';
 import { CreateShopDto } from './dto/create-shop.dto.js';
 import { UpdateShopDto } from './dto/update-shop.dto.js';
-import { ShopOwnerGuard } from '../shop-members/guards/shop-owner.guard.js';
+import { Roles } from '../shop-members/decorators/roles.decorator.js';
 import {
   ShopMembershipGuard,
   type ShopMemberRequest,
@@ -29,7 +29,7 @@ export class ShopsController {
   constructor(private readonly shops: ShopsService) {}
 
   @Get(':shopId/settings')
-  @UseGuards(ShopOwnerGuard)
+  @Roles('OWNER')
   settings(
     @Req() request: ShopMemberRequest,
     @Res({ passthrough: true }) response: Response,
@@ -42,7 +42,7 @@ export class ShopsController {
   }
 
   @Patch(':shopId')
-  @UseGuards(ShopOwnerGuard)
+  @Roles('OWNER')
   updateSettings(
     @Body() dto: UpdateShopDto,
     @Req() request: ShopMemberRequest,
