@@ -1,6 +1,8 @@
 import {
   SHOP_LIMITS,
   SHOP_SETTINGS_LIMITS,
+  isValidShopPhone,
+  SHOP_PHONE_HINT,
   type UpdateShopRequest,
 } from '@paserve/contracts';
 import { Transform } from 'class-transformer';
@@ -11,6 +13,7 @@ import {
   MaxLength,
   MinLength,
   ValidateIf,
+  ValidateBy,
 } from 'class-validator';
 
 const trim = ({ value }: { value: unknown }) =>
@@ -40,6 +43,14 @@ export class UpdateShopDto implements UpdateShopRequest {
   @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsString()
   @MaxLength(SHOP_SETTINGS_LIMITS.phone)
+  @ValidateBy({
+    name: 'shopPhone',
+    validator: {
+      validate: (value: unknown) =>
+        typeof value === 'string' && isValidShopPhone(value),
+      defaultMessage: () => SHOP_PHONE_HINT,
+    },
+  })
   phone?: string;
 
   @Transform(trim)

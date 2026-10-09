@@ -54,7 +54,7 @@ try {
           name: ' Changed Business ',
           description: ' A friendly cafe ',
           displayName: ' The Cafe ',
-          phone: ' +63 123 ',
+          phone: ' +63 9123456789 ',
           contactEmail: ' cafe@example.com ',
           website: ' https://example.com ',
           address: ' Main Street ',

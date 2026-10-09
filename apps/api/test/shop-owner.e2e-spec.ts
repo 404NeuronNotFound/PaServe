@@ -224,7 +224,7 @@ describe('Owner-only shop updates', () => {
   it('saves contact, display and operating details, trims them, and clears blanks', async () => {
     const response = await patch(shopA, {
       displayName: ' Cafe Display ',
-      phone: ' +63 123 ',
+      phone: ' +63 9123456789 ',
       contactEmail: ' contact@example.com ',
       website: ' https://example.com ',
       address: ' Main Street ',
@@ -232,7 +232,7 @@ describe('Owner-only shop updates', () => {
     }).expect(200);
     expect(response.body.shop).toMatchObject({
       displayName: 'Cafe Display',
-      phone: '+63 123',
+      phone: '+63 9123456789',
       contactEmail: 'contact@example.com',
       website: 'https://example.com',
       address: 'Main Street',
@@ -272,6 +272,10 @@ describe('Owner-only shop updates', () => {
     { website: 'https://user:pass@example.com' },
     { website: 'example.com' },
     { phone: 123 },
+    { phone: 'letters only' },
+    { phone: '123456' },
+    { phone: '+1234567890123456' },
+    { phone: '(02 8123-4567' },
     { displayName: null },
     { operatingHours: [] },
     { logoUrl: 'https://example.com/logo.png' },
