@@ -284,6 +284,16 @@ export function DashboardFrame({
                   Categories
                 </NavLink>
               )}
+            {membership &&
+              hasShopPermission(membership.role, "shop.menu.manage") && (
+                <NavLink
+                  to={`${shopPath(membership.shopId)}/products`}
+                  onClick={closeNavigation}
+                >
+                  <FiCoffee aria-hidden="true" />
+                  Products
+                </NavLink>
+              )}
             <NavLink end to="/app/shops" onClick={closeNavigation}>
               <FiCoffee aria-hidden="true" />
               Your shops

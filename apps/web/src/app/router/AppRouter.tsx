@@ -19,6 +19,7 @@ import {
 import { ActiveShopPage } from "../../pages/owner/ActiveShopPage";
 import { ShopSettingsPage } from "../../pages/owner/ShopSettingsPage";
 import { CategoriesPage } from "../../pages/owner/CategoriesPage";
+import { ProductsPage } from "../../pages/owner/ProductsPage";
 import { OwnerDashboardLayout } from "../../components/layout/OwnerDashboardLayout";
 
 export function AppRouter() {
@@ -43,6 +44,7 @@ export function AppRouter() {
               <Route index element={<ActiveShopPage />} />
               <Route path="settings" element={<ShopSettingsPage />} />
               <Route path="categories" element={<CategoriesPage />} />
+              <Route path="products" element={<ProductsPage />} />
             </Route>
           </Route>
           <Route path="account" element={<AccountPage />} />
