@@ -55,6 +55,12 @@ model Shop {
   name        String
   slug        String   @unique
   description String?
+  displayName String?
+  phone       String?
+  contactEmail String?
+  website     String?
+  address     String?
+  operatingHours String?
   logoUrl     String?
   bannerUrl   String?
   isActive    Boolean  @default(true)

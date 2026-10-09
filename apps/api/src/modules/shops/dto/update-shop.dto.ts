@@ -1,6 +1,17 @@
-import { SHOP_LIMITS, type UpdateShopRequest } from '@paserve/contracts';
+import {
+  SHOP_LIMITS,
+  SHOP_SETTINGS_LIMITS,
+  type UpdateShopRequest,
+} from '@paserve/contracts';
 import { Transform } from 'class-transformer';
-import { IsString, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import {
+  IsEmail,
+  IsUrl,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -18,4 +29,50 @@ export class UpdateShopDto implements UpdateShopRequest {
   @IsString({ message: 'Enter a description or leave it blank.' })
   @MaxLength(SHOP_LIMITS.descriptionMax)
   description?: string;
+
+  @Transform(trim)
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsString()
+  @MaxLength(SHOP_SETTINGS_LIMITS.displayName)
+  displayName?: string;
+
+  @Transform(trim)
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsString()
+  @MaxLength(SHOP_SETTINGS_LIMITS.phone)
+  phone?: string;
+
+  @Transform(trim)
+  @ValidateIf((_object, value: unknown) => value !== undefined && value !== '')
+  @IsEmail({}, { message: 'Enter a valid contact email or leave it blank.' })
+  @MaxLength(SHOP_SETTINGS_LIMITS.contactEmail)
+  contactEmail?: string;
+
+  @Transform(trim)
+  @ValidateIf((_object, value: unknown) => value !== undefined && value !== '')
+  @IsUrl(
+    {
+      protocols: ['http', 'https'],
+      require_protocol: true,
+      disallow_auth: true,
+    },
+    {
+      message:
+        'Enter a full http:// or https:// website address or leave it blank.',
+    },
+  )
+  @MaxLength(SHOP_SETTINGS_LIMITS.website)
+  website?: string;
+
+  @Transform(trim)
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsString()
+  @MaxLength(SHOP_SETTINGS_LIMITS.address)
+  address?: string;
+
+  @Transform(trim)
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsString()
+  @MaxLength(SHOP_SETTINGS_LIMITS.operatingHours)
+  operatingHours?: string;
 }

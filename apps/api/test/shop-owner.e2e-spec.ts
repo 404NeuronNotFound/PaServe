@@ -20,6 +20,7 @@ describe('Owner-only shop updates', () => {
   const findUnique = vi.fn();
   const create = vi.fn();
   const update = vi.fn();
+  const findFirst = vi.fn();
   const createdAt = new Date('2026-10-09T00:00:00Z');
   const membership = (shopId: string, role: ShopRole) => ({
     id: `member-${shopId}`,
@@ -32,7 +33,10 @@ describe('Owner-only shop updates', () => {
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
-      .useValue({ shop: { create, update }, shopMember: { findUnique } })
+      .useValue({
+        shop: { create, update, findFirst },
+        shopMember: { findUnique },
+      })
       .overrideProvider(AuthService)
       .useValue({ currentUser })
       .compile();
@@ -48,6 +52,19 @@ describe('Owner-only shop updates', () => {
     members.clear();
     members.set(shopA, membership(shopA, 'OWNER'));
     members.set(shopB, membership(shopB, 'CASHIER'));
+    findFirst.mockImplementation(
+      async ({ where }: { where: { id: string } }) => ({
+        ...members.get(where.id)!.shop,
+        description: 'Original description',
+        createdAt,
+        displayName: null,
+        phone: null,
+        contactEmail: null,
+        website: null,
+        address: null,
+        operatingHours: null,
+      }),
+    );
     currentUser.mockImplementation(async (token: string) => {
       if (token === 'revoked') throw invalidSession();
       // Deliberately stale OWNER claim: authorization must use the join record.
@@ -160,6 +177,112 @@ describe('Owner-only shop updates', () => {
       }),
     );
   });
+
+  it('loads settings only for the owner of the exact requested shop', async () => {
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/shops/${shopA}/settings`)
+      .set('Authorization', 'Bearer valid-token')
+      .expect(200);
+    expect(response.body.shop).toMatchObject({
+      id: shopA,
+      name: 'Cafe',
+      displayName: null,
+      operatingHours: null,
+    });
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: shopA,
+          isActive: true,
+          members: {
+            some: { userId, role: 'OWNER', user: { isActive: true } },
+          },
+        },
+      }),
+    );
+    findFirst.mockClear();
+    await request(app.getHttpServer())
+      .get(`/api/v1/shops/${shopB}/settings`)
+      .set('Authorization', 'Bearer valid-token')
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/v1/shops/${missingShop}/settings`)
+      .set('Authorization', 'Bearer valid-token')
+      .expect(404);
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+
+  it('fails a settings read when ownership changes after the guard', async () => {
+    findFirst.mockResolvedValue(null);
+    await request(app.getHttpServer())
+      .get(`/api/v1/shops/${shopA}/settings`)
+      .set('Authorization', 'Bearer valid-token')
+      .expect(403);
+  });
+
+  it('saves contact, display and operating details, trims them, and clears blanks', async () => {
+    const response = await patch(shopA, {
+      displayName: ' Cafe Display ',
+      phone: ' +63 123 ',
+      contactEmail: ' contact@example.com ',
+      website: ' https://example.com ',
+      address: ' Main Street ',
+      operatingHours: ' Mon–Fri 8am–6pm ',
+    }).expect(200);
+    expect(response.body.shop).toMatchObject({
+      displayName: 'Cafe Display',
+      phone: '+63 123',
+      contactEmail: 'contact@example.com',
+      website: 'https://example.com',
+      address: 'Main Street',
+      operatingHours: 'Mon–Fri 8am–6pm',
+    });
+    await patch(shopA, {
+      displayName: ' ',
+      phone: '',
+      contactEmail: '',
+      website: '',
+      address: '',
+      operatingHours: '',
+    }).expect(200);
+    expect(update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: {
+          displayName: null,
+          phone: null,
+          contactEmail: null,
+          website: null,
+          address: null,
+          operatingHours: null,
+        },
+      }),
+    );
+  });
+
+  it.each([
+    { displayName: 'x'.repeat(121) },
+    { phone: 'x'.repeat(41) },
+    { address: 'x'.repeat(501) },
+    { operatingHours: 'x'.repeat(1001) },
+    { contactEmail: 'invalid' },
+    { contactEmail: null },
+    { website: 'javascript:alert(1)' },
+    { website: 'ftp://example.com' },
+    { website: 'https://user:pass@example.com' },
+    { website: 'example.com' },
+    { phone: 123 },
+    { displayName: null },
+    { operatingHours: [] },
+    { logoUrl: 'https://example.com/logo.png' },
+    { bannerUrl: '' },
+  ])(
+    'rejects invalid new settings and unimplemented branding writes (%j)',
+    async (body) => {
+      await patch(shopA, body).expect(400);
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
 
   it('lets a newly onboarded creator perform the protected operation', async () => {
     const created = await request(app.getHttpServer())

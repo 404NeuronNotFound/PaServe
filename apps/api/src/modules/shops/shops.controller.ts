@@ -28,6 +28,19 @@ import {
 export class ShopsController {
   constructor(private readonly shops: ShopsService) {}
 
+  @Get(':shopId/settings')
+  @UseGuards(ShopOwnerGuard)
+  settings(
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.shops.getSettings(
+      request.user.id,
+      request.shopMembership.shopId,
+    );
+  }
+
   @Patch(':shopId')
   @UseGuards(ShopOwnerGuard)
   updateSettings(
