@@ -232,7 +232,11 @@ export interface UpdateShopResponse {
 }
 export type ShopSettingsResponse = UpdateShopResponse;
 
-export const CATEGORY_LIMITS = { nameMax: 80, slugMax: 80 } as const;
+export const CATEGORY_LIMITS = {
+  nameMax: 80,
+  slugMax: 80,
+  descriptionMax: 500,
+} as const;
 export interface CreateCategoryRequest {
   name: string;
 }
@@ -240,6 +244,7 @@ export interface MenuCategory {
   id: string;
   shopId: string;
   name: string;
+  description: string | null;
   slug: string;
   sortOrder: number;
   isVisible: boolean;
@@ -251,3 +256,8 @@ export interface CreateCategoryResponse {
 export interface CategoriesResponse {
   categories: MenuCategory[];
 }
+export interface UpdateCategoryRequest {
+  name?: string;
+  description?: string;
+}
+export type UpdateCategoryResponse = CreateCategoryResponse;
