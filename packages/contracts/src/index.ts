@@ -72,6 +72,22 @@ export const SHOP_SETTINGS_LIMITS = {
   operatingHours: 1000,
 } as const;
 
+export const SHOP_PHONE_HINT =
+  "Use 7–15 digits. A leading +, spaces, hyphens and parentheses are allowed.";
+export function isValidShopPhone(value: string): boolean {
+  const phone = value.trim();
+  if (!phone) return true;
+  const digits = phone.replace(/[^0-9]/g, "");
+  if (!/^\+?[0-9 ()-]+$/.test(phone) || digits.length < 7 || digits.length > 15)
+    return false;
+  let parentheses = 0;
+  for (const character of phone) {
+    if (character === "(" && ++parentheses > 1) return false;
+    if (character === ")" && --parentheses < 0) return false;
+  }
+  return parentheses === 0;
+}
+
 export interface CreateShopRequest {
   name: string;
   description?: string;
