@@ -8,6 +8,7 @@ import {
   type ApiErrorResponse,
   type CategoriesResponse,
   type CurrentUserResponse,
+  type MenuCategory,
 } from "@paserve/contracts";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
@@ -19,6 +20,7 @@ import {
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import "./categories.css";
+import { CategoryEditor } from "./CategoryEditor";
 
 export function CategoriesPage() {
   const membership = useActiveShop();
@@ -37,6 +39,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
   const [fieldError, setFieldError] = useState("");
   const [error, setError] = useState("");
   const [lostAccess, setLostAccess] = useState(false);
+  const [editing, setEditing] = useState<MenuCategory | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const mounted = useRef(false);
   const submitting = useRef(false);
@@ -188,10 +191,27 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                   <div>
                     <strong>{category.name}</strong>
                     <small>/{category.slug}</small>
+                    {category.description && (
+                      <p className="category-description">
+                        {category.description}
+                      </p>
+                    )}
                   </div>
                   <span className="category-visibility">
                     {category.isVisible ? "Visible" : "Hidden"}
                   </span>
+                  <button
+                    id={`category-edit-${category.id}`}
+                    type="button"
+                    className="secondary-button category-edit-button"
+                    disabled={
+                      Boolean(editing) || mutation.isPending || lostAccess
+                    }
+                    aria-label={`Edit ${category.name}`}
+                    onClick={() => setEditing(category)}
+                  >
+                    Edit
+                  </button>
                 </li>
               ))}
             </ul>
@@ -211,6 +231,22 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             >
               {query.isFetching ? "Refreshing…" : "Refresh categories"}
             </button>
+          )}
+          {editing && (
+            <CategoryEditor
+              key={editing.id}
+              category={editing}
+              userId={userId}
+              shopId={shopId}
+              onClose={() => {
+                setEditing(null);
+                queueMicrotask(() =>
+                  document
+                    .getElementById(`category-edit-${editing.id}`)
+                    ?.focus(),
+                );
+              }}
+            />
           )}
         </section>
         <section

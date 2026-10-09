@@ -2,6 +2,8 @@ import type {
   CategoriesResponse,
   CreateCategoryRequest,
   CreateCategoryResponse,
+  UpdateCategoryRequest,
+  UpdateCategoryResponse,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
@@ -15,6 +17,18 @@ export async function listCategories(
     await api.get<CategoriesResponse>(
       `/shops/${encodeURIComponent(shopId)}/categories`,
       { signal },
+    )
+  ).data;
+}
+export async function updateCategory(
+  shopId: string,
+  categoryId: string,
+  input: UpdateCategoryRequest,
+): Promise<UpdateCategoryResponse> {
+  return (
+    await api.patch<UpdateCategoryResponse>(
+      `/shops/${encodeURIComponent(shopId)}/categories/${encodeURIComponent(categoryId)}`,
+      input,
     )
   ).data;
 }

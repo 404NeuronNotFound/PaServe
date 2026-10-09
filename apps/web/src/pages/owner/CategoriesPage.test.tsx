@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -10,6 +10,7 @@ import {
   createCategory,
   listCategories,
   categoriesKey,
+  updateCategory,
 } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
 import { CategoriesPage } from "./CategoriesPage";
@@ -19,11 +20,13 @@ vi.mock("../../features/shops/api/categories", async (importOriginal) => ({
   >()),
   createCategory: vi.fn(),
   listCategories: vi.fn(),
+  updateCategory: vi.fn(),
 }));
 const category = {
   id: "category-a",
   shopId: "a",
   name: "Coffee",
+  description: null,
   slug: "coffee",
   sortOrder: 0,
   isVisible: true,
@@ -150,4 +153,137 @@ it("ignores a creation response after the page is unmounted", async () => {
     categories: [],
   });
   expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+
+it("edits display details and retains the menu address", async () => {
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  const edited = {
+    ...category,
+    name: "Hot Drinks",
+    description: "Fresh coffee",
+  };
+  vi.mocked(updateCategory).mockResolvedValue({ category: edited });
+  setup();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Edit Coffee" }));
+  const editor = within(screen.getByRole("region", { name: "Edit category" }));
+  const name = editor.getByRole("textbox", { name: "Category name" });
+  expect(name).toHaveFocus();
+  await user.clear(name);
+  await user.type(name, "Hot Drinks");
+  await user.type(
+    editor.getByRole("textbox", { name: /Description/ }),
+    "Fresh coffee",
+  );
+  expect(editor.getByText("/coffee")).toBeInTheDocument();
+  vi.mocked(listCategories).mockResolvedValue({ categories: [edited] });
+  await user.click(editor.getByRole("button", { name: "Save changes" }));
+  await waitFor(() =>
+    expect(updateCategory).toHaveBeenCalledWith("a", "category-a", {
+      name: "Hot Drinks",
+      description: "Fresh coffee",
+    }),
+  );
+  expect(
+    await screen.findByRole("button", { name: "Edit Hot Drinks" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("region", { name: "Edit category" }),
+  ).not.toBeInTheDocument();
+});
+
+it("keeps invalid edit values and blocks empty names", async () => {
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  setup();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Edit Coffee" }));
+  const editor = within(screen.getByRole("region", { name: "Edit category" }));
+  await user.clear(editor.getByRole("textbox", { name: "Category name" }));
+  await user.click(editor.getByRole("button", { name: "Save changes" }));
+  expect(editor.getByText("Enter a category name.")).toBeInTheDocument();
+  expect(updateCategory).not.toHaveBeenCalled();
+});
+
+it("preserves the edit draft when saving fails", async () => {
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  vi.mocked(updateCategory).mockRejectedValue(new Error("offline"));
+  setup();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Edit Coffee" }));
+  const editor = within(screen.getByRole("region", { name: "Edit category" }));
+  await user.type(
+    editor.getByRole("textbox", { name: /Description/ }),
+    "Fresh coffee",
+  );
+  await user.click(editor.getByRole("button", { name: "Save changes" }));
+  expect(
+    await editor.findByText("We couldn’t save the category. Please try again."),
+  ).toBeInTheDocument();
+  expect(editor.getByRole("textbox", { name: /Description/ })).toHaveValue(
+    "Fresh coffee",
+  );
+});
+
+it("confirms discarding edits and supports keeping the draft", async () => {
+  const originalShow = Object.getOwnPropertyDescriptor(
+    HTMLDialogElement.prototype,
+    "showModal",
+  );
+  const originalClose = Object.getOwnPropertyDescriptor(
+    HTMLDialogElement.prototype,
+    "close",
+  );
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+    configurable: true,
+    value: function (this: HTMLDialogElement) {
+      this.open = true;
+    },
+  });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", {
+    configurable: true,
+    value: function (this: HTMLDialogElement) {
+      this.open = false;
+    },
+  });
+  try {
+    vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+    setup();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Edit Coffee" }),
+    );
+    const editor = within(
+      screen.getByRole("region", { name: "Edit category" }),
+    );
+    await user.type(
+      editor.getByRole("textbox", { name: /Description/ }),
+      "Draft",
+    );
+    await user.click(editor.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(editor.getByRole("textbox", { name: /Description/ })).toHaveValue(
+      "Draft",
+    );
+    await user.click(editor.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(
+      screen.queryByRole("region", { name: "Edit category" }),
+    ).not.toBeInTheDocument();
+    expect(updateCategory).not.toHaveBeenCalled();
+  } finally {
+    if (originalShow)
+      Object.defineProperty(
+        HTMLDialogElement.prototype,
+        "showModal",
+        originalShow,
+      );
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+    if (originalClose)
+      Object.defineProperty(
+        HTMLDialogElement.prototype,
+        "close",
+        originalClose,
+      );
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
+  }
 });
