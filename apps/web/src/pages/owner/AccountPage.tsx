@@ -16,6 +16,7 @@ import { currentUserKey, logoutAccount } from "../../features/auth/api/session";
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { rememberShop, shopPath } from "../../features/shops/active-shop";
 
 export function AccountPage() {
   const client = useQueryClient();
@@ -34,6 +35,7 @@ export function AccountPage() {
     mutationFn: logoutAccount,
     retry: false,
     onSuccess: () => {
+      if (user?.id) rememberShop(user.id, null);
       feedback.clearTransient();
       feedback.toast("You are signed out.");
       client.clear();
@@ -181,10 +183,18 @@ export function AccountPage() {
                             membership.role.slice(1).toLowerCase()}{" "}
                           ·{" "}
                           {membership.shop.isActive
-                            ? "Active shop"
+                            ? "Available shop"
                             : "Inactive shop"}
                         </span>
                       </div>
+                      {membership.shop.isActive && (
+                        <Link
+                          className="secondary-button"
+                          to={shopPath(membership.shopId)}
+                        >
+                          Manage {membership.shop.name}
+                        </Link>
+                      )}
                     </li>
                   ))}
                 </ul>

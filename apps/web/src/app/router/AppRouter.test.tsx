@@ -33,28 +33,31 @@ function renderAt(path: string) {
   );
 }
 
-it.each(["/app", "/app/account", "/app/onboarding/create-shop"])(
-  "redirects guests entering %s directly to login",
-  async (path) => {
-    const error = new AxiosError("Unauthorized");
-    error.response = {
-      status: 401,
-      statusText: "Unauthorized",
-      headers: {},
-      config: { headers: new AxiosHeaders() },
-      data: {},
-    };
-    vi.mocked(getCurrentUser).mockRejectedValue(error);
-    renderAt(path);
-    expect(
-      await screen.findByRole("heading", { name: "Public sign in" }),
-    ).toBeInTheDocument();
-    expect(window.location.pathname).toBe("/login");
-    expect(
-      screen.queryByText("Your account is ready. Shop setup comes next."),
-    ).not.toBeInTheDocument();
-  },
-);
+it.each([
+  "/app",
+  "/app/account",
+  "/app/onboarding/create-shop",
+  "/app/shops",
+  "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e",
+])("redirects guests entering %s directly to login", async (path) => {
+  const error = new AxiosError("Unauthorized");
+  error.response = {
+    status: 401,
+    statusText: "Unauthorized",
+    headers: {},
+    config: { headers: new AxiosHeaders() },
+    data: {},
+  };
+  vi.mocked(getCurrentUser).mockRejectedValue(error);
+  renderAt(path);
+  expect(
+    await screen.findByRole("heading", { name: "Public sign in" }),
+  ).toBeInTheDocument();
+  expect(window.location.pathname).toBe("/login");
+  expect(
+    screen.queryByText("Your account is ready. Shop setup comes next."),
+  ).not.toBeInTheDocument();
+});
 
 it.each(["/app", "/app/account"])(
   "allows a verified user into %s",

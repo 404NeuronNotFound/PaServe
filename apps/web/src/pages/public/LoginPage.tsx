@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AuthLayout } from "../../components/layout/AuthLayout";
 import { LoginForm } from "../../features/auth/components/LoginForm";
-import { currentUserKey } from "../../features/auth/api/session";
 import { feedback } from "../../app/stores/feedback";
 
 export function LoginPage() {
@@ -18,12 +17,12 @@ export function LoginPage() {
       <h1 id="login-heading">Sign in to PaServe</h1>
       <p className="form-intro">Use your email and password to continue.</p>
       <LoginForm
-        onSuccess={(session) => {
+        onSuccess={() => {
           feedback.clearTransient();
           feedback.toast("You are signed in.");
           queryClient.clear();
-          queryClient.setQueryData(currentUserKey, { user: session.user });
-          void navigate("/app/account", { replace: true });
+          // Resolve from the complete, fresh /auth/me profile, including shops.
+          void navigate("/app", { replace: true });
         }}
       />
       <p className="account-note">

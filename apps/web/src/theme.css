@@ -1574,6 +1574,58 @@
 .shop-create-link:hover {
   background: var(--color-secondary);
 }
+.shop-context-page {
+  overflow: auto;
+}
+.shop-context-content {
+  width: min(720px, calc(100% - 32px));
+  margin: 24px auto;
+}
+.shop-context-content h1 {
+  overflow-wrap: anywhere;
+  font-family: Georgia, serif;
+}
+.shop-context-content p {
+  line-height: 1.6;
+}
+.shop-selection-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.shop-selection-list .secondary-button {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.shop-context-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+.shop-context-content .secondary-button,
+.membership-list .secondary-button,
+.shop-context-error .secondary-button {
+  color: var(--color-text);
+  border-color: var(--color-border);
+  min-height: 44px;
+}
+.shop-context-content .secondary-button:hover,
+.membership-list .secondary-button:hover,
+.shop-context-error .secondary-button:hover {
+  background: var(--color-secondary);
+}
+.membership-list li {
+  flex-wrap: wrap;
+}
+.membership-list .secondary-button {
+  margin-left: auto;
+  white-space: normal;
+}
 @media (max-width: 760px) {
   .shop-create-page {
     height: auto;
