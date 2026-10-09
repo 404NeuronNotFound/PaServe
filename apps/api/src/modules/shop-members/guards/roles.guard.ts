@@ -5,19 +5,11 @@ import {
   type ExecutionContext,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import type { ShopRole } from '@paserve/contracts';
+import { SHOP_ROLES, type ShopRole } from '@paserve/contracts';
 import { invalidSession } from '../../auth/tokens.service.js';
 import { ShopMembersService } from '../shop-members.service.js';
 import type { ShopMemberRequest } from './shop-membership.guard.js';
 import { SHOP_ROLES_KEY } from '../roles.metadata.js';
-
-const knownRoles: readonly ShopRole[] = [
-  'OWNER',
-  'ADMIN',
-  'MANAGER',
-  'CASHIER',
-  'KITCHEN',
-];
 
 /** Always resolves live membership for :shopId; never trusts cached role claims. */
 @Injectable()
@@ -37,7 +29,7 @@ export class RolesGuard implements CanActivate {
     if (
       !Array.isArray(roles) ||
       !roles.length ||
-      !roles.every((role) => knownRoles.includes(role))
+      !Array.from(roles).every((role) => SHOP_ROLES.includes(role))
     )
       throw new ForbiddenException({
         code: 'SHOP_ROLE_POLICY_REQUIRED',

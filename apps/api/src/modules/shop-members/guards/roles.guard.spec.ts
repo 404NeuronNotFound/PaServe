@@ -80,6 +80,15 @@ describe('RolesGuard', () => {
     });
   });
 
+  it('rejects sparse role policies before membership lookup', async () => {
+    Reflect.defineMetadata(SHOP_ROLES_KEY, Array(1), handler);
+    await expect(guard.canActivate(context)).rejects.toMatchObject({
+      status: 403,
+      response: { code: 'SHOP_ROLE_POLICY_REQUIRED' },
+    });
+    expect(memberships.requireMembership).not.toHaveBeenCalled();
+  });
+
   it('rejects requests without authentication before membership lookup', async () => {
     Reflect.defineMetadata(SHOP_ROLES_KEY, ['ADMIN'], handler);
     delete request.user;

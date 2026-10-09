@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import type { ShopRole } from '@paserve/contracts';
+import { SHOP_ROLES, type ShopRole } from '@paserve/contracts';
 import { isUUID } from 'class-validator';
 
 /** Fail closed before constructing a Prisma filter; never allow omitted shop IDs. */
@@ -8,7 +8,14 @@ export function shopAccessWhere(
   shopId: string,
   roles?: readonly ShopRole[],
 ) {
-  if (!isUUID(userId) || !isUUID(shopId) || (roles && !roles.length))
+  if (
+    !isUUID(userId) ||
+    !isUUID(shopId) ||
+    (roles !== undefined &&
+      (!Array.isArray(roles) ||
+        !roles.length ||
+        !Array.from(roles).every((role) => SHOP_ROLES.includes(role))))
+  )
     throw new BadRequestException({
       code: 'INVALID_TENANT_CONTEXT',
       message: 'A valid user and shop context are required.',

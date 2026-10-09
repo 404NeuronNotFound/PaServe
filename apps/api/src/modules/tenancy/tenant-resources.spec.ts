@@ -3,6 +3,7 @@ import { TenantResourcesRepository } from './tenant-resources.repository.js';
 import { TenantResourcesService } from './tenant-resources.service.js';
 import type { PrismaService } from '../../database/prisma.service.js';
 import type { ShopMembersService } from '../shop-members/shop-members.service.js';
+import type { ShopRole } from '@paserve/contracts';
 
 describe('tenant resource isolation', () => {
   const userId = '75992537-5d60-4d22-8e1e-60a114644681';
@@ -116,6 +117,20 @@ describe('tenant resource isolation', () => {
       id: shopId,
       members: { some: { userId, role: 'OWNER' } },
     });
+  });
+
+  it.each([
+    { roles: null },
+    { roles: 'OWNER' },
+    { roles: [undefined] },
+    { roles: [null] },
+    { roles: ['SUPER_ADMIN'] },
+    { roles: ['OWNER', undefined] },
+    { roles: Array(1) },
+  ])('rejects malformed role filters before a query (%j)', ({ roles }) => {
+    expect(() =>
+      shopAccessWhere(userId, shopId, roles as readonly ShopRole[]),
+    ).toThrow();
   });
 
   it('rejects an omitted resource ID at repository level instead of reading the first row', () => {

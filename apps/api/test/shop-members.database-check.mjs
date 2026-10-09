@@ -2,6 +2,7 @@
 import 'dotenv/config';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { SHOP_PERMISSIONS } from '@paserve/contracts';
 import { PrismaService } from '../dist/database/prisma.service.js';
 import { ShopsRepository } from '../dist/modules/shops/shops.repository.js';
 import { ShopsService } from '../dist/modules/shops/shops.service.js';
@@ -142,6 +143,94 @@ try {
           where: { userId_shopId: { userId: userA.id, shopId: shopA.id } },
           data: { role: 'OWNER' },
         });
+        // Exercise every permission using live, independent shop memberships.
+        const daily = [
+          'shop.menu.manage',
+          'shop.orders.manage',
+          'shop.reports.read',
+          'shop.daily-operations.manage',
+        ];
+        const counter = [
+          'shop.orders.qr.scan',
+          'shop.orders.read',
+          'shop.payments.record',
+          'shop.orders.confirm',
+          'shop.orders.reject',
+          'shop.menu.availability.update',
+        ];
+        const preparation = [
+          'shop.preparation.queue.read',
+          'shop.preparation.status.update',
+        ];
+        const grants = {
+          OWNER: [
+            ...daily,
+            ...counter,
+            ...preparation,
+            'shop.operations.manage',
+            'shop.settings.manage',
+            'shop.ownership.manage',
+            'shop.billing.manage',
+          ],
+          ADMIN: [
+            ...daily,
+            ...counter,
+            ...preparation,
+            'shop.operations.manage',
+          ],
+          MANAGER: [...daily, ...counter, ...preparation],
+          CASHIER: counter,
+          KITCHEN: preparation,
+        };
+        for (const [role, allowed] of Object.entries(grants)) {
+          await tx.shopMember.update({
+            where: { userId_shopId: { userId: userA.id, shopId: shopB.id } },
+            data: { role },
+          });
+          for (const permission of SHOP_PERMISSIONS) {
+            const check = memberships.requirePermission(
+              userA.id,
+              shopB.id,
+              permission,
+            );
+            if (allowed.includes(permission))
+              assert.equal((await check).role, role);
+            else await assert.rejects(check, { status: 403 });
+          }
+          await assert.rejects(
+            memberships.requirePermission(userA.id, shopB.id, 'shop.unknown'),
+            { status: 403 },
+          );
+          const transition = memberships.requirePreparationTransition(
+            userA.id,
+            shopB.id,
+            'QUEUED',
+            'PREPARING',
+          );
+          if (role === 'CASHIER')
+            await assert.rejects(transition, { status: 403 });
+          else {
+            assert.equal((await transition).role, role);
+            await assert.rejects(
+              memberships.requirePreparationTransition(
+                userA.id,
+                shopB.id,
+                'READY',
+                'QUEUED',
+              ),
+              { status: 400 },
+            );
+          }
+          // A role change in B must never change OWNER authority in A.
+          assert.equal(
+            (await memberships.requireOwner(userA.id, shopA.id)).role,
+            'OWNER',
+          );
+        }
+        await tx.shopMember.update({
+          where: { userId_shopId: { userId: userA.id, shopId: shopB.id } },
+          data: { role: 'CASHIER' },
+        });
         // A staff member creating another shop owns only the new relationship.
         const { shop: shopC } = await shops.create(userA.id, {
           name: `Member C ${fixtureKey}`,
@@ -268,7 +357,7 @@ try {
         assert.equal(await tx.shop.count({ where: { id: shopB.id } }), 1);
         throw rollback;
       },
-      { timeout: 30000, maxWait: 10000 },
+      { timeout: 60000, maxWait: 10000 },
     ),
     (error) => error === rollback,
   );
@@ -292,7 +381,7 @@ try {
     0,
   );
   console.log(
-    'Verified OWNER assignment, owner-only updates, unchanged slugs, denial after role changes, write-time authorization, independent roles, relationship constraints, and cascade cleanup. No fixtures retained.',
+    'Verified all five role permission matrices and preparation policies against live memberships, OWNER assignment, owner-only updates, unchanged slugs, denial after role changes, write-time authorization, independent roles, relationship constraints, and cascade cleanup. No fixtures retained.',
   );
 } finally {
   await prisma.$disconnect();
