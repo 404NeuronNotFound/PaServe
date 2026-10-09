@@ -169,6 +169,71 @@
 .categories-refresh {
   margin-top: 20px;
 }
+.categories-reorder {
+  margin: 0 0 20px;
+}
+.category-order-editor {
+  display: grid;
+  gap: 20px;
+}
+.category-order-editor h3,
+.category-order-editor > p {
+  margin: 0;
+}
+.category-order-editor > p {
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.category-order-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.category-order-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.category-order-position {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-secondary);
+  font-size: 13px;
+}
+.category-order-list li > div:first-of-type {
+  min-width: 0;
+  flex: 1;
+}
+.category-order-list strong,
+.category-order-list small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.category-order-list small {
+  color: var(--color-muted);
+  margin-top: 6px;
+}
+.category-order-controls {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.category-order-controls .secondary-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  margin: 0;
+}
 @media (max-width: 1000px) {
   .categories-layout {
     grid-template-columns: minmax(0, 1fr);

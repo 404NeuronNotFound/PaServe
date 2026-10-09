@@ -13,6 +13,7 @@ import {
   updateCategory,
   deleteCategory,
   setCategoryVisibility,
+  reorderCategories,
 } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
 import { CategoriesPage } from "./CategoriesPage";
@@ -25,6 +26,7 @@ vi.mock("../../features/shops/api/categories", async (importOriginal) => ({
   updateCategory: vi.fn(),
   deleteCategory: vi.fn(),
   setCategoryVisibility: vi.fn(),
+  reorderCategories: vi.fn(),
 }));
 const category = {
   id: "category-a",
@@ -36,6 +38,172 @@ const category = {
   isVisible: true,
   createdAt: "2026-10-09T00:00:00Z",
 };
+const meals = {
+  ...category,
+  id: "category-b",
+  name: "Meals",
+  slug: "meals",
+  isVisible: false,
+  sortOrder: 7,
+};
+it.each(["OWNER", "ADMIN", "MANAGER"] as const)(
+  "lets %s arrange, save and undo the full category order",
+  async (role) => {
+    vi.mocked(listCategories).mockResolvedValue({
+      categories: [category, meals],
+    });
+    const saved = [
+      { ...meals, sortOrder: 0 },
+      { ...category, sortOrder: 1 },
+    ];
+    vi.mocked(reorderCategories)
+      .mockResolvedValueOnce({ categories: saved })
+      .mockResolvedValueOnce({
+        categories: [
+          { ...category, sortOrder: 0 },
+          { ...meals, sortOrder: 1 },
+        ],
+      });
+    const { client } = setup(role);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Reorder categories" }),
+    );
+    const editor = within(
+      screen.getByRole("region", { name: "Reorder categories" }),
+    );
+    expect(
+      editor.getByRole("button", { name: "Move Coffee up" }),
+    ).toBeDisabled();
+    expect(
+      editor.getByRole("button", { name: "Move Meals down" }),
+    ).toBeDisabled();
+    expect(editor.getByRole("button", { name: "Save order" })).toBeDisabled();
+    await user.click(editor.getByRole("button", { name: "Move Meals up" }));
+    expect(editor.getByRole("status")).toHaveTextContent(
+      "Meals moved to position 1 of 2.",
+    );
+    expect(reorderCategories).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Create category" }),
+    ).toBeDisabled();
+    vi.mocked(listCategories).mockResolvedValue({ categories: saved });
+    await user.click(editor.getByRole("button", { name: "Save order" }));
+    await waitFor(() =>
+      expect(reorderCategories).toHaveBeenCalledWith("a", {
+        categoryIds: ["category-b", "category-a"],
+        expectedOrder: ["category-a", "category-b"],
+      }),
+    );
+    await screen.findByRole("button", { name: "Reorder categories" });
+    expect(
+      screen.queryByRole("region", { name: "Reorder categories" }),
+    ).not.toBeInTheDocument();
+    expect(client.getQueryData(categoriesKey("user-a", "a"))).toEqual({
+      categories: saved,
+    });
+    const notice = useFeedbackStore.getState().notices[0];
+    if (notice.kind !== "snackbar") throw new Error("Missing Undo");
+    vi.mocked(listCategories).mockResolvedValue({
+      categories: [
+        { ...category, sortOrder: 0 },
+        { ...meals, sortOrder: 1 },
+      ],
+    });
+    await notice.action.onClick();
+    expect(reorderCategories).toHaveBeenLastCalledWith("a", {
+      categoryIds: ["category-a", "category-b"],
+      expectedOrder: ["category-b", "category-a"],
+    });
+  },
+);
+
+it("keeps a reorder draft and explains a concurrent order conflict", async () => {
+  vi.mocked(listCategories).mockResolvedValue({
+    categories: [category, meals],
+  });
+  vi.mocked(reorderCategories).mockRejectedValue({
+    isAxiosError: true,
+    response: { status: 409 },
+  });
+  setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Reorder categories" }),
+  );
+  const editor = within(
+    screen.getByRole("region", { name: "Reorder categories" }),
+  );
+  await user.click(editor.getByRole("button", { name: "Move Meals up" }));
+  await user.click(editor.getByRole("button", { name: "Save order" }));
+  expect(
+    await editor.findByText(/category list or order changed elsewhere/),
+  ).toBeInTheDocument();
+  expect(editor.getAllByRole("listitem")[0]).toHaveTextContent("Meals");
+  expect(reorderCategories).toHaveBeenCalledTimes(1);
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+
+it("confirms discarding reorder changes and supports keeping the draft", async () => {
+  const restore = mockDecisionDialog();
+  try {
+    vi.mocked(listCategories).mockResolvedValue({
+      categories: [category, meals],
+    });
+    setup();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Reorder categories" }),
+    );
+    const editor = within(
+      screen.getByRole("region", { name: "Reorder categories" }),
+    );
+    await user.click(editor.getByRole("button", { name: "Move Coffee down" }));
+    await user.click(editor.getByRole("button", { name: "Cancel" }));
+    expect(
+      screen.getByRole("button", { name: "Keep arranging" }),
+    ).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Keep arranging" }));
+    expect(editor.getAllByRole("listitem")[0]).toHaveTextContent("Meals");
+    await user.click(editor.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(
+      screen.queryByRole("region", { name: "Reorder categories" }),
+    ).not.toBeInTheDocument();
+    expect(reorderCategories).not.toHaveBeenCalled();
+  } finally {
+    restore();
+  }
+});
+
+it("blocks repeated saves and ignores a reorder completion after leaving the shop", async () => {
+  vi.mocked(listCategories).mockResolvedValue({
+    categories: [category, meals],
+  });
+  let resolve!: (result: { categories: (typeof category)[] }) => void;
+  vi.mocked(reorderCategories).mockImplementation(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  const { unmount, client } = setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Reorder categories" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Move Meals up" }));
+  await user.dblClick(screen.getByRole("button", { name: "Save order" }));
+  expect(reorderCategories).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  unmount();
+  resolve({ categories: [meals, category] });
+  await waitFor(() => expect(reorderCategories).toHaveBeenCalled());
+  expect(client.getQueryData(categoriesKey("user-a", "a"))).toEqual({
+    categories: [category, meals],
+  });
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
 beforeEach(() => {
   vi.mocked(listCategories).mockResolvedValue({ categories: [] });
   vi.mocked(createCategory).mockResolvedValue({ category });

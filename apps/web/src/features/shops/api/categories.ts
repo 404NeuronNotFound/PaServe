@@ -5,11 +5,23 @@ import type {
   UpdateCategoryRequest,
   UpdateCategoryResponse,
   SetCategoryVisibilityRequest,
+  ReorderCategoriesRequest,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
 export const categoriesKey = (userId: string, shopId: string) =>
   ["categories", userId, shopId] as const;
+export async function reorderCategories(
+  shopId: string,
+  input: ReorderCategoriesRequest,
+): Promise<CategoriesResponse> {
+  return (
+    await api.patch<CategoriesResponse>(
+      `/shops/${encodeURIComponent(shopId)}/categories/reorder`,
+      input,
+    )
+  ).data;
+}
 export async function setCategoryVisibility(
   shopId: string,
   categoryId: string,

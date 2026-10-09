@@ -4,6 +4,7 @@ import { isAxiosError } from "axios";
 import { FiLayers, FiLoader, FiPlus, FiEye, FiEyeOff } from "react-icons/fi";
 import {
   CATEGORY_LIMITS,
+  CATEGORY_REORDER_MAX,
   hasShopPermission,
   type ApiErrorResponse,
   type CategoriesResponse,
@@ -18,12 +19,14 @@ import {
   listCategories,
   deleteCategory,
   setCategoryVisibility,
+  reorderCategories,
 } from "../../features/shops/api/categories";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import "./categories.css";
 import { CategoryEditor } from "./CategoryEditor";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
+import { CategoryOrderEditor } from "./CategoryOrderEditor";
 
 export function CategoriesPage() {
   const membership = useActiveShop();
@@ -44,6 +47,8 @@ function CategoryWorkspace({ userId }: { userId: string }) {
   const [lostAccess, setLostAccess] = useState(false);
   const [editing, setEditing] = useState<MenuCategory | null>(null);
   const [deleting, setDeleting] = useState<MenuCategory | null>(null);
+  const [reordering, setReordering] = useState(false);
+  const orderBusy = useRef(false);
   const [visibilityError, setVisibilityError] = useState<{
     id: string;
     message: string;
@@ -84,6 +89,77 @@ function CategoryWorkspace({ userId }: { userId: string }) {
     retry: false,
     networkMode: "always",
   });
+  const order = useMutation({
+    mutationFn: ({
+      categoryIds,
+      expectedOrder,
+    }: {
+      categoryIds: string[];
+      expectedOrder: string[];
+    }) => reorderCategories(shopId, { categoryIds, expectedOrder }),
+    retry: false,
+    networkMode: "always",
+  });
+  async function saveOrder(
+    categoryIds: string[],
+    expectedOrder: string[],
+    undo = false,
+  ): Promise<boolean> {
+    if (!stillHere())
+      throw new Error(
+        "Return to this shop’s Categories page before changing its order.",
+      );
+    if (orderBusy.current || visibilityBusy.current)
+      throw new Error("Wait for the current menu update to finish.");
+    orderBusy.current = true;
+    try {
+      await client.cancelQueries({ queryKey: key });
+      if (!stillHere()) return false;
+      const result = await order.mutateAsync({ categoryIds, expectedOrder });
+      if (!stillHere()) return false;
+      await client.cancelQueries({ queryKey: key });
+      if (!stillHere()) return false;
+      client.setQueryData(key, result);
+      void client.invalidateQueries({ queryKey: key });
+      if (!undo)
+        feedback.snackbar(
+          "Category order saved.",
+          {
+            label: "Undo",
+            onClick: async () => {
+              await saveOrder(
+                expectedOrder,
+                result.categories.map((category) => category.id),
+                true,
+              );
+            },
+            errorMessage: (failure) =>
+              failure instanceof Error
+                ? failure.message
+                : "We couldn’t undo the order. Refresh the categories.",
+          },
+          { key: `category-order:${userId}:${shopId}` },
+        );
+      return true;
+    } catch (failure) {
+      if (!stillHere()) return false;
+      let message = "We couldn’t save the order. Please try again.";
+      if (isAxiosError(failure)) {
+        if (failure.response?.status === 409)
+          message =
+            "The category list or order changed elsewhere. Cancel and refresh categories before arranging again.";
+        else if ([401, 403, 404].includes(failure.response?.status ?? 0))
+          message =
+            "Categories or your access changed. Cancel and refresh categories to continue.";
+        else if (!failure.response)
+          message =
+            "We couldn’t confirm the saved order. Cancel and refresh categories before trying again.";
+      }
+      throw new Error(message, { cause: failure });
+    } finally {
+      orderBusy.current = false;
+    }
+  }
   function visibilityMessage(failure: unknown) {
     if (isAxiosError(failure)) {
       if ([401, 403, 404].includes(failure.response?.status ?? 0))
@@ -114,7 +190,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
         );
       return;
     }
-    if (visibilityBusy.current) {
+    if (visibilityBusy.current || orderBusy.current) {
       if (undo)
         throw new Error("Wait for the current visibility update to finish.");
       return;
@@ -193,7 +269,14 @@ function CategoryWorkspace({ userId }: { userId: string }) {
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (submitting.current || !authorized || lostAccess) return;
+    if (
+      submitting.current ||
+      !authorized ||
+      lostAccess ||
+      reordering ||
+      orderBusy.current
+    )
+      return;
     const invalid = validate(name);
     setFieldError(invalid);
     setError("");
@@ -295,7 +378,48 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               <span>{query.data.categories.length}</span>
             )}
           </div>
-          {query.isPending ? (
+          {query.isSuccess &&
+            !query.isError &&
+            query.data.categories.length > 1 &&
+            !reordering && (
+              <button
+                id="category-reorder-button"
+                type="button"
+                className="secondary-button categories-reorder"
+                disabled={
+                  Boolean(editing) ||
+                  Boolean(deleting) ||
+                  mutation.isPending ||
+                  visibility.isPending ||
+                  order.isPending ||
+                  query.isFetching ||
+                  lostAccess ||
+                  query.data.categories.length > CATEGORY_REORDER_MAX
+                }
+                onClick={() => setReordering(true)}
+              >
+                Reorder categories
+              </button>
+            )}
+          {query.data &&
+            query.data.categories.length > CATEGORY_REORDER_MAX && (
+              <InlineMessage tone="info">
+                Reordering supports up to {CATEGORY_REORDER_MAX} categories at
+                once.
+              </InlineMessage>
+            )}
+          {reordering && query.data ? (
+            <CategoryOrderEditor
+              categories={query.data.categories}
+              onSave={saveOrder}
+              onClose={() => {
+                setReordering(false);
+                queueMicrotask(() =>
+                  document.getElementById("category-reorder-button")?.focus(),
+                );
+              }}
+            />
+          ) : query.isPending ? (
             <InlineMessage tone="info">Loading categories…</InlineMessage>
           ) : query.isError ? (
             <>
@@ -340,6 +464,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                         Boolean(deleting) ||
                         mutation.isPending ||
                         visibility.isPending ||
+                        order.isPending ||
                         lostAccess ||
                         query.isFetching
                       }
@@ -371,6 +496,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                         Boolean(deleting) ||
                         mutation.isPending ||
                         visibility.isPending ||
+                        order.isPending ||
                         lostAccess
                       }
                       aria-label={`Edit ${category.name}`}
@@ -388,6 +514,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                         Boolean(deleting) ||
                         mutation.isPending ||
                         visibility.isPending ||
+                        order.isPending ||
                         lostAccess
                       }
                       onClick={() => setDeleting(category)}
@@ -414,7 +541,12 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             <button
               type="button"
               className="secondary-button categories-refresh"
-              disabled={query.isFetching || visibility.isPending}
+              disabled={
+                query.isFetching ||
+                visibility.isPending ||
+                order.isPending ||
+                reordering
+              }
               onClick={() => {
                 setVisibilityError(null);
                 void query.refetch();
@@ -489,7 +621,9 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             </div>
             {error && <InlineMessage>{error}</InlineMessage>}
             <p className="categories-form-note">
-              New categories are visible by default.
+              {reordering
+                ? "Finish arranging categories before creating a new one. Your name draft stays here."
+                : "New categories are visible by default."}
             </p>
             <p className="sr-only" role="status">
               {mutation.isPending ? "Creating category. Please wait." : ""}
@@ -497,7 +631,13 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             <button
               className="primary-button"
               type="submit"
-              disabled={mutation.isPending || lostAccess || requestDenied}
+              disabled={
+                mutation.isPending ||
+                lostAccess ||
+                requestDenied ||
+                reordering ||
+                order.isPending
+              }
             >
               {mutation.isPending ? (
                 <FiLoader className="is-spinning" aria-hidden="true" />
