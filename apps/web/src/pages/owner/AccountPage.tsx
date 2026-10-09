@@ -43,7 +43,7 @@ export function AccountPage() {
     },
   });
   return (
-    <main className="account-page">
+    <main className="account-page phase-two account-overview-page">
       <header className="workspace-header">
         <Link className="wordmark" to="/app/account">
           <span className="brand-symbol">
@@ -94,21 +94,36 @@ export function AccountPage() {
           </div>
         </aside>
         <div className="account-content" id="overview">
-          <div className="account-greeting">
-            <p className="section-label">
-              <span className="status-dot" />{" "}
-              {user?.firstName
-                ? `WELCOME BACK, ${user.firstName.toUpperCase()}`
-                : "WELCOME TO YOUR NEXT CHAPTER"}
-            </p>
-            <h1 ref={heading} tabIndex={-1}>
-              Your space.
-              <br />
-              <em>
-                Your pace<span className="lime-period">.</span>
-              </em>
-            </h1>
-            <p>You’re signed in. Make yourself at home.</p>
+          <div className="account-hero">
+            <div className="account-greeting">
+              <p className="section-label">
+                <span className="status-dot" />{" "}
+                {user?.firstName
+                  ? `WELCOME BACK, ${user.firstName.toUpperCase()}`
+                  : "WELCOME TO YOUR NEXT CHAPTER"}
+              </p>
+              <h1 ref={heading} tabIndex={-1}>
+                Your space.
+                <br />
+                <em>
+                  Your pace<span className="lime-period">.</span>
+                </em>
+              </h1>
+              <p>You’re signed in. Make yourself at home.</p>
+            </div>
+            <div className="account-hero-action">
+              <span className="hero-coffee-mark" aria-hidden="true">
+                <FiCoffee />
+              </span>
+              <p>
+                A little ambition.
+                <br />
+                <em>A place of your own.</em>
+              </p>
+              <Link className="primary-button" to="/app/onboarding/create-shop">
+                Add a new shop <FiArrowUpRight aria-hidden="true" />
+              </Link>
+            </div>
           </div>
           <div className="workspace-summary">
             <span>
@@ -176,7 +191,7 @@ export function AccountPage() {
                       <span className="shop-icon">
                         <FiCoffee aria-hidden="true" />
                       </span>
-                      <div>
+                      <div className="membership-details">
                         <strong>{membership.shop.name}</strong>
                         <span>
                           {membership.role.charAt(0) +
@@ -186,13 +201,17 @@ export function AccountPage() {
                             ? "Available shop"
                             : "Inactive shop"}
                         </span>
+                        <span className="membership-slug">
+                          /{membership.shop.slug}
+                        </span>
                       </div>
                       {membership.shop.isActive && (
                         <Link
                           className="secondary-button"
                           to={shopPath(membership.shopId)}
+                          aria-label={`Manage ${membership.shop.name}`}
                         >
-                          Manage {membership.shop.name}
+                          Manage shop <FiArrowUpRight aria-hidden="true" />
                         </Link>
                       )}
                     </li>

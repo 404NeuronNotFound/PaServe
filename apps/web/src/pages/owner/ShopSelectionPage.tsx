@@ -37,7 +37,7 @@ export function ShopSelectionPage() {
     (membership) => membership.shop.isActive,
   );
   return (
-    <main className="account-page shop-context-page">
+    <main className="account-page shop-context-page phase-two shop-selection-page">
       <header className="workspace-header">
         <Link className="wordmark" to="/app/account">
           <FiCoffee aria-hidden="true" /> PaServe.
@@ -58,7 +58,10 @@ export function ShopSelectionPage() {
                 >
                   <FiCoffee aria-hidden="true" />{" "}
                   <span>
-                    {membership.shop.name} · {membership.role.toLowerCase()}
+                    <strong>{membership.shop.name}</strong>
+                    <span className="shop-selection-role">
+                      {membership.role.toLowerCase()} · /{membership.shop.slug}
+                    </span>
                   </span>
                 </Link>
               </li>

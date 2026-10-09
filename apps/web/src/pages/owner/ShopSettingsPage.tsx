@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { isAxiosError } from "axios";
@@ -289,78 +289,94 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
       </p>
       <form
         ref={form}
-        className="registration-form"
+        className="registration-form settings-form-grid"
         noValidate
         aria-busy={mutation.isPending}
         onSubmit={(event) => void submit(event)}
       >
         {fields.map((field) => (
-          <div key={field.key}>
-            {"section" in field && <h2>{field.section}</h2>}
-            <div className="field">
-              <label htmlFor={`settings-${field.key}`}>
-                {field.label}
-                {field.key === "name" ? " (required)" : ""}
-              </label>
-              {"multiline" in field ? (
-                <textarea
-                  id={`settings-${field.key}`}
-                  name={field.key}
-                  rows={3}
-                  maxLength={field.max}
-                  value={values[field.key]}
-                  disabled={mutation.isPending}
-                  aria-invalid={Boolean(errors[field.key])}
-                  aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
-                  onChange={(event) => {
-                    setValues({ ...values, [field.key]: event.target.value });
-                    setErrors({ ...errors, [field.key]: undefined });
-                  }}
-                />
-              ) : (
-                <input
-                  id={`settings-${field.key}`}
-                  name={field.key}
-                  type={"type" in field ? field.type : "text"}
-                  required={field.key === "name"}
-                  maxLength={field.max}
-                  value={values[field.key]}
-                  disabled={mutation.isPending}
-                  aria-invalid={Boolean(errors[field.key])}
-                  aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
-                  onChange={(event) => {
-                    setValues({ ...values, [field.key]: event.target.value });
-                    setErrors({ ...errors, [field.key]: undefined });
-                  }}
-                />
-              )}
-              <p className="field-hint" id={`settings-${field.key}-hint`}>
-                {"hint" in field
-                  ? field.hint
-                  : `Up to ${field.max} characters.`}
-              </p>
-              {errors[field.key] && (
-                <InlineMessage
-                  id={`settings-${field.key}-error`}
-                  className="field-error"
-                >
-                  {errors[field.key]}
-                </InlineMessage>
-              )}
+          <Fragment key={field.key}>
+            {"section" in field && (
+              <h2 className="settings-group-heading">{field.section}</h2>
+            )}
+            <div
+              className={
+                field.key === "description" || field.key === "operatingHours"
+                  ? "settings-field settings-field-wide"
+                  : "settings-field"
+              }
+            >
+              <div className="field">
+                <label htmlFor={`settings-${field.key}`}>
+                  {field.label}
+                  {field.key === "name" ? " (required)" : ""}
+                </label>
+                {"multiline" in field ? (
+                  <textarea
+                    id={`settings-${field.key}`}
+                    name={field.key}
+                    rows={3}
+                    maxLength={field.max}
+                    value={values[field.key]}
+                    disabled={mutation.isPending}
+                    aria-invalid={Boolean(errors[field.key])}
+                    aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
+                    onChange={(event) => {
+                      setValues({ ...values, [field.key]: event.target.value });
+                      setErrors({ ...errors, [field.key]: undefined });
+                    }}
+                  />
+                ) : (
+                  <input
+                    id={`settings-${field.key}`}
+                    name={field.key}
+                    type={"type" in field ? field.type : "text"}
+                    required={field.key === "name"}
+                    maxLength={field.max}
+                    value={values[field.key]}
+                    disabled={mutation.isPending}
+                    aria-invalid={Boolean(errors[field.key])}
+                    aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
+                    onChange={(event) => {
+                      setValues({ ...values, [field.key]: event.target.value });
+                      setErrors({ ...errors, [field.key]: undefined });
+                    }}
+                  />
+                )}
+                <p className="field-hint" id={`settings-${field.key}-hint`}>
+                  {"hint" in field
+                    ? field.hint
+                    : `Up to ${field.max} characters.`}
+                </p>
+                {errors[field.key] && (
+                  <InlineMessage
+                    id={`settings-${field.key}-error`}
+                    className="field-error"
+                  >
+                    {errors[field.key]}
+                  </InlineMessage>
+                )}
+              </div>
             </div>
-          </div>
+          </Fragment>
         ))}
-        <section aria-labelledby="branding-heading">
+        <section
+          className="settings-branding"
+          aria-labelledby="branding-heading"
+        >
           <h2 id="branding-heading">Branding</h2>
           <p className="field-hint">
             Logo and banner customization are planned for a future update.
           </p>
         </section>
-        {error && <InlineMessage>{error}</InlineMessage>}
+        {error && (
+          <InlineMessage className="settings-form-error">{error}</InlineMessage>
+        )}
         <p role="status" className="sr-only">
           {mutation.isPending ? "Saving shop settings. Please wait." : ""}
         </p>
-        <div className="shop-context-actions">
+        <div className="shop-context-actions settings-savebar">
+          <span className="field-hint">Your changes apply to this shop.</span>
           <button
             type="submit"
             className="primary-button"

@@ -109,7 +109,7 @@ export function CreateShopPage() {
   }
 
   return (
-    <main className="account-page shop-create-page">
+    <main className="account-page shop-create-page phase-two">
       <header className="workspace-header">
         <Link className="wordmark" to="/app/account">
           <span className="brand-symbol">
@@ -125,6 +125,44 @@ export function CreateShopPage() {
         </div>
       </header>
       <div className="account-content shop-create-content">
+        <aside className="shop-onboarding-intro" aria-label="Getting started">
+          <p className="section-label">A NEW CHAPTER</p>
+          <h2>
+            Your next
+            <br />
+            <em>great place.</em>
+          </h2>
+          <p>
+            From the first coffee to the last table. Give your business a home
+            in PaServe.
+          </p>
+          <ol>
+            <li>
+              <span>01</span>
+              <div>
+                <strong>Make it yours</strong>
+                <p>Start with your business name.</p>
+              </div>
+            </li>
+            <li>
+              <span>02</span>
+              <div>
+                <strong>Tell your story</strong>
+                <p>Add a description now or later.</p>
+              </div>
+            </li>
+            <li>
+              <span>03</span>
+              <div>
+                <strong>Step into your space</strong>
+                <p>You’ll be the owner of your new shop.</p>
+              </div>
+            </li>
+          </ol>
+          <div className="onboarding-signature" aria-hidden="true">
+            <FiCoffee /> SMALL DETAILS. BETTER DAYS.
+          </div>
+        </aside>
         <section
           className="profile-card shop-create-card"
           aria-labelledby="create-shop-heading"

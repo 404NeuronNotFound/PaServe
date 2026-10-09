@@ -80,7 +80,7 @@ export function DashboardFrame({
     if (navigationOpen) navigationTrigger.current?.focus();
   }
   return (
-    <div className="dashboard-shell">
+    <div className="dashboard-shell phase-two">
       <a className="skip-link" href="#dashboard-content">
         Skip to page content
       </a>
