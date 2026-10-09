@@ -1,22 +1,9 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
 import type { CreateShopResponse } from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
 import { ShopsRepository } from './shops.repository.js';
 import type { CreateShopDto } from './dto/create-shop.dto.js';
-
-function slugBase(name: string): string {
-  const slug = name
-    .normalize('NFKD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 80)
-    .replace(/-$/g, '');
-  const reserved = ['app', 'api', 'admin', 'login', 'register', 'shops'];
-  return !slug || reserved.includes(slug) ? 'shop' : slug;
-}
+import { generateShopSlug, SHOP_SLUG_MAX_ATTEMPTS } from './shop-slug.js';
 
 @Injectable()
 export class ShopsService {
@@ -27,9 +14,8 @@ export class ShopsService {
     dto: CreateShopDto,
   ): Promise<CreateShopResponse> {
     const name = dto.name.trim();
-    const base = slugBase(name);
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const slug = attempt === 0 ? base : `${base}-${randomUUID().slice(0, 8)}`;
+    for (let attempt = 0; attempt < SHOP_SLUG_MAX_ATTEMPTS; attempt++) {
+      const slug = generateShopSlug(name, attempt > 0);
       try {
         const shop = await this.repository.createWithOwner(
           userId,

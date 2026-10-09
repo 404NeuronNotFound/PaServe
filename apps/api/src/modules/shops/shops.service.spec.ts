@@ -57,7 +57,7 @@ describe('ShopsService creation', () => {
   });
   it.each([
     ['茶馆', 'shop'],
-    ['API', 'shop'],
+    ['API', 'api-shop'],
     ['---', 'shop'],
     ['A & B', 'a-b'],
   ])('handles slug base for %s', async (name, slug) => {

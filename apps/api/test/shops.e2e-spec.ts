@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { invalidSession } from '../src/modules/auth/tokens.service.js';
+import { Prisma } from '../src/generated/prisma/client.js';
 
 describe('POST /api/v1/shops', () => {
   let app: INestApplication<App>;
@@ -89,6 +90,84 @@ describe('POST /api/v1/shops', () => {
         data: expect.objectContaining({ description: null }),
       }),
     );
+  });
+  it('resolves collisions from simultaneous requests with the same normalized name', async () => {
+    const slugs = new Set<string>();
+    create.mockImplementation(
+      ({
+        data,
+      }: {
+        data: {
+          name: string;
+          slug: string;
+          description: string | null;
+          members: { create: { userId: string; role: string } };
+        };
+      }) => {
+        if (slugs.has(data.slug))
+          throw new Prisma.PrismaClientKnownRequestError('Unique constraint', {
+            code: 'P2002',
+            clientVersion: '7.10.0',
+            meta: {
+              driverAdapterError: {
+                cause: { constraint: { index: 'shops_slug_key' } },
+              },
+            },
+          });
+        slugs.add(data.slug);
+        const id = `shop-${slugs.size}`;
+        return Promise.resolve({
+          id,
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          isActive: true,
+          createdAt: new Date(),
+          members: [
+            {
+              id: `member-${slugs.size}`,
+              shopId: id,
+              role: data.members.create.role,
+            },
+          ],
+        });
+      },
+    );
+    const responses = await Promise.all(
+      ['Café North', 'CAFE NORTH', 'Cafe North', 'Café North'].map((name) =>
+        request(app.getHttpServer())
+          .post('/api/v1/shops')
+          .set('Authorization', 'Bearer valid-token')
+          .send({ name })
+          .expect(201),
+      ),
+    );
+    const returnedSlugs = responses.map(
+      (response) => response.body.shop.slug as string,
+    );
+    expect(new Set(returnedSlugs).size).toBe(4);
+    expect(returnedSlugs).toContain('cafe-north');
+    for (const response of responses) {
+      expect(response.body.shop.slug).toMatch(/^cafe-north(?:-[a-f0-9]{8})?$/);
+      expect(response.body.membership.shop.slug).toBe(response.body.shop.slug);
+      expect(response.body.membership.role).toBe('OWNER');
+    }
+  });
+  it('returns a recoverable conflict when all slug attempts collide', async () => {
+    create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint', {
+        code: 'P2002',
+        clientVersion: '7.10.0',
+        meta: { target: ['slug'] },
+      }),
+    );
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/shops')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ name: 'Café North' })
+      .expect(409);
+    expect(response.body.code).toBe('SHOP_SLUG_UNAVAILABLE');
+    expect(create).toHaveBeenCalledTimes(5);
   });
   it.each([
     {},
