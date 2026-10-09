@@ -11,7 +11,7 @@ describe('shop OWNER authorization policy', () => {
     expect(hasShopPermission('OWNER', permission)).toBe(true);
   });
 
-  it.each(['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'] as const)(
+  it.each(['MANAGER', 'CASHIER', 'KITCHEN'] as const)(
     'does not implicitly grant %s the owner permissions',
     (role) => {
       expect(isShopOwner(role)).toBe(false);
@@ -20,15 +20,29 @@ describe('shop OWNER authorization policy', () => {
     },
   );
 
+  it('keeps ADMIN distinct from OWNER and denies owner-reserved permissions', () => {
+    expect(isShopOwner('ADMIN')).toBe(false);
+    for (const permission of [
+      'shop.settings.manage',
+      'shop.ownership.manage',
+      'shop.billing.manage',
+    ] as const)
+      expect(hasShopPermission('ADMIN', permission)).toBe(false);
+  });
+
   it('recognizes only the exact OWNER role and rejects unknown runtime roles', () => {
     expect(isShopOwner('OWNER')).toBe(true);
     for (const role of ['owner', 'SUPER_ADMIN', '', undefined, null]) {
       expect(isShopOwner(role as ShopRole)).toBe(false);
-      expect(hasShopPermission(role as ShopRole, 'shop.billing.manage')).toBe(false);
+      expect(hasShopPermission(role as ShopRole, 'shop.billing.manage')).toBe(
+        false,
+      );
     }
   });
 
   it('denies unknown permissions even for OWNER', () => {
-    expect(hasShopPermission('OWNER', 'platform.manage' as ShopPermission)).toBe(false);
+    expect(
+      hasShopPermission('OWNER', 'platform.manage' as ShopPermission),
+    ).toBe(false);
   });
 });

@@ -5,12 +5,32 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
-import { isShopOwner, type UserMembership } from '@paserve/contracts';
+import {
+  hasShopPermission,
+  isShopOwner,
+  type ShopPermission,
+  type UserMembership,
+} from '@paserve/contracts';
 import { ShopMembersRepository } from './shop-members.repository.js';
 
 @Injectable()
 export class ShopMembersService {
   constructor(private readonly repository: ShopMembersRepository) {}
+
+  /** Resolve current membership before evaluating a shop-scoped permission. */
+  async requirePermission(
+    userId: string,
+    shopId: string,
+    permission: ShopPermission,
+  ): Promise<UserMembership> {
+    const membership = await this.requireMembership(userId, shopId);
+    if (!hasShopPermission(membership.role, permission))
+      throw new ForbiddenException({
+        code: 'SHOP_PERMISSION_REQUIRED',
+        message: 'Your role does not allow this action in this shop.',
+      });
+    return membership;
+  }
 
   async requireOwner(userId: string, shopId: string): Promise<UserMembership> {
     const membership = await this.requireMembership(userId, shopId);
