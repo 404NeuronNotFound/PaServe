@@ -2,6 +2,7 @@ import type {
   ShopMembershipResponse,
   UpdateShopRequest,
   UpdateShopResponse,
+  ShopSettingsResponse,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
@@ -29,5 +30,18 @@ export async function updateShop(
     `/shops/${encodeURIComponent(shopId)}`,
     input,
   );
+  return data;
+}
+
+export async function getShopSettings(
+  shopId: string,
+  signal?: AbortSignal,
+): Promise<ShopSettingsResponse> {
+  const { data } = await api.get<ShopSettingsResponse>(
+    `/shops/${encodeURIComponent(shopId)}/settings`,
+    { signal },
+  );
+  if (data.shop.id !== shopId || !data.shop.isActive)
+    throw new Error("The shop settings could not be verified.");
   return data;
 }

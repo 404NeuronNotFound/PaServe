@@ -1588,6 +1588,14 @@
 .shop-context-content p {
   line-height: 1.6;
 }
+.shop-settings-card h2 {
+  margin: 16px 0 12px;
+  font-size: 20px;
+}
+.shop-settings-card .shop-context-actions .primary-button {
+  width: auto;
+  min-width: 160px;
+}
 .shop-selection-list {
   list-style: none;
   padding: 0;

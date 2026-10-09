@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { FiCoffee } from "react-icons/fi";
-import { useActiveShop } from "../../features/shops/active-shop";
+import { useActiveShop, shopPath } from "../../features/shops/active-shop";
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 
 export function ActiveShopPage() {
@@ -27,6 +27,14 @@ export function ActiveShopPage() {
         <p>Your role: {membership.role.toLowerCase()}</p>
         <p>Menu slug: {membership.shop.slug}</p>
         <nav className="shop-context-actions" aria-label="Shop actions">
+          {membership.role === "OWNER" && (
+            <Link
+              className="primary-button"
+              to={`${shopPath(membership.shopId)}/settings`}
+            >
+              Shop settings
+            </Link>
+          )}
           <Link className="primary-button" to="/app/shops">
             Switch shop
           </Link>

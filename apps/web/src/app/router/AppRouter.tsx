@@ -17,6 +17,7 @@ import {
   ShopSelectionPage,
 } from "../../pages/owner/ShopSelectionPage";
 import { ActiveShopPage } from "../../pages/owner/ActiveShopPage";
+import { ShopSettingsPage } from "../../pages/owner/ShopSettingsPage";
 
 export function AppRouter() {
   return (
@@ -37,6 +38,7 @@ export function AppRouter() {
           <Route path="shops" element={<ShopSelectionPage />} />
           <Route path="shops/:shopId" element={<ActiveShopRoute />}>
             <Route index element={<ActiveShopPage />} />
+            <Route path="settings" element={<ShopSettingsPage />} />
           </Route>
           <Route path="account" element={<AccountPage />} />
           <Route path="onboarding/create-shop" element={<CreateShopPage />} />
