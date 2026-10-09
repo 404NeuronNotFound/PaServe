@@ -41,9 +41,20 @@ export const SHOP_OPERATIONAL_PERMISSIONS = [
   "shop.daily-operations.manage",
 ] as const;
 
+/** Front-counter actions; no refunds, price edits, menu editing or shop billing. */
+export const SHOP_CASHIER_PERMISSIONS = [
+  "shop.orders.qr.scan",
+  "shop.orders.read",
+  "shop.payments.record",
+  "shop.orders.confirm",
+  "shop.orders.reject",
+  "shop.menu.availability.update",
+] as const;
+
 /** Shop-scoped authority. Ownership/billing permissions are reserved for future flows. */
 export const SHOP_PERMISSIONS = [
   ...SHOP_OPERATIONAL_PERMISSIONS,
+  ...SHOP_CASHIER_PERMISSIONS,
   "shop.operations.manage",
   "shop.settings.manage",
   "shop.ownership.manage",
@@ -59,6 +70,7 @@ export function isShopOwner(role: ShopRole): boolean {
  * OWNER is the highest shop-level role, not a global account role.
  * Call only with the role from a validated membership for the target shop.
  * MANAGER has explicit daily-operation grants; ADMIN also has full operations.
+ * CASHIER has explicit front-counter grants, shared with the management roles.
  * Settings, ownership and billing remain OWNER-only.
  * Other roles receive explicit grants in their respective authorization steps;
  * a numeric role ranking must never grant owner-sensitive permissions.
@@ -71,9 +83,13 @@ export function hasShopPermission(
   const dailyOperation = SHOP_OPERATIONAL_PERMISSIONS.some(
     (allowed) => allowed === permission,
   );
+  const counterAction = SHOP_CASHIER_PERMISSIONS.some(
+    (allowed) => allowed === permission,
+  );
   if (role === "ADMIN")
-    return permission === "shop.operations.manage" || dailyOperation;
-  return role === "MANAGER" && dailyOperation;
+    return permission === "shop.operations.manage" || dailyOperation || counterAction;
+  if (role === "MANAGER") return dailyOperation || counterAction;
+  return role === "CASHIER" && counterAction;
 }
 
 export interface UserMembership {
