@@ -12,6 +12,7 @@ import {
   categoriesKey,
   updateCategory,
   deleteCategory,
+  setCategoryVisibility,
 } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
 import { CategoriesPage } from "./CategoriesPage";
@@ -23,6 +24,7 @@ vi.mock("../../features/shops/api/categories", async (importOriginal) => ({
   listCategories: vi.fn(),
   updateCategory: vi.fn(),
   deleteCategory: vi.fn(),
+  setCategoryVisibility: vi.fn(),
 }));
 const category = {
   id: "category-a",
@@ -37,6 +39,145 @@ const category = {
 beforeEach(() => {
   vi.mocked(listCategories).mockResolvedValue({ categories: [] });
   vi.mocked(createCategory).mockResolvedValue({ category });
+});
+
+it("hides and restores a category with one Undo action, retaining a creation draft", async () => {
+  const hidden = { ...category, isVisible: false };
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  vi.mocked(setCategoryVisibility)
+    .mockResolvedValueOnce({ category: hidden })
+    .mockResolvedValueOnce({ category });
+  const { client } = setup();
+  const user = userEvent.setup();
+  await screen.findByRole("button", { name: "Hide Coffee" });
+  await user.type(
+    screen.getByRole("textbox", { name: "Category name" }),
+    "Meals draft",
+  );
+  vi.mocked(listCategories).mockResolvedValue({ categories: [hidden] });
+  await user.click(screen.getByRole("button", { name: "Hide Coffee" }));
+  await screen.findByRole("button", { name: "Show Coffee" });
+  expect(setCategoryVisibility).toHaveBeenCalledExactlyOnceWith(
+    "a",
+    "category-a",
+    { isVisible: false, expectedVisibility: true },
+  );
+  expect(screen.getByText("Hidden")).toBeInTheDocument();
+  expect(screen.getByRole("textbox")).toHaveValue("Meals draft");
+  const notice = useFeedbackStore.getState().notices[0];
+  expect(notice.kind).toBe("snackbar");
+  if (notice.kind !== "snackbar") throw new Error("Missing Undo");
+  expect(notice.action.label).toBe("Undo");
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  await notice.action.onClick();
+  await screen.findByRole("button", { name: "Hide Coffee" });
+  expect(setCategoryVisibility).toHaveBeenLastCalledWith("a", "category-a", {
+    isVisible: true,
+    expectedVisibility: false,
+  });
+  expect(client.getQueryData(categoriesKey("user-a", "a"))).toEqual({
+    categories: [category],
+  });
+});
+
+it("shows a hidden category directly without a confirmation dialog", async () => {
+  const hidden = { ...category, isVisible: false };
+  vi.mocked(listCategories).mockResolvedValue({ categories: [hidden] });
+  vi.mocked(setCategoryVisibility).mockResolvedValue({ category });
+  setup();
+  const button = await screen.findByRole("button", { name: "Show Coffee" });
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  await userEvent.setup().click(button);
+  await screen.findByRole("button", { name: "Hide Coffee" });
+  expect(setCategoryVisibility).toHaveBeenCalledWith("a", "category-a", {
+    isVisible: true,
+    expectedVisibility: false,
+  });
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it.each([
+  [{ isAxiosError: true }, /couldn’t confirm visibility/],
+  [
+    { isAxiosError: true, response: { status: 409 } },
+    /Visibility changed elsewhere/,
+  ],
+  [{ isAxiosError: true, response: { status: 403 } }, /your access changed/],
+] as const)(
+  "retains the category and shows contextual visibility failure %j",
+  async (failure, message) => {
+    vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+    vi.mocked(setCategoryVisibility).mockRejectedValue(failure);
+    setup();
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Hide Coffee" }));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.getByText("Visible")).toBeInTheDocument();
+    expect(setCategoryVisibility).toHaveBeenCalledTimes(1);
+    expect(useFeedbackStore.getState().notices).toHaveLength(0);
+  },
+);
+
+it("blocks duplicate visibility submissions and ignores completion after leaving", async () => {
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  let resolve!: (value: { category: typeof category }) => void;
+  vi.mocked(setCategoryVisibility).mockImplementation(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  const { unmount, client } = setup();
+  const user = userEvent.setup();
+  const button = await screen.findByRole("button", { name: "Hide Coffee" });
+  await user.dblClick(button);
+  expect(setCategoryVisibility).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Edit Coffee" })).toBeDisabled();
+  unmount();
+  resolve({ category: { ...category, isVisible: false } });
+  await waitFor(() => expect(setCategoryVisibility).toHaveBeenCalled());
+  expect(client.getQueryData(categoriesKey("user-a", "a"))).toEqual({
+    categories: [category],
+  });
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+
+it("does not run a stale Undo after switching shops", async () => {
+  const hidden = { ...category, isVisible: false };
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  vi.mocked(setCategoryVisibility).mockResolvedValue({ category: hidden });
+  const { unmount } = setup();
+  const button = await screen.findByRole("button", { name: "Hide Coffee" });
+  vi.mocked(listCategories).mockResolvedValue({ categories: [hidden] });
+  await userEvent.setup().click(button);
+  await screen.findByRole("button", { name: "Show Coffee" });
+  const notice = useFeedbackStore.getState().notices[0];
+  if (notice.kind !== "snackbar") throw new Error("Missing Undo");
+  unmount();
+  await expect(notice.action.onClick()).rejects.toThrow(/Return to this shop/);
+  expect(setCategoryVisibility).toHaveBeenCalledTimes(1);
+});
+
+it("reports an Undo conflict without overwriting the newer category state", async () => {
+  const hidden = { ...category, isVisible: false };
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  vi.mocked(setCategoryVisibility)
+    .mockResolvedValueOnce({ category: hidden })
+    .mockRejectedValueOnce({ isAxiosError: true, response: { status: 409 } });
+  const { client } = setup();
+  const button = await screen.findByRole("button", { name: "Hide Coffee" });
+  vi.mocked(listCategories).mockResolvedValue({ categories: [hidden] });
+  await userEvent.setup().click(button);
+  await screen.findByRole("button", { name: "Show Coffee" });
+  const notice = useFeedbackStore.getState().notices[0];
+  if (notice.kind !== "snackbar") throw new Error("Missing Undo");
+  await expect(notice.action.onClick()).rejects.toThrow(
+    /Visibility changed elsewhere/,
+  );
+  expect(client.getQueryData(categoriesKey("user-a", "a"))).toEqual({
+    categories: [hidden],
+  });
 });
 
 function mockDecisionDialog() {

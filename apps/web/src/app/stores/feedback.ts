@@ -8,6 +8,7 @@ type ToastOptions = {
 export type FeedbackAction = {
   label: string;
   onClick: () => void | Promise<void>;
+  errorMessage?: (error: unknown) => string;
 };
 type SnackbarOptions = { key?: string; duration?: number };
 export type TransientNotice = {

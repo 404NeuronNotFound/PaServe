@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { FiLayers, FiLoader, FiPlus } from "react-icons/fi";
+import { FiLayers, FiLoader, FiPlus, FiEye, FiEyeOff } from "react-icons/fi";
 import {
   CATEGORY_LIMITS,
   hasShopPermission,
@@ -17,6 +17,7 @@ import {
   createCategory,
   listCategories,
   deleteCategory,
+  setCategoryVisibility,
 } from "../../features/shops/api/categories";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
@@ -43,6 +44,11 @@ function CategoryWorkspace({ userId }: { userId: string }) {
   const [lostAccess, setLostAccess] = useState(false);
   const [editing, setEditing] = useState<MenuCategory | null>(null);
   const [deleting, setDeleting] = useState<MenuCategory | null>(null);
+  const [visibilityError, setVisibilityError] = useState<{
+    id: string;
+    message: string;
+  } | null>(null);
+  const visibilityBusy = useRef(false);
   const input = useRef<HTMLInputElement>(null);
   const mounted = useRef(false);
   const submitting = useRef(false);
@@ -65,6 +71,102 @@ function CategoryWorkspace({ userId }: { userId: string }) {
     mutationFn: (categoryId: string) => deleteCategory(shopId, categoryId),
     retry: false,
   });
+  const visibility = useMutation({
+    mutationFn: ({
+      id,
+      isVisible,
+      expectedVisibility,
+    }: {
+      id: string;
+      isVisible: boolean;
+      expectedVisibility: boolean;
+    }) => setCategoryVisibility(shopId, id, { isVisible, expectedVisibility }),
+    retry: false,
+    networkMode: "always",
+  });
+  function visibilityMessage(failure: unknown) {
+    if (isAxiosError(failure)) {
+      if ([401, 403, 404].includes(failure.response?.status ?? 0))
+        return "This category is unavailable or your access changed. Refresh the categories to continue.";
+      if (failure.response?.status === 409)
+        return "Visibility changed elsewhere. Refresh the categories before trying again.";
+      if (!failure.response)
+        return "We couldn’t confirm visibility. Refresh the categories before trying again.";
+    }
+    return "We couldn’t update visibility. Please try again.";
+  }
+  function stillHere() {
+    return (
+      mounted.current &&
+      client.getQueryData<CurrentUserResponse>(currentUserKey)?.user.id ===
+        userId
+    );
+  }
+  async function changeVisibility(
+    category: MenuCategory,
+    isVisible: boolean,
+    undo = false,
+  ) {
+    if (!stillHere()) {
+      if (undo)
+        throw new Error(
+          "Return to this shop’s Categories page before using Undo.",
+        );
+      return;
+    }
+    if (visibilityBusy.current) {
+      if (undo)
+        throw new Error("Wait for the current visibility update to finish.");
+      return;
+    }
+    visibilityBusy.current = true;
+    setVisibilityError(null);
+    try {
+      await client.cancelQueries({ queryKey: key });
+      if (!stillHere()) return;
+      const result = await visibility.mutateAsync({
+        id: category.id,
+        isVisible,
+        expectedVisibility: category.isVisible,
+      });
+      if (!stillHere()) return;
+      await client.cancelQueries({ queryKey: key });
+      if (!stillHere()) return;
+      client.setQueryData<CategoriesResponse>(key, (current) =>
+        current
+          ? {
+              categories: current.categories.map((item) =>
+                item.id === result.category.id ? result.category : item,
+              ),
+            }
+          : current,
+      );
+      void client.invalidateQueries({ queryKey: key });
+      if (!undo)
+        feedback.snackbar(
+          isVisible
+            ? `“${result.category.name}” is visible on the menu.`
+            : `“${result.category.name}” is hidden. Its products are kept.`,
+          {
+            label: "Undo",
+            onClick: () =>
+              changeVisibility(result.category, category.isVisible, true),
+            errorMessage: (failure) =>
+              failure instanceof Error
+                ? failure.message
+                : "We couldn’t undo visibility. Refresh the categories.",
+          },
+          { key: `category-visibility:${userId}:${shopId}:${category.id}` },
+        );
+    } catch (failure) {
+      if (!stillHere()) return;
+      const message = visibilityMessage(failure);
+      if (undo) throw new Error(message, { cause: failure });
+      setVisibilityError({ id: category.id, message });
+    } finally {
+      visibilityBusy.current = false;
+    }
+  }
   function deletionMessage(failure: unknown) {
     if (isAxiosError(failure)) {
       if ([401, 403, 404].includes(failure.response?.status ?? 0))
@@ -175,6 +277,10 @@ function CategoryWorkspace({ userId }: { userId: string }) {
         <p className="section-label">YOUR MENU, ONE CHAPTER AT A TIME</p>
         <h1 id="categories-title">Categories</h1>
         <p>Give {membership.shop.name}’s menu a little structure.</p>
+        <p className="categories-visibility-hint">
+          Hide a category to pause it on the public menu. Its products stay
+          safely linked, ready to show again.
+        </p>
       </header>
       <div className="categories-layout">
         <section
@@ -202,11 +308,17 @@ function CategoryWorkspace({ userId }: { userId: string }) {
           ) : query.data.categories.length ? (
             <ul className="categories-list">
               {query.data.categories.map((category) => (
-                <li key={category.id}>
+                <li
+                  key={category.id}
+                  aria-busy={
+                    visibility.isPending &&
+                    visibility.variables?.id === category.id
+                  }
+                >
                   <span className="category-icon">
                     <FiLayers aria-hidden="true" />
                   </span>
-                  <div>
+                  <div className="category-details">
                     <strong>{category.name}</strong>
                     <small>/{category.slug}</small>
                     {category.description && (
@@ -215,39 +327,79 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                       </p>
                     )}
                   </div>
-                  <span className="category-visibility">
-                    {category.isVisible ? "Visible" : "Hidden"}
-                  </span>
-                  <button
-                    id={`category-edit-${category.id}`}
-                    type="button"
-                    className="secondary-button category-edit-button"
-                    disabled={
-                      Boolean(editing) ||
-                      Boolean(deleting) ||
-                      mutation.isPending ||
-                      lostAccess
-                    }
-                    aria-label={`Edit ${category.name}`}
-                    onClick={() => setEditing(category)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    id={`category-delete-${category.id}`}
-                    type="button"
-                    className="secondary-button category-delete-button"
-                    aria-label={`Delete ${category.name}`}
-                    disabled={
-                      Boolean(editing) ||
-                      Boolean(deleting) ||
-                      mutation.isPending ||
-                      lostAccess
-                    }
-                    onClick={() => setDeleting(category)}
-                  >
-                    Delete
-                  </button>
+                  <div className="category-actions">
+                    <span className="category-visibility">
+                      {category.isVisible ? "Visible" : "Hidden"}
+                    </span>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      aria-label={`${category.isVisible ? "Hide" : "Show"} ${category.name}`}
+                      disabled={
+                        Boolean(editing) ||
+                        Boolean(deleting) ||
+                        mutation.isPending ||
+                        visibility.isPending ||
+                        lostAccess ||
+                        query.isFetching
+                      }
+                      onClick={() =>
+                        void changeVisibility(category, !category.isVisible)
+                      }
+                    >
+                      {visibility.isPending &&
+                      visibility.variables?.id === category.id ? (
+                        <FiLoader className="is-spinning" aria-hidden="true" />
+                      ) : category.isVisible ? (
+                        <FiEyeOff aria-hidden="true" />
+                      ) : (
+                        <FiEye aria-hidden="true" />
+                      )}
+                      {visibility.isPending &&
+                      visibility.variables?.id === category.id
+                        ? "Saving…"
+                        : category.isVisible
+                          ? "Hide"
+                          : "Show"}
+                    </button>
+                    <button
+                      id={`category-edit-${category.id}`}
+                      type="button"
+                      className="secondary-button category-edit-button"
+                      disabled={
+                        Boolean(editing) ||
+                        Boolean(deleting) ||
+                        mutation.isPending ||
+                        visibility.isPending ||
+                        lostAccess
+                      }
+                      aria-label={`Edit ${category.name}`}
+                      onClick={() => setEditing(category)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      id={`category-delete-${category.id}`}
+                      type="button"
+                      className="secondary-button category-delete-button"
+                      aria-label={`Delete ${category.name}`}
+                      disabled={
+                        Boolean(editing) ||
+                        Boolean(deleting) ||
+                        mutation.isPending ||
+                        visibility.isPending ||
+                        lostAccess
+                      }
+                      onClick={() => setDeleting(category)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  {visibilityError?.id === category.id && (
+                    <InlineMessage className="category-visibility-error">
+                      {visibilityError.message}
+                    </InlineMessage>
+                  )}
                 </li>
               ))}
             </ul>
@@ -262,8 +414,11 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             <button
               type="button"
               className="secondary-button categories-refresh"
-              disabled={query.isFetching}
-              onClick={() => void query.refetch()}
+              disabled={query.isFetching || visibility.isPending}
+              onClick={() => {
+                setVisibilityError(null);
+                void query.refetch();
+              }}
             >
               {query.isFetching ? "Refreshing…" : "Refresh categories"}
             </button>

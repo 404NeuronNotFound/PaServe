@@ -4,11 +4,24 @@ import type {
   CreateCategoryResponse,
   UpdateCategoryRequest,
   UpdateCategoryResponse,
+  SetCategoryVisibilityRequest,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
 export const categoriesKey = (userId: string, shopId: string) =>
   ["categories", userId, shopId] as const;
+export async function setCategoryVisibility(
+  shopId: string,
+  categoryId: string,
+  input: SetCategoryVisibilityRequest,
+): Promise<UpdateCategoryResponse> {
+  return (
+    await api.patch<UpdateCategoryResponse>(
+      `/shops/${encodeURIComponent(shopId)}/categories/${encodeURIComponent(categoryId)}/visibility`,
+      input,
+    )
+  ).data;
+}
 export async function deleteCategory(
   shopId: string,
   categoryId: string,

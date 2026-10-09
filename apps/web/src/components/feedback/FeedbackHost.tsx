@@ -95,8 +95,11 @@ function TransientMessage({
     try {
       await notice.action.onClick();
       dismiss(notice.id);
-    } catch {
-      setError("The action could not be completed. Please try again.");
+    } catch (failure) {
+      setError(
+        notice.action.errorMessage?.(failure) ??
+          "The action could not be completed. Please try again.",
+      );
       // A failed action needs time to recover rather than disappearing immediately.
       remaining.current = notice.duration;
     } finally {

@@ -178,6 +178,28 @@ it("keeps a persistent banner across transient clearing until explicitly dismiss
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
 
+it("shows a provided recovery message for a failed Undo while hiding internal errors", async () => {
+  render(<FeedbackHost />);
+  act(() =>
+    feedback.snackbar("Category hidden.", {
+      label: "Undo",
+      onClick: () => Promise.reject(new Error("Internal database details")),
+      errorMessage: () =>
+        "Visibility changed elsewhere. Refresh the categories before trying again.",
+    }),
+  );
+  await act(async () =>
+    fireEvent.click(screen.getByRole("button", { name: "Undo" })),
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Visibility changed elsewhere.",
+  );
+  expect(
+    screen.queryByText("Internal database details"),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
+});
+
 it("replaces an appearance snackbar and undoes the most recent change", async () => {
   render(
     <>
