@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
@@ -10,8 +16,10 @@ import {
   FiMenu,
   FiChevronDown,
   FiCheck,
+  FiLayers,
 } from "react-icons/fi";
 import type { CurrentUserResponse, UserMembership } from "@paserve/contracts";
+import { hasShopPermission } from "@paserve/contracts";
 import { currentUserKey, logoutAccount } from "../../features/auth/api/session";
 import {
   rememberShop,
@@ -89,12 +97,23 @@ export function DashboardFrame({
       return;
     }
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
-    const items = Array.from(menu.querySelectorAll<HTMLElement>(".dashboard-dropdown-panel a, .dashboard-dropdown-panel button:not(:disabled)"));
+    const items = Array.from(
+      menu.querySelectorAll<HTMLElement>(
+        ".dashboard-dropdown-panel a, .dashboard-dropdown-panel button:not(:disabled)",
+      ),
+    );
     if (!items.length) return;
     event.preventDefault();
     menu.open = true;
     const index = items.indexOf(document.activeElement as HTMLElement);
-    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : event.key === "ArrowDown" ? (index + 1) % items.length : (index <= 0 ? items.length : index) - 1;
+    const next =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? items.length - 1
+          : event.key === "ArrowDown"
+            ? (index + 1) % items.length
+            : (index <= 0 ? items.length : index) - 1;
     items[next]?.focus();
   }
   return (
@@ -111,9 +130,15 @@ export function DashboardFrame({
         </Link>
         <div className="dashboard-shop-control">
           {choices.length > 1 ? (
-            <details ref={shopMenu} className="dashboard-shop-menu" onKeyDown={dropdownKeys}>
+            <details
+              ref={shopMenu}
+              className="dashboard-shop-menu"
+              onKeyDown={dropdownKeys}
+            >
               <summary aria-label="Active shop">
-                <span className="dashboard-switcher-icon"><FiCoffee aria-hidden="true" /></span>
+                <span className="dashboard-switcher-icon">
+                  <FiCoffee aria-hidden="true" />
+                </span>
                 <span className="dashboard-switcher-label">
                   <span>Active shop</span>
                   <strong>{membership?.shop.name ?? "Choose a shop"}</strong>
@@ -123,16 +148,30 @@ export function DashboardFrame({
               <div className="dashboard-dropdown-panel dashboard-shop-panel">
                 <p className="section-label">SWITCH WORKSPACE</p>
                 {choices.map((item) => (
-                  <button key={item.id} type="button" aria-current={item.shopId === membership?.shopId ? "true" : undefined}
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-current={
+                      item.shopId === membership?.shopId ? "true" : undefined
+                    }
                     onClick={() => {
                       shopMenu.current?.removeAttribute("open");
                       shopMenu.current?.querySelector("summary")?.focus();
                       closeNavigation();
-                      if (item.shopId !== membership?.shopId) void navigate(shopPath(item.shopId));
-                    }}>
+                      if (item.shopId !== membership?.shopId)
+                        void navigate(shopPath(item.shopId));
+                    }}
+                  >
                     <FiCoffee aria-hidden="true" />
-                    <span><strong>{item.shop.name}</strong><small>/{item.shop.slug} · {item.role.toLowerCase()}</small></span>
-                    {item.shopId === membership?.shopId && <FiCheck aria-hidden="true" />}
+                    <span>
+                      <strong>{item.shop.name}</strong>
+                      <small>
+                        /{item.shop.slug} · {item.role.toLowerCase()}
+                      </small>
+                    </span>
+                    {item.shopId === membership?.shopId && (
+                      <FiCheck aria-hidden="true" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -204,8 +243,15 @@ export function DashboardFrame({
           <p className="section-label">YOUR WORKSPACE</p>
           {membership && (
             <div className="dashboard-sidebar-identity">
-              <span className="dashboard-sidebar-emblem"><FiCoffee aria-hidden="true" /></span>
-              <div><strong>{membership.shop.name}</strong><p className="dashboard-shop-role">{membership.role.toLowerCase()} workspace</p></div>
+              <span className="dashboard-sidebar-emblem">
+                <FiCoffee aria-hidden="true" />
+              </span>
+              <div>
+                <strong>{membership.shop.name}</strong>
+                <p className="dashboard-shop-role">
+                  {membership.role.toLowerCase()} workspace
+                </p>
+              </div>
             </div>
           )}
           <nav aria-label="Shop navigation">
@@ -228,6 +274,16 @@ export function DashboardFrame({
                 Shop settings
               </NavLink>
             )}
+            {membership &&
+              hasShopPermission(membership.role, "shop.menu.manage") && (
+                <NavLink
+                  to={`${shopPath(membership.shopId)}/categories`}
+                  onClick={closeNavigation}
+                >
+                  <FiLayers aria-hidden="true" />
+                  Categories
+                </NavLink>
+              )}
             <NavLink end to="/app/shops" onClick={closeNavigation}>
               <FiCoffee aria-hidden="true" />
               Your shops
