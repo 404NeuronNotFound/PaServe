@@ -11,16 +11,7 @@ describe('shop OWNER authorization policy', () => {
     expect(hasShopPermission('OWNER', permission)).toBe(true);
   });
 
-  it.each(['KITCHEN'] as const)(
-    'does not implicitly grant %s the owner permissions',
-    (role) => {
-      expect(isShopOwner(role)).toBe(false);
-      for (const permission of SHOP_PERMISSIONS)
-        expect(hasShopPermission(role, permission)).toBe(false);
-    },
-  );
-
-  it.each(['ADMIN', 'MANAGER', 'CASHIER'] as const)(
+  it.each(['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'] as const)(
     'keeps %s distinct from OWNER and denies owner-reserved permissions',
     (role) => {
       expect(isShopOwner(role)).toBe(false);

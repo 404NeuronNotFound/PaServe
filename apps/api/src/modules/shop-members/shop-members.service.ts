@@ -7,7 +7,9 @@ import {
 import { isUUID } from 'class-validator';
 import {
   hasShopPermission,
+  canTransitionPreparationStatus,
   isShopOwner,
+  type PreparationStatus,
   type ShopPermission,
   type UserMembership,
 } from '@paserve/contracts';
@@ -16,6 +18,26 @@ import { ShopMembersRepository } from './shop-members.repository.js';
 @Injectable()
 export class ShopMembersService {
   constructor(private readonly repository: ShopMembersRepository) {}
+
+  /** Future callers must obtain `from` from the tenant-scoped stored record. */
+  async requirePreparationTransition(
+    userId: string,
+    shopId: string,
+    from: PreparationStatus,
+    to: PreparationStatus,
+  ): Promise<UserMembership> {
+    const membership = await this.requirePermission(
+      userId,
+      shopId,
+      'shop.preparation.status.update',
+    );
+    if (!canTransitionPreparationStatus(from, to))
+      throw new BadRequestException({
+        code: 'INVALID_PREPARATION_TRANSITION',
+        message: 'This preparation status change is not allowed.',
+      });
+    return membership;
+  }
 
   /** Resolve current membership before evaluating a shop-scoped permission. */
   async requirePermission(
