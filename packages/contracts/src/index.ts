@@ -262,6 +262,59 @@ export interface UpdateCategoryRequest {
 }
 export type UpdateCategoryResponse = CreateCategoryResponse;
 export const CATEGORY_REORDER_MAX = 500;
+export const PRODUCT_LIMITS = {
+  nameMax: 120,
+  slugMax: 120,
+  descriptionMax: 2000,
+  imageUrlMax: 2048,
+  sortOrderMax: 2147483647,
+} as const;
+export const PRODUCT_STATUSES = ["AVAILABLE", "SOLD_OUT", "HIDDEN"] as const;
+export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
+export const PRODUCT_PRICE_PATTERN = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
+export function isValidProductImageUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      Boolean(url.hostname) &&
+      !url.username &&
+      !url.password
+    );
+  } catch {
+    return false;
+  }
+}
+export interface CreateProductRequest {
+  name: string;
+  price: string;
+  categoryId?: string;
+  description?: string;
+  status?: ProductStatus;
+  imageUrl?: string;
+  isFeatured?: boolean;
+  sortOrder?: number;
+}
+export interface MenuProduct {
+  id: string;
+  shopId: string;
+  categoryId: string | null;
+  name: string;
+  slug: string;
+  description: string | null;
+  price: string;
+  status: ProductStatus;
+  imageUrl: string | null;
+  isFeatured: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+export interface CreateProductResponse {
+  product: MenuProduct;
+}
+export interface ProductsResponse {
+  products: MenuProduct[];
+}
 export interface ReorderCategoriesRequest {
   categoryIds: string[];
   expectedOrder: string[];
