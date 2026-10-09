@@ -143,3 +143,47 @@ it("keeps action errors inside the dialog and lets the user retry", async () => 
   await user.click(screen.getByRole("button", { name: "Delete" }));
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
+
+it("keeps an animated dismissal blocked until it finishes and then restores focus", () => {
+  vi.useFakeTimers();
+  try {
+    const action = vi.fn();
+    function AnimatedHarness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button onClick={() => setOpen(true)}>Delete record</button>
+          <DecisionDialog
+            open={open}
+            title="Delete record?"
+            description="Your products are kept."
+            confirmLabel="Delete"
+            animateClose
+            destructive
+            onConfirm={action}
+            onClose={() => setOpen(false)}
+          />
+        </>
+      );
+    }
+    render(<AnimatedHarness />);
+    const trigger = screen.getByRole("button", { name: "Delete record" });
+    trigger.focus();
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    fireEvent(
+      screen.getByRole("dialog"),
+      new Event("cancel", { cancelable: true }),
+    );
+    act(() => vi.advanceTimersByTime(179));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    expect(action).not.toHaveBeenCalled();
+  } finally {
+    vi.useRealTimers();
+  }
+});

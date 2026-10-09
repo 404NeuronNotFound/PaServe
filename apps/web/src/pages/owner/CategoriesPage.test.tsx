@@ -400,10 +400,13 @@ it("confirms category deletion, preserves products in its explanation, and refre
     );
     expect(screen.getByRole("button", { name: "Keep category" })).toHaveFocus();
     expect(
-      screen.getByText(/All linked products will be kept in Uncategorized/),
+      screen.getByText(/Your products move to Uncategorized/),
     ).toBeInTheDocument();
     expect(deleteCategory).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Keep category" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
     expect(deleteCategory).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Delete Coffee" }));
     vi.mocked(listCategories).mockResolvedValue({ categories: [] });
@@ -414,7 +417,9 @@ it("confirms category deletion, preserves products in its explanation, and refre
     expect(
       await screen.findByText("A place for every favorite."),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
     expect(
       useFeedbackStore
         .getState()

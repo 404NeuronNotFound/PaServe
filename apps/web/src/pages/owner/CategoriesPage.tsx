@@ -714,10 +714,11 @@ function CategoryWorkspace({ userId }: { userId: string }) {
       <DecisionDialog
         open={Boolean(deleting)}
         title={`Delete “${deleting?.name ?? ""}”?`}
-        description="This permanently removes the category. All linked products will be kept in Uncategorized, with their prices, images, visibility and availability unchanged. This cannot be undone."
+        description="Your products move to Uncategorized. Deleting this category can’t be undone."
         confirmLabel="Delete category"
         cancelLabel="Keep category"
         destructive
+        animateClose
         errorMessage={deletionMessage}
         onConfirm={async () => {
           if (!deleting) return;

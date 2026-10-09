@@ -114,18 +114,42 @@
   font-size: 14px;
 }
 .feedback-dialog {
+  box-sizing: border-box;
   width: min(480px, calc(100% - 32px));
   max-height: calc(100svh - 32px);
   overflow: auto;
   padding: 28px;
   border: 1px solid var(--color-border);
-  border-radius: 20px;
+  border-radius: 24px;
   color: var(--color-text);
   background: var(--color-surface);
   box-shadow: 0 20px 60px #0004;
 }
+.feedback-dialog[open] {
+  animation: feedback-dialog-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.feedback-dialog.is-closing[open] {
+  animation: feedback-dialog-out 180ms ease both;
+}
 .feedback-dialog::backdrop {
-  background: #0f171ac0;
+  background: #1320189e;
+  backdrop-filter: blur(5px);
+  animation: feedback-backdrop-in 240ms ease both;
+}
+.feedback-dialog.is-closing::backdrop {
+  animation: feedback-backdrop-out 180ms ease both;
+}
+.feedback-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 15px;
+  background: var(--color-secondary);
+  color: var(--color-error);
+  font-size: 21px;
 }
 .feedback-dialog h2 {
   margin: 0 0 12px;
@@ -136,6 +160,7 @@
   overflow-wrap: anywhere;
 }
 .feedback-dialog > p {
+  color: var(--color-muted);
   font-size: 15px;
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -146,6 +171,45 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 24px;
+}
+.feedback-dialog-actions .secondary-button {
+  min-height: 44px;
+  margin: 0;
+}
+@keyframes feedback-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes feedback-dialog-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+@keyframes feedback-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes feedback-backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feedback-dialog[open],
+  .feedback-dialog::backdrop {
+    animation: none;
+  }
 }
 .feedback-dialog-actions .primary-button {
   width: auto;
