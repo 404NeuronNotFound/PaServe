@@ -91,10 +91,70 @@ try {
           (await memberships.requireMembership(userB.id, shopB.id)).role,
           'OWNER',
         );
+        await memberships.requireOwner(userA.id, shopA.id);
+        const saved = await shops.updateSettings(userA.id, shopA.id, {
+          name: `Renamed member ${fixtureKey}`,
+          description: ' Owner-edited description ',
+        });
+        assert.equal(saved.shop.name, `Renamed member ${fixtureKey}`);
+        assert.equal(saved.shop.description, 'Owner-edited description');
+        assert.equal(saved.shop.slug, shopA.slug);
+        await assert.rejects(
+          memberships.requireOwner(userA.id, shopB.id),
+          (error) => error.status === 403,
+        );
+        await assert.rejects(
+          shops.updateSettings(userA.id, shopB.id, {
+            name: 'Unauthorized change',
+          }),
+          (error) => error.status === 403,
+        );
+        assert.equal(
+          (await tx.shop.findUnique({ where: { id: shopB.id } })).name,
+          shopB.name,
+        );
+        await assert.rejects(
+          memberships.requireOwner(randomUUID(), shopA.id),
+          (error) => error.status === 404,
+        );
+
+        // Simulate losing ownership after authorization but before the write.
+        await memberships.requireOwner(userA.id, shopA.id);
+        await tx.shopMember.update({
+          where: { userId_shopId: { userId: userA.id, shopId: shopA.id } },
+          data: { role: 'MANAGER' },
+        });
+        await assert.rejects(
+          memberships.requireOwner(userA.id, shopA.id),
+          (error) => error.status === 403,
+        );
+        await assert.rejects(
+          shops.updateSettings(userA.id, shopA.id, {
+            name: 'Unauthorized change',
+          }),
+          (error) => error.status === 403,
+        );
+        assert.equal(
+          (await tx.shop.findUnique({ where: { id: shopA.id } })).name,
+          saved.shop.name,
+        );
+        await tx.shopMember.update({
+          where: { userId_shopId: { userId: userA.id, shopId: shopA.id } },
+          data: { role: 'OWNER' },
+        });
         // A staff member creating another shop owns only the new relationship.
         const { shop: shopC } = await shops.create(userA.id, {
           name: `Member C ${fixtureKey}`,
         });
+        await memberships.requireOwner(userA.id, shopC.id);
+        assert.equal(
+          (
+            await shops.updateSettings(userA.id, shopC.id, {
+              description: 'New owner setting',
+            })
+          ).shop.description,
+          'New owner setting',
+        );
         assert.equal(
           (await memberships.requireMembership(userA.id, shopC.id)).role,
           'OWNER',
@@ -156,6 +216,12 @@ try {
           data: { isActive: false },
         });
         await assert.rejects(
+          shops.updateSettings(userB.id, shopB.id, {
+            name: 'Inactive shop change',
+          }),
+          (error) => error.status === 403,
+        );
+        await assert.rejects(
           memberships.requireMembership(userA.id, shopB.id),
           (error) => error.status === 404,
         );
@@ -167,6 +233,12 @@ try {
           where: { id: userA.id },
           data: { isActive: false },
         });
+        await assert.rejects(
+          shops.updateSettings(userA.id, shopA.id, {
+            name: 'Inactive user change',
+          }),
+          (error) => error.status === 403,
+        );
         await assert.rejects(
           memberships.requireMembership(userA.id, shopB.id),
           (error) => error.status === 404,
@@ -212,6 +284,7 @@ try {
             `Member A ${fixtureKey}`,
             `Member B ${fixtureKey}`,
             `Member C ${fixtureKey}`,
+            `Renamed member ${fixtureKey}`,
           ],
         },
       },
@@ -219,7 +292,7 @@ try {
     0,
   );
   console.log(
-    'Verified automatic OWNER association, no global User role or account mutation, independent staff roles, isolation, duplicate/foreign-key protection, live changes, and cascade cleanup. No fixtures retained.',
+    'Verified OWNER assignment, owner-only updates, unchanged slugs, denial after role changes, write-time authorization, independent roles, relationship constraints, and cascade cleanup. No fixtures retained.',
   );
 } finally {
   await prisma.$disconnect();

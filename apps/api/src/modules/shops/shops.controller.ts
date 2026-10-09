@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Post,
   Req,
   Res,
@@ -15,6 +16,8 @@ import {
 } from '../auth/guards/jwt-auth.guard.js';
 import { ShopsService } from './shops.service.js';
 import { CreateShopDto } from './dto/create-shop.dto.js';
+import { UpdateShopDto } from './dto/update-shop.dto.js';
+import { ShopOwnerGuard } from '../shop-members/guards/shop-owner.guard.js';
 import {
   ShopMembershipGuard,
   type ShopMemberRequest,
@@ -24,6 +27,21 @@ import {
 @UseGuards(JwtAuthGuard)
 export class ShopsController {
   constructor(private readonly shops: ShopsService) {}
+
+  @Patch(':shopId')
+  @UseGuards(ShopOwnerGuard)
+  updateSettings(
+    @Body() dto: UpdateShopDto,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.shops.updateSettings(
+      request.user.id,
+      request.shopMembership.shopId,
+      dto,
+    );
+  }
 
   @Get(':shopId/membership')
   @UseGuards(ShopMembershipGuard)

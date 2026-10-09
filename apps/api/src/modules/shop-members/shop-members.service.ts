@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,16 @@ import { ShopMembersRepository } from './shop-members.repository.js';
 @Injectable()
 export class ShopMembersService {
   constructor(private readonly repository: ShopMembersRepository) {}
+
+  async requireOwner(userId: string, shopId: string): Promise<UserMembership> {
+    const membership = await this.requireMembership(userId, shopId);
+    if (membership.role !== 'OWNER')
+      throw new ForbiddenException({
+        code: 'OWNER_REQUIRED',
+        message: 'Only this shop’s owner can perform this action.',
+      });
+    return membership;
+  }
 
   async requireMembership(
     userId: string,

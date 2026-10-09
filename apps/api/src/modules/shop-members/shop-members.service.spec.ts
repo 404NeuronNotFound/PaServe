@@ -26,6 +26,24 @@ describe('ShopMembersService', () => {
     repository.findMembership.mockResolvedValue(record);
   });
 
+  it('recognizes OWNER for the requested shop', async () => {
+    expect((await service.requireOwner('user-id', shopId)).role).toBe('OWNER');
+    expect(repository.findMembership).toHaveBeenCalledWith('user-id', shopId);
+  });
+
+  it.each(['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'])(
+    'denies owner-only access for %s',
+    async (role) => {
+      repository.findMembership.mockResolvedValue({ ...record, role });
+      await expect(
+        service.requireOwner('user-id', shopId),
+      ).rejects.toMatchObject({
+        status: 403,
+        response: { code: 'OWNER_REQUIRED' },
+      });
+    },
+  );
+
   it('returns only the current user’s shop relationship and safe shop fields', async () => {
     await expect(service.requireMembership('user-id', shopId)).resolves.toEqual(
       {

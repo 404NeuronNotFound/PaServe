@@ -1,13 +1,56 @@
-import { ConflictException, Injectable } from '@nestjs/common';
-import type { CreateShopResponse } from '@paserve/contracts';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
+import type {
+  CreateShopResponse,
+  UpdateShopResponse,
+} from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
 import { ShopsRepository } from './shops.repository.js';
 import type { CreateShopDto } from './dto/create-shop.dto.js';
 import { generateShopSlug, SHOP_SLUG_MAX_ATTEMPTS } from './shop-slug.js';
+import type { UpdateShopDto } from './dto/update-shop.dto.js';
 
 @Injectable()
 export class ShopsService {
   constructor(private readonly repository: ShopsRepository) {}
+
+  async updateSettings(
+    userId: string,
+    shopId: string,
+    dto: UpdateShopDto,
+  ): Promise<UpdateShopResponse> {
+    if (dto.name === undefined && dto.description === undefined)
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Provide a shop name or description to update.',
+      });
+    const data = {
+      ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+      ...(dto.description !== undefined
+        ? { description: dto.description.trim() || null }
+        : {}),
+    };
+    try {
+      const shop = await this.repository.updateSettings(userId, shopId, data);
+      return { shop: { ...shop, createdAt: shop.createdAt.toISOString() } };
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new ForbiddenException({
+          code: 'OWNER_REQUIRED',
+          message:
+            'Your owner access is no longer available. Please refresh and try again.',
+        });
+      }
+      throw error;
+    }
+  }
 
   async create(
     userId: string,
