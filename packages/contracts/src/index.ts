@@ -49,6 +49,7 @@ export function isShopOwner(role: ShopRole): boolean {
 /**
  * OWNER is the highest shop-level role, not a global account role.
  * Call only with the role from a validated membership for the target shop.
+ * ADMIN manages operations; settings, ownership and billing remain OWNER-only.
  * Other roles receive explicit grants in their respective authorization steps;
  * a numeric role ranking must never grant owner-sensitive permissions.
  */
@@ -56,7 +57,8 @@ export function hasShopPermission(
   role: ShopRole,
   permission: ShopPermission,
 ): boolean {
-  return isShopOwner(role) && SHOP_PERMISSIONS.includes(permission);
+  if (isShopOwner(role)) return SHOP_PERMISSIONS.includes(permission);
+  return role === "ADMIN" && permission === "shop.operations.manage";
 }
 
 export interface UserMembership {
