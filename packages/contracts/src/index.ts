@@ -84,3 +84,12 @@ export interface CreateShopResponse {
 export interface ShopMembershipResponse {
   membership: UserMembership;
 }
+
+export interface UpdateShopRequest {
+  name?: string;
+  description?: string;
+}
+
+export interface UpdateShopResponse {
+  shop: CreateShopResponse["shop"];
+}
