@@ -261,6 +261,11 @@ export interface UpdateCategoryRequest {
   description?: string;
 }
 export type UpdateCategoryResponse = CreateCategoryResponse;
+export const CATEGORY_REORDER_MAX = 500;
+export interface ReorderCategoriesRequest {
+  categoryIds: string[];
+  expectedOrder: string[];
+}
 export interface SetCategoryVisibilityRequest {
   isVisible: boolean;
   expectedVisibility: boolean;
