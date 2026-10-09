@@ -16,6 +16,7 @@ import { categorySlug } from './category-slug.js';
 import type { CreateCategoryDto } from './create-category.dto.js';
 import type { UpdateCategoryDto } from './update-category.dto.js';
 import { TenantResourcesService } from '../tenancy/tenant-resources.service.js';
+import type { CategoryVisibilityDto } from './category-visibility.dto.js';
 
 const lostAccess = () =>
   new ForbiddenException({
@@ -30,6 +31,56 @@ export class CategoriesService {
     private readonly members: ShopMembersService,
     private readonly resources: TenantResourcesService,
   ) {}
+  async setVisibility(
+    userId: string,
+    shopId: string,
+    categoryId: string,
+    dto: CategoryVisibilityDto,
+  ): Promise<CreateCategoryResponse> {
+    await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
+    await this.resources.requireResource(
+      userId,
+      shopId,
+      'category',
+      categoryId,
+    );
+    try {
+      const category = await this.repository.setVisibility(
+        userId,
+        shopId,
+        categoryId,
+        dto.isVisible,
+        dto.expectedVisibility,
+      );
+      return {
+        category: { ...category, createdAt: category.createdAt.toISOString() },
+      };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        // Distinguish stale visibility from revoked access without leaking foreign resources.
+        await this.members.requirePermission(
+          userId,
+          shopId,
+          'shop.menu.manage',
+        );
+        await this.resources.requireResource(
+          userId,
+          shopId,
+          'category',
+          categoryId,
+        );
+        throw new ConflictException({
+          code: 'CATEGORY_VISIBILITY_CHANGED',
+          message:
+            'Category visibility changed. Refresh the categories before trying again.',
+        });
+      }
+      throw error;
+    }
+  }
   async delete(
     userId: string,
     shopId: string,

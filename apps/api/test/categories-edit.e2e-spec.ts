@@ -81,6 +81,106 @@ describe('category editing and deletion', () => {
     request(app.getHttpServer())
       .delete(`/api/v1/shops/${target}/categories/${resource}`)
       .set('Authorization', 'Bearer valid');
+  const visibility = (
+    body: unknown = { isVisible: true, expectedVisibility: false },
+    resource = id,
+    target = shopId,
+  ) =>
+    request(app.getHttpServer())
+      .patch(`/api/v1/shops/${target}/categories/${resource}/visibility`)
+      .set('Authorization', 'Bearer valid')
+      .send(body);
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'allows %s to show/hide without touching category details or products',
+    async (allowed) => {
+      role = allowed;
+      const response = await visibility().expect(200);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.body.category).toMatchObject({
+        ...original,
+        isVisible: true,
+        createdAt: original.createdAt.toISOString(),
+      });
+      expect(update.mock.calls[0][0]).toMatchObject({
+        where: {
+          id,
+          shopId,
+          isVisible: false,
+          shop: {
+            id: shopId,
+            isActive: true,
+            members: {
+              some: {
+                userId,
+                role: { in: ['OWNER', 'ADMIN', 'MANAGER'] },
+                user: { isActive: true },
+              },
+            },
+          },
+        },
+        data: { isVisible: true },
+      });
+      await visibility({ isVisible: false, expectedVisibility: true }).expect(
+        200,
+      );
+      expect(update.mock.calls[1][0].data).toEqual({ isVisible: false });
+    },
+  );
+  it.each(['CASHIER', 'KITCHEN'])(
+    'blocks %s visibility updates',
+    async (denied) => {
+      role = denied;
+      await visibility().expect(403);
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    {},
+    { isVisible: true },
+    { isVisible: 'false', expectedVisibility: false },
+    { isVisible: 0, expectedVisibility: false },
+    { isVisible: null, expectedVisibility: false },
+    { isVisible: false, expectedVisibility: 'true' },
+    { isVisible: false, expectedVisibility: true, shopId: otherShop },
+    { isVisible: false, expectedVisibility: true, name: 'Injected' },
+  ])('rejects invalid visibility input (%j)', async (body) => {
+    await visibility(body).expect(400);
+    expect(update).not.toHaveBeenCalled();
+  });
+  it('rejects foreign categories, mixed IDs, malformed IDs and unauthenticated visibility writes', async () => {
+    await visibility(undefined, foreign).expect(404);
+    await visibility(undefined, id, otherShop).expect(404);
+    await visibility(undefined, 'bad').expect(400);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/shops/${shopId}/categories/${id}/visibility`)
+      .send({ isVisible: true, expectedVisibility: false })
+      .expect(401);
+    expect(update).not.toHaveBeenCalled();
+  });
+  const missingWrite = () =>
+    new Prisma.PrismaClientKnownRequestError('changed', {
+      code: 'P2025',
+      clientVersion: 'test',
+    });
+  it('returns a conflict when the visibility source state changed', async () => {
+    update.mockRejectedValue(missingWrite());
+    const response = await visibility().expect(409);
+    expect(response.body.code).toBe('CATEGORY_VISIBILITY_CHANGED');
+  });
+  it('rechecks membership after a denied visibility write', async () => {
+    update.mockImplementation(async () => {
+      role = 'CASHIER';
+      throw missingWrite();
+    });
+    await visibility().expect(403);
+  });
+  it('handles a category deleted before the visibility write safely', async () => {
+    update.mockImplementation(async () => {
+      findCategory.mockResolvedValue(null);
+      throw missingWrite();
+    });
+    await visibility().expect(404);
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER'])(
     'allows %s to delete with live tenant and role predicates',
     async (allowed) => {

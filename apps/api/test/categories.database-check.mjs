@@ -8,6 +8,7 @@ import { ShopMembersRepository } from '../dist/modules/shop-members/shop-members
 import { ShopMembersService } from '../dist/modules/shop-members/shop-members.service.js';
 import { TenantResourcesService } from '../dist/modules/tenancy/tenant-resources.service.js';
 import { TenantResourcesRepository } from '../dist/modules/tenancy/tenant-resources.repository.js';
+import { PublicMenuRepository } from '../dist/modules/categories/public-menu.repository.js';
 const prisma = new PrismaService();
 const email = `categories-${randomUUID()}@example.com`;
 const rollback = new Error('Intentional category rollback');
@@ -67,6 +68,51 @@ try {
             price: '10.00',
           },
         });
+        const publicMenus = new PublicMenuRepository(tx);
+        const hiddenMenu = await publicMenus.read(shop.slug);
+        assert.equal(
+          hiddenMenu.categories.some((category) => category.id === saved.id),
+          false,
+        );
+        assert.equal(
+          hiddenMenu.products.some((item) => item.id === product.id),
+          false,
+        );
+        const beforeVisibility = await tx.product.findUniqueOrThrow({
+          where: { id: product.id },
+        });
+        await service.setVisibility(user.id, shop.id, saved.id, {
+          isVisible: true,
+          expectedVisibility: false,
+        });
+        const visibleMenu = await publicMenus.read(shop.slug);
+        assert.equal(
+          visibleMenu.categories.some((category) => category.id === saved.id),
+          true,
+        );
+        assert.equal(
+          visibleMenu.products.some((item) => item.id === product.id),
+          true,
+        );
+        assert.deepEqual(
+          await tx.product.findUniqueOrThrow({ where: { id: product.id } }),
+          beforeVisibility,
+        );
+        await service.setVisibility(user.id, shop.id, saved.id, {
+          isVisible: false,
+          expectedVisibility: true,
+        });
+        await tx.$executeRaw`SAVEPOINT stale_visibility`;
+        await assert.rejects(
+          repository.setVisibility(user.id, shop.id, saved.id, true, true),
+          { code: 'P2025' },
+        );
+        await tx.$executeRaw`ROLLBACK TO SAVEPOINT stale_visibility`;
+        await tx.$executeRaw`RELEASE SAVEPOINT stale_visibility`;
+        assert.deepEqual(
+          await tx.product.findUniqueOrThrow({ where: { id: product.id } }),
+          beforeVisibility,
+        );
         const edited = (
           await service.update(user.id, shop.id, saved.id, {
             name: ' Hot Drinks ',
@@ -140,6 +186,14 @@ try {
           });
           assert.equal(roleEdit.category.description, `Updated by ${role}`);
           assert.equal(roleEdit.category.slug, 'coffee');
+          await service.setVisibility(user.id, shop.id, saved.id, {
+            isVisible: true,
+            expectedVisibility: false,
+          });
+          await service.setVisibility(user.id, shop.id, saved.id, {
+            isVisible: false,
+            expectedVisibility: true,
+          });
         }
         // Lose permission after a successful check; the repository must still block the write.
         await members.requirePermission(user.id, shop.id, 'shop.menu.manage');
@@ -155,6 +209,13 @@ try {
         await tx.$executeRaw`ROLLBACK TO SAVEPOINT category_access`;
         await tx.$executeRaw`RELEASE SAVEPOINT category_access`;
         assert.equal(await repository.list(user.id, shop.id), null);
+        await tx.$executeRaw`SAVEPOINT category_visibility_access`;
+        await assert.rejects(
+          repository.setVisibility(user.id, shop.id, saved.id, true, false),
+          { code: 'P2025' },
+        );
+        await tx.$executeRaw`ROLLBACK TO SAVEPOINT category_visibility_access`;
+        await tx.$executeRaw`RELEASE SAVEPOINT category_visibility_access`;
         await tx.$executeRaw`SAVEPOINT category_edit_access`;
         await assert.rejects(
           repository.update(user.id, shop.id, saved.id, {
@@ -180,6 +241,13 @@ try {
           );
           await assert.rejects(
             service.update(user.id, shop.id, saved.id, { name: 'Forbidden' }),
+            { status: 403 },
+          );
+          await assert.rejects(
+            service.setVisibility(user.id, shop.id, saved.id, {
+              isVisible: true,
+              expectedVisibility: false,
+            }),
             { status: 403 },
           );
         }
@@ -226,6 +294,50 @@ try {
             price: '20.00',
             status: 'SOLD_OUT',
           },
+        });
+        await assert.rejects(
+          service.setVisibility(user.id, other.id, saved.id, {
+            isVisible: true,
+            expectedVisibility: false,
+          }),
+          { status: 404 },
+        );
+        await service.setVisibility(user.id, shop.id, saved.id, {
+          isVisible: true,
+          expectedVisibility: false,
+        });
+        // Showing a category must never expose a product that remains individually hidden.
+        assert.equal(
+          (await publicMenus.read(shop.slug)).products.some(
+            (item) => item.id === product.id,
+          ),
+          false,
+        );
+        assert.equal(
+          (await publicMenus.read(shop.slug)).products.some(
+            (item) => item.id === unrelatedProduct.id,
+          ),
+          false,
+        );
+        assert.equal(
+          (await publicMenus.read(other.slug)).products.some(
+            (item) =>
+              item.id === unrelatedProduct.id && item.status === 'SOLD_OUT',
+          ),
+          true,
+        );
+        assert.deepEqual(
+          await tx.product.findUniqueOrThrow({ where: { id: product.id } }),
+          beforeProduct,
+        );
+        await tx.shop.update({
+          where: { id: other.id },
+          data: { isActive: false },
+        });
+        assert.equal(await publicMenus.read(other.slug), null);
+        await tx.shop.update({
+          where: { id: other.id },
+          data: { isActive: true },
         });
         await assert.rejects(service.delete(user.id, other.id, saved.id), {
           status: 404,
@@ -275,7 +387,7 @@ try {
   );
   assert.equal(await prisma.user.count({ where: { email } }), 0);
   console.log(
-    'Verified category create/edit/delete, defaults, tenant and role denials, write-time permission loss, preserved linked products in Uncategorized and unchanged foreign-shop products. All fixtures rolled back.',
+    'Verified category create/edit/delete/hide/show, public visibility filtering, stale visibility conflicts, defaults, tenant and role denials, write-time permission loss, preserved linked products and unchanged foreign-shop products. All fixtures rolled back.',
   );
 } finally {
   await prisma.$disconnect();

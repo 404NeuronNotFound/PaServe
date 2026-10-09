@@ -16,6 +16,7 @@ import { CreateCategoryDto } from './create-category.dto.js';
 import { CategoriesService } from './categories.service.js';
 import { UpdateCategoryDto } from './update-category.dto.js';
 import { EmptyDto } from '../auth/dto/empty.dto.js';
+import { CategoryVisibilityDto } from './category-visibility.dto.js';
 import {
   ShopResource,
   type ShopResourceRequest,
@@ -25,6 +26,21 @@ import {
 @Roles('OWNER', 'ADMIN', 'MANAGER')
 export class CategoriesController {
   constructor(private readonly categories: CategoriesService) {}
+  @Patch(':categoryId/visibility')
+  @ShopResource('category', 'categoryId')
+  setVisibility(
+    @Body() dto: CategoryVisibilityDto,
+    @Req() req: ShopResourceRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.categories.setVisibility(
+      req.user.id,
+      req.shopResource.shopId,
+      req.shopResource.id,
+      dto,
+    );
+  }
   @Delete(':categoryId')
   @HttpCode(204)
   @ShopResource('category', 'categoryId')
