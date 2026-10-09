@@ -5,6 +5,7 @@ import { AppService } from './app.service.js';
 import { DatabaseModule } from './database/database.module.js';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { ShopsModule } from './modules/shops/shops.module.js';
 import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
 import { requestValidationPipe } from './common/pipes/request-validation.pipe.js';
 
@@ -15,6 +16,7 @@ import { requestValidationPipe } from './common/pipes/request-validation.pipe.js
     }),
     DatabaseModule,
     AuthModule,
+    ShopsModule,
   ],
   controllers: [AppController],
   providers: [

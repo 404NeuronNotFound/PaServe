@@ -24,6 +24,6 @@ import { AuthOriginGuard } from './guards/auth-origin.guard.js';
     AuthOriginGuard,
     ThrottlerGuard,
   ],
-  exports: [JwtAuthGuard],
+  exports: [JwtAuthGuard, AuthService],
 })
 export class AuthModule {}
