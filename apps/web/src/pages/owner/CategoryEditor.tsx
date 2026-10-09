@@ -16,6 +16,7 @@ import { currentUserKey } from "../../features/auth/api/session";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { feedback } from "../../app/stores/feedback";
+import { FiLayers, FiX, FiCheck, FiLoader, FiLink } from "react-icons/fi";
 
 export function CategoryEditor({
   category,
@@ -36,6 +37,9 @@ export function CategoryEditor({
   const [descriptionError, setDescriptionError] = useState("");
   const [discard, setDiscard] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const active = useRef(false),
     running = useRef(false);
@@ -52,11 +56,18 @@ export function CategoryEditor({
   });
   useEffect(() => {
     active.current = true;
+    const node = dialog.current;
+    node?.showModal();
     input.current?.focus();
     return () => {
       active.current = false;
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      node?.close();
+      queueMicrotask(() =>
+        document.getElementById(`category-edit-${category.id}`)?.focus(),
+      );
     };
-  }, []);
+  }, [category.id]);
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (dirty) {
@@ -70,9 +81,22 @@ export function CategoryEditor({
   useEffect(() => {
     if (nameError && !mutation.isPending) input.current?.focus();
   }, [nameError, mutation.isPending]);
+  function finishClose() {
+    if (closeTimer.current) return;
+    setClosing(true);
+    const reduced = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    closeTimer.current = setTimeout(onClose, reduced ? 0 : 180);
+  }
+  function requestClose() {
+    if (running.current || closing || discard) return;
+    if (dirty) setDiscard(true);
+    else finishClose();
+  }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (running.current || unavailable || !dirty) return;
+    if (running.current || unavailable || closing || !dirty) return;
     const invalidName = !name.trim()
       ? "Enter a category name."
       : name.trim().length > CATEGORY_LIMITS.nameMax
@@ -112,7 +136,7 @@ export function CategoryEditor({
         queryKey: categoriesKey(userId, shopId),
       });
       feedback.toast("Category details saved.");
-      onClose();
+      finishClose();
     } catch (failure) {
       if (
         !active.current ||
@@ -143,118 +167,169 @@ export function CategoryEditor({
     }
   }
   return (
-    <section
-      className="category-editor"
-      aria-labelledby="category-editor-title"
-    >
-      <p className="section-label">CATEGORY DETAILS</p>
-      <h2 id="category-editor-title">Edit category</h2>
-      <form
-        noValidate
+    <>
+      <dialog
+        ref={dialog}
+        className={`category-edit-dialog${closing ? " is-closing" : ""}`}
+        aria-modal="true"
+        aria-labelledby="category-modal-title"
+        aria-describedby="category-modal-description"
         aria-busy={mutation.isPending}
-        onSubmit={(event) => void submit(event)}
+        onCancel={(event) => {
+          event.preventDefault();
+          requestClose();
+        }}
       >
-        <div className="field">
-          <label htmlFor="edit-category-name">Category name</label>
-          <input
-            ref={input}
-            id="edit-category-name"
-            required
-            maxLength={CATEGORY_LIMITS.nameMax}
-            value={name}
-            disabled={mutation.isPending || unavailable}
-            aria-invalid={Boolean(nameError)}
-            aria-describedby={
-              nameError ? "edit-category-name-error" : undefined
-            }
-            onChange={(event) => {
-              setName(event.target.value);
-              setNameError("");
-              setError("");
-            }}
-          />
-          {nameError && (
-            <InlineMessage
-              id="edit-category-name-error"
-              className="field-error"
+        <section
+          className="category-editor"
+          aria-labelledby="category-editor-title"
+        >
+          <header className="category-modal-heading">
+            <span className="category-modal-icon">
+              <FiLayers aria-hidden="true" />
+            </span>
+            <div>
+              <p className="section-label">CATEGORY DETAILS</p>
+              <h2 id="category-editor-title">
+                <span id="category-modal-title">Edit category</span>
+              </h2>
+              <p id="category-modal-description">
+                A little polish for <strong>{category.name}</strong>.
+              </p>
+            </div>
+            <button
+              className="secondary-button category-modal-close"
+              type="button"
+              aria-label="Close category editor"
+              disabled={mutation.isPending || closing}
+              onClick={requestClose}
             >
-              {nameError}
-            </InlineMessage>
-          )}
-        </div>
-        <div className="field">
-          <label htmlFor="edit-category-description">
-            Description <span className="field-hint">(optional)</span>
-          </label>
-          <textarea
-            id="edit-category-description"
-            rows={3}
-            value={description}
-            maxLength={CATEGORY_LIMITS.descriptionMax}
-            disabled={mutation.isPending || unavailable}
-            aria-invalid={Boolean(descriptionError)}
-            aria-describedby={`category-description-hint${descriptionError ? " category-description-error" : ""}`}
-            onChange={(event) => {
-              setDescription(event.target.value);
-              setDescriptionError("");
-              setError("");
-            }}
-          />
-          <p className="field-hint" id="category-description-hint">
-            A short introduction, up to {CATEGORY_LIMITS.descriptionMax}{" "}
-            characters.
-          </p>
-          {descriptionError && (
-            <InlineMessage
-              className="field-error"
-              id="category-description-error"
-            >
-              {descriptionError}
-            </InlineMessage>
-          )}
-        </div>
-        <p className="categories-form-note">
-          Menu address: <strong>/{category.slug}</strong>. Renaming keeps this
-          address.
-        </p>
-        {error && <InlineMessage>{error}</InlineMessage>}
-        <p className="field-hint" role="status">
-          {mutation.isPending
-            ? "Saving changes…"
-            : dirty
-              ? "Unsaved changes"
-              : "No changes yet"}
-        </p>
-        <div className="category-editor-actions">
-          <button
-            className="primary-button"
-            type="submit"
-            disabled={mutation.isPending || unavailable || !dirty}
+              <FiX aria-hidden="true" />
+            </button>
+          </header>
+          <form
+            noValidate
+            aria-busy={mutation.isPending}
+            onSubmit={(event) => void submit(event)}
           >
-            {mutation.isPending ? "Saving…" : "Save changes"}
-          </button>
-          <button
-            className="secondary-button"
-            type="button"
-            disabled={mutation.isPending}
-            onClick={() => {
-              if (dirty) setDiscard(true);
-              else onClose();
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
+            <div className="field">
+              <label htmlFor="edit-category-name">Category name</label>
+              <input
+                ref={input}
+                id="edit-category-name"
+                required
+                maxLength={CATEGORY_LIMITS.nameMax}
+                value={name}
+                autoComplete="off"
+                disabled={mutation.isPending || unavailable || closing}
+                aria-invalid={Boolean(nameError)}
+                aria-describedby={
+                  nameError ? "edit-category-name-error" : undefined
+                }
+                onChange={(event) => {
+                  setName(event.target.value);
+                  setNameError("");
+                  setError("");
+                }}
+              />
+              {nameError && (
+                <InlineMessage
+                  id="edit-category-name-error"
+                  className="field-error"
+                >
+                  {nameError}
+                </InlineMessage>
+              )}
+            </div>
+            <div className="field">
+              <label htmlFor="edit-category-description">
+                Description <span className="field-hint">(optional)</span>
+              </label>
+              <textarea
+                id="edit-category-description"
+                rows={4}
+                placeholder="What makes this part of your menu special?"
+                value={description}
+                maxLength={CATEGORY_LIMITS.descriptionMax}
+                disabled={mutation.isPending || unavailable || closing}
+                aria-invalid={Boolean(descriptionError)}
+                aria-describedby={`category-description-hint${descriptionError ? " category-description-error" : ""}`}
+                onChange={(event) => {
+                  setDescription(event.target.value);
+                  setDescriptionError("");
+                  setError("");
+                }}
+              />
+              <p className="field-hint" id="category-description-hint">
+                A short introduction, up to {CATEGORY_LIMITS.descriptionMax}{" "}
+                characters.
+                <span className="category-character-count">
+                  {description.length}/{CATEGORY_LIMITS.descriptionMax}
+                </span>
+              </p>
+              {descriptionError && (
+                <InlineMessage
+                  className="field-error"
+                  id="category-description-error"
+                >
+                  {descriptionError}
+                </InlineMessage>
+              )}
+            </div>
+            <div className="category-address-note">
+              <FiLink aria-hidden="true" />
+              <div>
+                <span>YOUR MENU ADDRESS</span>
+                <strong>/{category.slug}</strong>
+                <p>Renaming keeps this address.</p>
+              </div>
+            </div>
+            {error && <InlineMessage>{error}</InlineMessage>}
+            <footer className="category-modal-footer">
+              <p className="field-hint category-edit-status" role="status">
+                {mutation.isPending
+                  ? "Saving changes…"
+                  : dirty
+                    ? "Unsaved changes"
+                    : "No changes yet"}
+              </p>
+              <div className="category-editor-actions">
+                <button
+                  className="primary-button"
+                  type="submit"
+                  disabled={
+                    mutation.isPending || unavailable || closing || !dirty
+                  }
+                >
+                  {mutation.isPending ? (
+                    <FiLoader className="is-spinning" aria-hidden="true" />
+                  ) : (
+                    <FiCheck aria-hidden="true" />
+                  )}
+                  {mutation.isPending ? "Saving…" : "Save changes"}
+                </button>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={mutation.isPending || closing}
+                  onClick={requestClose}
+                >
+                  Cancel
+                </button>
+              </div>
+            </footer>
+          </form>
+        </section>
+      </dialog>
       <DecisionDialog
         open={discard}
         title="Discard category changes?"
         description="Your unsaved category details will be lost."
         confirmLabel="Discard changes"
         cancelLabel="Keep editing"
-        onConfirm={onClose}
+        onConfirm={finishClose}
         onClose={() => setDiscard(false)}
       />
-    </section>
+    </>
   );
 }

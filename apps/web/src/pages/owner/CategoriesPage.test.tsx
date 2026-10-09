@@ -1,10 +1,17 @@
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  within,
+  fireEvent,
+  cleanup,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { AxiosError } from "axios";
-import type { UserMembership } from "@paserve/contracts";
+import type { UserMembership, MenuCategory } from "@paserve/contracts";
 import { ActiveShopContext } from "../../features/shops/active-shop";
 import {
   createCategory,
@@ -204,7 +211,9 @@ it("blocks repeated saves and ignores a reorder completion after leaving the sho
   });
   expect(useFeedbackStore.getState().notices).toHaveLength(0);
 });
+let restoreDialogs: () => void;
 beforeEach(() => {
+  restoreDialogs = mockDecisionDialog();
   vi.mocked(listCategories).mockResolvedValue({ categories: [] });
   vi.mocked(createCategory).mockResolvedValue({ category });
 });
@@ -470,6 +479,8 @@ it("ignores a deletion completion after leaving the shop page", async () => {
   }
 });
 afterEach(() => {
+  cleanup();
+  restoreDialogs();
   vi.resetAllMocks();
   useFeedbackStore.getState().clear();
 });
@@ -620,9 +631,11 @@ it("edits display details and retains the menu address", async () => {
   expect(
     await screen.findByRole("button", { name: "Edit Hot Drinks" }),
   ).toBeInTheDocument();
-  expect(
-    screen.queryByRole("region", { name: "Edit category" }),
-  ).not.toBeInTheDocument();
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "Edit category" }),
+    ).not.toBeInTheDocument(),
+  );
 });
 
 it("keeps invalid edit values and blocks empty names", async () => {
@@ -699,9 +712,11 @@ it("confirms discarding edits and supports keeping the draft", async () => {
     );
     await user.click(editor.getByRole("button", { name: "Cancel" }));
     await user.click(screen.getByRole("button", { name: "Discard changes" }));
-    expect(
-      screen.queryByRole("region", { name: "Edit category" }),
-    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Edit category" }),
+      ).not.toBeInTheDocument(),
+    );
     expect(updateCategory).not.toHaveBeenCalled();
   } finally {
     if (originalShow)
@@ -719,4 +734,89 @@ it("confirms discarding edits and supports keeping the draft", async () => {
       );
     else Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
   }
+});
+
+it("opens an edit modal, handles Escape, and restores focus to its category", async () => {
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  setup();
+  const user = userEvent.setup();
+  const trigger = await screen.findByRole("button", { name: "Edit Coffee" });
+  await user.click(trigger);
+  const modal = screen.getByRole("dialog", { name: "Edit category" });
+  expect(modal).toHaveAttribute("aria-modal", "true");
+  expect(
+    within(modal).getByRole("textbox", { name: "Category name" }),
+  ).toHaveFocus();
+  fireEvent(modal, new Event("cancel", { cancelable: true }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "Edit category" }),
+    ).not.toBeInTheDocument(),
+  );
+  await waitFor(() => expect(trigger).toHaveFocus());
+  expect(updateCategory).not.toHaveBeenCalled();
+});
+
+it("protects dirty edits on Escape and Close while retaining the draft and count", async () => {
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  setup();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Edit Coffee" }));
+  const modal = screen.getByRole("dialog", { name: "Edit category" });
+  const description = within(modal).getByRole("textbox", {
+    name: /Description/,
+  });
+  await user.type(description, "Fresh coffee");
+  expect(within(modal).getByText("12/500")).toBeInTheDocument();
+  fireEvent(modal, new Event("cancel", { cancelable: true }));
+  await user.click(screen.getByRole("button", { name: "Keep editing" }));
+  expect(description).toHaveValue("Fresh coffee");
+  await user.click(
+    screen.getByRole("button", { name: "Close category editor" }),
+  );
+  expect(
+    screen.getByRole("dialog", { name: "Discard category changes?" }),
+  ).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Discard changes" }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "Edit category" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(updateCategory).not.toHaveBeenCalled();
+});
+
+it("blocks modal dismissal and duplicate saves while an edit is pending", async () => {
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  let resolve!: (result: { category: MenuCategory }) => void;
+  vi.mocked(updateCategory).mockImplementation(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  setup();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Edit Coffee" }));
+  const modal = screen.getByRole("dialog", { name: "Edit category" });
+  await user.type(
+    within(modal).getByRole("textbox", { name: /Description/ }),
+    "Draft",
+  );
+  await user.dblClick(
+    within(modal).getByRole("button", { name: "Save changes" }),
+  );
+  expect(updateCategory).toHaveBeenCalledTimes(1);
+  expect(
+    within(modal).getByRole("button", { name: "Close category editor" }),
+  ).toBeDisabled();
+  expect(within(modal).getByRole("button", { name: "Cancel" })).toBeDisabled();
+  fireEvent(modal, new Event("cancel", { cancelable: true }));
+  expect(modal).toBeInTheDocument();
+  resolve({ category: { ...category, description: "Draft" } });
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "Edit category" }),
+    ).not.toBeInTheDocument(),
+  );
 });

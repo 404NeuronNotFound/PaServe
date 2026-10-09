@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { FiLayers, FiLoader, FiPlus, FiEye, FiEyeOff } from "react-icons/fi";
+import {
+  FiLayers,
+  FiLoader,
+  FiPlus,
+  FiEye,
+  FiEyeOff,
+  FiEdit2,
+  FiTrash2,
+  FiShuffle,
+} from "react-icons/fi";
 import {
   CATEGORY_LIMITS,
   CATEGORY_REORDER_MAX,
@@ -357,50 +366,85 @@ function CategoryWorkspace({ userId }: { userId: string }) {
   return (
     <section className="categories-page" aria-labelledby="categories-title">
       <header className="categories-heading">
-        <p className="section-label">YOUR MENU, ONE CHAPTER AT A TIME</p>
-        <h1 id="categories-title">Categories</h1>
-        <p>Give {membership.shop.name}’s menu a little structure.</p>
-        <p className="categories-visibility-hint">
-          Hide a category to pause it on the public menu. Its products stay
-          safely linked, ready to show again.
-        </p>
+        <div className="categories-heading-copy">
+          <p className="section-label">YOUR MENU, ONE CHAPTER AT A TIME</p>
+          <h1 id="categories-title">Categories</h1>
+          <p>Give {membership.shop.name}’s menu a little structure.</p>
+          <p className="categories-visibility-hint">
+            Hide a category to pause it on the public menu. Its products stay
+            safely linked, ready to show again.
+          </p>
+        </div>
+        {query.isSuccess && !query.isError && (
+          <div
+            className="categories-menu-summary"
+            aria-label="Menu visibility summary"
+          >
+            <span className="categories-summary-icon">
+              <FiLayers aria-hidden="true" />
+            </span>
+            <p className="section-label">AT A GLANCE</p>
+            <div>
+              <strong>
+                {
+                  query.data.categories.filter((category) => category.isVisible)
+                    .length
+                }
+              </strong>
+              <span>visible</span>
+              <span className="categories-summary-divider" aria-hidden="true" />
+              <strong>
+                {
+                  query.data.categories.filter(
+                    (category) => !category.isVisible,
+                  ).length
+                }
+              </strong>
+              <span>hidden</span>
+            </div>
+            <p>Organized for your guests. Flexible for you.</p>
+          </div>
+        )}
       </header>
       <div className="categories-layout">
         <section
           className="categories-list-panel"
           aria-labelledby="category-list-title"
         >
-          <div className="categories-panel-heading">
-            <h2 id="category-list-title" tabIndex={-1}>
-              Your categories
-            </h2>
-            {query.isSuccess && !query.isError && (
-              <span>{query.data.categories.length}</span>
-            )}
+          <div className="categories-toolbar">
+            <div className="categories-panel-heading">
+              <h2 id="category-list-title" tabIndex={-1}>
+                Your categories
+              </h2>
+              {query.isSuccess && !query.isError && (
+                <span>{query.data.categories.length}</span>
+              )}
+            </div>
+            {query.isSuccess &&
+              !query.isError &&
+              query.data.categories.length > 1 &&
+              !reordering && (
+                <button
+                  id="category-reorder-button"
+                  type="button"
+                  className="secondary-button categories-reorder"
+                  disabled={
+                    Boolean(editing) ||
+                    Boolean(deleting) ||
+                    mutation.isPending ||
+                    visibility.isPending ||
+                    order.isPending ||
+                    query.isFetching ||
+                    lostAccess ||
+                    query.data.categories.length > CATEGORY_REORDER_MAX
+                  }
+                  onClick={() => setReordering(true)}
+                >
+                  <FiShuffle aria-hidden="true" />
+                  Reorder categories
+                </button>
+              )}
           </div>
-          {query.isSuccess &&
-            !query.isError &&
-            query.data.categories.length > 1 &&
-            !reordering && (
-              <button
-                id="category-reorder-button"
-                type="button"
-                className="secondary-button categories-reorder"
-                disabled={
-                  Boolean(editing) ||
-                  Boolean(deleting) ||
-                  mutation.isPending ||
-                  visibility.isPending ||
-                  order.isPending ||
-                  query.isFetching ||
-                  lostAccess ||
-                  query.data.categories.length > CATEGORY_REORDER_MAX
-                }
-                onClick={() => setReordering(true)}
-              >
-                Reorder categories
-              </button>
-            )}
           {query.data &&
             query.data.categories.length > CATEGORY_REORDER_MAX && (
               <InlineMessage tone="info">
@@ -431,9 +475,10 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             </>
           ) : query.data.categories.length ? (
             <ul className="categories-list">
-              {query.data.categories.map((category) => (
+              {query.data.categories.map((category, index) => (
                 <li
                   key={category.id}
+                  className={category.isVisible ? "" : "category-is-hidden"}
                   aria-busy={
                     visibility.isPending &&
                     visibility.variables?.id === category.id
@@ -441,9 +486,24 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                 >
                   <span className="category-icon">
                     <FiLayers aria-hidden="true" />
+                    <span className="category-position" aria-hidden="true">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
                   </span>
                   <div className="category-details">
-                    <strong>{category.name}</strong>
+                    <div className="category-row-heading">
+                      <strong>{category.name}</strong>
+                      <span
+                        className={`category-visibility${category.isVisible ? " is-visible" : ""}`}
+                      >
+                        {category.isVisible ? (
+                          <FiEye aria-hidden="true" />
+                        ) : (
+                          <FiEyeOff aria-hidden="true" />
+                        )}
+                        {category.isVisible ? "Visible" : "Hidden"}
+                      </span>
+                    </div>
                     <small>/{category.slug}</small>
                     {category.description && (
                       <p className="category-description">
@@ -452,9 +512,6 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                     )}
                   </div>
                   <div className="category-actions">
-                    <span className="category-visibility">
-                      {category.isVisible ? "Visible" : "Hidden"}
-                    </span>
                     <button
                       type="button"
                       className="secondary-button"
@@ -502,6 +559,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                       aria-label={`Edit ${category.name}`}
                       onClick={() => setEditing(category)}
                     >
+                      <FiEdit2 aria-hidden="true" />
                       Edit
                     </button>
                     <button
@@ -519,6 +577,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                       }
                       onClick={() => setDeleting(category)}
                     >
+                      <FiTrash2 aria-hidden="true" />
                       Delete
                     </button>
                   </div>
@@ -576,11 +635,14 @@ function CategoryWorkspace({ userId }: { userId: string }) {
           className="categories-create-panel"
           aria-labelledby="create-category-title"
         >
+          <span className="categories-create-emblem" aria-hidden="true">
+            <FiPlus />
+          </span>
           <p className="section-label">START WITH THE BASICS</p>
           <h2 id="create-category-title">Create a category</h2>
           <p>
-            Think Coffee, Meals, Pastries or Desserts. Choose a name that feels
-            right for your menu.
+            A home for your next favorite. Start with Coffee, Meals, Pastries or
+            Desserts.
           </p>
           <form
             noValidate
