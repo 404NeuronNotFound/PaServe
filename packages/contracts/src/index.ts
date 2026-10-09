@@ -51,10 +51,29 @@ export const SHOP_CASHIER_PERMISSIONS = [
   "shop.menu.availability.update",
 ] as const;
 
+/** Kitchen and barista authority, separate from checkout and order approval. */
+export const SHOP_KITCHEN_PERMISSIONS = [
+  "shop.preparation.queue.read",
+  "shop.preparation.status.update",
+] as const;
+
+/** Preparation-only states; these are not payment or order-approval states. */
+export const PREPARATION_STATUSES = ["QUEUED", "PREPARING", "READY"] as const;
+export type PreparationStatus = (typeof PREPARATION_STATUSES)[number];
+
+export function canTransitionPreparationStatus(
+  from: PreparationStatus,
+  to: PreparationStatus,
+): boolean {
+  return (from === "QUEUED" && to === "PREPARING") ||
+    (from === "PREPARING" && to === "READY");
+}
+
 /** Shop-scoped authority. Ownership/billing permissions are reserved for future flows. */
 export const SHOP_PERMISSIONS = [
   ...SHOP_OPERATIONAL_PERMISSIONS,
   ...SHOP_CASHIER_PERMISSIONS,
+  ...SHOP_KITCHEN_PERMISSIONS,
   "shop.operations.manage",
   "shop.settings.manage",
   "shop.ownership.manage",
@@ -71,6 +90,7 @@ export function isShopOwner(role: ShopRole): boolean {
  * Call only with the role from a validated membership for the target shop.
  * MANAGER has explicit daily-operation grants; ADMIN also has full operations.
  * CASHIER has explicit front-counter grants, shared with the management roles.
+ * KITCHEN has queue/preparation grants, also shared with management roles.
  * Settings, ownership and billing remain OWNER-only.
  * Other roles receive explicit grants in their respective authorization steps;
  * a numeric role ranking must never grant owner-sensitive permissions.
@@ -86,10 +106,14 @@ export function hasShopPermission(
   const counterAction = SHOP_CASHIER_PERMISSIONS.some(
     (allowed) => allowed === permission,
   );
+  const preparationAction = SHOP_KITCHEN_PERMISSIONS.some(
+    (allowed) => allowed === permission,
+  );
   if (role === "ADMIN")
-    return permission === "shop.operations.manage" || dailyOperation || counterAction;
-  if (role === "MANAGER") return dailyOperation || counterAction;
-  return role === "CASHIER" && counterAction;
+    return permission === "shop.operations.manage" || dailyOperation || counterAction || preparationAction;
+  if (role === "MANAGER") return dailyOperation || counterAction || preparationAction;
+  if (role === "CASHIER") return counterAction;
+  return role === "KITCHEN" && preparationAction;
 }
 
 export interface UserMembership {
