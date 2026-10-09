@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AuthLayout } from "../../components/layout/AuthLayout";
 import { LoginForm } from "../../features/auth/components/LoginForm";
 import { currentUserKey } from "../../features/auth/api/session";
+import { feedback } from "../../app/stores/feedback";
 
 export function LoginPage() {
   useEffect(() => {
@@ -18,6 +19,8 @@ export function LoginPage() {
       <p className="form-intro">Use your email and password to continue.</p>
       <LoginForm
         onSuccess={(session) => {
+          feedback.clearTransient();
+          feedback.toast("You are signed in.");
           queryClient.clear();
           queryClient.setQueryData(currentUserKey, { user: session.user });
           void navigate("/app/account", { replace: true });

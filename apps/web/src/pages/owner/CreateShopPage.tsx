@@ -11,6 +11,8 @@ import {
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import { currentUserKey } from "../../features/auth/api/session";
 import { createShop } from "../../features/shops/api/create";
+import { feedback } from "../../app/stores/feedback";
+import { InlineMessage } from "../../components/feedback/InlineMessage";
 
 export function CreateShopPage() {
   const [name, setName] = useState("");
@@ -73,6 +75,7 @@ export function CreateShopPage() {
           : current,
       );
       void client.invalidateQueries({ queryKey: currentUserKey });
+      feedback.toast("Your shop was created.");
       void navigate("/app/account", {
         replace: true,
         state: { createdShopName: result.shop.name },
@@ -162,9 +165,9 @@ export function CreateShopPage() {
                 }}
               />
               {errors.name && (
-                <p className="field-error" id="shop-name-error" role="alert">
+                <InlineMessage className="field-error" id="shop-name-error">
                   {errors.name}
-                </p>
+                </InlineMessage>
               )}
             </div>
             <div className="field">
@@ -194,19 +197,18 @@ export function CreateShopPage() {
                 characters.
               </p>
               {errors.description && (
-                <p
+                <InlineMessage
                   className="field-error"
                   id="shop-description-error"
-                  role="alert"
                 >
                   {errors.description}
-                </p>
+                </InlineMessage>
               )}
             </div>
             {formError && (
-              <p className="form-error" role="alert">
+              <InlineMessage>
                 {formError} <Link to="/app/account">View your account</Link>
-              </p>
+              </InlineMessage>
             )}
             <p className="field-hint">You will be the owner of this shop.</p>
             <p className="sr-only" role="status">

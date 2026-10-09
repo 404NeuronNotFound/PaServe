@@ -4,6 +4,7 @@ import { FiCheckCircle } from "react-icons/fi";
 import type { RegisteredUser } from "@paserve/contracts";
 import { AuthLayout } from "../../components/layout/AuthLayout";
 import { RegistrationForm } from "../../features/auth/components/RegistrationForm";
+import { feedback } from "../../app/stores/feedback";
 
 export function RegisterPage() {
   const [user, setUser] = useState<RegisteredUser | null>(null);
@@ -41,7 +42,12 @@ export function RegisterPage() {
           <p className="form-intro">
             Just your email and a password to get started.
           </p>
-          <RegistrationForm onSuccess={(result) => setUser(result.user)} />
+          <RegistrationForm
+            onSuccess={(result) => {
+              setUser(result.user);
+              feedback.toast("Your account is ready.");
+            }}
+          />
           <p className="account-note">
             Already have an account? <Link to="/login">Sign in</Link>
           </p>

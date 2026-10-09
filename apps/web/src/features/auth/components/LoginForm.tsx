@@ -2,16 +2,11 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import isEmail from "validator/lib/isEmail";
-import {
-  FiAlertCircle,
-  FiArrowRight,
-  FiEye,
-  FiEyeOff,
-  FiLoader,
-} from "react-icons/fi";
+import { FiArrowRight, FiEye, FiEyeOff, FiLoader } from "react-icons/fi";
 import type { ApiErrorResponse, LoginResponse } from "@paserve/contracts";
 import { REGISTRATION_LIMITS } from "@paserve/contracts";
 import { loginAccount } from "../api/session";
+import { InlineMessage } from "../../../components/feedback/InlineMessage";
 
 export function LoginForm({
   onSuccess,
@@ -160,10 +155,9 @@ export function LoginForm({
             aria-describedby={errors.email ? "login-email-error" : undefined}
           />
           {errors.email && (
-            <p className="field-error" id="login-email-error" role="alert">
-              <FiAlertCircle aria-hidden="true" />
+            <InlineMessage className="field-error" id="login-email-error">
               {errors.email}
-            </p>
+            </InlineMessage>
           )}
         </div>
         <div className="field">
@@ -217,17 +211,15 @@ export function LoginForm({
             </button>
           </div>
           {errors.password && (
-            <p className="field-error" id="login-password-error" role="alert">
-              <FiAlertCircle aria-hidden="true" />
+            <InlineMessage className="field-error" id="login-password-error">
               {errors.password}
-            </p>
+            </InlineMessage>
           )}
         </div>
         {formError && (
-          <p ref={errorRef} tabIndex={-1} className="form-error" role="alert">
-            <FiAlertCircle aria-hidden="true" />
+          <InlineMessage ref={errorRef} tabIndex={-1}>
             {formError}
-          </p>
+          </InlineMessage>
         )}
         <button
           className="primary-button"

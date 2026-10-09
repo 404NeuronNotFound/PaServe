@@ -9,10 +9,13 @@ import { CreateShopPage } from "./CreateShopPage";
 import { AccountPage } from "./AccountPage";
 import { createShop } from "../../features/shops/api/create";
 import { currentUserKey } from "../../features/auth/api/session";
+import { FeedbackHost } from "../../components/feedback/FeedbackHost";
+import { useFeedbackStore } from "../../app/stores/feedback";
 
 vi.mock("../../features/shops/api/create", () => ({ createShop: vi.fn() }));
 afterEach(() => {
   vi.resetAllMocks();
+  useFeedbackStore.getState().clear();
 });
 
 const shop = {
@@ -39,6 +42,7 @@ function setup() {
   });
   render(
     <QueryClientProvider client={client}>
+      <FeedbackHost />
       <MemoryRouter initialEntries={["/app/onboarding/create-shop"]}>
         <Routes>
           <Route
@@ -76,6 +80,7 @@ it("submits normalized business information and shows the new owner membership",
     name: "Café North",
     description: "Coffee and pastries",
   });
+  expect(screen.getByText("Your shop was created.")).toBeInTheDocument();
   expect(
     await screen.findByText("Café North is ready. You are its owner."),
   ).toBeInTheDocument();

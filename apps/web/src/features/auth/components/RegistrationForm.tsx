@@ -1,16 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import {
-  FiAlertCircle,
-  FiArrowRight,
-  FiEye,
-  FiEyeOff,
-  FiLoader,
-} from "react-icons/fi";
+import { FiArrowRight, FiEye, FiEyeOff, FiLoader } from "react-icons/fi";
 import type { ApiErrorResponse, RegisterResponse } from "@paserve/contracts";
 import { REGISTRATION_LIMITS } from "@paserve/contracts";
 import { registerAccount } from "../api/register";
+import { InlineMessage } from "../../../components/feedback/InlineMessage";
 import {
   validateRegistration,
   type RegistrationErrors,
@@ -155,10 +150,9 @@ export function RegistrationForm({
             aria-describedby={errors.email ? "email-error" : undefined}
           />
           {errors.email && (
-            <p className="field-error" id="email-error" role="alert">
-              <FiAlertCircle aria-hidden="true" />
+            <InlineMessage className="field-error" id="email-error">
               {errors.email}
-            </p>
+            </InlineMessage>
           )}
         </div>
         <div className="field">
@@ -201,10 +195,9 @@ export function RegistrationForm({
             works well.
           </p>
           {errors.password && (
-            <p className="field-error" id="password-error" role="alert">
-              <FiAlertCircle aria-hidden="true" />
+            <InlineMessage className="field-error" id="password-error">
               {errors.password}
-            </p>
+            </InlineMessage>
           )}
         </div>
         <div className="field">
@@ -228,18 +221,12 @@ export function RegistrationForm({
             }
           />
           {errors.confirmPassword && (
-            <p className="field-error" id="confirm-error" role="alert">
-              <FiAlertCircle aria-hidden="true" />
+            <InlineMessage className="field-error" id="confirm-error">
               {errors.confirmPassword}
-            </p>
+            </InlineMessage>
           )}
         </div>
-        {formError && (
-          <p className="form-error" role="alert">
-            <FiAlertCircle aria-hidden="true" />
-            {formError}
-          </p>
-        )}
+        {formError && <InlineMessage>{formError}</InlineMessage>}
         <button
           className="primary-button"
           type="submit"

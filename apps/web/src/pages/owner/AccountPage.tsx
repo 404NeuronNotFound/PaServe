@@ -14,6 +14,8 @@ import {
 import type { CurrentUserResponse } from "@paserve/contracts";
 import { currentUserKey, logoutAccount } from "../../features/auth/api/session";
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
+import { feedback } from "../../app/stores/feedback";
+import { InlineMessage } from "../../components/feedback/InlineMessage";
 
 export function AccountPage() {
   const client = useQueryClient();
@@ -32,6 +34,8 @@ export function AccountPage() {
     mutationFn: logoutAccount,
     retry: false,
     onSuccess: () => {
+      feedback.clearTransient();
+      feedback.toast("You are signed out.");
       client.clear();
       void navigate("/login", { replace: true });
     },
@@ -120,9 +124,9 @@ export function AccountPage() {
             </span>
           </div>
           {logout.isError && (
-            <p className="form-error" role="alert">
+            <InlineMessage>
               We couldn’t sign you out. Please try again.
-            </p>
+            </InlineMessage>
           )}
           <div className="account-grid">
             <section className="profile-card" aria-labelledby="profile-heading">
@@ -159,9 +163,9 @@ export function AccountPage() {
               </div>
               <h2 id="shops-heading">Your people. Your places.</h2>
               {createdShopName && (
-                <p role="status">
+                <InlineMessage tone="success" className="shop-created-status">
                   {createdShopName} is ready. You are its owner.
-                </p>
+                </InlineMessage>
               )}
               {user?.memberships?.length ? (
                 <ul className="membership-list">

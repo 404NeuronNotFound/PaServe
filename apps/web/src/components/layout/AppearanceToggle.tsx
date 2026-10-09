@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { FiMoon, FiSun } from "react-icons/fi";
 import { useAppearanceStore } from "../../app/stores/appearance";
+import { feedback } from "../../app/stores/feedback";
 
 export function AppearanceToggle() {
   const { appearance, setAppearance } = useAppearanceStore();
@@ -16,7 +17,19 @@ export function AppearanceToggle() {
       aria-label="Dark appearance"
       aria-checked={appearance === "night"}
       data-mode={appearance}
-      onClick={() => setAppearance(appearance === "night" ? "day" : "night")}
+      onClick={() => {
+        const previous = appearance;
+        const next = appearance === "night" ? "day" : "night";
+        setAppearance(next);
+        feedback.snackbar(
+          `${next === "night" ? "Night" : "Day"} appearance enabled.`,
+          {
+            label: "Undo",
+            onClick: () => setAppearance(previous),
+          },
+          { key: "appearance" },
+        );
+      }}
     >
       <span className="appearance-thumb" aria-hidden="true" />
       <span className="day-label" aria-hidden="true">
