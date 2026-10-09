@@ -9,6 +9,7 @@ import { ShopsModule } from './modules/shops/shops.module.js';
 import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
 import { requestValidationPipe } from './common/pipes/request-validation.pipe.js';
 import { TenancyModule } from './modules/tenancy/tenancy.module.js';
+import { CategoriesModule } from './modules/categories/categories.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { TenancyModule } from './modules/tenancy/tenancy.module.js';
     AuthModule,
     ShopsModule,
     TenancyModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [
