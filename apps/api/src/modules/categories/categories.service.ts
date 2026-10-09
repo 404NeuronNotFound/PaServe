@@ -17,6 +17,7 @@ import type { CreateCategoryDto } from './create-category.dto.js';
 import type { UpdateCategoryDto } from './update-category.dto.js';
 import { TenantResourcesService } from '../tenancy/tenant-resources.service.js';
 import type { CategoryVisibilityDto } from './category-visibility.dto.js';
+import type { ReorderCategoriesDto } from './reorder-categories.dto.js';
 
 const lostAccess = () =>
   new ForbiddenException({
@@ -31,6 +32,46 @@ export class CategoriesService {
     private readonly members: ShopMembersService,
     private readonly resources: TenantResourcesService,
   ) {}
+  async reorder(
+    userId: string,
+    shopId: string,
+    dto: ReorderCategoriesDto,
+  ): Promise<CategoriesResponse> {
+    await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
+    if (
+      dto.categoryIds.length !== dto.expectedOrder.length ||
+      dto.categoryIds.some((id) => !dto.expectedOrder.includes(id))
+    )
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Provide the same complete category list in both orders.',
+      });
+    try {
+      const categories = await this.repository.reorder(
+        userId,
+        shopId,
+        dto.categoryIds,
+        dto.expectedOrder,
+      );
+      return {
+        categories: categories.map((category) => ({
+          ...category,
+          createdAt: category.createdAt.toISOString(),
+        })),
+      };
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') throw lostAccess();
+        if (error.code === 'P2034')
+          throw new ConflictException({
+            code: 'CATEGORY_ORDER_CHANGED',
+            message:
+              'The menu changed while saving. Refresh before saving again.',
+          });
+      }
+      throw error;
+    }
+  }
   async setVisibility(
     userId: string,
     shopId: string,

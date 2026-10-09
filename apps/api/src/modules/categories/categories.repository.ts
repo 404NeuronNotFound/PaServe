@@ -1,4 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 
@@ -17,6 +23,83 @@ const categorySelect = {
 @Injectable()
 export class CategoriesRepository {
   constructor(private readonly prisma: PrismaService) {}
+  reorder(
+    userId: string,
+    shopId: string,
+    categoryIds: string[],
+    expectedOrder: string[],
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const shop = await tx.shop.findFirst({
+          where: shopAccessWhere(userId, shopId, roles),
+          select: {
+            categories: {
+              where: { shopId },
+              select: { id: true },
+              orderBy: [
+                { sortOrder: 'asc' },
+                { createdAt: 'asc' },
+                { id: 'asc' },
+              ],
+            },
+          },
+        });
+        if (!shop)
+          throw new ForbiddenException({
+            code: 'SHOP_PERMISSION_REQUIRED',
+            message: 'Your menu management access is no longer available.',
+          });
+        const current = shop.categories.map((category) => category.id);
+        const currentIds = new Set(current);
+        if (categoryIds.some((id) => !currentIds.has(id)))
+          throw new NotFoundException({
+            code: 'RESOURCE_NOT_ACCESSIBLE',
+            message: 'One or more categories are unavailable in this shop.',
+          });
+        if (
+          current.length !== expectedOrder.length ||
+          current.some((id, index) => id !== expectedOrder[index])
+        )
+          throw new ConflictException({
+            code: 'CATEGORY_ORDER_CHANGED',
+            message:
+              'The category list or order changed. Refresh before saving again.',
+          });
+        for (const [sortOrder, id] of categoryIds.entries()) {
+          await tx.category.update({
+            where: { id, shopId, shop: shopAccessWhere(userId, shopId, roles) },
+            data: { sortOrder },
+            select: { id: true },
+          });
+        }
+        const result = await tx.shop.findFirst({
+          where: shopAccessWhere(userId, shopId, roles),
+          select: {
+            categories: {
+              where: { shopId },
+              select: categorySelect,
+              orderBy: [
+                { sortOrder: 'asc' },
+                { createdAt: 'asc' },
+                { id: 'asc' },
+              ],
+            },
+          },
+        });
+        if (!result)
+          throw new ForbiddenException({
+            code: 'SHOP_PERMISSION_REQUIRED',
+            message: 'Your menu management access is no longer available.',
+          });
+        return result.categories;
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        timeout: 15000,
+      },
+    );
+  }
   setVisibility(
     userId: string,
     shopId: string,

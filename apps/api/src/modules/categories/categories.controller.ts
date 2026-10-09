@@ -17,6 +17,7 @@ import { CategoriesService } from './categories.service.js';
 import { UpdateCategoryDto } from './update-category.dto.js';
 import { EmptyDto } from '../auth/dto/empty.dto.js';
 import { CategoryVisibilityDto } from './category-visibility.dto.js';
+import { ReorderCategoriesDto } from './reorder-categories.dto.js';
 import {
   ShopResource,
   type ShopResourceRequest,
@@ -26,6 +27,15 @@ import {
 @Roles('OWNER', 'ADMIN', 'MANAGER')
 export class CategoriesController {
   constructor(private readonly categories: CategoriesService) {}
+  @Patch('reorder')
+  reorder(
+    @Body() dto: ReorderCategoriesDto,
+    @Req() req: ShopMemberRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.categories.reorder(req.user.id, req.shopMembership.shopId, dto);
+  }
   @Patch(':categoryId/visibility')
   @ShopResource('category', 'categoryId')
   setVisibility(
