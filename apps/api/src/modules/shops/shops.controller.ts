@@ -18,10 +18,8 @@ import { ShopsService } from './shops.service.js';
 import { CreateShopDto } from './dto/create-shop.dto.js';
 import { UpdateShopDto } from './dto/update-shop.dto.js';
 import { Roles } from '../shop-members/decorators/roles.decorator.js';
-import {
-  ShopMembershipGuard,
-  type ShopMemberRequest,
-} from '../shop-members/guards/shop-membership.guard.js';
+import { ShopMember } from '../shop-members/decorators/shop-member.decorator.js';
+import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 
 @Controller('shops')
 @UseGuards(JwtAuthGuard)
@@ -57,7 +55,7 @@ export class ShopsController {
   }
 
   @Get(':shopId/membership')
-  @UseGuards(ShopMembershipGuard)
+  @ShopMember()
   membership(
     @Req() request: ShopMemberRequest,
     @Res({ passthrough: true }) response: Response,
