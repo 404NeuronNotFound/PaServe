@@ -261,3 +261,25 @@ export interface UpdateCategoryRequest {
   description?: string;
 }
 export type UpdateCategoryResponse = CreateCategoryResponse;
+export interface SetCategoryVisibilityRequest {
+  isVisible: boolean;
+  expectedVisibility: boolean;
+}
+export interface PublicMenuResponse {
+  shop: { name: string; slug: string; description: string | null };
+  categories: Array<
+    Pick<MenuCategory, "id" | "name" | "slug" | "description" | "sortOrder">
+  >;
+  products: Array<{
+    id: string;
+    categoryId: string | null;
+    name: string;
+    slug: string;
+    description: string | null;
+    price: string;
+    imageUrl: string | null;
+    status: "AVAILABLE" | "SOLD_OUT";
+    isFeatured: boolean;
+    sortOrder: number;
+  }>;
+}
