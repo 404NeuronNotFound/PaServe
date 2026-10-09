@@ -9,6 +9,7 @@ import { RegisterPage } from "../../pages/public/RegisterPage";
 import { ConnectionPage } from "../../pages/public/ConnectionPage";
 import { LoginPage } from "../../pages/public/LoginPage";
 import { AccountPage } from "../../pages/owner/AccountPage";
+import { CreateShopPage } from "../../pages/owner/CreateShopPage";
 import { ProtectedRoute } from "../../features/auth/components/ProtectedRoute";
 
 export function AppRouter() {
@@ -28,6 +29,7 @@ export function AppRouter() {
         >
           <Route index element={<Navigate to="account" replace />} />
           <Route path="account" element={<AccountPage />} />
+          <Route path="onboarding/create-shop" element={<CreateShopPage />} />
         </Route>
         <Route path="/connection" element={<ConnectionPage />} />
         <Route

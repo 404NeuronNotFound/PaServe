@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   FiArrowUpRight,
   FiCoffee,
@@ -18,6 +18,10 @@ import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 export function AccountPage() {
   const client = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
+  const createdShopName = (
+    location.state as { createdShopName?: string } | null
+  )?.createdShopName;
   const user = client.getQueryData<CurrentUserResponse>(currentUserKey)?.user;
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -154,6 +158,11 @@ export function AccountPage() {
                 <FiUsers aria-hidden="true" />
               </div>
               <h2 id="shops-heading">Your people. Your places.</h2>
+              {createdShopName && (
+                <p role="status">
+                  {createdShopName} is ready. You are its owner.
+                </p>
+              )}
               {user?.memberships?.length ? (
                 <ul className="membership-list">
                   {user.memberships.map((membership) => (
@@ -178,10 +187,19 @@ export function AccountPage() {
               ) : (
                 <div className="empty-workspace">
                   <FiCoffee aria-hidden="true" />
-                  <p>Your account is ready. Shop setup comes next.</p>
+                  <p>
+                    Your account is ready. Create your first shop to get
+                    started.
+                  </p>
                   <span>Your shop memberships will appear here.</span>
                 </div>
               )}
+              <Link
+                className="secondary-button shop-create-link"
+                to="/app/onboarding/create-shop"
+              >
+                <FiCoffee aria-hidden="true" /> Create shop
+              </Link>
             </section>
           </div>
           <footer className="workspace-footer">

@@ -1505,3 +1505,85 @@
     animation: none !important;
   }
 }
+
+.shop-create-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100svh - 24px);
+  min-height: 0;
+}
+.shop-create-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  max-width: 680px;
+  padding: 24px;
+}
+.shop-create-card {
+  overflow: visible;
+}
+.shop-create-card h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(30px, 4vw, 42px);
+  font-weight: 400;
+}
+.shop-create-card .registration-form {
+  gap: 16px;
+}
+.shop-create-card .field textarea {
+  display: block;
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+.shop-create-card .field textarea:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+:root[data-appearance="night"] .shop-create-card .field textarea:focus {
+  outline-color: var(--color-lime);
+}
+.shop-create-card .field textarea[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+.shop-create-card textarea:disabled {
+  opacity: 0.65;
+}
+.shop-create-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+.shop-create-link {
+  margin-top: 16px;
+  color: var(--color-text);
+  border-color: var(--color-border);
+  text-decoration: none;
+}
+.shop-create-link:hover {
+  background: var(--color-secondary);
+}
+@media (max-width: 760px) {
+  .shop-create-page {
+    height: auto;
+    min-height: calc(100svh - 24px);
+  }
+  .shop-create-content {
+    overflow: visible;
+    padding: 20px 16px;
+  }
+  .shop-create-card {
+    padding: 20px;
+  }
+}

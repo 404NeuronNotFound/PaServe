@@ -33,7 +33,7 @@ function renderAt(path: string) {
   );
 }
 
-it.each(["/app", "/app/account"])(
+it.each(["/app", "/app/account", "/app/onboarding/create-shop"])(
   "redirects guests entering %s directly to login",
   async (path) => {
     const error = new AxiosError("Unauthorized");
