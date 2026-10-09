@@ -80,3 +80,7 @@ export interface CreateShopResponse {
   };
   membership: UserMembership;
 }
+
+export interface ShopMembershipResponse {
+  membership: UserMembership;
+}
