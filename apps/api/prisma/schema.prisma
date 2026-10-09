@@ -94,6 +94,7 @@ model Category {
   id        String   @id @default(uuid())
   shopId    String
   name      String
+  description String?
   slug      String
   sortOrder Int      @default(0)
   isVisible Boolean  @default(true)

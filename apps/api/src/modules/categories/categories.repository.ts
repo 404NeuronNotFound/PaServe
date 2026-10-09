@@ -7,6 +7,7 @@ const categorySelect = {
   id: true,
   shopId: true,
   name: true,
+  description: true,
   slug: true,
   sortOrder: true,
   isVisible: true,
@@ -16,6 +17,18 @@ const categorySelect = {
 @Injectable()
 export class CategoriesRepository {
   constructor(private readonly prisma: PrismaService) {}
+  update(
+    userId: string,
+    shopId: string,
+    id: string,
+    data: { name?: string; description?: string | null },
+  ) {
+    return this.prisma.category.update({
+      where: { id, shopId, shop: shopAccessWhere(userId, shopId, roles) },
+      data,
+      select: categorySelect,
+    });
+  }
   list(userId: string, shopId: string) {
     // Parent scope repeats live authorization and distinguishes lost access from an empty menu.
     return this.prisma.shop.findFirst({

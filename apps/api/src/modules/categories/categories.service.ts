@@ -1,5 +1,7 @@
 import {
   ConflictException,
+  BadRequestException,
+  NotFoundException,
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
@@ -12,6 +14,8 @@ import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import { CategoriesRepository } from './categories.repository.js';
 import { categorySlug } from './category-slug.js';
 import type { CreateCategoryDto } from './create-category.dto.js';
+import type { UpdateCategoryDto } from './update-category.dto.js';
+import { TenantResourcesService } from '../tenancy/tenant-resources.service.js';
 
 const lostAccess = () =>
   new ForbiddenException({
@@ -24,7 +28,53 @@ export class CategoriesService {
   constructor(
     private readonly repository: CategoriesRepository,
     private readonly members: ShopMembersService,
+    private readonly resources: TenantResourcesService,
   ) {}
+  async update(
+    userId: string,
+    shopId: string,
+    categoryId: string,
+    dto: UpdateCategoryDto,
+  ): Promise<CreateCategoryResponse> {
+    await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
+    await this.resources.requireResource(
+      userId,
+      shopId,
+      'category',
+      categoryId,
+    );
+    const data: { name?: string; description?: string | null } = {};
+    if (dto.name !== undefined)
+      data.name = dto.name.trim().replace(/\s+/g, ' ');
+    if (dto.description !== undefined)
+      data.description = dto.description.trim() || null;
+    if (!Object.keys(data).length)
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Provide at least one category detail to update.',
+      });
+    try {
+      const category = await this.repository.update(
+        userId,
+        shopId,
+        categoryId,
+        data,
+      );
+      return {
+        category: { ...category, createdAt: category.createdAt.toISOString() },
+      };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      )
+        throw new NotFoundException({
+          code: 'RESOURCE_NOT_ACCESSIBLE',
+          message: 'This category is unavailable or you no longer have access.',
+        });
+      throw error;
+    }
+  }
   async list(userId: string, shopId: string): Promise<CategoriesResponse> {
     await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
     const result = await this.repository.list(userId, shopId);
