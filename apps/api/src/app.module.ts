@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { ShopsModule } from './modules/shops/shops.module.js';
 import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
 import { requestValidationPipe } from './common/pipes/request-validation.pipe.js';
+import { TenancyModule } from './modules/tenancy/tenancy.module.js';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { requestValidationPipe } from './common/pipes/request-validation.pipe.js
     DatabaseModule,
     AuthModule,
     ShopsModule,
+    TenancyModule,
   ],
   controllers: [AppController],
   providers: [

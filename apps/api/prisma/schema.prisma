@@ -104,6 +104,8 @@ model Category {
   products Product[]
 
   @@unique([shopId, slug])
+  // Supports the additional SQL product/category tenant foreign key.
+  @@unique([id, shopId])
   @@index([shopId])
   @@map("categories")
 }

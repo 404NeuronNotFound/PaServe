@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { UpdateShopRequest } from '@paserve/contracts';
+import { shopAccessWhere } from '../tenancy/shop-scope.js';
 export type ShopSettingsData = { name?: string } & {
   [K in Exclude<keyof UpdateShopRequest, 'name'>]?: string | null;
 };
@@ -26,11 +27,7 @@ export class ShopsRepository {
 
   findSettings(userId: string, shopId: string) {
     return this.prisma.shop.findFirst({
-      where: {
-        id: shopId,
-        isActive: true,
-        members: { some: { userId, role: 'OWNER', user: { isActive: true } } },
-      },
+      where: shopAccessWhere(userId, shopId, ['OWNER']),
       select: settingsSelect,
     });
   }
@@ -38,11 +35,7 @@ export class ShopsRepository {
   updateSettings(userId: string, shopId: string, data: ShopSettingsData) {
     return this.prisma.shop.update({
       // Check ownership in the write too, in case it changed after the guard.
-      where: {
-        id: shopId,
-        isActive: true,
-        members: { some: { userId, role: 'OWNER', user: { isActive: true } } },
-      },
+      where: shopAccessWhere(userId, shopId, ['OWNER']),
       data,
       select: settingsSelect,
     });
