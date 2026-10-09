@@ -10,6 +10,7 @@ type DecisionDialogProps = {
   destructive?: boolean;
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
+  errorMessage?: (error: unknown) => string;
 };
 
 export function DecisionDialog(props: DecisionDialogProps) {
@@ -24,6 +25,7 @@ function OpenDecisionDialog({
   destructive = false,
   onConfirm,
   onClose,
+  errorMessage,
 }: DecisionDialogProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
@@ -52,8 +54,11 @@ function OpenDecisionDialog({
     try {
       await onConfirm();
       onClose();
-    } catch {
-      setError("The action could not be completed. Please try again.");
+    } catch (failure) {
+      setError(
+        errorMessage?.(failure) ??
+          "The action could not be completed. Please try again.",
+      );
     } finally {
       running.current = false;
       setPending(false);

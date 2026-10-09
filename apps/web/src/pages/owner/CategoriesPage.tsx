@@ -16,11 +16,13 @@ import {
   categoriesKey,
   createCategory,
   listCategories,
+  deleteCategory,
 } from "../../features/shops/api/categories";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import "./categories.css";
 import { CategoryEditor } from "./CategoryEditor";
+import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 
 export function CategoriesPage() {
   const membership = useActiveShop();
@@ -40,6 +42,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
   const [error, setError] = useState("");
   const [lostAccess, setLostAccess] = useState(false);
   const [editing, setEditing] = useState<MenuCategory | null>(null);
+  const [deleting, setDeleting] = useState<MenuCategory | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const mounted = useRef(false);
   const submitting = useRef(false);
@@ -58,6 +61,19 @@ function CategoryWorkspace({ userId }: { userId: string }) {
       createCategory(shopId, { name: categoryName }),
     retry: false,
   });
+  const deletion = useMutation({
+    mutationFn: (categoryId: string) => deleteCategory(shopId, categoryId),
+    retry: false,
+  });
+  function deletionMessage(failure: unknown) {
+    if (isAxiosError(failure)) {
+      if ([401, 403, 404].includes(failure.response?.status ?? 0))
+        return "This category is unavailable or you no longer have permission to delete it. Close this dialog and refresh the categories.";
+      if (!failure.response)
+        return "We couldn’t confirm deletion. Close this dialog and refresh the categories before trying again.";
+    }
+    return "We couldn’t delete the category. Your products have been kept. Please try again.";
+  }
   useEffect(() => {
     mounted.current = true;
     document.title = `Categories · ${membership.shop.name} · PaServe`;
@@ -166,7 +182,9 @@ function CategoryWorkspace({ userId }: { userId: string }) {
           aria-labelledby="category-list-title"
         >
           <div className="categories-panel-heading">
-            <h2 id="category-list-title">Your categories</h2>
+            <h2 id="category-list-title" tabIndex={-1}>
+              Your categories
+            </h2>
             {query.isSuccess && !query.isError && (
               <span>{query.data.categories.length}</span>
             )}
@@ -205,12 +223,30 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                     type="button"
                     className="secondary-button category-edit-button"
                     disabled={
-                      Boolean(editing) || mutation.isPending || lostAccess
+                      Boolean(editing) ||
+                      Boolean(deleting) ||
+                      mutation.isPending ||
+                      lostAccess
                     }
                     aria-label={`Edit ${category.name}`}
                     onClick={() => setEditing(category)}
                   >
                     Edit
+                  </button>
+                  <button
+                    id={`category-delete-${category.id}`}
+                    type="button"
+                    className="secondary-button category-delete-button"
+                    aria-label={`Delete ${category.name}`}
+                    disabled={
+                      Boolean(editing) ||
+                      Boolean(deleting) ||
+                      mutation.isPending ||
+                      lostAccess
+                    }
+                    onClick={() => setDeleting(category)}
+                  >
+                    Delete
                   </button>
                 </li>
               ))}
@@ -318,6 +354,49 @@ function CategoryWorkspace({ userId }: { userId: string }) {
           </form>
         </section>
       </div>
+      <DecisionDialog
+        open={Boolean(deleting)}
+        title={`Delete “${deleting?.name ?? ""}”?`}
+        description="This permanently removes the category. All linked products will be kept in Uncategorized, with their prices, images, visibility and availability unchanged. This cannot be undone."
+        confirmLabel="Delete category"
+        cancelLabel="Keep category"
+        destructive
+        errorMessage={deletionMessage}
+        onConfirm={async () => {
+          if (!deleting) return;
+          const target = deleting;
+          await deletion.mutateAsync(target.id);
+          if (
+            !mounted.current ||
+            client.getQueryData<CurrentUserResponse>(currentUserKey)?.user
+              .id !== userId
+          )
+            return;
+          client.setQueryData<CategoriesResponse>(key, (current) =>
+            current
+              ? {
+                  categories: current.categories.filter(
+                    (category) => category.id !== target.id,
+                  ),
+                }
+              : current,
+          );
+          void client.invalidateQueries({ queryKey: key });
+          feedback.toast(
+            "Category deleted. Linked products were kept in Uncategorized.",
+          );
+        }}
+        onClose={() => {
+          const target = deleting;
+          setDeleting(null);
+          queueMicrotask(() =>
+            (
+              document.getElementById(`category-delete-${target?.id}`) ??
+              document.getElementById("category-list-title")
+            )?.focus(),
+          );
+        }}
+      />
     </section>
   );
 }

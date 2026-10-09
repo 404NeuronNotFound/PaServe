@@ -11,6 +11,7 @@ import {
   listCategories,
   categoriesKey,
   updateCategory,
+  deleteCategory,
 } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
 import { CategoriesPage } from "./CategoriesPage";
@@ -21,6 +22,7 @@ vi.mock("../../features/shops/api/categories", async (importOriginal) => ({
   createCategory: vi.fn(),
   listCategories: vi.fn(),
   updateCategory: vi.fn(),
+  deleteCategory: vi.fn(),
 }));
 const category = {
   id: "category-a",
@@ -35,6 +37,128 @@ const category = {
 beforeEach(() => {
   vi.mocked(listCategories).mockResolvedValue({ categories: [] });
   vi.mocked(createCategory).mockResolvedValue({ category });
+});
+
+function mockDecisionDialog() {
+  const show = Object.getOwnPropertyDescriptor(
+    HTMLDialogElement.prototype,
+    "showModal",
+  );
+  const close = Object.getOwnPropertyDescriptor(
+    HTMLDialogElement.prototype,
+    "close",
+  );
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+    configurable: true,
+    value: function (this: HTMLDialogElement) {
+      this.open = true;
+    },
+  });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", {
+    configurable: true,
+    value: function (this: HTMLDialogElement) {
+      this.open = false;
+    },
+  });
+  return () => {
+    if (show)
+      Object.defineProperty(HTMLDialogElement.prototype, "showModal", show);
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+    if (close)
+      Object.defineProperty(HTMLDialogElement.prototype, "close", close);
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
+  };
+}
+
+it("confirms category deletion, preserves products in its explanation, and refreshes the list", async () => {
+  const restore = mockDecisionDialog();
+  try {
+    vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+    vi.mocked(deleteCategory).mockResolvedValue(undefined);
+    setup();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Delete Coffee" }),
+    );
+    expect(screen.getByRole("button", { name: "Keep category" })).toHaveFocus();
+    expect(
+      screen.getByText(/All linked products will be kept in Uncategorized/),
+    ).toBeInTheDocument();
+    expect(deleteCategory).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Keep category" }));
+    expect(deleteCategory).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Delete Coffee" }));
+    vi.mocked(listCategories).mockResolvedValue({ categories: [] });
+    await user.click(screen.getByRole("button", { name: "Delete category" }));
+    await waitFor(() =>
+      expect(deleteCategory).toHaveBeenCalledExactlyOnceWith("a", "category-a"),
+    );
+    expect(
+      await screen.findByText("A place for every favorite."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      useFeedbackStore
+        .getState()
+        .notices.some((notice) =>
+          notice.message.includes("Linked products were kept"),
+        ),
+    ).toBe(true);
+  } finally {
+    restore();
+  }
+});
+
+it("keeps the category and explains an unconfirmed deletion without automatic retry", async () => {
+  const restore = mockDecisionDialog();
+  try {
+    vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+    vi.mocked(deleteCategory).mockRejectedValue({ isAxiosError: true });
+    setup();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Delete Coffee" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Delete category" }));
+    expect(
+      await screen.findByText(/We couldn’t confirm deletion/),
+    ).toBeInTheDocument();
+    expect(deleteCategory).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("/coffee")).toBeInTheDocument();
+    expect(useFeedbackStore.getState().notices).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: "Keep category" }));
+  } finally {
+    restore();
+  }
+});
+
+it("ignores a deletion completion after leaving the shop page", async () => {
+  const restore = mockDecisionDialog();
+  try {
+    vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+    let resolve!: () => void;
+    vi.mocked(deleteCategory).mockImplementation(
+      () =>
+        new Promise<void>((done) => {
+          resolve = done;
+        }),
+    );
+    const { client, unmount } = setup();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Delete Coffee" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Delete category" }));
+    unmount();
+    resolve();
+    await waitFor(() => expect(deleteCategory).toHaveBeenCalled());
+    expect(client.getQueryData(categoriesKey("user-a", "a"))).toEqual({
+      categories: [category],
+    });
+    expect(useFeedbackStore.getState().notices).toHaveLength(0);
+  } finally {
+    restore();
+  }
 });
 afterEach(() => {
   vi.resetAllMocks();

@@ -9,6 +9,14 @@ import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
 export const categoriesKey = (userId: string, shopId: string) =>
   ["categories", userId, shopId] as const;
+export async function deleteCategory(
+  shopId: string,
+  categoryId: string,
+): Promise<void> {
+  await api.delete(
+    `/shops/${encodeURIComponent(shopId)}/categories/${encodeURIComponent(categoryId)}`,
+  );
+}
 export async function listCategories(
   shopId: string,
   signal?: AbortSignal,

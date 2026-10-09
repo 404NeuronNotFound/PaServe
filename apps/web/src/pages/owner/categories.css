@@ -205,3 +205,8 @@
 .category-editor .categories-form-note {
   overflow-wrap: anywhere;
 }
+.categories-list .category-delete-button {
+  margin: 0;
+  flex-shrink: 0;
+  color: var(--color-error);
+}
