@@ -58,12 +58,20 @@ export function CreateShopPage() {
       focusField.current = Object.keys(nextErrors)[0];
       return;
     }
+    const creatorId = client.getQueryData<CurrentUserResponse>(currentUserKey)?.user.id;
+    if (!creatorId) {
+      setFormError("Your session has expired. Sign in again to create your shop.");
+      return;
+    }
     submitting.current = true;
     try {
       const result = await mutation.mutateAsync({
         name: name.trim(),
         description: description.trim(),
       });
+      // A response from a previous account must not update the current account
+      // or redirect it after logout/account switching.
+      if (client.getQueryData<CurrentUserResponse>(currentUserKey)?.user.id !== creatorId) return;
       client.setQueryData<CurrentUserResponse>(currentUserKey, (current) =>
         current
           ? {
@@ -81,6 +89,7 @@ export function CreateShopPage() {
         state: { createdShopName: result.shop.name },
       });
     } catch (error: unknown) {
+      if (client.getQueryData<CurrentUserResponse>(currentUserKey)?.user.id !== creatorId) return;
       if (
         isAxiosError<ApiErrorResponse>(error) &&
         error.response?.data.code === "VALIDATION_ERROR"

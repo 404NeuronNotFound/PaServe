@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { focusManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AxiosError, AxiosHeaders } from "axios";
 import type { UserMembership } from "@paserve/contracts";
@@ -72,9 +72,27 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  focusManager.setFocused(undefined);
   vi.resetAllMocks();
   sessionStorage.clear();
   useFeedbackStore.getState().clear();
+});
+it("preserves a settings draft when returning to the browser window", async () => {
+  setup("/app/shops/a/settings");
+  const user = userEvent.setup();
+  const name = await screen.findByLabelText("Business name (required)");
+  await user.clear(name);
+  await user.type(name, "Unsaved cafe name");
+  const sessionCalls = vi.mocked(getCurrentUser).mock.calls.length;
+  const membershipCalls = vi.mocked(getShopMembership).mock.calls.length;
+  await act(async () => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  });
+  await waitFor(() => expect(vi.mocked(getCurrentUser).mock.calls.length).toBeGreaterThan(sessionCalls));
+  expect(getShopMembership).toHaveBeenCalledTimes(membershipCalls);
+  expect(screen.getByLabelText("Business name (required)")).toHaveValue("Unsaved cafe name");
+  expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
 });
 function setup(path = "/app/shops/a") {
   const client = new QueryClient();

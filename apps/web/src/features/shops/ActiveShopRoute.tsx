@@ -26,6 +26,11 @@ export function ActiveShopRoute() {
     networkMode: "always",
     staleTime: 0,
     gcTime: 0,
+    // Automatic background validation would replace the outlet with the access
+    // loader and silently discard an in-progress settings draft. Validate on
+    // route entry; business requests still enforce live membership in the API.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const status = isAxiosError(context.error)
     ? context.error.response?.status

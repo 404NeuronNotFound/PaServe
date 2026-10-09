@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -143,4 +143,21 @@ it("can cancel without creating a shop", async () => {
   );
   expect(await screen.findByText("owner@example.com")).toBeInTheDocument();
   expect(createShop).not.toHaveBeenCalled();
+});
+
+it.each(["account switch", "logout"])("ignores a late shop response after %s", async (change) => {
+  let finish!: (value: CreateShopResponse) => void;
+  vi.mocked(createShop).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  const { user, client } = setup();
+  await user.type(screen.getByLabelText("Shop name"), "Cafe North");
+  await user.click(screen.getByRole("button", { name: "Create shop" }));
+  const nextAccount = { user: { id: "another-user", email: "other@example.com", memberships: [] } };
+  act(() => {
+    if (change === "logout") client.clear();
+    else client.setQueryData(currentUserKey, nextAccount);
+  });
+  await act(async () => { finish(result); });
+  expect(client.getQueryData(currentUserKey)).toEqual(change === "logout" ? undefined : nextAccount);
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+  expect(screen.getByRole("heading", { name: "Create your shop" })).toBeInTheDocument();
 });
