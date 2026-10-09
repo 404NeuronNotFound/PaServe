@@ -33,8 +33,17 @@ export interface LoginResponse {
 
 export type ShopRole = "OWNER" | "ADMIN" | "MANAGER" | "CASHIER" | "KITCHEN";
 
+/** Explicit daily operations; these grants do not include role or billing changes. */
+export const SHOP_OPERATIONAL_PERMISSIONS = [
+  "shop.menu.manage",
+  "shop.orders.manage",
+  "shop.reports.read",
+  "shop.daily-operations.manage",
+] as const;
+
 /** Shop-scoped authority. Ownership/billing permissions are reserved for future flows. */
 export const SHOP_PERMISSIONS = [
+  ...SHOP_OPERATIONAL_PERMISSIONS,
   "shop.operations.manage",
   "shop.settings.manage",
   "shop.ownership.manage",
@@ -49,7 +58,8 @@ export function isShopOwner(role: ShopRole): boolean {
 /**
  * OWNER is the highest shop-level role, not a global account role.
  * Call only with the role from a validated membership for the target shop.
- * ADMIN manages operations; settings, ownership and billing remain OWNER-only.
+ * MANAGER has explicit daily-operation grants; ADMIN also has full operations.
+ * Settings, ownership and billing remain OWNER-only.
  * Other roles receive explicit grants in their respective authorization steps;
  * a numeric role ranking must never grant owner-sensitive permissions.
  */
@@ -58,7 +68,12 @@ export function hasShopPermission(
   permission: ShopPermission,
 ): boolean {
   if (isShopOwner(role)) return SHOP_PERMISSIONS.includes(permission);
-  return role === "ADMIN" && permission === "shop.operations.manage";
+  const dailyOperation = SHOP_OPERATIONAL_PERMISSIONS.some(
+    (allowed) => allowed === permission,
+  );
+  if (role === "ADMIN")
+    return permission === "shop.operations.manage" || dailyOperation;
+  return role === "MANAGER" && dailyOperation;
 }
 
 export interface UserMembership {
