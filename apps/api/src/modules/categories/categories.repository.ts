@@ -17,6 +17,13 @@ const categorySelect = {
 @Injectable()
 export class CategoriesRepository {
   constructor(private readonly prisma: PrismaService) {}
+  delete(userId: string, shopId: string, id: string) {
+    // Both category FKs detach products atomically; the tenant FK clears only categoryId.
+    return this.prisma.category.delete({
+      where: { id, shopId, shop: shopAccessWhere(userId, shopId, roles) },
+      select: { id: true },
+    });
+  }
   update(
     userId: string,
     shopId: string,

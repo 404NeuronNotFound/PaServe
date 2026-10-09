@@ -30,6 +30,32 @@ export class CategoriesService {
     private readonly members: ShopMembersService,
     private readonly resources: TenantResourcesService,
   ) {}
+  async delete(
+    userId: string,
+    shopId: string,
+    categoryId: string,
+  ): Promise<void> {
+    await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
+    await this.resources.requireResource(
+      userId,
+      shopId,
+      'category',
+      categoryId,
+    );
+    try {
+      await this.repository.delete(userId, shopId, categoryId);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      )
+        throw new NotFoundException({
+          code: 'RESOURCE_NOT_ACCESSIBLE',
+          message: 'This category is unavailable or you no longer have access.',
+        });
+      throw error;
+    }
+  }
   async update(
     userId: string,
     shopId: string,

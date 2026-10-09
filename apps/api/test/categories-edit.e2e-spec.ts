@@ -6,7 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { Prisma } from '../src/generated/prisma/client.js';
-describe('category editing', () => {
+describe('category editing and deletion', () => {
   let app: INestApplication<App>;
   const userId = '75992537-5d60-4d22-8e1e-60a114644681',
     shopId = '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e',
@@ -17,6 +17,7 @@ describe('category editing', () => {
     findCategory = vi.fn(),
     update = vi.fn(),
     currentUser = vi.fn();
+  const deleteRecord = vi.fn();
   let role: string;
   const original = {
     id,
@@ -35,7 +36,7 @@ describe('category editing', () => {
       .overrideProvider(PrismaService)
       .useValue({
         shopMember: { findUnique: findMembership },
-        category: { findFirst: findCategory, update },
+        category: { findFirst: findCategory, update, delete: deleteRecord },
       })
       .compile();
     app = module.createNestApplication();
@@ -65,6 +66,7 @@ describe('category editing', () => {
       where.id === id && where.shopId === shopId ? { id, shopId } : null,
     );
     update.mockImplementation(async ({ data }) => ({ ...original, ...data }));
+    deleteRecord.mockResolvedValue({ id });
   });
   const patch = (
     body: unknown = { name: 'Drinks', description: 'Freshly brewed' },
@@ -75,6 +77,77 @@ describe('category editing', () => {
       .patch(`/api/v1/shops/${target}/categories/${resource}`)
       .set('Authorization', 'Bearer valid')
       .send(body);
+  const remove = (resource = id, target = shopId) =>
+    request(app.getHttpServer())
+      .delete(`/api/v1/shops/${target}/categories/${resource}`)
+      .set('Authorization', 'Bearer valid');
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'allows %s to delete with live tenant and role predicates',
+    async (allowed) => {
+      role = allowed;
+      const response = await remove().expect(204);
+      expect(response.text).toBe('');
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(deleteRecord).toHaveBeenCalledWith({
+        where: {
+          id,
+          shopId,
+          shop: {
+            id: shopId,
+            isActive: true,
+            members: {
+              some: {
+                userId,
+                role: { in: ['OWNER', 'ADMIN', 'MANAGER'] },
+                user: { isActive: true },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+    },
+  );
+  it.each(['CASHIER', 'KITCHEN'])(
+    'denies %s deletion before business logic',
+    async (denied) => {
+      role = denied;
+      await remove().expect(403);
+      expect(deleteRecord).not.toHaveBeenCalled();
+    },
+  );
+  it('denies mixed tenant/resource IDs without deleting anything', async () => {
+    await remove(foreign).expect(404);
+    await remove(id, otherShop).expect(404);
+    expect(deleteRecord).not.toHaveBeenCalled();
+  });
+  it('rejects deletion bodies and malformed IDs', async () => {
+    await remove()
+      .send({ shopId: otherShop, deleteProducts: true })
+      .expect(400);
+    await remove('bad-id').expect(400);
+    expect(deleteRecord).not.toHaveBeenCalled();
+  });
+  it('denies guests on deletion', async () => {
+    await request(app.getHttpServer())
+      .delete(`/api/v1/shops/${shopId}/categories/${id}`)
+      .expect(401);
+    expect(deleteRecord).not.toHaveBeenCalled();
+  });
+  it('denies deleted resources and lost write-time permission safely', async () => {
+    deleteRecord.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('lost', {
+        code: 'P2025',
+        clientVersion: 'test',
+      }),
+    );
+    const response = await remove().expect(404);
+    expect(response.body.code).toBe('RESOURCE_NOT_ACCESSIBLE');
+    findCategory.mockResolvedValue(null);
+    deleteRecord.mockClear();
+    await remove().expect(404);
+    expect(deleteRecord).not.toHaveBeenCalled();
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER'])(
     'lets %s edit allowed fields while retaining identity and defaults',
     async (allowed) => {
