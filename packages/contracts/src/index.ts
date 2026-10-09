@@ -312,6 +312,12 @@ export interface MenuProduct {
 export interface CreateProductResponse {
   product: MenuProduct;
 }
+export interface UpdateProductRequest extends Partial<
+  Omit<CreateProductRequest, "categoryId">
+> {
+  categoryId?: string | null;
+}
+export type UpdateProductResponse = CreateProductResponse;
 export interface ProductsResponse {
   products: MenuProduct[];
 }
