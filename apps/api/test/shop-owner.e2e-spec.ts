@@ -110,6 +110,27 @@ describe('Owner-only shop updates', () => {
       .set('Authorization', `Bearer ${token}`)
       .send(body as object);
 
+  it('uses the URL context even when a different active shop is suggested in a header', async () => {
+    await patch(shopB).set('X-Active-Shop-Id', shopA).expect(403);
+    expect(update).not.toHaveBeenCalled();
+    await patch(shopA).set('X-Active-Shop-Id', shopB).expect(200);
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: shopA }),
+      }),
+    );
+  });
+
+  it('requires an explicit shop target rather than falling back to another membership', async () => {
+    await request(app.getHttpServer())
+      .patch('/api/v1/shops')
+      .set('Authorization', 'Bearer valid-token')
+      .set('X-Active-Shop-Id', shopA)
+      .send({ name: 'Wrong target' })
+      .expect(404);
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it('allows the owner to update validated settings and preserves the slug', async () => {
     const response = await patch(shopA, {
       name: ' New Cafe ',
