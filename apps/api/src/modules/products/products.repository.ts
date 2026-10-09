@@ -32,6 +32,38 @@ export type ProductCreateData = {
 @Injectable()
 export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
+  update(
+    userId: string,
+    shopId: string,
+    productId: string,
+    categoryId: string | null | undefined,
+    data: Partial<Omit<ProductCreateData, 'slug'>>,
+  ) {
+    return this.prisma.product.update({
+      where: {
+        id: productId,
+        shopId,
+        shop: shopAccessWhere(userId, shopId, roles),
+      },
+      data: {
+        ...data,
+        ...(categoryId === undefined
+          ? {}
+          : categoryId === null
+            ? { category: { disconnect: true } }
+            : {
+                category: {
+                  connect: {
+                    id: categoryId,
+                    shopId,
+                    shop: shopAccessWhere(userId, shopId, roles),
+                  },
+                },
+              }),
+      },
+      select: productSelect,
+    });
+  }
   create(
     userId: string,
     shopId: string,

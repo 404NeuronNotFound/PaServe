@@ -61,6 +61,73 @@ try {
         assert.equal(created.product.isFeatured, true);
         assert.equal(created.product.status, 'SOLD_OUT');
         assert.equal(created.product.sortOrder, 7);
+        const beforeEdit = await tx.product.findFirstOrThrow({
+          where: { id: created.product.id, shopId: shop.id },
+        });
+        const edited = await service.update(
+          user.id,
+          shop.id,
+          created.product.id,
+          {
+            name: ' Iced latte ',
+            price: '15.75',
+            description: '',
+            imageUrl: '',
+            isFeatured: false,
+          },
+        );
+        const afterEdit = await tx.product.findFirstOrThrow({
+          where: { id: created.product.id, shopId: shop.id },
+        });
+        assert.equal(edited.product.price, '15.75');
+        assert.equal(afterEdit.name, 'Iced latte');
+        assert.equal(afterEdit.slug, beforeEdit.slug);
+        assert.equal(afterEdit.shopId, beforeEdit.shopId);
+        assert.equal(
+          afterEdit.createdAt.toISOString(),
+          beforeEdit.createdAt.toISOString(),
+        );
+        assert.equal(afterEdit.categoryId, beforeEdit.categoryId);
+        assert.equal(afterEdit.status, beforeEdit.status);
+        assert.equal(afterEdit.description, null);
+        assert.equal(afterEdit.imageUrl, null);
+        assert.equal(afterEdit.isFeatured, false);
+        await service.update(user.id, shop.id, created.product.id, {
+          categoryId: null,
+        });
+        assert.equal(
+          (await service.list(user.id, shop.id)).products[0].categoryId,
+          null,
+        );
+        await service.update(user.id, shop.id, created.product.id, {
+          categoryId: category.id,
+        });
+        assert.equal(
+          (await service.list(user.id, shop.id)).products[0].categoryId,
+          category.id,
+        );
+        const beforeRejectedEdit = await tx.product.findFirstOrThrow({
+          where: { id: created.product.id, shopId: shop.id },
+        });
+        await assert.rejects(
+          service.update(user.id, other.id, created.product.id, { price: '1' }),
+          (error) => error.getStatus() === 404,
+        );
+        const foreignCategory = await tx.category.create({
+          data: { shopId: other.id, name: 'Foreign', slug: 'foreign' },
+        });
+        await assert.rejects(
+          service.update(user.id, shop.id, created.product.id, {
+            categoryId: foreignCategory.id,
+          }),
+          (error) => error.getStatus() === 404,
+        );
+        assert.deepEqual(
+          await tx.product.findFirstOrThrow({
+            where: { id: created.product.id, shopId: shop.id },
+          }),
+          beforeRejectedEdit,
+        );
         const zero = await service.create(user.id, shop.id, {
           name: 'Water',
           price: '0',
@@ -76,6 +143,15 @@ try {
         });
         const publicMenus = new PublicMenuRepository(tx);
         let menu = await publicMenus.read(shop.slug);
+        const customerProduct = menu.products.find(
+          (item) => item.id === created.product.id,
+        );
+        assert.equal(customerProduct.name, 'Iced latte');
+        assert.equal(customerProduct.price.toFixed(2), '15.75');
+        assert.equal(customerProduct.description, null);
+        assert.equal(customerProduct.imageUrl, null);
+        assert.equal(customerProduct.isFeatured, false);
+        assert.equal(customerProduct.slug, 'latte');
         assert.equal(
           menu.products.some((item) => item.id === created.product.id),
           true,
@@ -133,6 +209,26 @@ try {
         await assert.rejects(
           service.create(user.id, shop.id, { name: 'Denied', price: '1' }),
           (error) => error.getStatus() === 403,
+        );
+        await assert.rejects(
+          service.update(user.id, shop.id, created.product.id, { price: '1' }),
+          (error) => error.getStatus() === 403,
+        );
+        await tx.$executeRawUnsafe('SAVEPOINT lost_edit_access');
+        await assert.rejects(
+          repository.update(user.id, shop.id, created.product.id, undefined, {
+            price: '1',
+          }),
+          (error) => error.code === 'P2025',
+        );
+        await tx.$executeRawUnsafe('ROLLBACK TO SAVEPOINT lost_edit_access');
+        assert.equal(
+          (
+            await tx.product.findFirstOrThrow({
+              where: { id: created.product.id, shopId: shop.id },
+            })
+          ).price.toFixed(2),
+          '15.75',
         );
         await tx.$executeRawUnsafe('SAVEPOINT lost_access');
         await assert.rejects(

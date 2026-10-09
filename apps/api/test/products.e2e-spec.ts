@@ -13,15 +13,18 @@ describe('tenant-scoped product creation', () => {
   const shopId = '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e';
   const other = '55b18d73-f2fb-4fe6-bb1c-30cf385c3b24';
   const categoryId = 'a47f6994-b62d-4714-b9da-78ac7929df26';
+  const productId = '18e9679d-22f8-4b66-80bf-e6150b77e291';
   const membership = vi.fn(),
     shopWrite = vi.fn(),
     categoryWrite = vi.fn(),
     categoryRead = vi.fn(),
     shopRead = vi.fn(),
     currentUser = vi.fn();
+  const productRead = vi.fn(),
+    productWrite = vi.fn();
   let role: string;
   const product = {
-    id: 'product-id',
+    id: productId,
     shopId,
     categoryId: null,
     name: 'Latte',
@@ -43,6 +46,7 @@ describe('tenant-scoped product creation', () => {
         shopMember: { findUnique: membership },
         shop: { update: shopWrite, findFirst: shopRead },
         category: { update: categoryWrite, findFirst: categoryRead },
+        product: { findFirst: productRead, update: productWrite },
       })
       .compile();
     app = module.createNestApplication();
@@ -76,6 +80,16 @@ describe('tenant-scoped product creation', () => {
     shopWrite.mockResolvedValue({ products: [product] });
     categoryWrite.mockResolvedValue({ products: [{ ...product, categoryId }] });
     shopRead.mockResolvedValue({ products: [product] });
+    productRead.mockImplementation(async ({ where }) =>
+      where.shopId === shopId && where.id === productId
+        ? { id: productId, shopId }
+        : null,
+    );
+    productWrite.mockResolvedValue({
+      ...product,
+      name: 'Iced latte',
+      price: new Prisma.Decimal('15'),
+    });
   });
   const post = (
     body: unknown = { name: 'Latte', price: '12.50' },
@@ -89,6 +103,121 @@ describe('tenant-scoped product creation', () => {
     request(app.getHttpServer())
       .get(`/api/v1/shops/${shopId}/products`)
       .set('Authorization', 'Bearer valid');
+  const patch = (body: unknown, shop = shopId, id = productId) =>
+    request(app.getHttpServer())
+      .patch(`/api/v1/shops/${shop}/products/${id}`)
+      .set('Authorization', 'Bearer valid')
+      .send(body);
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'lets %s edit only product fields, preserving slug and tenant',
+    async (value) => {
+      role = value;
+      const response = await patch({
+        name: ' Iced latte ',
+        price: '15',
+      }).expect(200);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.body.product).toMatchObject({
+        name: 'Iced latte',
+        price: '15.00',
+        slug: 'latte',
+        shopId,
+      });
+      const query = productWrite.mock.calls[0][0];
+      expect(query.where).toMatchObject({
+        id: productId,
+        shopId,
+        shop: {
+          id: shopId,
+          members: {
+            some: { userId, role: { in: ['OWNER', 'ADMIN', 'MANAGER'] } },
+          },
+        },
+      });
+      expect(query.data).toEqual({ name: 'Iced latte', price: '15' });
+      expect(shopWrite).not.toHaveBeenCalled();
+      expect(categoryWrite).not.toHaveBeenCalled();
+    },
+  );
+  it('assigns a same-shop category, clears optional fields and keeps false/zero', async () => {
+    await patch({
+      categoryId,
+      description: '',
+      imageUrl: '',
+      isFeatured: false,
+      sortOrder: 0,
+      status: 'HIDDEN',
+    }).expect(200);
+    expect(productWrite.mock.calls[0][0].data).toMatchObject({
+      category: { connect: { id: categoryId, shopId } },
+      description: null,
+      imageUrl: null,
+      isFeatured: false,
+      sortOrder: 0,
+      status: 'HIDDEN',
+    });
+    await patch({ categoryId: null }).expect(200);
+    expect(productWrite.mock.calls[1][0].data).toEqual({
+      category: { disconnect: true },
+    });
+  });
+  it.each(['CASHIER', 'KITCHEN'])(
+    'denies %s product editing before resource reads',
+    async (value) => {
+      role = value;
+      await patch({ name: 'Changed' }).expect(403);
+      expect(productRead).not.toHaveBeenCalled();
+      expect(productWrite).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    {},
+    { name: '' },
+    { name: null },
+    { price: '1.001' },
+    { price: -1 },
+    { price: null },
+    { categoryId: 'bad' },
+    { status: null },
+    { isFeatured: 'true' },
+    { sortOrder: -1 },
+    { imageUrl: 'http://example.com/a' },
+    { shopId: other },
+    { slug: 'changed' },
+    { id: productId },
+    { orderItems: [] },
+  ])('rejects invalid or protected edit fields (%j)', async (body) => {
+    await patch(body).expect(400);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('rejects foreign products and foreign categories for a multi-shop actor', async () => {
+    await patch({ name: 'Stolen' }, other).expect(404);
+    await patch({ categoryId: other }).expect(404);
+    await patch({ name: 'Changed' }, shopId, 'bad-id').expect(400);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('rejects editing as guest or after membership removal', async () => {
+    await request(app.getHttpServer())
+      .patch(`/api/v1/shops/${shopId}/products/${productId}`)
+      .send({ price: '1' })
+      .expect(401);
+    membership.mockResolvedValue(null);
+    await patch({ price: '1' }).expect(404);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it.each(['P2025', 'P2003'])(
+    'safely rejects %s during an edit write',
+    async (code) => {
+      productWrite.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('secret', {
+          code,
+          clientVersion: 'test',
+        }),
+      );
+      const response = await patch({ price: '1' }).expect(404);
+      expect(JSON.stringify(response.body)).not.toContain('secret');
+    },
+  );
   it.each(['OWNER', 'ADMIN', 'MANAGER'])(
     'allows %s with exact prices and safe defaults',
     async (value) => {

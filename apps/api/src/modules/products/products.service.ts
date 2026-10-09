@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import type {
   CreateProductResponse,
@@ -14,6 +15,8 @@ import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import { TenantResourcesService } from '../tenancy/tenant-resources.service.js';
 import type { CreateProductDto } from './create-product.dto.js';
 import { productSlug } from './product-slug.js';
+import type { UpdateProductDto } from './update-product.dto.js';
+import type { ProductCreateData } from './products.repository.js';
 
 @Injectable()
 export class ProductsService {
@@ -22,6 +25,64 @@ export class ProductsService {
     private readonly members: ShopMembersService,
     private readonly resources: TenantResourcesService,
   ) {}
+  async update(
+    userId: string,
+    shopId: string,
+    productId: string,
+    dto: UpdateProductDto,
+  ): Promise<CreateProductResponse> {
+    await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
+    await this.resources.requireResource(userId, shopId, 'product', productId);
+    if (Object.values(dto).every((value) => value === undefined))
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Provide at least one product field to update.',
+      });
+    if (dto.categoryId)
+      await this.resources.requireResource(
+        userId,
+        shopId,
+        'category',
+        dto.categoryId,
+      );
+    const data: Partial<Omit<ProductCreateData, 'slug'>> = {};
+    if (dto.name !== undefined)
+      data.name = dto.name.trim().replace(/\s+/g, ' ');
+    if (dto.price !== undefined) data.price = dto.price;
+    if (dto.description !== undefined)
+      data.description = dto.description.trim() || null;
+    if (dto.imageUrl !== undefined) data.imageUrl = dto.imageUrl.trim() || null;
+    if (dto.status !== undefined) data.status = dto.status;
+    if (dto.isFeatured !== undefined) data.isFeatured = dto.isFeatured;
+    if (dto.sortOrder !== undefined) data.sortOrder = dto.sortOrder;
+    try {
+      const product = await this.repository.update(
+        userId,
+        shopId,
+        productId,
+        dto.categoryId,
+        data,
+      );
+      return {
+        product: {
+          ...product,
+          price: product.price.toFixed(2),
+          createdAt: product.createdAt.toISOString(),
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        ['P2025', 'P2003'].includes(error.code)
+      )
+        throw new NotFoundException({
+          code: 'RESOURCE_NOT_ACCESSIBLE',
+          message:
+            'The product or category is unavailable, or your access changed. Refresh before trying again.',
+        });
+      throw error;
+    }
+  }
   async create(
     userId: string,
     shopId: string,
