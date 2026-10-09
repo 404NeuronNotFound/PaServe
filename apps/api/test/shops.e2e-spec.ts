@@ -91,6 +91,47 @@ describe('POST /api/v1/shops', () => {
       }),
     );
   });
+  it('assigns OWNER for a new shop without changing the creator’s staff role elsewhere', async () => {
+    const creator = {
+      id: 'signed-in-user',
+      memberships: [
+        { id: 'existing-member', shopId: 'existing-shop', role: 'CASHIER' },
+      ],
+    };
+    currentUser.mockResolvedValue(creator);
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/shops')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ name: 'Café North' })
+      .expect(201);
+    expect(response.body.membership.role).toBe('OWNER');
+    expect(response.body.membership.shopId).toBe(response.body.shop.id);
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          members: { create: { userId: creator.id, role: 'OWNER' } },
+        }),
+      }),
+    );
+    expect(creator.memberships).toEqual([
+      { id: 'existing-member', shopId: 'existing-shop', role: 'CASHIER' },
+    ]);
+    expect(response.body.user).toBeUndefined();
+    expect(response.body.role).toBeUndefined();
+  });
+
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'])(
+    'rejects a client-selected %s onboarding role before writing',
+    async (role) => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/shops')
+        .set('Authorization', 'Bearer valid-token')
+        .send({ name: 'Cafe', role })
+        .expect(400);
+      expect(response.body.code).toBe('VALIDATION_ERROR');
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
   it('resolves collisions from simultaneous requests with the same normalized name', async () => {
     const slugs = new Set<string>();
     create.mockImplementation(
@@ -177,7 +218,6 @@ describe('POST /api/v1/shops', () => {
     { name: 'Shop', description: 'x'.repeat(1001) },
     { name: 'Shop', description: null },
     { name: 'Shop', description: {} },
-    { name: 'Shop', role: 'ADMIN' },
     { name: 'Shop', userId: 'victim' },
     { name: 'Shop', slug: 'injected' },
     { name: 'Shop', isActive: false },

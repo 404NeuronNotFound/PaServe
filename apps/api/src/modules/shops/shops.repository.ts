@@ -17,6 +17,7 @@ export class ShopsRepository {
         name,
         slug,
         description,
+        // Ownership is assigned by the server on this shop's membership only.
         members: { create: { userId, role: 'OWNER' } },
       },
       select: {

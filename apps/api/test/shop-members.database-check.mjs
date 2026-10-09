@@ -25,6 +25,15 @@ try {
     LEFT JOIN public.shops s ON s.id = m."shopId"`;
   assert.equal(audit.duplicates, 0);
   assert.equal(audit.invalid, 0);
+  const globalRoleColumns = await prisma.$queryRaw`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'users'
+      AND column_name IN ('role', 'roles', 'shopRole', 'globalRole')`;
+  assert.equal(
+    globalRoleColumns.length,
+    0,
+    'Shop roles must not be stored globally on User',
+  );
   console.log(
     `Audited ${audit.total} existing memberships: valid user/shop links, roles, and unique pairs.`,
   );
@@ -48,6 +57,14 @@ try {
         const { shop: shopB } = await shops.create(userB.id, {
           name: `Member B ${fixtureKey}`,
         });
+        assert.deepEqual(
+          await tx.user.findUnique({ where: { id: userA.id } }),
+          userA,
+        );
+        assert.deepEqual(
+          await tx.user.findUnique({ where: { id: userB.id } }),
+          userB,
+        );
         assert.equal(
           (await memberships.requireMembership(userA.id, shopA.id)).role,
           'OWNER',
@@ -73,6 +90,28 @@ try {
         assert.equal(
           (await memberships.requireMembership(userB.id, shopB.id)).role,
           'OWNER',
+        );
+        // A staff member creating another shop owns only the new relationship.
+        const { shop: shopC } = await shops.create(userA.id, {
+          name: `Member C ${fixtureKey}`,
+        });
+        assert.equal(
+          (await memberships.requireMembership(userA.id, shopC.id)).role,
+          'OWNER',
+        );
+        assert.equal(
+          (await memberships.requireMembership(userA.id, shopB.id)).role,
+          'CASHIER',
+        );
+        assert.equal(
+          await tx.shopMember.count({
+            where: { userId: userA.id, shopId: shopC.id, role: 'OWNER' },
+          }),
+          1,
+        );
+        assert.deepEqual(
+          await tx.user.findUnique({ where: { id: userA.id } }),
+          userA,
         );
 
         async function expectConstraintFailure(data, expectedCode) {
@@ -168,13 +207,19 @@ try {
   assert.equal(
     await prisma.shop.count({
       where: {
-        name: { in: [`Member A ${fixtureKey}`, `Member B ${fixtureKey}`] },
+        name: {
+          in: [
+            `Member A ${fixtureKey}`,
+            `Member B ${fixtureKey}`,
+            `Member C ${fixtureKey}`,
+          ],
+        },
       },
     }),
     0,
   );
   console.log(
-    'Verified automatic OWNER association, per-shop roles, isolation, duplicate/foreign-key protection, live changes, and cascade cleanup. No fixtures retained.',
+    'Verified automatic OWNER association, no global User role or account mutation, independent staff roles, isolation, duplicate/foreign-key protection, live changes, and cascade cleanup. No fixtures retained.',
   );
 } finally {
   await prisma.$disconnect();
