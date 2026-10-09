@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
-import type { UserMembership } from '@paserve/contracts';
+import { isShopOwner, type UserMembership } from '@paserve/contracts';
 import { ShopMembersRepository } from './shop-members.repository.js';
 
 @Injectable()
@@ -14,7 +14,7 @@ export class ShopMembersService {
 
   async requireOwner(userId: string, shopId: string): Promise<UserMembership> {
     const membership = await this.requireMembership(userId, shopId);
-    if (membership.role !== 'OWNER')
+    if (!isShopOwner(membership.role))
       throw new ForbiddenException({
         code: 'OWNER_REQUIRED',
         message: 'Only this shop’s owner can perform this action.',
