@@ -207,6 +207,132 @@ describe('add-on management and product selection', () => {
       .send({ addOnId: id });
   const quote = (body: unknown = { addOnIds: [shotId, oatId] }) =>
     request(app.getHttpServer()).post(`${publicPath}/quote`).send(body);
+  it.each([
+    ['No Onions', '0', '0.00'],
+    ['No Whipped Cream', '0.00', '0.00'],
+    ['Extra Cheese', '15.5', '15.50'],
+    ['Caramel Drizzle', '8.25', '8.25'],
+  ])(
+    'creates custom modifier %s at %s',
+    async (name, priceAdjustment, expected) => {
+      const response = await create({ name, priceAdjustment }).expect(201);
+      expect(response.body.addOn).toMatchObject({
+        name,
+        priceAdjustment: expected,
+        isAvailable: true,
+      });
+    },
+  );
+  it('retains a zero-cost removal in selection and combines it with a paid topping', async () => {
+    const update = (id: string, body: object) =>
+      request(app.getHttpServer())
+        .patch(`${root}/${id}`)
+        .set('Authorization', 'Bearer valid')
+        .send(body);
+    await update(cheeseId, { name: 'No Onions', priceAdjustment: '0' }).expect(
+      200,
+    );
+    await update(shotId, {
+      name: 'Extra Cheese',
+      priceAdjustment: '15.50',
+    }).expect(200);
+    await quote({ addOnIds: [cheeseId] }).expect(400);
+    await assign(cheeseId).expect(201);
+    const free = await quote({ addOnIds: [cheeseId] }).expect(201);
+    expect(free.body).toMatchObject({
+      addOnTotal: '0.00',
+      baseWithAddOnsPrice: '120.00',
+      addOns: [{ id: cheeseId, name: 'No Onions', priceAdjustment: '0.00' }],
+    });
+    const mixed = await quote({ addOnIds: [cheeseId, shotId] }).expect(201);
+    expect(mixed.body).toMatchObject({
+      addOnTotal: '15.50',
+      baseWithAddOnsPrice: '135.50',
+      addOns: [
+        { id: cheeseId, name: 'No Onions', priceAdjustment: '0.00' },
+        { id: shotId, name: 'Extra Cheese', priceAdjustment: '15.50' },
+      ],
+    });
+    await quote({ addOnIds: [cheeseId, cheeseId] }).expect(400);
+    await update(cheeseId, { isAvailable: false }).expect(200);
+    await quote({ addOnIds: [cheeseId, shotId] }).expect(400);
+    await update(cheeseId, { isAvailable: true }).expect(200);
+    await request(app.getHttpServer())
+      .delete(`${productPath}/${cheeseId}`)
+      .set('Authorization', 'Bearer valid')
+      .expect(200);
+    await quote({ addOnIds: [cheeseId] }).expect(400);
+  });
+  it('uses current topping prices after editing a free modifier to a paid extra', async () => {
+    await assign(cheeseId).expect(201);
+    await request(app.getHttpServer())
+      .patch(`${root}/${cheeseId}`)
+      .set('Authorization', 'Bearer valid')
+      .send({ name: 'Extra Cheese', priceAdjustment: '12.75' })
+      .expect(200);
+    const response = await quote({ addOnIds: [cheeseId] }).expect(201);
+    expect(response.body).toMatchObject({
+      addOnTotal: '12.75',
+      baseWithAddOnsPrice: '132.75',
+      addOns: [
+        { id: cheeseId, name: 'Extra Cheese', priceAdjustment: '12.75' },
+      ],
+    });
+  });
+  it.each([
+    ['less ice', 'less ice'],
+    ['  no onions  ', 'no onions'],
+    ['less ice\r\nno onions', 'less ice\nno onions'],
+    ['\u5c11\u51b0\uff0c\u8c22\u8c22', '\u5c11\u51b0\uff0c\u8c22\u8c22'],
+    ['<img src=x onerror="alert(1)">', '<img src=x onerror="alert(1)">'],
+    ['a'.repeat(300), 'a'.repeat(300)],
+    ['\u{1f600}'.repeat(300), '\u{1f600}'.repeat(300)],
+  ])(
+    'accepts a bounded plain-text customer note %s',
+    async (notes, expected) => {
+      const response = await quote({ addOnIds: [], notes }).expect(201);
+      expect(response.body.notes).toBe(expected);
+      expect(response.body.baseWithAddOnsPrice).toBe('120.00');
+    },
+  );
+  it.each(['', ' \r\n\t '])('omits blank customer notes %s', async (notes) => {
+    expect(
+      (await quote({ addOnIds: [], notes }).expect(201)).body,
+    ).not.toHaveProperty('notes');
+  });
+  it.each([
+    'a'.repeat(301),
+    '\u{1f600}'.repeat(301),
+    null,
+    123,
+    {},
+    [],
+    'no\u0000onions',
+    'less\u0007ice',
+    'hidden\u202etext',
+  ])('rejects invalid customer note %j', async (notes) => {
+    await quote({ addOnIds: [], notes }).expect(400);
+  });
+  it('keeps notes scoped to each quote and preserves add-on eligibility', async () => {
+    const first = await quote({ addOnIds: [shotId], notes: 'less ice' }).expect(
+      201,
+    );
+    const second = await quote({
+      addOnIds: [shotId],
+      notes: 'no sugar',
+    }).expect(201);
+    expect(first.body.notes).toBe('less ice');
+    expect(second.body.notes).toBe('no sugar');
+    expect(first.body.baseWithAddOnsPrice).toBe(
+      second.body.baseWithAddOnsPrice,
+    );
+    expect(
+      (await quote({ addOnIds: [shotId] }).expect(201)).body,
+    ).not.toHaveProperty('notes');
+    await quote({ addOnIds: [cheeseId], notes: 'please add cheese' }).expect(
+      400,
+    );
+  });
   const createExtraShot = (body: object) =>
     request(app.getHttpServer())
       .post(`${root}/extra-shot`)

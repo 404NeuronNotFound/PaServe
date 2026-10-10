@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import {
   PRODUCT_CURRENCY,
+  normalizeCustomerNote,
   type AddOnResponse,
   type AddOnsResponse,
   type PublicProductAddOnsResponse,
@@ -251,6 +252,9 @@ export class AddOnsService {
     return {
       productId: product.id,
       currency: PRODUCT_CURRENCY,
+      ...(dto.notes !== undefined && normalizeCustomerNote(dto.notes)
+        ? { notes: normalizeCustomerNote(dto.notes) }
+        : {}),
       basePrice: product.price.toFixed(2),
       addOns: selected.map(publicSerialize),
       addOnTotal: total.toFixed(2),

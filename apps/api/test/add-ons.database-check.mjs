@@ -255,6 +255,65 @@ try {
           assert.equal(alternativeQuote.addOnTotal, '18.75');
           assert.equal(alternativeQuote.baseWithAddOnsPrice, '143.76');
         }
+        // Custom toppings and free removal instructions share the same data model.
+        const removal = (
+          await service.create(user.id, shop.id, {
+            name: 'No Onions',
+            priceAdjustment: '0',
+          })
+        ).addOn;
+        const topping = (
+          await service.create(user.id, shop.id, {
+            name: 'Extra Cheese',
+            priceAdjustment: '15.50',
+          })
+        ).addOn;
+        for (const modifier of [removal, topping])
+          await service.assign(user.id, shop.id, food.id, modifier.id);
+        const freeRemoval = await service.quote(shop.slug, food.id, {
+          addOnIds: [removal.id],
+        });
+        assert.equal(freeRemoval.baseWithAddOnsPrice, '100.00');
+        assert.equal(freeRemoval.addOnTotal, '0.00');
+        assert.equal(freeRemoval.addOns[0].name, 'No Onions');
+        assert.equal(freeRemoval.addOns[0].priceAdjustment, '0.00');
+        const topped = await service.quote(shop.slug, food.id, {
+          addOnIds: [removal.id, topping.id],
+        });
+        assert.equal(topped.baseWithAddOnsPrice, '115.50');
+        assert.equal(topped.addOnTotal, '15.50');
+        assert.equal(topped.addOns.length, 2);
+        await assert.rejects(
+          () =>
+            service.quote(shop.slug, product.id, { addOnIds: [removal.id] }),
+          (error) => error.getResponse().code === 'ADD_ON_SELECTION_INVALID',
+        );
+        await service.update(user.id, shop.id, topping.id, {
+          priceAdjustment: '12.75',
+        });
+        assert.equal(
+          (
+            await service.quote(shop.slug, food.id, {
+              addOnIds: [removal.id, topping.id],
+            })
+          ).baseWithAddOnsPrice,
+          '112.75',
+        );
+        await service.update(user.id, shop.id, removal.id, {
+          isAvailable: false,
+        });
+        await assert.rejects(
+          () => service.quote(shop.slug, food.id, { addOnIds: [removal.id] }),
+          (error) => error.getStatus() === 400,
+        );
+        await service.update(user.id, shop.id, removal.id, {
+          isAvailable: true,
+        });
+        await service.unassign(user.id, shop.id, food.id, removal.id);
+        await assert.rejects(
+          () => service.quote(shop.slug, food.id, { addOnIds: [removal.id] }),
+          (error) => error.getStatus() === 400,
+        );
         const rejectedWrite = async (operation, predicate) => {
           await tx.$executeRawUnsafe('SAVEPOINT invalid_addon');
           await assert.rejects(operation, predicate);

@@ -16,6 +16,9 @@ import {
 } from 'class-validator';
 import {
   ADD_ON_LIMITS,
+  CUSTOMER_NOTE_MAX_LENGTH,
+  CUSTOMER_NOTE_PATTERN,
+  normalizeCustomerNote,
   PRODUCT_PRICE_PATTERN,
   type CreateAddOnRequest,
   type UpdateAddOnRequest,
@@ -93,6 +96,15 @@ export class AssignProductAddOnDto implements AssignProductAddOnRequest {
   addOnId!: string;
 }
 export class AddOnSelectionDto implements AddOnSelectionRequest {
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? normalizeCustomerNote(value) : value,
+  )
+  @ValidateIf(optional)
+  @IsString()
+  @MaxLength(CUSTOMER_NOTE_MAX_LENGTH)
+  @Matches(CUSTOMER_NOTE_PATTERN)
+  notes?: string;
+
   @IsArray()
   @ArrayMaxSize(ADD_ON_LIMITS.selectionMax)
   @ArrayUnique()
