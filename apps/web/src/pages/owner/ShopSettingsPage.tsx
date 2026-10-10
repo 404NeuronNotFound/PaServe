@@ -396,7 +396,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
       className="shop-context-content profile-card shop-create-card shop-settings-card"
       aria-labelledby="settings-heading"
     >
-      <header className="settings-editor-header">
+      <div className="settings-editor-header">
         <div>
           <p className="section-label">
             {membership.shop.name} · MAKE IT YOURS
@@ -421,7 +421,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
         >
           Preview changes
         </button>
-      </header>
+      </div>
       <div className="settings-assets">
         <ShopLogoUpload
           shopId={shop.id}
