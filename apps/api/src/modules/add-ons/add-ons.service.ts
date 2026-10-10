@@ -20,6 +20,7 @@ import type {
   CreateAddOnDto,
   UpdateAddOnDto,
   AddOnSelectionDto,
+  CreateExtraShotDto,
 } from './add-ons.dto.js';
 
 const serialize = (addOn: AddOn) => ({
@@ -92,6 +93,27 @@ export class AddOnsService {
         (await this.repository.create(userId, shopId, dto)).addOns[0],
       ),
     }));
+  }
+  async createExtraShot(
+    userId: string,
+    shopId: string,
+    dto: CreateExtraShotDto,
+  ): Promise<AddOnResponse> {
+    await this.authorize(userId, shopId);
+    if (!new Prisma.Decimal(dto.priceAdjustment).greaterThan(0))
+      throw new BadRequestException({
+        code: 'EXTRA_SHOT_REQUIRES_SURCHARGE',
+        message: 'Extra Shot must have a positive additional price.',
+        fieldErrors: {
+          priceAdjustment: ['Use an additional price of at least 0.01.'],
+        },
+      });
+    return this.create(userId, shopId, {
+      name: 'Extra Shot',
+      priceAdjustment: dto.priceAdjustment,
+      isAvailable: true,
+      sortOrder: dto.sortOrder ?? 0,
+    });
   }
   async update(
     userId: string,

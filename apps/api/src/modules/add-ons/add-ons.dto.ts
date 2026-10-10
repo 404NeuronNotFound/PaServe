@@ -21,6 +21,7 @@ import {
   type UpdateAddOnRequest,
   type AssignProductAddOnRequest,
   type AddOnSelectionRequest,
+  type CreateExtraShotRequest,
 } from '@paserve/contracts';
 
 const normalize = ({ value }: { value: unknown }) =>
@@ -68,6 +69,17 @@ export class UpdateAddOnDto
   @IsString()
   @Matches(PRODUCT_PRICE_PATTERN)
   priceAdjustment?: string;
+}
+export class CreateExtraShotDto implements CreateExtraShotRequest {
+  @IsString()
+  @Matches(PRODUCT_PRICE_PATTERN)
+  priceAdjustment!: string;
+
+  @ValidateIf(optional)
+  @IsInt()
+  @Min(0)
+  @Max(ADD_ON_LIMITS.sortOrderMax)
+  sortOrder?: number;
 }
 export class AssignProductAddOnDto implements AssignProductAddOnRequest {
   @IsUUID('4')

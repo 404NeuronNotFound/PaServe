@@ -23,12 +23,26 @@ import {
   UpdateAddOnDto,
   AssignProductAddOnDto,
   AddOnSelectionDto,
+  CreateExtraShotDto,
 } from './add-ons.dto.js';
 
 @Controller('shops/:shopId/add-ons')
 @Roles('OWNER', 'ADMIN', 'MANAGER')
 export class AddOnsController {
   constructor(private readonly addOns: AddOnsService) {}
+  @Post('extra-shot')
+  createExtraShot(
+    @Body() dto: CreateExtraShotDto,
+    @Req() req: ShopMemberRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.addOns.createExtraShot(
+      req.user.id,
+      req.shopMembership.shopId,
+      dto,
+    );
+  }
   @Get()
   list(
     @Req() req: ShopMemberRequest,

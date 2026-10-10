@@ -365,6 +365,11 @@ export interface CreateAddOnRequest {
   sortOrder?: number;
 }
 export type UpdateAddOnRequest = Partial<CreateAddOnRequest>;
+export interface CreateExtraShotRequest {
+  /** Positive owner-configured PHP surcharge for one extra shot. */
+  priceAdjustment: string;
+  sortOrder?: number;
+}
 export interface AddOn {
   id: string;
   shopId: string;

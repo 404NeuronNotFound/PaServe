@@ -84,8 +84,7 @@ try {
         const repo = new AddOnsRepository(tx);
         const service = new AddOnsService(repo, members, resources);
         const shot = (
-          await service.create(user.id, shop.id, {
-            name: 'Extra Shot',
+          await service.createExtraShot(user.id, shop.id, {
             priceAdjustment: '30.1',
           })
         ).addOn;
@@ -121,6 +120,13 @@ try {
           })
         ).addOn;
         assert.equal(shot.priceAdjustment, '30.10');
+        assert.equal(shot.name, 'Extra Shot');
+        assert.equal(shot.isAvailable, true);
+        await assert.rejects(
+          () =>
+            service.createExtraShot(user.id, shop.id, { priceAdjustment: '0' }),
+          (error) => error.getStatus() === 400,
+        );
         assert.equal(cheese.priceAdjustment, '0.00');
         assert.equal((await service.list(user.id, shop.id)).addOns.length, 5);
         for (const addOn of [shot, oat, syrup])
@@ -147,6 +153,15 @@ try {
         });
         assert.equal(quote.addOnTotal, '55.30');
         assert.equal(quote.baseWithAddOnsPrice, '175.30');
+        assert.equal(
+          (await service.quote(shop.slug, product.id, { addOnIds: [shot.id] }))
+            .baseWithAddOnsPrice,
+          '150.10',
+        );
+        await assert.rejects(
+          () => service.quote(shop.slug, food.id, { addOnIds: [shot.id] }),
+          (error) => error.getResponse().code === 'ADD_ON_SELECTION_INVALID',
+        );
         assert.equal(
           (await service.quote(shop.slug, product.id, { addOnIds: [] }))
             .baseWithAddOnsPrice,

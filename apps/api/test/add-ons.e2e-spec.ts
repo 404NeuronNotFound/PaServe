@@ -207,6 +207,104 @@ describe('add-on management and product selection', () => {
       .send({ addOnId: id });
   const quote = (body: unknown = { addOnIds: [shotId, oatId] }) =>
     request(app.getHttpServer()).post(`${publicPath}/quote`).send(body);
+  const createExtraShot = (body: object) =>
+    request(app.getHttpServer())
+      .post(`${root}/extra-shot`)
+      .set('Authorization', 'Bearer valid')
+      .send(body);
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'allows %s to create a priced Extra Shot example',
+    async (allowed) => {
+      role = allowed;
+      const response = await createExtraShot({
+        priceAdjustment: '30.1',
+      }).expect(201);
+      expect(response.body.addOn).toMatchObject({
+        name: 'Extra Shot',
+        priceAdjustment: '30.10',
+        isAvailable: true,
+        sortOrder: 0,
+      });
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(writeShop.mock.calls[0][0].where).toMatchObject({
+        id: shopId,
+        isActive: true,
+        members: { some: { userId, user: { isActive: true } } },
+      });
+    },
+  );
+  it.each(['0.01', '99999999.99'])(
+    'supports exact Extra Shot price %s and custom ordering',
+    async (priceAdjustment) => {
+      expect(
+        (await createExtraShot({ priceAdjustment, sortOrder: 5 }).expect(201))
+          .body.addOn,
+      ).toMatchObject({ priceAdjustment, sortOrder: 5 });
+    },
+  );
+  it.each(['0', '0.00'])(
+    'rejects an unpriced Extra Shot %s',
+    async (priceAdjustment) => {
+      expect(
+        (await createExtraShot({ priceAdjustment }).expect(400)).body.code,
+      ).toBe('EXTRA_SHOT_REQUIRES_SURCHARGE');
+      expect(writeShop).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['-1', 'NaN', '1e2', '0.001', '100000000', ' 30 ', 30, null])(
+    'rejects invalid Extra Shot surcharge %s',
+    async (priceAdjustment) => {
+      await createExtraShot({ priceAdjustment }).expect(400);
+      expect(writeShop).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    { name: 'Double Shot' },
+    { price: '150' },
+    { quantity: 2 },
+    { isAvailable: false },
+    { shopId: otherShop },
+    { productId },
+    { sortOrder: -1 },
+  ])('rejects Extra Shot overrides and invalid fields %j', async (fields) => {
+    await createExtraShot({ priceAdjustment: '30', ...fields }).expect(400);
+    expect(writeShop).not.toHaveBeenCalled();
+  });
+  it.each(['CASHIER', 'KITCHEN'])(
+    'blocks %s from creating Extra Shot',
+    async (denied) => {
+      role = denied;
+      await createExtraShot({ priceAdjustment: '30' }).expect(403);
+      expect(writeShop).not.toHaveBeenCalled();
+    },
+  );
+  it('requires an Extra Shot price and owner authentication', async () => {
+    await createExtraShot({}).expect(400);
+    await request(app.getHttpServer())
+      .post(`${root}/extra-shot`)
+      .send({ priceAdjustment: '30' })
+      .expect(401);
+  });
+  it('returns a conflict without replacing an existing Extra Shot', async () => {
+    writeShop.mockRejectedValue(duplicate());
+    expect(
+      (await createExtraShot({ priceAdjustment: '30' }).expect(409)).body.code,
+    ).toBe('ADD_ON_CONFLICT');
+  });
+  it('includes Extra Shot once in the production quote and rejects it after detachment', async () => {
+    const response = await quote({ addOnIds: [shotId] }).expect(201);
+    expect(response.body).toMatchObject({
+      addOnTotal: '30.10',
+      baseWithAddOnsPrice: '150.10',
+      addOns: [{ id: shotId, name: 'Extra Shot', priceAdjustment: '30.10' }],
+    });
+    await quote({ addOnIds: [shotId, shotId] }).expect(400);
+    await request(app.getHttpServer())
+      .delete(`${productPath}/${shotId}`)
+      .set('Authorization', 'Bearer valid')
+      .expect(200);
+    await quote({ addOnIds: [shotId] }).expect(400);
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER'])(
     'allows %s to manage reusable add-ons and product eligibility',
     async (allowed) => {
