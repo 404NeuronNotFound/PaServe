@@ -2688,3 +2688,8 @@
     width: 100%;
   }
 }
+.shop-color-picker {
+  max-width: 96px;
+  min-height: 44px;
+  cursor: pointer;
+}

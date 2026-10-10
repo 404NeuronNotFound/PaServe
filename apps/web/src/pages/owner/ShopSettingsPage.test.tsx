@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -165,6 +171,46 @@ it("loads current values and saves only changed fields to the active shop", asyn
     ])!.user.memberships[0].shop.name,
   ).toBe("Cafe Renamed");
   expect(screen.getByText("cafe-a")).toBeInTheDocument();
+});
+it("validates, saves, and clears primary color without changing other settings", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  vi.mocked(updateShop).mockResolvedValue({
+    shop: { ...shop, primaryColor: "#ABCDEF" },
+  });
+  const client = setup();
+  const invalidation = vi.spyOn(client, "invalidateQueries");
+  const user = userEvent.setup();
+  const input = await screen.findByLabelText("Primary color");
+  await user.type(input, "red");
+  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  expect(input).toHaveAttribute("aria-invalid", "true");
+  expect(updateShop).not.toHaveBeenCalled();
+  await user.clear(input);
+  await user.type(input, "#abcdef");
+  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  await vi.waitFor(() => expect(input).toHaveValue("#ABCDEF"));
+  expect(updateShop).toHaveBeenLastCalledWith("shop-a", {
+    primaryColor: "#ABCDEF",
+  });
+  expect(invalidation).toHaveBeenCalledWith({
+    queryKey: ["public-menu", "cafe-a"],
+  });
+  vi.mocked(updateShop).mockResolvedValue({
+    shop: { ...shop, primaryColor: null },
+  });
+  await user.clear(input);
+  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  await vi.waitFor(() =>
+    expect(updateShop).toHaveBeenLastCalledWith("shop-a", { primaryColor: "" }),
+  );
+});
+it("lets the native picker populate the editable hex value", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  setup();
+  fireEvent.change(await screen.findByLabelText("Choose primary color"), {
+    target: { value: "#123456" },
+  });
+  expect(screen.getByLabelText("Primary color")).toHaveValue("#123456");
 });
 it("keeps non-owner members out of settings without fetching them", async () => {
   setup("CASHIER");

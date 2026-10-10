@@ -209,6 +209,7 @@ export interface ShopMembershipResponse {
 }
 
 export interface UpdateShopRequest {
+  primaryColor?: string;
   name?: string;
   description?: string;
   displayName?: string;
@@ -220,6 +221,7 @@ export interface UpdateShopRequest {
 }
 
 export type ShopSettings = CreateShopResponse["shop"] & {
+  primaryColor?: string | null;
   logoUrl?: string | null;
   bannerUrl?: string | null;
   displayName: string | null;
@@ -234,6 +236,14 @@ export interface UpdateShopResponse {
   shop: ShopSettings;
 }
 export type ShopSettingsResponse = UpdateShopResponse;
+
+export const DEFAULT_MENU_PRIMARY_COLOR = "#243329";
+export const SHOP_PRIMARY_COLOR_HINT =
+  "Use a six-digit hex color, such as #243329, or leave blank for the default.";
+export const isValidShopPrimaryColor = (value: string): boolean =>
+  value.trim() === "" || /^#[0-9a-f]{6}$/i.test(value.trim());
+export const normalizeShopPrimaryColor = (value: string): string =>
+  value.trim().toUpperCase();
 
 export const SHOP_LOGO_LIMITS = {
   maxBytes: 5 * 1024 * 1024,
@@ -544,6 +554,7 @@ export interface PublicMenuResponse {
     description: string | null;
     logoUrl?: string | null;
     bannerUrl?: string | null;
+    primaryColor?: string | null;
   };
   categories: Array<
     Pick<MenuCategory, "id" | "name" | "slug" | "description" | "sortOrder">

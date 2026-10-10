@@ -9,6 +9,10 @@ import {
   SHOP_SETTINGS_LIMITS,
   isValidShopPhone,
   SHOP_PHONE_HINT,
+  DEFAULT_MENU_PRIMARY_COLOR,
+  SHOP_PRIMARY_COLOR_HINT,
+  isValidShopPrimaryColor,
+  normalizeShopPrimaryColor,
   type ShopSettings,
   type UpdateShopRequest,
   type CurrentUserResponse,
@@ -30,6 +34,13 @@ import { ShopLogoUpload } from "./ShopLogoUpload";
 import { ShopBannerUpload } from "./ShopBannerUpload";
 
 const fields = [
+  {
+    key: "primaryColor",
+    label: "Primary color",
+    max: 7,
+    section: "Menu appearance",
+    hint: SHOP_PRIMARY_COLOR_HINT,
+  },
   {
     key: "name",
     label: "Business name",
@@ -86,8 +97,12 @@ const fields = [
 ] as const;
 type Field = keyof UpdateShopRequest;
 type Values = Record<Field, string>;
+const normalizedValue = (key: Field, value: string) =>
+  key === "primaryColor" ? normalizeShopPrimaryColor(value) : value.trim();
 const valuesFrom = (shop: ShopSettings) =>
-  Object.fromEntries(fields.map(({ key }) => [key, shop[key] ?? ""])) as Values;
+  Object.fromEntries(
+    fields.map(({ key }) => [key, normalizedValue(key, shop[key] ?? "")]),
+  ) as Values;
 
 export function ShopSettingsPage() {
   const membership = useActiveShop();
@@ -183,7 +198,9 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
     retry: false,
   });
   const busy = mutation.isPending || logoPending || bannerPending;
-  const dirty = fields.some(({ key }) => values[key].trim() !== baseline[key]);
+  const dirty = fields.some(
+    ({ key }) => normalizedValue(key, values[key]) !== baseline[key],
+  );
   const resetNoticeKey = `settings-reset:${shop.id}`;
   useEffect(
     () => () => {
@@ -221,6 +238,8 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
   function fieldError(key: Field, value: string): string | undefined {
     const field = fields.find((item) => item.key === key)!;
     const trimmed = value.trim();
+    if (key === "primaryColor" && !isValidShopPrimaryColor(value))
+      return SHOP_PRIMARY_COLOR_HINT;
     if (trimmed.length > field.max)
       return `Use no more than ${field.max} characters.`;
     if (key === "name" && !trimmed) return "Enter your business name.";
@@ -263,8 +282,10 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
     if (Object.keys(next).length) return;
     const changes = Object.fromEntries(
       fields
-        .filter(({ key }) => values[key].trim() !== baseline[key])
-        .map(({ key }) => [key, values[key].trim()]),
+        .filter(
+          ({ key }) => normalizedValue(key, values[key]) !== baseline[key],
+        )
+        .map(({ key }) => [key, normalizedValue(key, values[key])]),
     ) as UpdateShopRequest;
     if (!Object.keys(changes).length) return;
     for (const notice of useFeedbackStore.getState().notices) {
@@ -282,6 +303,9 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
       setValues(updated);
       setBaseline(updated);
       client.setQueryData(["shops", membership.id, shop.id, "settings"], saved);
+      void client.invalidateQueries({
+        queryKey: ["public-menu", saved.shop.slug],
+      });
       if (user) {
         client.setQueryData(activeShopKey(user.id, shop.id), {
           ...membership,
@@ -388,6 +412,24 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                   {field.label}
                   {field.key === "name" ? " (required)" : ""}
                 </label>
+                {field.key === "primaryColor" && (
+                  <input
+                    type="color"
+                    className="shop-color-picker"
+                    aria-label="Choose primary color"
+                    aria-describedby="settings-primaryColor-hint"
+                    value={
+                      isValidShopPrimaryColor(values.primaryColor) &&
+                      values.primaryColor.trim()
+                        ? normalizeShopPrimaryColor(values.primaryColor)
+                        : DEFAULT_MENU_PRIMARY_COLOR
+                    }
+                    disabled={busy}
+                    onChange={(event) =>
+                      changeField("primaryColor", event.target.value)
+                    }
+                  />
+                )}
                 {"multiline" in field ? (
                   <textarea
                     id={`settings-${field.key}`}
@@ -515,7 +557,10 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
             className="secondary-button"
             to={shopPath(shop.id)}
             onClick={(event) => {
-              if (busy) { event.preventDefault(); return; }
+              if (busy) {
+                event.preventDefault();
+                return;
+              }
               if (dirty || logoDirty || bannerDirty) {
                 event.preventDefault();
                 setDecision("leave");

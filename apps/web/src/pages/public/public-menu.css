@@ -5,6 +5,8 @@
   color: var(--color-text);
 }
 .public-menu-header {
+  border-top: 6px solid var(--menu-primary, #243329);
+  padding-top: 20px;
   display: flex;
   align-items: flex-start;
   gap: 20px;
@@ -14,6 +16,14 @@
 .public-menu-header > div {
   flex: 1;
   min-width: 0;
+}
+.public-menu-header .section-label {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--menu-primary, #243329);
+  color: var(--menu-on-primary, #FFFFFF);
 }
 .public-menu-header h1 {
   overflow-wrap: anywhere;
@@ -28,6 +38,8 @@
   margin-top: 32px;
 }
 .public-menu-section h2 {
+  border-inline-start: 5px solid var(--menu-primary, #243329);
+  padding-inline-start: 12px;
   font-family: Georgia, serif;
 }
 .public-menu-section ul {

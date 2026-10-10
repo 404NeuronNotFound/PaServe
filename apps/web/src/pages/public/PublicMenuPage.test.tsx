@@ -11,8 +11,9 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 function setup() {
+  const client = new QueryClient();
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/menu/cafe"]}>
         <Routes>
           <Route path="/menu/:shopSlug" element={<PublicMenuPage />} />
@@ -20,6 +21,7 @@ function setup() {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return client;
 }
 const menu = {
   shop: {
@@ -32,6 +34,42 @@ const menu = {
   products: [],
   featuredProducts: [],
 };
+it("scopes the persisted brand color to the customer menu", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: { ...menu, shop: { ...menu.shop, primaryColor: "#AABBCC" } },
+  });
+  setup();
+  await screen.findByRole("heading", { name: "Cafe" });
+  expect(
+    screen.getByRole("main").style.getPropertyValue("--menu-primary"),
+  ).toBe("#AABBCC");
+  expect(
+    document.documentElement.style.getPropertyValue("--menu-primary"),
+  ).toBe("");
+});
+it("updates both theme colors after a saved-color refetch and resets to the default", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: { ...menu, shop: { ...menu.shop, primaryColor: "#000000" } },
+  });
+  const client = setup();
+  await screen.findByRole("heading", { name: "Cafe" });
+  const theme = () => screen.getByRole("main").style;
+  expect(theme().getPropertyValue("--menu-on-primary")).toBe("#FFFFFF");
+  vi.mocked(api.get).mockResolvedValue({
+    data: { ...menu, shop: { ...menu.shop, primaryColor: "#FFFFFF" } },
+  });
+  await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+  await vi.waitFor(() =>
+    expect(theme().getPropertyValue("--menu-primary")).toBe("#FFFFFF"),
+  );
+  expect(theme().getPropertyValue("--menu-on-primary")).toBe("#000000");
+  vi.mocked(api.get).mockResolvedValue({ data: menu });
+  await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+  await vi.waitFor(() =>
+    expect(theme().getPropertyValue("--menu-primary")).toBe("#243329"),
+  );
+  expect(theme().getPropertyValue("--menu-on-primary")).toBe("#FFFFFF");
+});
 it("displays the persisted shop logo on a public route", async () => {
   vi.mocked(api.get).mockResolvedValue({ data: menu });
   setup();

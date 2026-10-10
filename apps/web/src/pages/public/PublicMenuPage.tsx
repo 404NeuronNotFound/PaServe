@@ -5,6 +5,7 @@ import { isAxiosError } from "axios";
 import type { PublicMenuResponse } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import { formatProductPrice } from "../../lib/money";
+import { menuTheme } from "../../lib/menu-theme";
 import { ShopLogo } from "../../components/shops/ShopLogo";
 import { ShopBanner } from "../../components/shops/ShopBanner";
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
@@ -51,7 +52,7 @@ export function PublicMenuPage() {
     );
   const { shop, categories, products, featuredProducts } = menu.data;
   return (
-    <main className="public-menu">
+    <main className="public-menu" style={menuTheme(shop.primaryColor)}>
       <ShopBanner url={shop.bannerUrl} name={shop.name} />
       <header className="public-menu-header">
         <ShopLogo url={shop.logoUrl} name={shop.name} />
