@@ -17,6 +17,7 @@ import {
   listProducts,
   productsKey,
   updateProduct,
+  setProductArchived,
 } from "../../features/shops/api/products";
 import { listCategories } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
@@ -25,6 +26,7 @@ vi.mock("../../features/shops/api/products", async (original) => ({
   ...(await original<typeof import("../../features/shops/api/products")>()),
   createProduct: vi.fn(),
   updateProduct: vi.fn(),
+  setProductArchived: vi.fn(),
   listProducts: vi.fn(),
 }));
 vi.mock("../../features/shops/api/categories", async (original) => ({
@@ -42,6 +44,7 @@ const product: MenuProduct = {
   imageUrl: null,
   status: "AVAILABLE",
   isFeatured: false,
+  isArchived: false,
   sortOrder: 0,
   createdAt: "2026-10-09T00:00:00Z",
 };
@@ -134,6 +137,172 @@ async function edit() {
     modal: within(screen.getByRole("dialog", { name: "Edit product" })),
   };
 }
+it("confirms archival, retains the product in the archive and offers Undo", async () => {
+  const archived = { ...product, isArchived: true };
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  vi.mocked(setProductArchived)
+    .mockResolvedValueOnce({ product: archived })
+    .mockResolvedValueOnce({ product });
+  const { client } = setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Archive Latte" }),
+  );
+  const modal = within(screen.getByRole("dialog", { name: "Archive Latte?" }));
+  expect(modal.getByRole("button", { name: "Keep product" })).toHaveFocus();
+  expect(setProductArchived).not.toHaveBeenCalled();
+  vi.mocked(listProducts).mockResolvedValue({ products: [archived] });
+  await user.click(modal.getByRole("button", { name: "Archive product" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(setProductArchived).toHaveBeenCalledWith("a", "p", {
+    isArchived: true,
+    expectedArchived: false,
+  });
+  expect(
+    screen.queryByRole("button", { name: "Edit Latte" }),
+  ).not.toBeInTheDocument();
+  expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
+    products: [archived],
+  });
+  expect(screen.getByRole("button", { name: "Create product" })).toHaveFocus();
+  const notice = useFeedbackStore.getState().notices[0];
+  expect(notice.kind).toBe("snackbar");
+  if (notice.kind !== "snackbar") throw new Error("Missing Undo");
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  await notice.action.onClick();
+  expect(setProductArchived).toHaveBeenLastCalledWith("a", "p", {
+    isArchived: false,
+    expectedArchived: true,
+  });
+  expect(
+    await screen.findByRole("button", { name: "Edit Latte" }),
+  ).toBeInTheDocument();
+});
+it("lets the user view and restore archived products without changing menu status", async () => {
+  const hidden = { ...product, isArchived: true, status: "HIDDEN" as const };
+  vi.mocked(listProducts).mockResolvedValue({ products: [hidden] });
+  vi.mocked(setProductArchived).mockResolvedValue({
+    product: { ...hidden, isArchived: false },
+  });
+  setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("checkbox", { name: /Show archived products/ }),
+  );
+  expect(screen.getByText("Archived")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Edit Latte" }),
+  ).not.toBeInTheDocument();
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [{ ...hidden, isArchived: false }],
+  });
+  await user.click(screen.getByRole("button", { name: "Restore Latte" }));
+  expect(await screen.findByText("Hidden")).toBeInTheDocument();
+  expect(setProductArchived).toHaveBeenCalledWith("a", "p", {
+    isArchived: false,
+    expectedArchived: true,
+  });
+  expect(useFeedbackStore.getState().notices[0].kind).toBe("toast");
+});
+it("does not archive when the safe choice is used", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Archive Latte" }),
+  );
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Keep product",
+    }),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(setProductArchived).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Archive Latte" })).toHaveFocus();
+});
+it("retains the confirmation with inline feedback for stale or uncertain requests", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  vi.mocked(setProductArchived).mockRejectedValue({
+    isAxiosError: true,
+    response: { status: 409 },
+  });
+  setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Archive Latte" }),
+  );
+  const modal = within(screen.getByRole("dialog"));
+  await user.click(modal.getByRole("button", { name: "Archive product" }));
+  expect(
+    await modal.findByText(/Archive status changed elsewhere/),
+  ).toBeInTheDocument();
+  expect(setProductArchived).toHaveBeenCalledTimes(1);
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+  vi.mocked(setProductArchived).mockRejectedValue({ isAxiosError: true });
+  await user.click(modal.getByRole("button", { name: "Archive product" }));
+  expect(await modal.findByText(/confirm the change/)).toBeInTheDocument();
+  expect(setProductArchived).toHaveBeenCalledTimes(2);
+});
+it("blocks duplicate archive actions and ignores late completion after leaving the shop", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  let resolve!: (value: { product: MenuProduct }) => void;
+  vi.mocked(setProductArchived).mockReturnValue(
+    new Promise((done) => {
+      resolve = done;
+    }),
+  );
+  const { client, unmount } = setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Archive Latte" }),
+  );
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Archive product",
+    }),
+  );
+  expect(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Keep product",
+    }),
+  ).toBeDisabled();
+  expect(setProductArchived).toHaveBeenCalledTimes(1);
+  unmount();
+  resolve({ product: { ...product, isArchived: true } });
+  await new Promise((done) => setTimeout(done, 20));
+  expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
+    products: [product],
+  });
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+it("invalidates an Undo callback when the user leaves the shop page", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  const archived = { ...product, isArchived: true };
+  vi.mocked(setProductArchived).mockResolvedValue({ product: archived });
+  const { unmount } = setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Archive Latte" }),
+  );
+  vi.mocked(listProducts).mockResolvedValue({ products: [archived] });
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Archive product",
+    }),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  const notice = useFeedbackStore.getState().notices[0];
+  if (notice.kind !== "snackbar") throw new Error("Missing Undo");
+  unmount();
+  await expect(notice.action.onClick()).rejects.toThrow(/Return to this shop/);
+  expect(setProductArchived).toHaveBeenCalledTimes(1);
+});
 it("prefills editing and sends only changed fields, preserving the menu address", async () => {
   vi.mocked(listProducts).mockResolvedValue({ products: [product] });
   const updated = { ...product, name: "Iced latte", price: "15.75" };
