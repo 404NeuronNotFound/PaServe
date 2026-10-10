@@ -50,6 +50,22 @@ export class ProductsController {
       dto,
     );
   }
+  @Patch(':productId/sold-out')
+  @Roles('OWNER', 'ADMIN', 'MANAGER', 'CASHIER')
+  @ShopResource('product', 'productId')
+  setSoldOut(
+    @Body() dto: ProductAvailableDto,
+    @Req() req: ShopResourceRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.products.setSoldOut(
+      req.user.id,
+      req.shopResource.shopId,
+      req.shopResource.id,
+      dto,
+    );
+  }
   @Post(':productId/image')
   @ShopResource('product', 'productId')
   @UseInterceptors(

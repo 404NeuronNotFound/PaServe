@@ -62,6 +62,29 @@ try {
         assert.equal(saved.product.status, 'AVAILABLE');
         assert.equal(saved.product.price, '12.50');
         assert.equal((await read()).products[0].isOrderable, true);
+        const sold = await service.setSoldOut(user.id, shop.id, product.id, {
+          expectedStatus: 'AVAILABLE',
+        });
+        assert.equal(sold.product.status, 'SOLD_OUT');
+        assert.equal(sold.product.price, '12.50');
+        assert.equal((await read()).products[0].isOrderable, false);
+        assert.equal((await read()).products[0].status, 'SOLD_OUT');
+        await assert.rejects(
+          service.setSoldOut(user.id, shop.id, product.id, {
+            expectedStatus: 'AVAILABLE',
+          }),
+          (e) => e.getStatus?.() === 409,
+        );
+        await assert.rejects(
+          service.setSoldOut(user.id, other.id, product.id, {
+            expectedStatus: 'SOLD_OUT',
+          }),
+          (e) => e.getStatus?.() === 404,
+        );
+        await service.setAvailable(user.id, shop.id, product.id, {
+          expectedStatus: 'SOLD_OUT',
+        });
+
         await assert.rejects(
           service.setAvailable(user.id, shop.id, product.id, {
             expectedStatus: 'SOLD_OUT',
@@ -79,6 +102,14 @@ try {
           data: { isVisible: false },
         });
         assert.equal((await read()).products.length, 0);
+        await service.setSoldOut(user.id, shop.id, product.id, {
+          expectedStatus: 'AVAILABLE',
+        });
+        assert.equal((await read()).products.length, 0);
+        await service.setAvailable(user.id, shop.id, product.id, {
+          expectedStatus: 'SOLD_OUT',
+        });
+
         await service.setAvailable(user.id, shop.id, product.id, {
           expectedStatus: 'AVAILABLE',
         });
@@ -129,6 +160,14 @@ try {
           expectedStatus: 'SOLD_OUT',
         });
         assert.equal((await read()).products[0].isOrderable, true);
+
+        await service.setSoldOut(user.id, shop.id, product.id, {
+          expectedStatus: 'AVAILABLE',
+        });
+        assert.equal((await read()).products[0].isOrderable, false);
+        await service.setAvailable(user.id, shop.id, product.id, {
+          expectedStatus: 'SOLD_OUT',
+        });
         await tx.shopMember.update({
           where: { userId_shopId: { userId: user.id, shopId: shop.id } },
           data: { role: 'KITCHEN' },
@@ -152,7 +191,7 @@ try {
   );
   assert.equal(await prisma.user.count({ where: { email } }), 0);
   console.log(
-    'Availability persistence, public orderability, category/archive/shop rules, stale writes, cashier limits and tenant isolation passed. Fixtures rolled back.',
+    'Available/Sold out persistence, public orderability, category/archive/shop rules, stale writes, cashier limits and tenant isolation passed. Fixtures rolled back.',
   );
 } finally {
   await prisma.$disconnect();

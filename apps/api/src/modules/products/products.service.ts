@@ -33,6 +33,23 @@ export class ProductsService {
     productId: string,
     dto: ProductAvailableDto,
   ): Promise<CreateProductResponse> {
+    return this.changeAvailability(userId, shopId, productId, dto, false);
+  }
+  async setSoldOut(
+    userId: string,
+    shopId: string,
+    productId: string,
+    dto: ProductAvailableDto,
+  ): Promise<CreateProductResponse> {
+    return this.changeAvailability(userId, shopId, productId, dto, true);
+  }
+  private async changeAvailability(
+    userId: string,
+    shopId: string,
+    productId: string,
+    dto: ProductAvailableDto,
+    soldOut: boolean,
+  ): Promise<CreateProductResponse> {
     await this.members.requirePermission(
       userId,
       shopId,
@@ -42,7 +59,10 @@ export class ProductsService {
       await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
     await this.resources.requireResource(userId, shopId, 'product', productId);
     try {
-      const product = await this.repository.setAvailable(
+      const write = soldOut
+        ? this.repository.setSoldOut.bind(this.repository)
+        : this.repository.setAvailable.bind(this.repository);
+      const product = await write(
         userId,
         shopId,
         productId,

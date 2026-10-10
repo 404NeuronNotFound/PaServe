@@ -221,6 +221,93 @@ describe('tenant-scoped product creation', () => {
     request(app.getHttpServer())
       .post(`/api/v1/shops/${shop}/products/${id}/image`)
       .set('Authorization', 'Bearer valid');
+  const soldOut = (
+    body: unknown = { expectedStatus: 'AVAILABLE' },
+    target = shopId,
+    id = productId,
+  ) =>
+    request(app.getHttpServer())
+      .patch(`/api/v1/shops/${target}/products/${id}/sold-out`)
+      .set('Authorization', 'Bearer valid')
+      .send(body);
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'])(
+    'allows %s to mark available products sold out',
+    async (value) => {
+      role = value;
+      productWrite.mockResolvedValue({ ...product, status: 'SOLD_OUT' });
+      const result = await soldOut().expect(200);
+      expect(result.body.product.status).toBe('SOLD_OUT');
+      expect(result.headers['cache-control']).toBe('no-store');
+      expect(productWrite.mock.calls[0][0]).toMatchObject({
+        where: {
+          id: productId,
+          shopId,
+          isArchived: false,
+          status: 'AVAILABLE',
+          shop: {
+            isActive: true,
+            members: {
+              some: {
+                userId,
+                role: { in: ['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] },
+                user: { isActive: true },
+              },
+            },
+          },
+        },
+        data: { status: 'SOLD_OUT' },
+      });
+    },
+  );
+  it('only management can publish a hidden product as sold out', async () => {
+    await soldOut({ expectedStatus: 'HIDDEN' }).expect(200);
+    expect(
+      productWrite.mock.calls[0][0].where.shop.members.some.role.in,
+    ).toEqual(['OWNER', 'ADMIN', 'MANAGER']);
+    productWrite.mockClear();
+    role = 'CASHIER';
+    await soldOut({ expectedStatus: 'HIDDEN' }).expect(403);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('denies kitchen, guests and foreign products for sold out actions', async () => {
+    await soldOut(undefined, other).expect(404);
+    await soldOut(undefined, shopId, 'bad').expect(400);
+    role = 'KITCHEN';
+    await soldOut().expect(403);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/shops/${shopId}/products/${productId}/sold-out`)
+      .send({ expectedStatus: 'AVAILABLE' })
+      .expect(401);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it.each([
+    {},
+    { expectedStatus: null },
+    { expectedStatus: 'INVALID' },
+    { expectedStatus: 'AVAILABLE', price: '1' },
+    { expectedStatus: 'AVAILABLE', shopId: other },
+    { expectedStatus: 'AVAILABLE', isArchived: false },
+  ])('rejects invalid or privileged sold out fields %j', async (body) => {
+    await soldOut(body).expect(400);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('rejects stale/archived sold out writes and role loss', async () => {
+    productWrite.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('stale', {
+        code: 'P2025',
+        clientVersion: 'test',
+      }),
+    );
+    await soldOut().expect(409);
+    productWrite.mockImplementation(async () => {
+      role = 'KITCHEN';
+      throw new Prisma.PrismaClientKnownRequestError('lost', {
+        code: 'P2025',
+        clientVersion: 'test',
+      });
+    });
+    await soldOut().expect(403);
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER'])(
     'lets %s upload a decoded image and persist only the resulting URL',
     async (value) => {
