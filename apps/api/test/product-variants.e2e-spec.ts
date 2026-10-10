@@ -163,6 +163,27 @@ describe('product variants management', () => {
       .patch(path(suffix))
       .set('Authorization', 'Bearer valid')
       .send(body);
+  it.each(['\ud800', '\udfff'])(
+    'rejects malformed Unicode variant/group name %j before storage',
+    async (name) => {
+      await post('variants', { name, priceAdjustment: '0' }).expect(400);
+      await post('option-groups', { name }).expect(400);
+      await patch(`variants/${variantId}`, { name }).expect(400);
+      await patch(`option-groups/${groupId}`, { name }).expect(400);
+      expect(writeProduct).not.toHaveBeenCalled();
+      expect(writeVariant).not.toHaveBeenCalled();
+    },
+  );
+  it('accepts valid Unicode variant and group names at the character limit', async () => {
+    const name = '\u{1f600}'.repeat(80);
+    expect(
+      (await post('variants', { name, priceAdjustment: '0' }).expect(201)).body
+        .variant.name,
+    ).toBe(name);
+    expect(
+      (await post('option-groups', { name }).expect(201)).body.optionGroup.name,
+    ).toBe(name);
+  });
   it.each([
     ['Small', '0'],
     ['Medium', '15'],

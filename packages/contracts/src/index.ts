@@ -397,10 +397,13 @@ export interface AssignProductAddOnRequest {
   addOnId: string;
 }
 export const CUSTOMER_NOTE_MAX_LENGTH = 300;
-/** Plain text: allow line breaks/tabs, reject other controls and bidi overrides. */
-export const CUSTOMER_NOTE_PATTERN = /^[^\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]*$/u;
+/** Plain text: allow line breaks/tabs; reject controls, bidi overrides and lone surrogates. */
+export const CUSTOMER_NOTE_PATTERN = /^[^\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069\ud800-\udfff]*$/u;
 export function normalizeCustomerNote(value: string): string | undefined {
-  return value.replace(/\r\n?/g, "\n").trim() || undefined;
+  const normalized = value.replace(/\r\n?/g, "\n");
+  // Preserve invalid input for validation: trim must not erase forbidden controls.
+  if (!CUSTOMER_NOTE_PATTERN.test(normalized)) return normalized;
+  return normalized.trim() || undefined;
 }
 export interface AddOnSelectionRequest {
   addOnIds: string[];

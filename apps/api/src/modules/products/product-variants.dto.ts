@@ -78,7 +78,7 @@ export class CreateProductOptionGroupDto
   @IsString()
   @MinLength(1)
   @MaxLength(PRODUCT_VARIANT_LIMITS.nameMax)
-  @Matches(/^\P{Cc}*$/u)
+  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
   name!: string;
 }
 export class UpdateProductOptionGroupDto
@@ -90,7 +90,7 @@ export class UpdateProductOptionGroupDto
   @IsString()
   @MinLength(1)
   @MaxLength(PRODUCT_VARIANT_LIMITS.nameMax)
-  @Matches(/^\P{Cc}*$/u)
+  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
   name?: string;
 }
 export class CreateProductVariantDto
@@ -101,7 +101,7 @@ export class CreateProductVariantDto
   @IsString()
   @MinLength(1)
   @MaxLength(PRODUCT_VARIANT_LIMITS.nameMax)
-  @Matches(/^\P{Cc}*$/u)
+  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
   name!: string;
 
   @IsString()
@@ -117,7 +117,7 @@ export class UpdateProductVariantDto
   @IsString()
   @MinLength(1)
   @MaxLength(PRODUCT_VARIANT_LIMITS.nameMax)
-  @Matches(/^\P{Cc}*$/u)
+  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
   name?: string;
 
   @ValidateIf(optional)

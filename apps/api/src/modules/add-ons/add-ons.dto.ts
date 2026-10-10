@@ -50,7 +50,7 @@ export class CreateAddOnDto
   @IsString()
   @MinLength(1)
   @MaxLength(ADD_ON_LIMITS.nameMax)
-  @Matches(/^\P{Cc}*$/u)
+  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
   name!: string;
 
   @IsString()
@@ -66,7 +66,7 @@ export class UpdateAddOnDto
   @IsString()
   @MinLength(1)
   @MaxLength(ADD_ON_LIMITS.nameMax)
-  @Matches(/^\P{Cc}*$/u)
+  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
   name?: string;
 
   @ValidateIf(optional)

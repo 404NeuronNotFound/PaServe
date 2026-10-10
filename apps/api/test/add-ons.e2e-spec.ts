@@ -310,6 +310,11 @@ describe('add-on management and product selection', () => {
     'no\u0000onions',
     'less\u0007ice',
     'hidden\u202etext',
+    '\u000b',
+    '\u000cless ice',
+    'no onions\u000b',
+    '\ud800',
+    '\udfff',
   ])('rejects invalid customer note %j', async (notes) => {
     await quote({ addOnIds: [], notes }).expect(400);
   });
@@ -773,6 +778,26 @@ describe('add-on management and product selection', () => {
       shopId: otherShop,
     }).expect(400);
     await quote({ addOnIds: [], price: '0' }).expect(400);
+  });
+  it.each(['\ud800', '\udfff'])(
+    'rejects malformed Unicode modifier name %j before storage',
+    async (name) => {
+      await create({ name, priceAdjustment: '0' }).expect(400);
+      await request(app.getHttpServer())
+        .patch(`${root}/${shotId}`)
+        .set('Authorization', 'Bearer valid')
+        .send({ name })
+        .expect(400);
+      expect(writeShop).not.toHaveBeenCalled();
+      expect(writeAddOn).not.toHaveBeenCalled();
+    },
+  );
+  it('accepts valid Unicode modifier names at the character limit', async () => {
+    const name = '\u{1f600}'.repeat(80);
+    expect(
+      (await create({ name, priceAdjustment: '0' }).expect(201)).body.addOn
+        .name,
+    ).toBe(name);
   });
   it.each([
     {},
