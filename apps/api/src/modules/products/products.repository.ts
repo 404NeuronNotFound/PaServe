@@ -33,6 +33,28 @@ export type ProductCreateData = {
 @Injectable()
 export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
+  setAvailable(
+    userId: string,
+    shopId: string,
+    productId: string,
+    expectedStatus: ProductStatus,
+  ) {
+    return this.prisma.product.update({
+      where: {
+        id: productId,
+        shopId,
+        isArchived: false,
+        status: expectedStatus,
+        shop: shopAccessWhere(
+          userId,
+          shopId,
+          expectedStatus === 'HIDDEN' ? roles : [...roles, 'CASHIER'],
+        ),
+      },
+      data: { status: 'AVAILABLE' },
+      select: productSelect,
+    });
+  }
   findForImage(userId: string, shopId: string, productId: string) {
     return this.prisma.product.findFirst({
       where: {

@@ -18,6 +18,7 @@ import { productSlug } from './product-slug.js';
 import type { UpdateProductDto } from './update-product.dto.js';
 import type { ProductCreateData } from './products.repository.js';
 import type { ProductArchiveDto } from './product-archive.dto.js';
+import type { ProductAvailableDto } from './product-available.dto.js';
 
 @Injectable()
 export class ProductsService {
@@ -26,6 +27,65 @@ export class ProductsService {
     private readonly members: ShopMembersService,
     private readonly resources: TenantResourcesService,
   ) {}
+  async setAvailable(
+    userId: string,
+    shopId: string,
+    productId: string,
+    dto: ProductAvailableDto,
+  ): Promise<CreateProductResponse> {
+    await this.members.requirePermission(
+      userId,
+      shopId,
+      'shop.menu.availability.update',
+    );
+    if (dto.expectedStatus === 'HIDDEN')
+      await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
+    await this.resources.requireResource(userId, shopId, 'product', productId);
+    try {
+      const product = await this.repository.setAvailable(
+        userId,
+        shopId,
+        productId,
+        dto.expectedStatus,
+      );
+      return {
+        product: {
+          ...product,
+          price: product.price.toFixed(2),
+          createdAt: product.createdAt.toISOString(),
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        await this.members.requirePermission(
+          userId,
+          shopId,
+          'shop.menu.availability.update',
+        );
+        if (dto.expectedStatus === 'HIDDEN')
+          await this.members.requirePermission(
+            userId,
+            shopId,
+            'shop.menu.manage',
+          );
+        await this.resources.requireResource(
+          userId,
+          shopId,
+          'product',
+          productId,
+        );
+        throw new ConflictException({
+          code: 'PRODUCT_AVAILABILITY_CHANGED',
+          message:
+            'The product status or archive state changed. Refresh products before trying again.',
+        });
+      }
+      throw error;
+    }
+  }
   async setArchived(
     userId: string,
     shopId: string,

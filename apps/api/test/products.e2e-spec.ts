@@ -122,6 +122,101 @@ describe('tenant-scoped product creation', () => {
     request(app.getHttpServer())
       .get(`/api/v1/shops/${shopId}/products`)
       .set('Authorization', 'Bearer valid');
+  const available = (
+    body: unknown = { expectedStatus: 'SOLD_OUT' },
+    target = shopId,
+    id = productId,
+  ) =>
+    request(app.getHttpServer())
+      .patch(`/api/v1/shops/${target}/products/${id}/available`)
+      .set('Authorization', 'Bearer valid')
+      .send(body);
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'])(
+    'allows %s to make a sold-out product available with a scoped conditional write',
+    async (value) => {
+      role = value;
+      const response = await available().expect(200);
+      expect(response.body.product.status).toBe('AVAILABLE');
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(productWrite.mock.calls[0][0]).toMatchObject({
+        where: {
+          id: productId,
+          shopId,
+          isArchived: false,
+          status: 'SOLD_OUT',
+          shop: {
+            id: shopId,
+            isActive: true,
+            members: {
+              some: {
+                userId,
+                role: { in: ['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] },
+                user: { isActive: true },
+              },
+            },
+          },
+        },
+        data: { status: 'AVAILABLE' },
+      });
+    },
+  );
+  it('restricts publishing hidden products to management roles at write time', async () => {
+    await available({ expectedStatus: 'HIDDEN' }).expect(200);
+    expect(
+      productWrite.mock.calls[0][0].where.shop.members.some.role.in,
+    ).toEqual(['OWNER', 'ADMIN', 'MANAGER']);
+    productWrite.mockClear();
+    role = 'CASHIER';
+    await available({ expectedStatus: 'HIDDEN' }).expect(403);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('denies kitchen availability updates and guest requests', async () => {
+    role = 'KITCHEN';
+    await available().expect(403);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/shops/${shopId}/products/${productId}/available`)
+      .send({ expectedStatus: 'SOLD_OUT' })
+      .expect(401);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it.each([
+    {},
+    { expectedStatus: null },
+    { expectedStatus: 'INVALID' },
+    { expectedStatus: true },
+    { expectedStatus: 'SOLD_OUT', shopId: other },
+    { expectedStatus: 'SOLD_OUT', price: '1' },
+    { expectedStatus: 'SOLD_OUT', isArchived: false },
+  ])('rejects invalid availability fields %j', async (body) => {
+    await available(body).expect(400);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('rejects foreign and malformed availability references', async () => {
+    await available(undefined, other).expect(404);
+    await available(undefined, shopId, 'bad').expect(400);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('returns a conflict for stale status or archived products without restoring them', async () => {
+    productWrite.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('stale', {
+        code: 'P2025',
+        clientVersion: 'test',
+      }),
+    );
+    const result = await available().expect(409);
+    expect(result.body.code).toBe('PRODUCT_AVAILABILITY_CHANGED');
+    expect(productWrite.mock.calls[0][0].where.isArchived).toBe(false);
+  });
+  it('rechecks live permission after a conditional availability write fails', async () => {
+    productWrite.mockImplementation(async () => {
+      role = 'KITCHEN';
+      throw new Prisma.PrismaClientKnownRequestError('lost', {
+        code: 'P2025',
+        clientVersion: 'test',
+      });
+    });
+    await available().expect(403);
+  });
   const imageRequest = (shop = shopId, id = productId) =>
     request(app.getHttpServer())
       .post(`/api/v1/shops/${shop}/products/${id}/image`)

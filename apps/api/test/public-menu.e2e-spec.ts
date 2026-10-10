@@ -55,6 +55,7 @@ describe('public menu visibility', () => {
       description: null,
     });
     expect(response.body.products[0].price).toBe('10.00');
+    expect(response.body.products[0].isOrderable).toBe(false);
     expect(findShop.mock.calls[0][0]).toEqual({
       where: { slug: 'cafe', isActive: true },
       select: { id: true },
@@ -88,6 +89,31 @@ describe('public menu visibility', () => {
     findShop.mockResolvedValue(null);
     await request(app.getHttpServer()).get('/api/v1/menu/missing').expect(404);
     expect(findShop).toHaveBeenCalledTimes(1);
+  });
+  it('marks an available public product as orderable', async () => {
+    findShop
+      .mockResolvedValueOnce({ id: 'shop-a' })
+      .mockResolvedValueOnce({
+        name: 'Cafe',
+        slug: 'cafe',
+        description: null,
+        categories: [],
+        products: [
+          {
+            id: 'product',
+            status: 'AVAILABLE',
+            price: new Prisma.Decimal('0.01'),
+          },
+        ],
+      });
+    const result = await request(app.getHttpServer())
+      .get('/api/v1/menu/cafe')
+      .expect(200);
+    expect(result.body.products[0]).toMatchObject({
+      isOrderable: true,
+      status: 'AVAILABLE',
+      price: '0.01',
+    });
   });
   it('handles shop deactivation between slug resolution and menu read', async () => {
     findShop

@@ -21,6 +21,7 @@ import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './create-product.dto.js';
 import { UpdateProductDto } from './update-product.dto.js';
 import { ProductArchiveDto } from './product-archive.dto.js';
+import { ProductAvailableDto } from './product-available.dto.js';
 import {
   ShopResource,
   type ShopResourceRequest,
@@ -33,6 +34,22 @@ export class ProductsController {
     private readonly products: ProductsService,
     private readonly images: ProductImageService,
   ) {}
+  @Patch(':productId/available')
+  @Roles('OWNER', 'ADMIN', 'MANAGER', 'CASHIER')
+  @ShopResource('product', 'productId')
+  setAvailable(
+    @Body() dto: ProductAvailableDto,
+    @Req() req: ShopResourceRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.products.setAvailable(
+      req.user.id,
+      req.shopResource.shopId,
+      req.shopResource.id,
+      dto,
+    );
+  }
   @Post(':productId/image')
   @ShopResource('product', 'productId')
   @UseInterceptors(

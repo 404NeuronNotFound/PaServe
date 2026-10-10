@@ -30,6 +30,7 @@ export class PublicMenuController {
       products: products.map((product) => ({
         ...product,
         price: product.price.toFixed(2),
+        isOrderable: product.status === 'AVAILABLE',
         status: product.status as 'AVAILABLE' | 'SOLD_OUT',
       })),
     };
