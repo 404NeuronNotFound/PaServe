@@ -212,6 +212,46 @@ it("lets the native picker populate the editable hex value", async () => {
   });
   expect(screen.getByLabelText("Primary color")).toHaveValue("#123456");
 });
+it("validates, saves, and clears accent color without changing other settings", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  vi.mocked(updateShop).mockResolvedValue({
+    shop: { ...shop, accentColor: "#ABCDEF" },
+  });
+  const client = setup();
+  const invalidation = vi.spyOn(client, "invalidateQueries");
+  const user = userEvent.setup();
+  const input = await screen.findByLabelText("Accent color");
+  await user.type(input, "red");
+  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  expect(input).toHaveAttribute("aria-invalid", "true");
+  expect(updateShop).not.toHaveBeenCalled();
+  await user.clear(input);
+  await user.type(input, "#abcdef");
+  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  await vi.waitFor(() => expect(input).toHaveValue("#ABCDEF"));
+  expect(updateShop).toHaveBeenLastCalledWith("shop-a", {
+    accentColor: "#ABCDEF",
+  });
+  expect(invalidation).toHaveBeenCalledWith({
+    queryKey: ["public-menu", "cafe-a"],
+  });
+  vi.mocked(updateShop).mockResolvedValue({
+    shop: { ...shop, accentColor: null },
+  });
+  await user.clear(input);
+  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  await vi.waitFor(() =>
+    expect(updateShop).toHaveBeenLastCalledWith("shop-a", { accentColor: "" }),
+  );
+});
+it("lets the native picker populate the editable hex value", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  setup();
+  fireEvent.change(await screen.findByLabelText("Choose accent color"), {
+    target: { value: "#123456" },
+  });
+  expect(screen.getByLabelText("Accent color")).toHaveValue("#123456");
+});
 it("keeps non-owner members out of settings without fetching them", async () => {
   setup("CASHIER");
   expect(

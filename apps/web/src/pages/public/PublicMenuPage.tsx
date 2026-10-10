@@ -52,7 +52,10 @@ export function PublicMenuPage() {
     );
   const { shop, categories, products, featuredProducts } = menu.data;
   return (
-    <main className="public-menu" style={menuTheme(shop.primaryColor)}>
+    <main
+      className="public-menu"
+      style={menuTheme(shop.primaryColor, shop.accentColor)}
+    >
       <ShopBanner url={shop.bannerUrl} name={shop.name} />
       <header className="public-menu-header">
         <ShopLogo url={shop.logoUrl} name={shop.name} />
@@ -112,8 +115,11 @@ function MenuSection({
             <div>
               <h3>{product.name}</h3>
               {product.description && <p>{product.description}</p>}
+              {product.isFeatured && (
+                <span className="menu-accent-badge">Featured</span>
+              )}
               {product.status === "SOLD_OUT" && (
-                <span className="field-hint">Sold out</span>
+                <span className="menu-accent-badge">Sold out</span>
               )}
             </div>
             <strong>{formatProductPrice(product.price)}</strong>

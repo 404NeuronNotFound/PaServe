@@ -47,6 +47,33 @@ it("scopes the persisted brand color to the customer menu", async () => {
     document.documentElement.style.getPropertyValue("--menu-primary"),
   ).toBe("");
 });
+it("refreshes accent and its readable foreground independently and restores the default", async () => {
+  const data = (accentColor: string | null) => ({
+    ...menu,
+    shop: { ...menu.shop, primaryColor: "#123456", accentColor },
+  });
+  vi.mocked(api.get).mockResolvedValue({ data: data("#000000") });
+  const client = setup();
+  await screen.findByRole("heading", { name: "Cafe" });
+  const theme = () => screen.getByRole("main").style;
+  expect(theme().getPropertyValue("--menu-accent")).toBe("#000000");
+  expect(theme().getPropertyValue("--menu-on-accent")).toBe("#FFFFFF");
+  vi.mocked(api.get).mockResolvedValue({ data: data("#FFFFFF") });
+  await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+  await vi.waitFor(() =>
+    expect(theme().getPropertyValue("--menu-accent")).toBe("#FFFFFF"),
+  );
+  expect(theme().getPropertyValue("--menu-on-accent")).toBe("#000000");
+  expect(theme().getPropertyValue("--menu-primary")).toBe("#123456");
+  expect(document.documentElement.style.getPropertyValue("--menu-accent")).toBe(
+    "",
+  );
+  vi.mocked(api.get).mockResolvedValue({ data: data(null) });
+  await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+  await vi.waitFor(() =>
+    expect(theme().getPropertyValue("--menu-accent")).toBe("#C9EF83"),
+  );
+});
 it("updates both theme colors after a saved-color refetch and resets to the default", async () => {
   vi.mocked(api.get).mockResolvedValue({
     data: { ...menu, shop: { ...menu.shop, primaryColor: "#000000" } },

@@ -10,6 +10,8 @@ import {
   isValidShopPhone,
   SHOP_PHONE_HINT,
   DEFAULT_MENU_PRIMARY_COLOR,
+  DEFAULT_MENU_ACCENT_COLOR,
+  SHOP_ACCENT_COLOR_HINT,
   SHOP_PRIMARY_COLOR_HINT,
   isValidShopPrimaryColor,
   normalizeShopPrimaryColor,
@@ -40,6 +42,12 @@ const fields = [
     max: 7,
     section: "Menu appearance",
     hint: SHOP_PRIMARY_COLOR_HINT,
+  },
+  {
+    key: "accentColor",
+    label: "Accent color",
+    max: 7,
+    hint: SHOP_ACCENT_COLOR_HINT,
   },
   {
     key: "name",
@@ -98,7 +106,9 @@ const fields = [
 type Field = keyof UpdateShopRequest;
 type Values = Record<Field, string>;
 const normalizedValue = (key: Field, value: string) =>
-  key === "primaryColor" ? normalizeShopPrimaryColor(value) : value.trim();
+  key === "primaryColor" || key === "accentColor"
+    ? normalizeShopPrimaryColor(value)
+    : value.trim();
 const valuesFrom = (shop: ShopSettings) =>
   Object.fromEntries(
     fields.map(({ key }) => [key, normalizedValue(key, shop[key] ?? "")]),
@@ -240,6 +250,8 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
     const trimmed = value.trim();
     if (key === "primaryColor" && !isValidShopPrimaryColor(value))
       return SHOP_PRIMARY_COLOR_HINT;
+    if (key === "accentColor" && !isValidShopPrimaryColor(value))
+      return SHOP_ACCENT_COLOR_HINT;
     if (trimmed.length > field.max)
       return `Use no more than ${field.max} characters.`;
     if (key === "name" && !trimmed) return "Enter your business name.";
@@ -412,21 +424,24 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                   {field.label}
                   {field.key === "name" ? " (required)" : ""}
                 </label>
-                {field.key === "primaryColor" && (
+                {(field.key === "primaryColor" ||
+                  field.key === "accentColor") && (
                   <input
                     type="color"
                     className="shop-color-picker"
-                    aria-label="Choose primary color"
-                    aria-describedby="settings-primaryColor-hint"
+                    aria-label={`Choose ${field.label.toLowerCase()}`}
+                    aria-describedby={`settings-${field.key}-hint`}
                     value={
-                      isValidShopPrimaryColor(values.primaryColor) &&
-                      values.primaryColor.trim()
-                        ? normalizeShopPrimaryColor(values.primaryColor)
-                        : DEFAULT_MENU_PRIMARY_COLOR
+                      isValidShopPrimaryColor(values[field.key]) &&
+                      values[field.key].trim()
+                        ? normalizeShopPrimaryColor(values[field.key])
+                        : field.key === "primaryColor"
+                          ? DEFAULT_MENU_PRIMARY_COLOR
+                          : DEFAULT_MENU_ACCENT_COLOR
                     }
                     disabled={busy}
                     onChange={(event) =>
-                      changeField("primaryColor", event.target.value)
+                      changeField(field.key, event.target.value)
                     }
                   />
                 )}
