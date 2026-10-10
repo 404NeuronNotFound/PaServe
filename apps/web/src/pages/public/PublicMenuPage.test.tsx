@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { PublicMenuPage } from "./PublicMenuPage";
@@ -200,6 +200,35 @@ it("renders saved category and product order with sold-out labels", async () => 
       .map((item) => item.textContent),
   ).toEqual(["Coffee", "Tea"]);
   expect(screen.getByText("Sold out")).toBeInTheDocument();
+});
+it.each(["grid", "list", "compact"])("loads configured product order for independent customer sessions in %s layout", async (menuLayout) => {
+  const coffee = { id: "coffee", name: "Coffee", categoryId: "drinks", sortOrder: 0, price: "12.50", description: null, imageUrl: null, status: "AVAILABLE" };
+  const tea = { ...coffee, id: "tea", name: "Tea", sortOrder: 1, status: "SOLD_OUT" };
+  const meal = { ...coffee, id: "meal", name: "Meal", categoryId: "meals" };
+  const data = (products: typeof coffee[]) => ({
+    ...menu, shop: { ...menu.shop, menuLayout },
+    categories: [{ id: "drinks", name: "Drinks" }, { id: "meals", name: "Meals" }], products,
+  });
+  vi.mocked(api.get).mockResolvedValue({ data: data([coffee, meal, tea]) });
+  const firstClient = setup();
+  await screen.findByRole("heading", { name: "Tea" });
+  const names = (region: string) => within(screen.getByRole("region", { name: region })).getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
+  expect(names("Drinks")).toEqual(["Coffee", "Tea"]);
+  cleanup();
+  firstClient.clear();
+  vi.mocked(api.get).mockResolvedValue({ data: data([{ ...tea, sortOrder: 0 }, meal, { ...coffee, sortOrder: 1 }]) });
+  // Each mount has its own QueryClient, as with separate customers or a reload.
+  for (let visitor = 0; visitor < 2; visitor++) {
+    const client = setup();
+    await screen.findByRole("heading", { name: "Tea" });
+    expect(names("Drinks")).toEqual(["Tea", "Coffee"]);
+    expect(names("Meals")).toEqual(["Meal"]);
+    expect(screen.getByText("Sold out")).toBeInTheDocument();
+    cleanup();
+    client.clear();
+  }
+  expect(api.get).toHaveBeenCalledTimes(3);
+  expect(api.get).toHaveBeenLastCalledWith("/menu/cafe", { signal: expect.any(AbortSignal) });
 });
 it("shows a recovery state for unavailable menus", async () => {
   vi.mocked(api.get).mockRejectedValue({

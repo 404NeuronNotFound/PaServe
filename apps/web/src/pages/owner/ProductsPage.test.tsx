@@ -364,6 +364,12 @@ it("saves product moves in one selected group and preserves other products", asy
     ],
   });
   const { client } = setup();
+  const publicKey = ["public-menu", "cafe-a"];
+  client.setQueryData(publicKey, {
+    products: [product, other],
+    featuredProducts: [],
+  });
+  const invalidate = vi.spyOn(client, "invalidateQueries");
   const user = userEvent.setup();
   await user.click(
     await screen.findByRole("button", {
@@ -400,6 +406,11 @@ it("saves product moves in one selected group and preserves other products", asy
       }
     ).products,
   ).toContainEqual(other);
+  expect(client.getQueryData(publicKey)).toEqual({
+    products: [{ ...product, sortOrder: 1 }, other],
+    featuredProducts: [],
+  });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: publicKey });
 });
 it("preserves a dirty product-order draft on conflict and protects cancellation", async () => {
   vi.mocked(listProducts).mockResolvedValue({

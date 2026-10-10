@@ -19,6 +19,7 @@ import {
   type CategoriesResponse,
   type CurrentUserResponse,
   type MenuCategory,
+  type PublicMenuResponse,
 } from "@paserve/contracts";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
@@ -36,6 +37,7 @@ import "./categories.css";
 import { CategoryEditor } from "./CategoryEditor";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { CategoryOrderEditor } from "./CategoryOrderEditor";
+import { withCategoryOrder } from "../../features/shops/category-menu-order";
 
 export function CategoriesPage() {
   const membership = useActiveShop();
@@ -130,6 +132,13 @@ function CategoryWorkspace({ userId }: { userId: string }) {
       await client.cancelQueries({ queryKey: key });
       if (!stillHere()) return false;
       client.setQueryData(key, result);
+      const publicKey = ["public-menu", membership.shop.slug];
+      await client.cancelQueries({ queryKey: publicKey });
+      if (!stillHere()) return false;
+      client.setQueryData<PublicMenuResponse>(publicKey, (menu) =>
+        menu ? withCategoryOrder(menu, result.categories) : menu,
+      );
+      void client.invalidateQueries({ queryKey: publicKey });
       void client.invalidateQueries({ queryKey: key });
       if (!undo)
         feedback.snackbar(

@@ -26,8 +26,10 @@ import {
   type CurrentUserResponse,
   type MenuProduct,
   type ProductsResponse,
+  type PublicMenuResponse,
 } from "@paserve/contracts";
 import { useActiveShop } from "../../features/shops/active-shop";
+import { withProductOrder } from "../../features/shops/product-menu-order";
 import { currentUserKey } from "../../features/auth/api/session";
 import {
   productsKey,
@@ -246,7 +248,11 @@ function ProductWorkspace({ userId }: { userId: string }) {
       });
       if (!stillHere()) return false;
       const key = productsKey(userId, membership.shopId);
-      await client.cancelQueries({ queryKey: key });
+      const publicKey = ["public-menu", membership.shop.slug];
+      await Promise.all([
+        client.cancelQueries({ queryKey: key }),
+        client.cancelQueries({ queryKey: publicKey }),
+      ]);
       if (!stillHere()) return false;
       const changed = new Map(result.products.map((item) => [item.id, item]));
       client.setQueryData<ProductsResponse>(key, (current) =>
@@ -264,6 +270,12 @@ function ProductWorkspace({ userId }: { userId: string }) {
           : current,
       );
       void client.invalidateQueries({ queryKey: key });
+      client.setQueryData<PublicMenuResponse>(publicKey, (current) =>
+        current
+          ? withProductOrder(current, orderCategory || null, result.products)
+          : current,
+      );
+      void client.invalidateQueries({ queryKey: publicKey });
       feedback.toast("Product order saved.");
       return true;
     } catch (error) {

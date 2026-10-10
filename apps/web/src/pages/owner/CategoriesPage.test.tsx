@@ -53,6 +53,81 @@ const meals = {
   isVisible: false,
   sortOrder: 7,
 };
+it("keeps ordering focused and updates the public menu cache only on Save and Undo", async () => {
+  const visibleMeals = { ...meals, isVisible: true };
+  const hidden = {
+    ...category,
+    id: "hidden",
+    name: "Hidden",
+    isVisible: false,
+    sortOrder: 2,
+  };
+  const items = [category, visibleMeals, hidden];
+  const menu = {
+    shop: {
+      name: "Cafe A",
+      slug: "cafe-a",
+      menuLayout: "compact",
+      primaryColor: "#123456",
+      accentColor: "#ABCDEF",
+    },
+    categories: [category, visibleMeals],
+    products: [category, visibleMeals].map((item) => ({
+      id: `product-${item.id}`,
+      categoryId: item.id,
+      name: `${item.name} item`,
+      description: null,
+      imageUrl: null,
+      price: "10.00",
+      status: "AVAILABLE",
+    })),
+    featuredProducts: [],
+  };
+  vi.mocked(listCategories).mockResolvedValue({ categories: items });
+  const { client } = setup();
+  client.setQueryData(["public-menu", "cafe-a"], menu);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Reorder categories" }),
+  );
+  expect(
+    screen.queryByRole("region", { name: "Category order preview" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Move Meals up" }));
+  expect(
+    client
+      .getQueryData<{ categories: typeof items }>(["public-menu", "cafe-a"])!
+      .categories.map((item) => item.id),
+  ).toEqual([category.id, meals.id]);
+  expect(reorderCategories).not.toHaveBeenCalled();
+  const saved = [visibleMeals, category, hidden].map((item, sortOrder) => ({
+    ...item,
+    sortOrder,
+  }));
+  vi.mocked(reorderCategories)
+    .mockResolvedValueOnce({ categories: saved })
+    .mockResolvedValueOnce({ categories: items });
+  vi.mocked(listCategories).mockResolvedValue({ categories: saved });
+  await user.click(screen.getByRole("button", { name: "Save order" }));
+  await screen.findByRole("button", { name: "Reorder categories" });
+  const cached = () =>
+    client.getQueryData<{
+      categories: typeof items;
+      products: typeof menu.products;
+    }>(["public-menu", "cafe-a"])!;
+  expect(cached().categories.map((item) => [item.id, item.sortOrder])).toEqual([
+    [meals.id, 0],
+    [category.id, 1],
+  ]);
+  expect(cached().products).toEqual(menu.products);
+  const notice = useFeedbackStore.getState().notices[0];
+  if (notice.kind !== "snackbar") throw new Error("Missing Undo");
+  await notice.action.onClick();
+  expect(cached().categories.map((item) => item.id)).toEqual([
+    category.id,
+    meals.id,
+  ]);
+});
 it.each(["OWNER", "ADMIN", "MANAGER"] as const)(
   "lets %s arrange, save and undo the full category order",
   async (role) => {
