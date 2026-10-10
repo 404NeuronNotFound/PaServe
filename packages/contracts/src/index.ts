@@ -339,6 +339,9 @@ export interface ProductArchiveRequest {
   expectedArchived: boolean;
 }
 export type ProductArchiveResponse = CreateProductResponse;
+export interface ProductAvailableRequest {
+  expectedStatus: ProductStatus;
+}
 export interface ProductsResponse {
   products: MenuProduct[];
 }
@@ -364,6 +367,7 @@ export interface PublicMenuResponse {
     price: string;
     imageUrl: string | null;
     status: "AVAILABLE" | "SOLD_OUT";
+    isOrderable: boolean;
     isFeatured: boolean;
     sortOrder: number;
   }>;
