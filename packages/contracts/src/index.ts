@@ -343,6 +343,7 @@ export interface ProductAvailableRequest {
   expectedStatus: ProductStatus;
 }
 export type ProductSoldOutRequest = ProductAvailableRequest;
+export type ProductHiddenRequest = ProductAvailableRequest;
 export interface ProductsResponse {
   products: MenuProduct[];
 }

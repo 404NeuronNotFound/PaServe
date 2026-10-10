@@ -221,6 +221,93 @@ describe('tenant-scoped product creation', () => {
     request(app.getHttpServer())
       .post(`/api/v1/shops/${shop}/products/${id}/image`)
       .set('Authorization', 'Bearer valid');
+  const hide = (
+    body: unknown = { expectedStatus: 'AVAILABLE' },
+    target = shopId,
+    id = productId,
+  ) =>
+    request(app.getHttpServer())
+      .patch(`/api/v1/shops/${target}/products/${id}/hidden`)
+      .set('Authorization', 'Bearer valid')
+      .send(body);
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'allows %s to hide products with a status-only tenant write',
+    async (value) => {
+      role = value;
+      productWrite.mockResolvedValue({ ...product, status: 'HIDDEN' });
+      const res = await hide().expect(200);
+      expect(res.body.product).toMatchObject({
+        status: 'HIDDEN',
+        price: '12.50',
+        isArchived: false,
+      });
+      expect(res.headers['cache-control']).toBe('no-store');
+      expect(productWrite.mock.calls[0][0]).toMatchObject({
+        where: {
+          id: productId,
+          shopId,
+          status: 'AVAILABLE',
+          isArchived: false,
+          shop: {
+            isActive: true,
+            members: {
+              some: {
+                userId,
+                role: { in: ['OWNER', 'ADMIN', 'MANAGER'] },
+                user: { isActive: true },
+              },
+            },
+          },
+        },
+        data: { status: 'HIDDEN' },
+      });
+    },
+  );
+  it.each(['CASHIER', 'KITCHEN'])(
+    'denies %s hiding products',
+    async (value) => {
+      role = value;
+      await hide().expect(403);
+      expect(productWrite).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    {},
+    { expectedStatus: null },
+    { expectedStatus: 'INVALID' },
+    { expectedStatus: 'AVAILABLE', shopId: other },
+    { expectedStatus: 'AVAILABLE', price: '1' },
+    { expectedStatus: 'AVAILABLE', isArchived: false },
+  ])('rejects invalid/protected hide fields %j', async (body) => {
+    await hide(body).expect(400);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('rejects foreign/malformed products and guests on hide', async () => {
+    await hide(undefined, other).expect(404);
+    await hide(undefined, shopId, 'bad').expect(400);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/shops/${shopId}/products/${productId}/hidden`)
+      .send({ expectedStatus: 'AVAILABLE' })
+      .expect(401);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('reports stale/archived hide state and rechecks lost management access', async () => {
+    productWrite.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('stale', {
+        code: 'P2025',
+        clientVersion: 'test',
+      }),
+    );
+    await hide().expect(409);
+    productWrite.mockImplementation(async () => {
+      role = 'CASHIER';
+      throw new Prisma.PrismaClientKnownRequestError('lost', {
+        code: 'P2025',
+        clientVersion: 'test',
+      });
+    });
+    await hide().expect(403);
+  });
   const soldOut = (
     body: unknown = { expectedStatus: 'AVAILABLE' },
     target = shopId,

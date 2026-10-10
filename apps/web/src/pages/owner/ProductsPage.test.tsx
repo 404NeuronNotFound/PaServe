@@ -21,6 +21,7 @@ import {
   uploadProductImage,
   setProductAvailable,
   setProductSoldOut,
+  setProductHidden,
 } from "../../features/shops/api/products";
 import { listCategories } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
@@ -33,6 +34,7 @@ vi.mock("../../features/shops/api/products", async (original) => ({
   uploadProductImage: vi.fn(),
   setProductAvailable: vi.fn(),
   setProductSoldOut: vi.fn(),
+  setProductHidden: vi.fn(),
   listProducts: vi.fn(),
 }));
 vi.mock("../../features/shops/api/categories", async (original) => ({
@@ -143,6 +145,72 @@ async function edit() {
     modal: within(screen.getByRole("dialog", { name: "Edit product" })),
   };
 }
+it("hides a product without deleting its card and keeps Edit and Make available", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  const saved: MenuProduct = { ...product, status: "HIDDEN" };
+  vi.mocked(setProductHidden).mockResolvedValue({ product: saved });
+  const { client } = setup();
+  const user = userEvent.setup();
+  const trigger = await screen.findByRole("button", { name: "Hide Latte" });
+  vi.mocked(listProducts).mockResolvedValue({ products: [saved] });
+  await user.click(trigger);
+  await waitFor(() =>
+    expect(setProductHidden).toHaveBeenCalledWith("a", "p", {
+      expectedStatus: "AVAILABLE",
+    }),
+  );
+  expect(
+    await screen.findByText("Hidden from the customer menu · Details kept"),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Make Latte available" }),
+  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Edit Latte" })).toBeEnabled();
+  expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
+    products: [saved],
+  });
+  expect(useFeedbackStore.getState().notices[0].message).toContain(
+    "hidden from the menu",
+  );
+});
+it("keeps hide failures inline without changing the product", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  vi.mocked(setProductHidden).mockRejectedValue({
+    isAxiosError: true,
+    response: { status: 409 },
+  });
+  setup();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Hide Latte" }));
+  expect(
+    await screen.findByText(/Product status changed elsewhere/),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Hide Latte" })).toBeEnabled();
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+it("blocks duplicate hide actions and ignores a late save", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  let resolve!: (value: { product: MenuProduct }) => void;
+  vi.mocked(setProductHidden).mockReturnValue(
+    new Promise((done) => {
+      resolve = done;
+    }),
+  );
+  const { client, unmount } = setup();
+  const user = userEvent.setup();
+  await user.dblClick(
+    await screen.findByRole("button", { name: "Hide Latte" }),
+  );
+  expect(setProductHidden).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Edit Latte" })).toBeDisabled();
+  unmount();
+  resolve({ product: { ...product, status: "HIDDEN" } });
+  await new Promise((done) => setTimeout(done, 20));
+  expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
+    products: [product],
+  });
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
 it("marks a product sold out and offers Make available without a confirmation", async () => {
   vi.mocked(listProducts).mockResolvedValue({ products: [product] });
   const saved: MenuProduct = { ...product, status: "SOLD_OUT" };

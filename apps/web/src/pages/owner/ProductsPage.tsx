@@ -12,6 +12,7 @@ import {
   FiRotateCcw,
   FiCheckCircle,
   FiSlash,
+  FiEyeOff,
 } from "react-icons/fi";
 import {
   hasShopPermission,
@@ -27,6 +28,7 @@ import {
   setProductArchived,
   setProductAvailable,
   setProductSoldOut,
+  setProductHidden,
 } from "../../features/shops/api/products";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { ProductEditor } from "./ProductEditor";
@@ -102,13 +104,21 @@ function ProductWorkspace({ userId }: { userId: string }) {
     }
     return "We couldn’t change the archive status. Please try again.";
   }
-  async function changeAvailability(product: MenuProduct, soldOut = false) {
+  async function changeAvailability(
+    product: MenuProduct,
+    targetStatus: "AVAILABLE" | "SOLD_OUT" | "HIDDEN" = "AVAILABLE",
+  ) {
     if (!stillHere() || running.current || editorOpen.current) return;
     running.current = true;
     setAvailableBusy(product.id);
     setAvailableError(null);
     try {
-      const write = soldOut ? setProductSoldOut : setProductAvailable;
+      const write =
+        targetStatus === "HIDDEN"
+          ? setProductHidden
+          : targetStatus === "SOLD_OUT"
+            ? setProductSoldOut
+            : setProductAvailable;
       const result = await write(membership.shopId, product.id, {
         expectedStatus: product.status,
       });
@@ -131,11 +141,13 @@ function ProductWorkspace({ userId }: { userId: string }) {
         (item) => item.id === product.categoryId,
       );
       feedback.toast(
-        soldOut
-          ? `“${result.product.name}” is sold out.${category && !category.isVisible ? " Its category is still hidden." : ""}`
-          : category && !category.isVisible
-            ? `“${result.product.name}” is available. Its category is still hidden.`
-            : `“${result.product.name}” is available. Category visibility still applies.`,
+        targetStatus === "HIDDEN"
+          ? `${result.product.name} is hidden from the menu.`
+          : targetStatus === "SOLD_OUT"
+            ? `“${result.product.name}” is sold out.${category && !category.isVisible ? " Its category is still hidden." : ""}`
+            : category && !category.isVisible
+              ? `“${result.product.name}” is available. Its category is still hidden.`
+              : `“${result.product.name}” is available. Category visibility still applies.`,
       );
     } catch (error) {
       if (!stillHere()) return;
@@ -362,6 +374,11 @@ function ProductWorkspace({ userId }: { userId: string }) {
                     {availableError?.id === product.id && (
                       <InlineMessage>{availableError.message}</InlineMessage>
                     )}
+                    {!product.isArchived && product.status === "HIDDEN" && (
+                      <p className="field-hint">
+                        Hidden from the customer menu · Details kept
+                      </p>
+                    )}
                     {!product.isArchived && product.status === "SOLD_OUT" && (
                       <p className="field-hint">
                         {!product.categoryId ||
@@ -411,6 +428,27 @@ function ProductWorkspace({ userId }: { userId: string }) {
                     <strong className="product-price">
                       {formatProductPrice(product.price)}
                     </strong>
+                    {!product.isArchived && product.status !== "HIDDEN" && (
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        aria-label={`Hide ${product.name}`}
+                        disabled={
+                          creating ||
+                          Boolean(editing) ||
+                          Boolean(archiving) ||
+                          archiveBusy ||
+                          Boolean(availableBusy) ||
+                          denied
+                        }
+                        onClick={() =>
+                          void changeAvailability(product, "HIDDEN")
+                        }
+                      >
+                        <FiEyeOff aria-hidden="true" />
+                        {availableBusy === product.id ? "Updating…" : "Hide"}
+                      </button>
+                    )}
                     {!product.isArchived && product.status !== "AVAILABLE" && (
                       <button
                         className="secondary-button"
@@ -445,7 +483,9 @@ function ProductWorkspace({ userId }: { userId: string }) {
                           Boolean(availableBusy) ||
                           denied
                         }
-                        onClick={() => void changeAvailability(product, true)}
+                        onClick={() =>
+                          void changeAvailability(product, "SOLD_OUT")
+                        }
                       >
                         <FiSlash aria-hidden="true" />
                         {availableBusy === product.id
