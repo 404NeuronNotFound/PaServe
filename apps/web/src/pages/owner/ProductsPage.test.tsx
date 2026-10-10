@@ -1,4 +1,4 @@
-﻿import { beforeEach, afterEach, it, expect, vi } from "vitest";
+import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import {
   render,
   screen,
@@ -102,6 +102,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.resetAllMocks();
   useFeedbackStore.getState().clear();
 });
@@ -124,6 +125,14 @@ function setup(role: UserMembership["role"] = "OWNER") {
     </QueryClientProvider>,
   );
   return { client, ...view };
+}
+async function findProductAction(name: string) {
+  await screen.findByRole("heading", { name: "Latte" });
+  const button = screen.getByRole("button", { name, hidden: true });
+  const disclosure = button.closest("details");
+  if (disclosure && !disclosure.open)
+    await userEvent.click(disclosure.querySelector("summary")!);
+  return screen.findByRole("button", { name });
 }
 async function open() {
   const user = userEvent.setup();
@@ -149,6 +158,187 @@ async function edit() {
     modal: within(screen.getByRole("dialog", { name: "Edit product" })),
   };
 }
+it("keeps secondary actions behind More and supports keyboard and outside dismissal", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("button", { name: "Edit Latte" });
+  const more = screen.getByLabelText("More actions for Latte");
+  const disclosure = more.closest("details")!;
+  expect(disclosure.open).toBe(false);
+  expect(
+    screen.queryByRole("button", { name: "Feature Latte" }),
+  ).not.toBeInTheDocument();
+  more.focus();
+  await user.keyboard("{ArrowDown}");
+  expect(screen.getByRole("button", { name: "Feature Latte" })).toHaveFocus();
+  await user.keyboard("{End}");
+  expect(screen.getByRole("button", { name: "Archive Latte" })).toHaveFocus();
+  await user.keyboard("{Escape}");
+  expect(disclosure.open).toBe(false);
+  expect(more).toHaveFocus();
+  await user.keyboard("{ArrowUp}");
+  expect(screen.getByRole("button", { name: "Archive Latte" })).toHaveFocus();
+  await user.click(screen.getByRole("heading", { name: "Your products" }));
+  expect(disclosure.open).toBe(false);
+});
+it("prevents opening another product's actions during a pending save", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [product, { ...product, id: "second", name: "Mocha" }],
+  });
+  vi.mocked(setProductFeatured).mockReturnValue(new Promise(() => {}));
+  setup();
+  const user = userEvent.setup();
+  await user.click(await findProductAction("Feature Latte"));
+  const more = screen.getByLabelText("More actions for Mocha");
+  expect(more).toHaveAttribute("aria-disabled", "true");
+  await user.click(more);
+  expect(more.closest("details")).not.toHaveAttribute("open");
+});
+it("groups products by category and opens reorder for that category only", async () => {
+  const coffee = {
+    ...product,
+    id: "coffee",
+    name: "Americano",
+    slug: "americano",
+    categoryId: category.id,
+  };
+  const mocha = { ...coffee, id: "mocha", name: "Mocha", sortOrder: 1 };
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [product, coffee, mocha],
+  });
+  setup();
+  const user = userEvent.setup();
+  const group = within(await screen.findByRole("region", { name: "Coffee" }));
+  expect(group.getByRole("heading", { name: "Americano" })).toBeInTheDocument();
+  expect(
+    group.queryByRole("heading", { name: "Latte" }),
+  ).not.toBeInTheDocument();
+  expect(group.getByText("Category hidden")).toBeInTheDocument();
+  expect(
+    within(screen.getByRole("region", { name: "Uncategorized" })).getByRole(
+      "heading",
+      { name: "Latte" },
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByLabelText("Product group")).not.toBeInTheDocument();
+  const trigger = group.getByRole("button", {
+    name: "Reorder Coffee products",
+  });
+  await user.click(trigger);
+  const modal = within(
+    screen.getByRole("dialog", { name: "Reorder products" }),
+  );
+  expect(modal.getByText("Americano")).toBeInTheDocument();
+  expect(modal.queryByText("Latte")).not.toBeInTheDocument();
+  await user.click(modal.getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(trigger).toHaveFocus());
+});
+it("paginates a large menu and resets pagination when searching", async () => {
+  const products = Array.from({ length: 17 }, (_, index) => ({
+    ...product,
+    id: `p-${index}`,
+    name: `Drink ${index}`,
+    slug: `drink-${index}`,
+    sortOrder: index,
+  }));
+  vi.mocked(listProducts).mockResolvedValue({ products });
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: "Drink 0" });
+  expect(
+    screen.queryByRole("heading", { name: "Drink 8" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText("Showing 1–8 of 17 products")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Next product page" }));
+  expect(screen.getByRole("heading", { name: "Drink 8" })).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Drink 0" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Next product page" }));
+  expect(screen.getByRole("heading", { name: "Drink 16" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Next product page" }),
+  ).toBeDisabled();
+  await user.type(screen.getByLabelText("Find a product"), "Drink 0");
+  expect(screen.getByText("Showing 1–1 of 1 products")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("navigation", { name: "Product pages" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Drink 0" })).toBeInTheDocument();
+  await user.click(
+    screen.getByRole("button", { name: "Reorder Uncategorized products" }),
+  );
+  const modal = within(
+    screen.getByRole("dialog", { name: "Reorder products" }),
+  );
+  expect(modal.getAllByRole("listitem")).toHaveLength(17);
+  expect(modal.getByText("Drink 16")).toBeInTheDocument();
+});
+it("combines category and status filters and recovers from no matches", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [
+      product,
+      { ...product, id: "coffee", categoryId: category.id, name: "Americano" },
+      {
+        ...product,
+        id: "mocha",
+        categoryId: category.id,
+        name: "Mocha",
+        slug: "mocha",
+        status: "SOLD_OUT",
+      },
+    ],
+  });
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: "Latte" });
+  await user.click(screen.getByLabelText("Category"));
+  await user.click(screen.getByRole("option", { name: "Coffee" }));
+  expect(
+    screen.queryByRole("region", { name: "Uncategorized" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByLabelText("Status"));
+  await user.click(screen.getByRole("option", { name: "Sold out" }));
+  expect(screen.getByRole("heading", { name: "Mocha" })).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Americano" }),
+  ).not.toBeInTheDocument();
+  await user.type(screen.getByLabelText("Find a product"), "Latte");
+  expect(
+    screen.getByRole("heading", { name: "No products found." }),
+  ).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Clear filters" }));
+  expect(screen.getByRole("heading", { name: "Latte" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Americano" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Mocha" })).toBeInTheDocument();
+});
+it("supports keyboard selection and closes the dropdown with Escape without closing the product modal", async () => {
+  setup();
+  const { user, modal } = await basics();
+  const status = modal.getByRole("combobox", { name: "Menu status" });
+  status.focus();
+  await user.keyboard("{ArrowDown}{End}{Enter}");
+  expect(status).toHaveTextContent("Hidden");
+  expect(status).toHaveAttribute("aria-expanded", "false");
+  const categoryTrigger = modal.getByRole("combobox", { name: "Category" });
+  await user.click(categoryTrigger);
+  await user.keyboard("co");
+  const option = modal.getByRole("option", { name: /Coffee/ });
+  expect(categoryTrigger).toHaveAttribute("aria-activedescendant", option.id);
+  await user.keyboard("{Escape}");
+  expect(categoryTrigger).toHaveAttribute("aria-expanded", "false");
+  expect(categoryTrigger).toHaveTextContent("Uncategorized");
+  expect(
+    screen.getByRole("dialog", { name: "Create product" }),
+  ).toBeInTheDocument();
+  expect(categoryTrigger).toHaveFocus();
+  await user.click(categoryTrigger);
+  await user.click(modal.getByLabelText("Product name"));
+  expect(categoryTrigger).toHaveAttribute("aria-expanded", "false");
+});
 it("saves product moves in one selected group and preserves other products", async () => {
   const second: MenuProduct = {
     ...product,
@@ -176,7 +366,9 @@ it("saves product moves in one selected group and preserves other products", asy
   const { client } = setup();
   const user = userEvent.setup();
   await user.click(
-    await screen.findByRole("button", { name: "Reorder products" }),
+    await screen.findByRole("button", {
+      name: "Reorder Uncategorized products",
+    }),
   );
   const modal = within(
     screen.getByRole("dialog", { name: "Reorder products" }),
@@ -223,7 +415,9 @@ it("preserves a dirty product-order draft on conflict and protects cancellation"
   setup();
   const user = userEvent.setup();
   await user.click(
-    await screen.findByRole("button", { name: "Reorder products" }),
+    await screen.findByRole("button", {
+      name: "Reorder Uncategorized products",
+    }),
   );
   const modal = within(
     screen.getByRole("dialog", { name: "Reorder products" }),
@@ -246,10 +440,10 @@ it("features and unfeatures a product while preserving menu status", async () =>
     .mockResolvedValueOnce({ product });
   const { client } = setup();
   const user = userEvent.setup();
-  const trigger = await screen.findByRole("button", { name: "Feature Latte" });
+  const trigger = await findProductAction("Feature Latte");
   vi.mocked(listProducts).mockResolvedValue({ products: [saved] });
   await user.click(trigger);
-  const undo = await screen.findByRole("button", { name: "Unfeature Latte" });
+  const undo = await findProductAction("Unfeature Latte");
   expect(undo).toHaveAttribute("aria-pressed", "true");
   expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
     products: [saved],
@@ -260,9 +454,10 @@ it("features and unfeatures a product while preserving menu status", async () =>
   });
   vi.mocked(listProducts).mockResolvedValue({ products: [product] });
   await user.click(undo);
-  expect(
-    await screen.findByRole("button", { name: "Feature Latte" }),
-  ).toHaveAttribute("aria-pressed", "false");
+  expect(await findProductAction("Feature Latte")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
   expect(setProductFeatured).toHaveBeenLastCalledWith("a", "p", {
     isFeatured: false,
     expectedFeatured: true,
@@ -276,13 +471,13 @@ it("retains the feature state on conflict and explains recovery inline", async (
   });
   setup();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "Feature Latte" }),
-  );
+  await user.click(await findProductAction("Feature Latte"));
   expect(
     await screen.findByText(/Featured selection changed elsewhere/),
   ).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Feature Latte" })).toBeEnabled();
+  expect(
+    screen.getByRole("button", { name: "Feature Latte", hidden: true }),
+  ).toBeEnabled();
   expect(useFeedbackStore.getState().notices).toHaveLength(0);
 });
 it("prevents duplicate featured changes and ignores late results", async () => {
@@ -295,9 +490,7 @@ it("prevents duplicate featured changes and ignores late results", async () => {
   );
   const { client, unmount } = setup();
   const user = userEvent.setup();
-  await user.dblClick(
-    await screen.findByRole("button", { name: "Feature Latte" }),
-  );
+  await user.dblClick(await findProductAction("Feature Latte"));
   expect(setProductFeatured).toHaveBeenCalledTimes(1);
   expect(screen.getByRole("button", { name: "Edit Latte" })).toBeDisabled();
   unmount();
@@ -314,7 +507,7 @@ it("hides a product without deleting its card and keeps Edit and Make available"
   vi.mocked(setProductHidden).mockResolvedValue({ product: saved });
   const { client } = setup();
   const user = userEvent.setup();
-  const trigger = await screen.findByRole("button", { name: "Hide Latte" });
+  const trigger = await findProductAction("Hide Latte");
   vi.mocked(listProducts).mockResolvedValue({ products: [saved] });
   await user.click(trigger);
   await waitFor(() =>
@@ -326,7 +519,7 @@ it("hides a product without deleting its card and keeps Edit and Make available"
     await screen.findByText("Hidden from the customer menu · Details kept"),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "Make Latte available" }),
+    screen.getByRole("button", { name: "Make Latte available", hidden: true }),
   ).toBeEnabled();
   expect(screen.getByRole("button", { name: "Edit Latte" })).toBeEnabled();
   expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
@@ -344,11 +537,13 @@ it("keeps hide failures inline without changing the product", async () => {
   });
   setup();
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "Hide Latte" }));
+  await user.click(await findProductAction("Hide Latte"));
   expect(
     await screen.findByText(/Product status changed elsewhere/),
   ).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Hide Latte" })).toBeEnabled();
+  expect(
+    screen.getByRole("button", { name: "Hide Latte", hidden: true }),
+  ).toBeEnabled();
   expect(useFeedbackStore.getState().notices).toHaveLength(0);
 });
 it("blocks duplicate hide actions and ignores a late save", async () => {
@@ -361,9 +556,7 @@ it("blocks duplicate hide actions and ignores a late save", async () => {
   );
   const { client, unmount } = setup();
   const user = userEvent.setup();
-  await user.dblClick(
-    await screen.findByRole("button", { name: "Hide Latte" }),
-  );
+  await user.dblClick(await findProductAction("Hide Latte"));
   expect(setProductHidden).toHaveBeenCalledTimes(1);
   expect(screen.getByRole("button", { name: "Edit Latte" })).toBeDisabled();
   unmount();
@@ -380,9 +573,7 @@ it("marks a product sold out and offers Make available without a confirmation", 
   vi.mocked(setProductSoldOut).mockResolvedValue({ product: saved });
   setup();
   const user = userEvent.setup();
-  const trigger = await screen.findByRole("button", {
-    name: "Mark Latte sold out",
-  });
+  const trigger = await findProductAction("Mark Latte sold out");
   vi.mocked(listProducts).mockResolvedValue({ products: [saved] });
   await user.click(trigger);
   await waitFor(() =>
@@ -390,9 +581,7 @@ it("marks a product sold out and offers Make available without a confirmation", 
       expectedStatus: "AVAILABLE",
     }),
   );
-  expect(
-    await screen.findByRole("button", { name: "Make Latte available" }),
-  ).toBeEnabled();
+  expect(await findProductAction("Make Latte available")).toBeEnabled();
   expect(screen.getByText("Temporarily unavailable")).toBeInTheDocument();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(useFeedbackStore.getState().notices[0].message).toContain(
@@ -410,14 +599,12 @@ it("preserves status and explains sold out conflicts inline", async () => {
   });
   setup();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "Mark Latte sold out" }),
-  );
+  await user.click(await findProductAction("Mark Latte sold out"));
   expect(
     await screen.findByText(/Product status changed elsewhere/),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "Mark Latte sold out" }),
+    screen.getByRole("button", { name: "Mark Latte sold out", hidden: true }),
   ).toBeEnabled();
   expect(useFeedbackStore.getState().notices).toHaveLength(0);
 });
@@ -431,9 +618,7 @@ it("blocks duplicate sold out actions and ignores completion after unmount", asy
   );
   const { client, unmount } = setup();
   const user = userEvent.setup();
-  const button = await screen.findByRole("button", {
-    name: "Mark Latte sold out",
-  });
+  const button = await findProductAction("Mark Latte sold out");
   await user.dblClick(button);
   expect(setProductSoldOut).toHaveBeenCalledTimes(1);
   expect(screen.getByRole("button", { name: "Edit Latte" })).toBeDisabled();
@@ -453,9 +638,7 @@ it("makes a sold-out product available with inline category context and a toast"
   vi.mocked(setProductAvailable).mockResolvedValue({ product: saved });
   setup();
   const user = userEvent.setup();
-  const trigger = await screen.findByRole("button", {
-    name: "Make Latte available",
-  });
+  const trigger = await findProductAction("Make Latte available");
   vi.mocked(listProducts).mockResolvedValue({ products: [saved] });
   await user.click(trigger);
   await waitFor(() =>
@@ -480,14 +663,12 @@ it("keeps the product unchanged when availability conflicts", async () => {
   });
   setup();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "Make Latte available" }),
-  );
+  await user.click(await findProductAction("Make Latte available"));
   expect(
     await screen.findByText(/Product status changed elsewhere/),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "Make Latte available" }),
+    screen.getByRole("button", { name: "Make Latte available", hidden: true }),
   ).toBeEnabled();
   expect(useFeedbackStore.getState().notices).toHaveLength(0);
 });
@@ -503,9 +684,7 @@ it("blocks other actions while availability is pending and ignores late response
   );
   const { client, unmount } = setup();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "Make Latte available" }),
-  );
+  await user.click(await findProductAction("Make Latte available"));
   expect(screen.getByRole("button", { name: "Edit Latte" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "Create product" })).toBeDisabled();
   unmount();
@@ -550,7 +729,7 @@ it("uploads an image immediately while keeping other edits unsaved", async () =>
   await user.type(modal.getByLabelText("Product name"), " changed");
   await user.click(modal.getByText("Image & display options"));
   const file = new File(["image bytes"], "photo.png", { type: "image/png" });
-  await user.upload(modal.getByLabelText("Image file"), file);
+  await user.upload(modal.getByLabelText(/Photo.*optional/), file);
   vi.mocked(listProducts).mockResolvedValue({ products: [imageProduct] });
   await user.click(modal.getByRole("button", { name: "Upload image" }));
   await waitFor(() =>
@@ -581,7 +760,7 @@ it("validates file size and type before uploading", async () => {
   setup();
   const { modal } = await edit();
   fireEvent.click(modal.getByText("Image & display options"));
-  fireEvent.change(modal.getByLabelText("Image file"), {
+  fireEvent.change(modal.getByLabelText(/Photo.*optional/), {
     target: {
       files: [new File(["svg"], "bad.svg", { type: "image/svg+xml" })],
     },
@@ -589,7 +768,7 @@ it("validates file size and type before uploading", async () => {
   expect(
     modal.getByText("Choose a JPEG, PNG or WebP image."),
   ).toBeInTheDocument();
-  fireEvent.change(modal.getByLabelText("Image file"), {
+  fireEvent.change(modal.getByLabelText(/Photo.*optional/), {
     target: {
       files: [
         new File([new Uint8Array(5 * 1024 * 1024 + 1)], "big.png", {
@@ -613,7 +792,7 @@ it("keeps the previous image and selected file on upload failure", async () => {
   const { user, modal } = await edit();
   await user.click(modal.getByText("Image & display options"));
   await user.upload(
-    modal.getByLabelText("Image file"),
+    modal.getByLabelText(/Photo.*optional/),
     new File(["png"], "a.png", { type: "image/png" }),
   );
   await user.click(modal.getByRole("button", { name: "Upload image" }));
@@ -638,7 +817,7 @@ it("blocks closing while uploading and ignores completion after unmount", async 
   const { user, modal } = await edit();
   await user.click(modal.getByText("Image & display options"));
   await user.upload(
-    modal.getByLabelText("Image file"),
+    modal.getByLabelText(/Photo.*optional/),
     new File(["png"], "a.png", { type: "image/png" }),
   );
   await user.click(modal.getByRole("button", { name: "Upload image" }));
@@ -665,9 +844,7 @@ it("confirms archival, retains the product in the archive and offers Undo", asyn
     .mockResolvedValueOnce({ product });
   const { client } = setup();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "Archive Latte" }),
-  );
+  await user.click(await findProductAction("Archive Latte"));
   const modal = within(screen.getByRole("dialog", { name: "Archive Latte?" }));
   expect(modal.getByRole("button", { name: "Keep product" })).toHaveFocus();
   expect(setProductArchived).not.toHaveBeenCalled();
@@ -686,7 +863,11 @@ it("confirms archival, retains the product in the archive and offers Undo", asyn
   expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
     products: [archived],
   });
-  expect(screen.getByRole("button", { name: "Create product" })).toHaveFocus();
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Create product" }),
+    ).toHaveFocus(),
+  );
   const notice = useFeedbackStore.getState().notices[0];
   expect(notice.kind).toBe("snackbar");
   if (notice.kind !== "snackbar") throw new Error("Missing Undo");
@@ -719,7 +900,9 @@ it("lets the user view and restore archived products without changing menu statu
     products: [{ ...hidden, isArchived: false }],
   });
   await user.click(screen.getByRole("button", { name: "Restore Latte" }));
-  expect(await screen.findByText("Hidden")).toBeInTheDocument();
+  expect(
+    await screen.findByText("Hidden", { selector: ".category-visibility" }),
+  ).toBeInTheDocument();
   expect(setProductArchived).toHaveBeenCalledWith("a", "p", {
     isArchived: false,
     expectedArchived: true,
@@ -730,9 +913,7 @@ it("does not archive when the safe choice is used", async () => {
   vi.mocked(listProducts).mockResolvedValue({ products: [product] });
   setup();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "Archive Latte" }),
-  );
+  await user.click(await findProductAction("Archive Latte"));
   await user.click(
     within(screen.getByRole("dialog")).getByRole("button", {
       name: "Keep product",
@@ -742,7 +923,9 @@ it("does not archive when the safe choice is used", async () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
   );
   expect(setProductArchived).not.toHaveBeenCalled();
-  expect(screen.getByRole("button", { name: "Archive Latte" })).toHaveFocus();
+  expect(
+    screen.getByText("More", { selector: "summary span" }).closest("summary"),
+  ).toHaveFocus();
 });
 it("retains the confirmation with inline feedback for stale or uncertain requests", async () => {
   vi.mocked(listProducts).mockResolvedValue({ products: [product] });
@@ -752,9 +935,7 @@ it("retains the confirmation with inline feedback for stale or uncertain request
   });
   setup();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "Archive Latte" }),
-  );
+  await user.click(await findProductAction("Archive Latte"));
   const modal = within(screen.getByRole("dialog"));
   await user.click(modal.getByRole("button", { name: "Archive product" }));
   expect(
@@ -777,9 +958,7 @@ it("blocks duplicate archive actions and ignores late completion after leaving t
   );
   const { client, unmount } = setup();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "Archive Latte" }),
-  );
+  await user.click(await findProductAction("Archive Latte"));
   await user.click(
     within(screen.getByRole("dialog")).getByRole("button", {
       name: "Archive product",
@@ -805,9 +984,7 @@ it("invalidates an Undo callback when the user leaves the shop page", async () =
   vi.mocked(setProductArchived).mockResolvedValue({ product: archived });
   const { unmount } = setup();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "Archive Latte" }),
-  );
+  await user.click(await findProductAction("Archive Latte"));
   vi.mocked(listProducts).mockResolvedValue({ products: [archived] });
   await user.click(
     within(screen.getByRole("dialog")).getByRole("button", {
@@ -862,8 +1039,9 @@ it("allows removing a category explicitly without clearing other fields", async 
   vi.mocked(updateProduct).mockResolvedValue({ product });
   setup();
   const { user, modal } = await edit();
+  await user.click(modal.getByLabelText("Category"));
   await modal.findByRole("option", { name: /Coffee/ });
-  await user.selectOptions(modal.getByLabelText("Category"), "");
+  await user.click(modal.getByRole("option", { name: "Uncategorized" }));
   await user.click(modal.getByRole("button", { name: "Save changes" }));
   await waitFor(() =>
     expect(updateProduct).toHaveBeenCalledWith("a", "p", { categoryId: null }),
@@ -986,8 +1164,10 @@ it("validates required fields and filters nonnumeric price input", async () => {
 it("creates optional fields and warns when the selected category is hidden", async () => {
   setup();
   const { user, modal } = await basics();
-  await user.selectOptions(modal.getByLabelText("Category"), "cat-a");
-  await user.selectOptions(modal.getByLabelText("Menu status"), "SOLD_OUT");
+  await user.click(modal.getByLabelText("Category"));
+  await user.click(modal.getByRole("option", { name: /Coffee/ }));
+  await user.click(modal.getByLabelText("Menu status"));
+  await user.click(modal.getByRole("option", { name: "Sold out" }));
   await user.type(modal.getByLabelText(/Description/), "Milky");
   await user.click(modal.getByText("Image & display options"));
   await user.type(
@@ -1094,4 +1274,188 @@ it("ignores a late creation after the shop view is unmounted", async () => {
     products: [],
   });
   expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+
+it("creates once then uploads the selected photo to the saved product", async () => {
+  vi.mocked(uploadProductImage).mockResolvedValue({
+    product: { ...product, imageUrl: "https://example.com/photo.webp" },
+    storagePath: "a/p/photo.webp",
+  });
+  setup();
+  const { user, modal } = await basics();
+  const file = new File(["photo"], "latte.png", { type: "image/png" });
+  await user.upload(modal.getByLabelText(/Photo.*optional/), file);
+  await user.click(modal.getByRole("button", { name: "Create product" }));
+  await waitFor(() =>
+    expect(uploadProductImage).toHaveBeenCalledWith(
+      "a",
+      "p",
+      file,
+      expect.any(Function),
+    ),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "Create product" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(createProduct).toHaveBeenCalledTimes(1);
+});
+it("keeps the saved product on photo failure and retries only its upload", async () => {
+  vi.mocked(uploadProductImage).mockRejectedValueOnce(new Error("offline"));
+  setup();
+  const { user, modal } = await basics();
+  const file = new File(["photo"], "latte.png", { type: "image/png" });
+  await user.upload(modal.getByLabelText(/Photo.*optional/), file);
+  await user.click(modal.getByRole("button", { name: "Create product" }));
+  await modal.findByText(/Product created. We couldn't confirm/);
+  expect(modal.getByLabelText("Product name")).toBeDisabled();
+  vi.mocked(uploadProductImage).mockResolvedValueOnce({
+    product,
+    storagePath: "a/p/photo.webp",
+  });
+  await user.click(modal.getByRole("button", { name: "Retry upload" }));
+  await waitFor(() => expect(uploadProductImage).toHaveBeenCalledTimes(2));
+  expect(createProduct).toHaveBeenCalledTimes(1);
+});
+it("rejects invalid creation photos before saving and permits removing them", async () => {
+  setup();
+  const { user, modal } = await basics();
+  fireEvent.change(modal.getByLabelText(/Photo.*optional/), {
+    target: { files: [new File(["svg"], "x.svg", { type: "image/svg+xml" })] },
+  });
+  expect(
+    modal.getByText("Choose a JPEG, PNG or WebP image."),
+  ).toBeInTheDocument();
+  expect(modal.getByRole("button", { name: "Create product" })).toBeDisabled();
+  expect(createProduct).not.toHaveBeenCalled();
+  await user.click(modal.getByRole("button", { name: "Clear selection" }));
+  await user.click(modal.getByRole("button", { name: "Create product" }));
+  await waitFor(() => expect(createProduct).toHaveBeenCalledTimes(1));
+  expect(uploadProductImage).not.toHaveBeenCalled();
+});
+
+it("can finish after an upload failure without recreating or uploading again", async () => {
+  vi.mocked(uploadProductImage).mockRejectedValueOnce(new Error("offline"));
+  setup();
+  const { user, modal } = await basics();
+  await user.upload(
+    modal.getByLabelText(/Photo.*optional/),
+    new File(["photo"], "latte.png", { type: "image/png" }),
+  );
+  await user.click(modal.getByRole("button", { name: "Create product" }));
+  await modal.findByRole("button", { name: "Retry upload" });
+  await user.click(modal.getByRole("button", { name: "Done" }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "Create product" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(createProduct).toHaveBeenCalledTimes(1);
+  expect(uploadProductImage).toHaveBeenCalledTimes(1);
+});
+it("blocks duplicate creation during upload and ignores completion after leaving", async () => {
+  let finish!: (value: Awaited<ReturnType<typeof uploadProductImage>>) => void;
+  vi.mocked(uploadProductImage).mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  const { unmount, client } = setup();
+  const { user, modal } = await basics();
+  await user.upload(
+    modal.getByLabelText(/Photo.*optional/),
+    new File(["photo"], "latte.png", { type: "image/png" }),
+  );
+  await user.click(modal.getByRole("button", { name: "Create product" }));
+  await waitFor(() => expect(uploadProductImage).toHaveBeenCalledTimes(1));
+  expect(
+    modal.getByRole("button", { name: "Uploading photo..." }),
+  ).toBeDisabled();
+  expect(modal.getByRole("button", { name: "Done" })).toBeDisabled();
+  unmount();
+  finish({
+    product: { ...product, imageUrl: "https://example.com/late.webp" },
+    storagePath: "a/p/late.webp",
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(createProduct).toHaveBeenCalledTimes(1);
+  expect(
+    client.getQueryData<{ products: MenuProduct[] }>(productsKey("user-a", "a"))
+      ?.products[0]?.imageUrl,
+  ).not.toBe("https://example.com/late.webp");
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+
+it("uses the same accessible photo panel in Create and Edit and clears only the selected replacement", async () => {
+  const old = { ...product, imageUrl: "https://example.com/current.webp" };
+  vi.mocked(listProducts).mockResolvedValue({ products: [old] });
+  setup();
+  const { user, modal } = await edit();
+  expect(
+    modal.getByRole("button", { name: "Replace photo" }),
+  ).toBeInTheDocument();
+  expect(modal.getByAltText("Current product photo")).toHaveAttribute(
+    "src",
+    old.imageUrl,
+  );
+  await user.upload(
+    modal.getByLabelText(/Photo.*optional/),
+    new File(["png"], "new.png", { type: "image/png" }),
+  );
+  expect(modal.getByText("Ready to upload")).toBeInTheDocument();
+  await user.click(modal.getByRole("button", { name: "Remove photo" }));
+  expect(modal.getByAltText("Current product photo")).toHaveAttribute(
+    "src",
+    old.imageUrl,
+  );
+  expect(uploadProductImage).not.toHaveBeenCalled();
+  expect(
+    modal.queryByRole("button", { name: "Upload image" }),
+  ).not.toBeInTheDocument();
+  await user.click(modal.getByRole("button", { name: "Cancel" }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "Edit product" }),
+    ).not.toBeInTheDocument(),
+  );
+  const create = await open();
+  expect(
+    create.modal.getByRole("button", { name: "Choose photo" }),
+  ).toBeInTheDocument();
+  expect(create.modal.getByLabelText(/Photo.*optional/)).toHaveAttribute(
+    "accept",
+    "image/jpeg,image/png,image/webp",
+  );
+});
+it("supports photo drops, rejects multiple files and releases previews", async () => {
+  const revoke = vi.fn();
+  vi.stubGlobal(
+    "URL",
+    class extends URL {
+      static createObjectURL = vi.fn(() => "blob:photo");
+      static revokeObjectURL = revoke;
+    },
+  );
+  setup();
+  const { user, modal } = await basics();
+  const file = new File(["png"], "new.png", { type: "image/png" });
+  fireEvent.drop(modal.getByRole("button", { name: "Choose photo" }), {
+    dataTransfer: { files: [file] },
+  });
+  expect(modal.getByAltText("Selected product photo preview")).toHaveAttribute(
+    "src",
+    "blob:photo",
+  );
+  fireEvent.drop(modal.getByRole("button", { name: "Replace photo" }), {
+    dataTransfer: { files: [file, file] },
+  });
+  expect(modal.getByText("Choose one photo at a time.")).toBeInTheDocument();
+  expect(modal.getByRole("button", { name: "Create product" })).toBeDisabled();
+  await user.click(modal.getByRole("button", { name: "Remove photo" }));
+  expect(revoke).toHaveBeenCalledWith("blob:photo");
+  expect(
+    modal.queryByAltText("Selected product photo preview"),
+  ).not.toBeInTheDocument();
+  expect(modal.getByRole("button", { name: "Create product" })).toBeEnabled();
 });

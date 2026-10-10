@@ -3,8 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { FiUpload, FiLoader } from "react-icons/fi";
 import {
-  PRODUCT_IMAGE_LIMITS,
-  PRODUCT_IMAGE_TYPES,
   type MenuProduct,
   type CurrentUserResponse,
   type ProductsResponse,
@@ -15,11 +13,13 @@ import {
 } from "../../features/shops/api/products";
 import { currentUserKey } from "../../features/auth/api/session";
 import { feedback } from "../../app/stores/feedback";
-import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ProductPhotoPicker } from "./ProductPhotoPicker";
+
 export function ProductImageUpload({
   userId,
   shopId,
   productId,
+  currentImageUrl,
   disabled,
   onUploaded,
   onPending,
@@ -27,52 +27,30 @@ export function ProductImageUpload({
   userId: string;
   shopId: string;
   productId: string;
+  currentImageUrl: string;
   disabled: boolean;
   onUploaded: (product: MenuProduct) => void;
   onPending: (pending: boolean) => void;
 }) {
   const client = useQueryClient();
-  const [file, setFile] = useState<File | null>(null),
-    [error, setError] = useState(""),
-    [pending, setPending] = useState(false),
-    [progress, setProgress] = useState(0),
-    [preview, setPreview] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+  const [progress, setProgress] = useState(0);
   const mounted = useRef(false),
-    running = useRef(false),
-    input = useRef<HTMLInputElement>(null);
+    running = useRef(false);
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
     };
   }, []);
-  useEffect(() => {
-    return () => {
-      if (preview) URL.revokeObjectURL?.(preview);
-    };
-  }, [preview]);
   function stillHere() {
     return (
       mounted.current &&
       client.getQueryData<CurrentUserResponse>(currentUserKey)?.user.id ===
         userId
     );
-  }
-  function select(file?: File) {
-    setError("");
-    setFile(null);
-    setPreview("");
-    if (!file) return;
-    if (!(PRODUCT_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-      setError("Choose a JPEG, PNG or WebP image.");
-      return;
-    }
-    if (!file.size || file.size > PRODUCT_IMAGE_LIMITS.maxBytes) {
-      setError("Choose an image between 1 byte and 5 MB.");
-      return;
-    }
-    setFile(file);
-    if (URL.createObjectURL) setPreview(URL.createObjectURL(file));
   }
   async function upload() {
     if (!file || running.current || disabled || !stillHere()) return;
@@ -106,23 +84,21 @@ export function ProductImageUpload({
       void client.invalidateQueries({ queryKey: key });
       onUploaded(result.product);
       setFile(null);
-      setPreview("");
-      if (input.current) input.current.value = "";
       feedback.toast("Product image uploaded.");
-    } catch (error) {
+    } catch (failure) {
       if (!stillHere()) return;
       let message =
-        "We couldn’t confirm the image save. Close this form and refresh products before trying again.";
-      if (isAxiosError(error) && error.response) {
-        if (error.response.status === 413)
+        "We couldn?t confirm the image save. Close this form and refresh products before trying again.";
+      if (isAxiosError(failure) && failure.response) {
+        if (failure.response.status === 413)
           message = "Choose an image no larger than 5 MB.";
-        else if (error.response.status === 400)
+        else if (failure.response.status === 400)
           message =
             "Choose a valid JPEG, PNG or WebP image (up to 5 MB and 16 megapixels).";
-        else if ([401, 403, 404].includes(error.response.status))
+        else if ([401, 403, 404].includes(failure.response.status))
           message =
             "The product or your access changed. Close this form and refresh products.";
-        else if (error.response.data?.code === "PRODUCT_STORAGE_UNAVAILABLE")
+        else if (failure.response.data?.code === "PRODUCT_STORAGE_UNAVAILABLE")
           message =
             "Image uploads are unavailable. Your current image is kept. Please try again later.";
       }
@@ -136,55 +112,34 @@ export function ProductImageUpload({
     }
   }
   return (
-    <section
-      className="product-image-upload"
-      aria-labelledby="product-image-upload-title"
+    <ProductPhotoPicker
+      file={file}
+      currentImageUrl={currentImageUrl}
+      error={error}
+      disabled={disabled || pending}
+      pending={pending}
+      progress={progress}
+      hint="Upload saves the photo; other edits stay in this form."
+      onChange={(selected, message) => {
+        setFile(selected);
+        setError(message);
+      }}
     >
-      <h3 id="product-image-upload-title">Upload a photo</h3>
-      <label htmlFor="product-photo-file">Image file</label>
-      <input
-        ref={input}
-        id="product-photo-file"
-        type="file"
-        accept={PRODUCT_IMAGE_TYPES.join(",")}
-        disabled={disabled || pending}
-        aria-describedby={`product-photo-hint${error ? " product-photo-error" : ""}`}
-        aria-invalid={Boolean(error)}
-        onChange={(event) => select(event.target.files?.[0])}
-      />
-      <p id="product-photo-hint" className="field-hint">
-        JPEG, PNG or WebP · up to 5 MB. Uploads save immediately; other edits
-        stay in this form.
-      </p>
-      {preview && (
-        <img
-          className="product-image-preview"
-          src={preview}
-          alt="Selected product photo preview"
-        />
+      {file && (
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={pending || disabled}
+          onClick={() => void upload()}
+        >
+          {pending ? (
+            <FiLoader className="is-spinning" aria-hidden="true" />
+          ) : (
+            <FiUpload aria-hidden="true" />
+          )}
+          {pending ? "Uploading?" : "Upload image"}
+        </button>
       )}
-      {file && <p className="field-hint">{file.name}</p>}
-      {error && <InlineMessage id="product-photo-error">{error}</InlineMessage>}
-      {pending && (
-        <p role="status" className="field-hint">
-          {progress < 100
-            ? `Uploading… ${progress}%`
-            : "Processing and saving image…"}
-        </p>
-      )}
-      <button
-        type="button"
-        className="secondary-button"
-        disabled={!file || pending || disabled}
-        onClick={() => void upload()}
-      >
-        {pending ? (
-          <FiLoader className="is-spinning" aria-hidden="true" />
-        ) : (
-          <FiUpload aria-hidden="true" />
-        )}
-        {pending ? "Uploading…" : "Upload image"}
-      </button>
-    </section>
+    </ProductPhotoPicker>
   );
 }

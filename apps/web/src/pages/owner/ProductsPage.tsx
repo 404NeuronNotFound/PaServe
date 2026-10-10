@@ -1,3 +1,4 @@
+import { SelectField } from "../../components/forms/SelectField";
 import { useEffect, useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -13,6 +14,11 @@ import {
   FiCheckCircle,
   FiSlash,
   FiEyeOff,
+  FiLayers,
+  FiMove,
+  FiSearch,
+  FiChevronLeft,
+  FiChevronRight,
 } from "react-icons/fi";
 import {
   hasShopPermission,
@@ -34,6 +40,7 @@ import {
   reorderProducts,
 } from "../../features/shops/api/products";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ProductActionsMenu } from "./ProductActionsMenu";
 import { ProductOrderEditor } from "./ProductOrderEditor";
 import { ProductEditor } from "./ProductEditor";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
@@ -60,6 +67,11 @@ function ProductWorkspace({ userId }: { userId: string }) {
   const [creating, setCreating] = useState(false);
   const [ordering, setOrdering] = useState(false);
   const [orderCategory, setOrderCategory] = useState("");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const browseControls = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<MenuProduct | null>(null);
   const [archiving, setArchiving] = useState<MenuProduct | null>(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
@@ -81,7 +93,9 @@ function ProductWorkspace({ userId }: { userId: string }) {
       document.getElementById(returnFocus.current) ??
       document.getElementById("create-product-button");
     returnFocus.current = null;
-    trigger?.focus();
+    queueMicrotask(() => {
+      if (trigger?.isConnected) trigger.focus();
+    });
   }, [archiving, archiveBusy, availableBusy]);
   useEffect(() => {
     editorOpen.current = creating || Boolean(editing) || ordering;
@@ -186,7 +200,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
       const key = productsKey(userId, membership.shopId);
       await client.cancelQueries({ queryKey: key });
       if (!stillHere()) return;
-      returnFocus.current = `feature-product-${product.id}`;
+      returnFocus.current = `more-product-${product.id}`;
       client.setQueryData<ProductsResponse>(key, (current) =>
         current
           ? {
@@ -352,6 +366,100 @@ function ProductWorkspace({ userId }: { userId: string }) {
   const denied =
     isAxiosError(query.error) &&
     [401, 403, 404].includes(query.error.response?.status ?? 0);
+  const visibleProducts =
+    query.data?.products.filter(
+      (product) => showArchived || !product.isArchived,
+    ) ?? [];
+  const knownCategories = categories.data?.categories ?? [];
+  const groupDefinitions = [
+    ...knownCategories.map((category) => ({
+      key: category.id,
+      categoryId: category.id as string | null,
+      name: category.name,
+      hidden: !category.isVisible,
+      unavailable: false,
+    })),
+    ...[
+      ...new Set(
+        visibleProducts
+          .map((product) => product.categoryId)
+          .filter(
+            (id): id is string =>
+              Boolean(id) &&
+              !knownCategories.some((category) => category.id === id),
+          ),
+      ),
+    ].map((id) => ({
+      key: id,
+      categoryId: id as string | null,
+      name: "Category unavailable",
+      hidden: false,
+      unavailable: true,
+    })),
+    {
+      key: "uncategorized",
+      categoryId: null,
+      name: "Uncategorized",
+      hidden: false,
+      unavailable: false,
+    },
+  ];
+  const allGroups = groupDefinitions
+    .map((group) => ({
+      ...group,
+      products: visibleProducts.filter(
+        (product) => product.categoryId === group.categoryId,
+      ),
+    }))
+    .filter((group) => group.products.length > 0);
+  const term = search.trim().toLocaleLowerCase();
+  const filteredProducts = allGroups.flatMap((group) =>
+    group.products.filter(
+      (product) =>
+        (!categoryFilter || group.key === categoryFilter) &&
+        (!statusFilter || product.status === statusFilter) &&
+        (!term ||
+          [
+            product.name,
+            product.slug,
+            product.description ?? "",
+            group.name,
+          ].some((value) => value.toLocaleLowerCase().includes(term))),
+    ),
+  );
+  const pageSize = 8;
+  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const start = (currentPage - 1) * pageSize;
+  const pageProducts = filteredProducts.slice(start, start + pageSize);
+  const groups = allGroups
+    .map((group) => ({
+      ...group,
+      totalCount: group.products.length,
+      activeCount:
+        query.data?.products.filter(
+          (product) =>
+            !product.isArchived && product.categoryId === group.categoryId,
+        ).length ?? 0,
+      products: pageProducts.filter(
+        (product) => product.categoryId === group.categoryId,
+      ),
+    }))
+    .filter((group) => group.products.length > 0);
+  const hasFilters = Boolean(search || categoryFilter || statusFilter);
+  const browsingLocked =
+    creating ||
+    Boolean(editing) ||
+    ordering ||
+    Boolean(archiving) ||
+    archiveBusy ||
+    Boolean(availableBusy);
+  function clearFilters() {
+    setSearch("");
+    setCategoryFilter("");
+    setStatusFilter("");
+    setPage(1);
+  }
   return (
     <section className="products-page" aria-labelledby="products-title">
       <header className="products-heading">
@@ -362,7 +470,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
         </div>
         <button
           id="create-product-button"
-          className="primary-button"
+          className="primary-button product-create-fab"
           type="button"
           disabled={
             creating ||
@@ -375,8 +483,10 @@ function ProductWorkspace({ userId }: { userId: string }) {
           }
           onClick={() => setCreating(true)}
         >
-          <FiPlus aria-hidden="true" />
-          Create product
+          <span className="product-create-icon" aria-hidden="true">
+            <FiPlus />
+          </span>
+          <span>Create product</span>
         </button>
       </header>
       <section className="products-panel" aria-labelledby="products-list-title">
@@ -386,7 +496,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
             {query.isSuccess && <span>{query.data.products.length}</span>}
           </div>
           <button
-            className="secondary-button"
+            className="secondary-button product-refresh-button"
             type="button"
             disabled={
               query.isFetching ||
@@ -404,13 +514,130 @@ function ProductWorkspace({ userId }: { userId: string }) {
             {query.isFetching ? "Refreshing…" : "Refresh products"}
           </button>
         </div>
+        {query.isSuccess && query.data.products.length > 0 && (
+          <div className="product-browse-controls" ref={browseControls}>
+            <div className="product-filter-fields">
+              <div className="field product-search-field">
+                <label htmlFor="product-search">Find a product</label>
+                <div className="product-search-input">
+                  <FiSearch aria-hidden="true" />
+                  <input
+                    id="product-search"
+                    type="search"
+                    placeholder="Search name, category or description"
+                    value={search}
+                    disabled={browsingLocked}
+                    onChange={(event) => {
+                      setSearch(event.target.value);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="product-category-filter">Category</label>
+                <SelectField
+                  id="product-category-filter"
+                  label="Category"
+                  value={categoryFilter}
+                  disabled={browsingLocked}
+                  onChange={(value) => {
+                    setCategoryFilter(value);
+                    setPage(1);
+                  }}
+                  options={[
+                    { value: "", label: "All categories" },
+                    ...allGroups.map((group) => ({
+                      value: group.key,
+                      label: group.name,
+                    })),
+                  ]}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="product-status-filter">Status</label>
+                <SelectField
+                  id="product-status-filter"
+                  label="Status"
+                  value={statusFilter}
+                  disabled={browsingLocked}
+                  onChange={(value) => {
+                    setStatusFilter(value);
+                    setPage(1);
+                  }}
+                  options={[
+                    { value: "", label: "All statuses" },
+                    { value: "AVAILABLE", label: "Available" },
+                    { value: "SOLD_OUT", label: "Sold out" },
+                    { value: "HIDDEN", label: "Hidden" },
+                  ]}
+                />
+              </div>
+            </div>
+            <div className="product-results-toolbar">
+              <p role="status">
+                {filteredProducts.length
+                  ? `Showing ${start + 1}–${Math.min(start + pageSize, filteredProducts.length)} of ${filteredProducts.length} products`
+                  : "No matching products"}
+              </p>
+              {hasFilters && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={browsingLocked}
+                  onClick={clearFilters}
+                >
+                  Clear filters
+                </button>
+              )}
+              {pageCount > 1 && (
+                <nav className="product-pagination" aria-label="Product pages">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    aria-label="Previous product page"
+                    disabled={browsingLocked || currentPage === 1}
+                    onClick={() => {
+                      setPage(currentPage - 1);
+                      browseControls.current?.scrollIntoView?.({
+                        block: "start",
+                      });
+                    }}
+                  >
+                    <FiChevronLeft aria-hidden="true" /> Previous
+                  </button>
+                  <span>
+                    Page {currentPage} of {pageCount}
+                  </span>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    aria-label="Next product page"
+                    disabled={browsingLocked || currentPage === pageCount}
+                    onClick={() => {
+                      setPage(currentPage + 1);
+                      browseControls.current?.scrollIntoView?.({
+                        block: "start",
+                      });
+                    }}
+                  >
+                    Next <FiChevronRight aria-hidden="true" />
+                  </button>
+                </nav>
+              )}
+            </div>
+          </div>
+        )}
         {query.isSuccess &&
           query.data.products.some((product) => product.isArchived) && (
             <label className="product-featured-field">
               <input
                 type="checkbox"
                 checked={showArchived}
-                onChange={(event) => setShowArchived(event.target.checked)}
+                onChange={(event) => {
+                  setShowArchived(event.target.checked);
+                  setPage(1);
+                }}
               />
               Show archived products (
               {
@@ -420,64 +647,6 @@ function ProductWorkspace({ userId }: { userId: string }) {
               )
             </label>
           )}
-        {query.isSuccess && (
-          <div className="category-editor-actions product-order-tools">
-            <div className="field">
-              <label htmlFor="product-order-category">Product group</label>
-              <select
-                id="product-order-category"
-                value={orderCategory}
-                disabled={
-                  ordering ||
-                  creating ||
-                  Boolean(editing) ||
-                  Boolean(archiving) ||
-                  archiveBusy ||
-                  Boolean(availableBusy)
-                }
-                onChange={(event) => setOrderCategory(event.target.value)}
-              >
-                <option value="">Uncategorized</option>
-                {categories.data?.categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                    {category.isVisible ? "" : " (hidden)"}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              id="reorder-products-button"
-              className="secondary-button"
-              type="button"
-              disabled={
-                ordering ||
-                creating ||
-                Boolean(editing) ||
-                Boolean(archiving) ||
-                archiveBusy ||
-                Boolean(availableBusy) ||
-                denied ||
-                query.data.products.filter(
-                  (item) =>
-                    !item.isArchived &&
-                    item.categoryId === (orderCategory || null),
-                ).length < 2 ||
-                query.data.products.filter(
-                  (item) =>
-                    !item.isArchived &&
-                    item.categoryId === (orderCategory || null),
-                ).length > PRODUCT_REORDER_MAX
-              }
-              onClick={() => setOrdering(true)}
-            >
-              Reorder products
-            </button>
-            <p className="categories-form-note">
-              Choose a group with 2–{PRODUCT_REORDER_MAX} active products.
-            </p>
-          </div>
-        )}
         {archiveError && <InlineMessage>{archiveError}</InlineMessage>}
         {query.isPending ? (
           <InlineMessage tone="info">Loading products…</InlineMessage>
@@ -488,232 +657,37 @@ function ProductWorkspace({ userId }: { userId: string }) {
               : "We couldn’t load products. Check your connection and try refreshing."}
           </InlineMessage>
         ) : query.data.products.length ? (
-          <ul className="products-list">
-            {query.data.products
-              .filter((product) => showArchived || !product.isArchived)
-              .map((product) => (
-                <li key={product.id}>
-                  <span className="product-emblem">
-                    <FiCoffee aria-hidden="true" />
-                    {product.imageUrl && (
-                      <img
-                        src={product.imageUrl}
-                        alt=""
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        onError={(event) => {
-                          event.currentTarget.hidden = true;
-                        }}
-                      />
-                    )}
-                  </span>
-                  <div className="product-card-details">
-                    <div className="product-card-title">
-                      <h3>{product.name}</h3>
-                      {product.isFeatured && (
-                        <span className="product-featured-badge">
-                          <FiStar aria-hidden="true" />
-                          Featured
-                        </span>
-                      )}
-                    </div>
-                    {!product.isArchived && product.status === "AVAILABLE" && (
-                      <p className="field-hint">
-                        {!product.categoryId
-                          ? "Shown on the menu · Available to order"
-                          : categories.data?.categories.find(
-                                (item) => item.id === product.categoryId,
-                              )?.isVisible === true
-                            ? "Shown on the menu · Available to order"
-                            : categories.data?.categories.find(
-                                  (item) => item.id === product.categoryId,
-                                )?.isVisible === false
-                              ? "Category hidden · Not shown on the menu"
-                              : "Availability follows category visibility"}
-                      </p>
-                    )}
-                    {availableError?.id === product.id && (
-                      <InlineMessage>{availableError.message}</InlineMessage>
-                    )}
-                    {!product.isArchived && product.status === "HIDDEN" && (
-                      <p className="field-hint">
-                        Hidden from the customer menu · Details kept
-                      </p>
-                    )}
-                    {!product.isArchived && product.status === "SOLD_OUT" && (
-                      <p className="field-hint">
-                        {!product.categoryId ||
-                        categories.data?.categories.find(
-                          (item) => item.id === product.categoryId,
-                        )?.isVisible === true
-                          ? "Shown on the menu · Sold out"
-                          : categories.data?.categories.find(
-                                (item) => item.id === product.categoryId,
-                              )?.isVisible === false
-                            ? "Category hidden · Not shown on the menu"
-                            : "Menu visibility follows category visibility"}
-                      </p>
-                    )}
-                    <small>/{product.slug}</small>
-                    {product.description && <p>{product.description}</p>}
-                    <div className="product-card-meta">
+          <div className="product-groups">
+            {groups.map((group) => (
+              <section
+                key={group.key}
+                className="product-group"
+                aria-labelledby={`product-group-${group.key}`}
+              >
+                <header className="product-group-heading">
+                  <div>
+                    <span className="product-group-icon" aria-hidden="true">
+                      <FiLayers />
+                    </span>
+                    <h3 id={`product-group-${group.key}`}>{group.name}</h3>
+                    <span>
+                      {group.products.length < group.totalCount
+                        ? `${group.products.length} of ${group.totalCount}`
+                        : group.products.length}{" "}
+                      {group.totalCount === 1 ? "product" : "products"}
+                    </span>
+                    {group.hidden && (
                       <span className="category-visibility">
-                        {product.isArchived
-                          ? "Archived"
-                          : product.status === "AVAILABLE"
-                            ? "Available"
-                            : product.status === "SOLD_OUT"
-                              ? "Sold out"
-                              : "Hidden"}
+                        Category hidden
                       </span>
-                      {product.isArchived && (
-                        <span>
-                          Previous status:{" "}
-                          {product.status === "AVAILABLE"
-                            ? "Available"
-                            : product.status === "SOLD_OUT"
-                              ? "Sold out"
-                              : "Hidden"}
-                        </span>
-                      )}
-                      {!product.categoryId && <span>Uncategorized</span>}
-                      {product.imageUrl && (
-                        <span>
-                          <FiImage aria-hidden="true" />
-                          Image linked
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
-                  <div className="product-card-actions">
-                    <strong className="product-price">
-                      {formatProductPrice(product.price)}
-                    </strong>
-                    {!product.isArchived && (
-                      <button
-                        id={`feature-product-${product.id}`}
-                        className="secondary-button"
-                        type="button"
-                        aria-pressed={product.isFeatured}
-                        aria-label={`${product.isFeatured ? "Unfeature" : "Feature"} ${product.name}`}
-                        disabled={
-                          creating ||
-                          Boolean(editing) ||
-                          ordering ||
-                          Boolean(archiving) ||
-                          archiveBusy ||
-                          Boolean(availableBusy) ||
-                          denied
-                        }
-                        onClick={() => void changeFeatured(product)}
-                      >
-                        <FiStar aria-hidden="true" />
-                        {availableBusy === product.id
-                          ? "Updating…"
-                          : product.isFeatured
-                            ? "Unfeature"
-                            : "Feature"}
-                      </button>
-                    )}
-                    {!product.isArchived && product.status !== "HIDDEN" && (
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        aria-label={`Hide ${product.name}`}
-                        disabled={
-                          creating ||
-                          Boolean(editing) ||
-                          ordering ||
-                          Boolean(archiving) ||
-                          archiveBusy ||
-                          Boolean(availableBusy) ||
-                          denied
-                        }
-                        onClick={() =>
-                          void changeAvailability(product, "HIDDEN")
-                        }
-                      >
-                        <FiEyeOff aria-hidden="true" />
-                        {availableBusy === product.id ? "Updating…" : "Hide"}
-                      </button>
-                    )}
-                    {!product.isArchived && product.status !== "AVAILABLE" && (
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        aria-label={`Make ${product.name} available`}
-                        disabled={
-                          creating ||
-                          Boolean(editing) ||
-                          ordering ||
-                          Boolean(archiving) ||
-                          archiveBusy ||
-                          Boolean(availableBusy) ||
-                          denied
-                        }
-                        onClick={() => void changeAvailability(product)}
-                      >
-                        <FiCheckCircle aria-hidden="true" />
-                        {availableBusy === product.id
-                          ? "Updating…"
-                          : "Make available"}
-                      </button>
-                    )}
-                    {!product.isArchived && product.status === "AVAILABLE" && (
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        aria-label={`Mark ${product.name} sold out`}
-                        disabled={
-                          creating ||
-                          Boolean(editing) ||
-                          ordering ||
-                          Boolean(archiving) ||
-                          archiveBusy ||
-                          Boolean(availableBusy) ||
-                          denied
-                        }
-                        onClick={() =>
-                          void changeAvailability(product, "SOLD_OUT")
-                        }
-                      >
-                        <FiSlash aria-hidden="true" />
-                        {availableBusy === product.id
-                          ? "Updating…"
-                          : "Mark sold out"}
-                      </button>
-                    )}
-                    {!product.isArchived && product.status === "SOLD_OUT" && (
-                      <span className="field-hint">
-                        Temporarily unavailable
-                      </span>
-                    )}
-                    {!product.isArchived && (
-                      <button
-                        id={`edit-product-${product.id}`}
-                        className="secondary-button"
-                        type="button"
-                        aria-label={`Edit ${product.name}`}
-                        disabled={
-                          creating ||
-                          Boolean(editing) ||
-                          ordering ||
-                          Boolean(archiving) ||
-                          archiveBusy ||
-                          Boolean(availableBusy) ||
-                          denied
-                        }
-                        onClick={() => setEditing(product)}
-                      >
-                        <FiEdit2 aria-hidden="true" />
-                        Edit
-                      </button>
-                    )}
+                  {group.activeCount >= 2 && (
                     <button
-                      id={`archive-product-${product.id}`}
-                      className="secondary-button"
+                      id={`reorder-products-${group.key}`}
                       type="button"
-                      aria-label={`${product.isArchived ? "Restore" : "Archive"} ${product.name}`}
+                      className="secondary-button"
+                      aria-label={`Reorder ${group.name} products`}
                       disabled={
                         creating ||
                         Boolean(editing) ||
@@ -721,29 +695,339 @@ function ProductWorkspace({ userId }: { userId: string }) {
                         Boolean(archiving) ||
                         archiveBusy ||
                         Boolean(availableBusy) ||
-                        denied
+                        denied ||
+                        group.unavailable ||
+                        group.activeCount > PRODUCT_REORDER_MAX
                       }
-                      onClick={() =>
-                        product.isArchived
-                          ? void changeArchive(product, false).catch(
-                              (error) => {
-                                if (stillHere()) setArchiveError(error.message);
-                              },
-                            )
-                          : setArchiving(product)
+                      onClick={() => {
+                        setOrderCategory(group.categoryId || "");
+                        setOrdering(true);
+                      }}
+                      title="Reorder the complete category, including products outside these results"
+                    >
+                      <FiMove aria-hidden="true" />
+                      Reorder
+                    </button>
+                  )}
+                </header>
+                <ul className="products-list">
+                  {group.products.map((product) => (
+                    <li
+                      key={product.id}
+                      data-status={
+                        product.isArchived ? "ARCHIVED" : product.status
                       }
                     >
-                      {product.isArchived ? (
-                        <FiRotateCcw aria-hidden="true" />
-                      ) : (
-                        <FiArchive aria-hidden="true" />
-                      )}
-                      {product.isArchived ? "Restore" : "Archive"}
-                    </button>
-                  </div>
-                </li>
-              ))}
-          </ul>
+                      <span className="product-emblem">
+                        <FiCoffee aria-hidden="true" />
+                        {product.imageUrl && (
+                          <img
+                            src={product.imageUrl}
+                            alt=""
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                            onError={(event) => {
+                              event.currentTarget.hidden = true;
+                            }}
+                          />
+                        )}
+                      </span>
+                      <div className="product-card-details">
+                        <div className="product-card-title">
+                          <h3>{product.name}</h3>
+                          {product.isFeatured && (
+                            <span className="product-featured-badge">
+                              <FiStar aria-hidden="true" />
+                              Featured
+                            </span>
+                          )}
+                        </div>
+                        {!product.isArchived &&
+                          product.status === "AVAILABLE" && (
+                            <p className="field-hint">
+                              {!product.categoryId
+                                ? "Shown on the menu · Available to order"
+                                : categories.data?.categories.find(
+                                      (item) => item.id === product.categoryId,
+                                    )?.isVisible === true
+                                  ? "Shown on the menu · Available to order"
+                                  : categories.data?.categories.find(
+                                        (item) =>
+                                          item.id === product.categoryId,
+                                      )?.isVisible === false
+                                    ? "Category hidden · Not shown on the menu"
+                                    : "Availability follows category visibility"}
+                            </p>
+                          )}
+                        {availableError?.id === product.id && (
+                          <InlineMessage>
+                            {availableError.message}
+                          </InlineMessage>
+                        )}
+                        {!product.isArchived && product.status === "HIDDEN" && (
+                          <p className="field-hint">
+                            Hidden from the customer menu · Details kept
+                          </p>
+                        )}
+                        {!product.isArchived &&
+                          product.status === "SOLD_OUT" && (
+                            <p className="field-hint">
+                              {!product.categoryId ||
+                              categories.data?.categories.find(
+                                (item) => item.id === product.categoryId,
+                              )?.isVisible === true
+                                ? "Shown on the menu · Sold out"
+                                : categories.data?.categories.find(
+                                      (item) => item.id === product.categoryId,
+                                    )?.isVisible === false
+                                  ? "Category hidden · Not shown on the menu"
+                                  : "Menu visibility follows category visibility"}
+                            </p>
+                          )}
+                        <small>/{product.slug}</small>
+                        {product.description && <p>{product.description}</p>}
+                        <div className="product-card-meta">
+                          <span className="category-visibility">
+                            {product.isArchived
+                              ? "Archived"
+                              : product.status === "AVAILABLE"
+                                ? "Available"
+                                : product.status === "SOLD_OUT"
+                                  ? "Sold out"
+                                  : "Hidden"}
+                          </span>
+                          {product.isArchived && (
+                            <span>
+                              Previous status:{" "}
+                              {product.status === "AVAILABLE"
+                                ? "Available"
+                                : product.status === "SOLD_OUT"
+                                  ? "Sold out"
+                                  : "Hidden"}
+                            </span>
+                          )}
+                          {!product.categoryId && <span>Uncategorized</span>}
+                          {product.imageUrl && (
+                            <span>
+                              <FiImage aria-hidden="true" />
+                              Photo added
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="product-card-actions">
+                        <strong className="product-price">
+                          {formatProductPrice(product.price)}
+                        </strong>
+                        {!product.isArchived && (
+                          <button
+                            id={`edit-product-${product.id}`}
+                            className="secondary-button"
+                            type="button"
+                            aria-label={`Edit ${product.name}`}
+                            disabled={
+                              creating ||
+                              Boolean(editing) ||
+                              ordering ||
+                              Boolean(archiving) ||
+                              archiveBusy ||
+                              Boolean(availableBusy) ||
+                              denied
+                            }
+                            onClick={() => setEditing(product)}
+                          >
+                            <FiEdit2 aria-hidden="true" />
+                            Edit
+                          </button>
+                        )}
+                        {!product.isArchived ? (
+                          <ProductActionsMenu
+                            id={`more-product-${product.id}`}
+                            name={product.name}
+                            disabled={
+                              creating ||
+                              Boolean(editing) ||
+                              ordering ||
+                              Boolean(archiving) ||
+                              archiveBusy ||
+                              Boolean(availableBusy) ||
+                              denied
+                            }
+                          >
+                            {!product.isArchived && (
+                              <button
+                                id={`feature-product-${product.id}`}
+                                className="secondary-button"
+                                type="button"
+                                aria-pressed={product.isFeatured}
+                                aria-label={`${product.isFeatured ? "Unfeature" : "Feature"} ${product.name}`}
+                                disabled={
+                                  creating ||
+                                  Boolean(editing) ||
+                                  ordering ||
+                                  Boolean(archiving) ||
+                                  archiveBusy ||
+                                  Boolean(availableBusy) ||
+                                  denied
+                                }
+                                onClick={() => void changeFeatured(product)}
+                              >
+                                <FiStar aria-hidden="true" />
+                                {availableBusy === product.id
+                                  ? "Updating…"
+                                  : product.isFeatured
+                                    ? "Unfeature"
+                                    : "Feature"}
+                              </button>
+                            )}
+                            {!product.isArchived &&
+                              product.status !== "HIDDEN" && (
+                                <button
+                                  className="secondary-button"
+                                  type="button"
+                                  aria-label={`Hide ${product.name}`}
+                                  disabled={
+                                    creating ||
+                                    Boolean(editing) ||
+                                    ordering ||
+                                    Boolean(archiving) ||
+                                    archiveBusy ||
+                                    Boolean(availableBusy) ||
+                                    denied
+                                  }
+                                  onClick={() =>
+                                    void changeAvailability(product, "HIDDEN")
+                                  }
+                                >
+                                  <FiEyeOff aria-hidden="true" />
+                                  {availableBusy === product.id
+                                    ? "Updating…"
+                                    : "Hide"}
+                                </button>
+                              )}
+                            {!product.isArchived &&
+                              product.status !== "AVAILABLE" && (
+                                <button
+                                  className="secondary-button"
+                                  type="button"
+                                  aria-label={`Make ${product.name} available`}
+                                  disabled={
+                                    creating ||
+                                    Boolean(editing) ||
+                                    ordering ||
+                                    Boolean(archiving) ||
+                                    archiveBusy ||
+                                    Boolean(availableBusy) ||
+                                    denied
+                                  }
+                                  onClick={() =>
+                                    void changeAvailability(product)
+                                  }
+                                >
+                                  <FiCheckCircle aria-hidden="true" />
+                                  {availableBusy === product.id
+                                    ? "Updating…"
+                                    : "Make available"}
+                                </button>
+                              )}
+                            {!product.isArchived &&
+                              product.status === "AVAILABLE" && (
+                                <button
+                                  className="secondary-button"
+                                  type="button"
+                                  aria-label={`Mark ${product.name} sold out`}
+                                  disabled={
+                                    creating ||
+                                    Boolean(editing) ||
+                                    ordering ||
+                                    Boolean(archiving) ||
+                                    archiveBusy ||
+                                    Boolean(availableBusy) ||
+                                    denied
+                                  }
+                                  onClick={() =>
+                                    void changeAvailability(product, "SOLD_OUT")
+                                  }
+                                >
+                                  <FiSlash aria-hidden="true" />
+                                  {availableBusy === product.id
+                                    ? "Updating…"
+                                    : "Mark sold out"}
+                                </button>
+                              )}
+                            {!product.isArchived &&
+                              product.status === "SOLD_OUT" && (
+                                <span className="field-hint">
+                                  Temporarily unavailable
+                                </span>
+                              )}
+                            <button
+                              id={`archive-product-${product.id}`}
+                              className="secondary-button"
+                              type="button"
+                              aria-label={`${product.isArchived ? "Restore" : "Archive"} ${product.name}`}
+                              disabled={
+                                creating ||
+                                Boolean(editing) ||
+                                ordering ||
+                                Boolean(archiving) ||
+                                archiveBusy ||
+                                Boolean(availableBusy) ||
+                                denied
+                              }
+                              onClick={() =>
+                                product.isArchived
+                                  ? void changeArchive(product, false).catch(
+                                      (error) => {
+                                        if (stillHere())
+                                          setArchiveError(error.message);
+                                      },
+                                    )
+                                  : setArchiving(product)
+                              }
+                            >
+                              {product.isArchived ? (
+                                <FiRotateCcw aria-hidden="true" />
+                              ) : (
+                                <FiArchive aria-hidden="true" />
+                              )}
+                              {product.isArchived ? "Restore" : "Archive"}
+                            </button>
+                          </ProductActionsMenu>
+                        ) : (
+                          <button
+                            id={`archive-product-${product.id}`}
+                            className="secondary-button"
+                            type="button"
+                            aria-label={`Restore ${product.name}`}
+                            disabled={
+                              creating ||
+                              Boolean(editing) ||
+                              ordering ||
+                              Boolean(archiving) ||
+                              archiveBusy ||
+                              Boolean(availableBusy) ||
+                              denied
+                            }
+                            onClick={() =>
+                              void changeArchive(product, false).catch(
+                                (error) => {
+                                  if (stillHere())
+                                    setArchiveError(error.message);
+                                },
+                              )
+                            }
+                          >
+                            <FiRotateCcw aria-hidden="true" /> Restore
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
         ) : (
           <div className="categories-empty">
             <FiCoffee aria-hidden="true" />
@@ -752,6 +1036,13 @@ function ProductWorkspace({ userId }: { userId: string }) {
           </div>
         )}
       </section>
+      {query.isSuccess && hasFilters && filteredProducts.length === 0 && (
+        <div className="categories-empty product-no-results">
+          <FiSearch aria-hidden="true" />
+          <h3>No products found.</h3>
+          <p>Try another name or clear the filters to browse your menu.</p>
+        </div>
+      )}
       {query.isSuccess &&
         query.data.products.length > 0 &&
         !showArchived &&
@@ -771,7 +1062,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
           if (archiving) await changeArchive(archiving, true);
         }}
         onClose={() => {
-          returnFocus.current = `archive-product-${archiving?.id}`;
+          returnFocus.current = `more-product-${archiving?.id}`;
           setArchiving(null);
         }}
         errorMessage={(error) =>
@@ -780,6 +1071,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
       />
       {ordering && query.isSuccess && (
         <ProductOrderEditor
+          triggerId={`reorder-products-${orderCategory || "uncategorized"}`}
           products={query.data.products.filter(
             (item) =>
               !item.isArchived && item.categoryId === (orderCategory || null),

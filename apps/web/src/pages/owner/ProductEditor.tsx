@@ -1,3 +1,4 @@
+import { SelectField } from "../../components/forms/SelectField";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -21,12 +22,14 @@ import {
 import {
   createProduct,
   updateProduct,
+  uploadProductImage,
   productsKey,
 } from "../../features/shops/api/products";
 import { currentUserKey } from "../../features/auth/api/session";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
+import { ProductPhotoPicker } from "./ProductPhotoPicker";
 import { ProductImageUpload } from "./ProductImageUpload";
 import { formatProductPrice } from "../../lib/money";
 
@@ -44,6 +47,11 @@ export function ProductEditor({
   const client = useQueryClient();
   const [imageSaved, setImageSaved] = useState(product?.imageUrl ?? "");
   const [uploading, setUploading] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState("");
+  const [created, setCreated] = useState<MenuProduct | null>(null);
+  const createdRef = useRef<MenuProduct | null>(null);
+  const [progress, setProgress] = useState(0);
   const [name, setName] = useState(product?.name ?? ""),
     [price, setPrice] = useState(product?.price ?? ""),
     [categoryId, setCategoryId] = useState(product?.categoryId ?? ""),
@@ -66,27 +74,31 @@ export function ProductEditor({
     running = useRef(false),
     pendingFocus = useRef<string | null>(null),
     closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dirty = product
-    ? Boolean(
-        name !== product.name ||
-        price !== product.price ||
-        categoryId !== (product.categoryId ?? "") ||
-        description !== (product.description ?? "") ||
-        imageUrl !== imageSaved ||
-        featured !== product.isFeatured ||
-        status !== product.status ||
-        sortOrder !== String(product.sortOrder),
-      )
-    : Boolean(
-        name ||
-        price ||
-        categoryId ||
-        description ||
-        imageUrl ||
-        featured ||
-        status !== "AVAILABLE" ||
-        sortOrder !== "0",
-      );
+  const dirty =
+    !created &&
+    (product
+      ? Boolean(
+          name !== product.name ||
+          price !== product.price ||
+          categoryId !== (product.categoryId ?? "") ||
+          description !== (product.description ?? "") ||
+          imageUrl !== imageSaved ||
+          featured !== product.isFeatured ||
+          status !== product.status ||
+          sortOrder !== String(product.sortOrder),
+        )
+      : Boolean(
+          photo ||
+          photoError ||
+          name ||
+          price ||
+          categoryId ||
+          description ||
+          imageUrl ||
+          featured ||
+          status !== "AVAILABLE" ||
+          sortOrder !== "0",
+        ));
   const categories = useQuery({
     queryKey: categoriesKey(userId, shopId),
     queryFn: ({ signal }) => listCategories(shopId, signal),
@@ -102,7 +114,8 @@ export function ProductEditor({
     retry: false,
     networkMode: "always",
   });
-  const disabled = mutation.isPending || uploading || closing || unavailable;
+  const busy = mutation.isPending || uploading || closing || unavailable;
+  const disabled = busy || Boolean(created);
   function stillHere() {
     return (
       active.current &&
@@ -172,9 +185,82 @@ export function ProductEditor({
     if (options) options.open = true;
     input.focus();
   }, [disabled, errors]);
+  async function cacheProduct(saved: MenuProduct) {
+    const key = productsKey(userId, shopId);
+    await client.cancelQueries({ queryKey: key });
+    if (!stillHere()) return;
+    client.setQueryData<ProductsResponse>(key, (current) => ({
+      products: [
+        ...(current?.products ?? []).filter((item) => item.id !== saved.id),
+        saved,
+      ].sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder ||
+          a.createdAt.localeCompare(b.createdAt) ||
+          a.id.localeCompare(b.id),
+      ),
+    }));
+    void client.invalidateQueries({ queryKey: key });
+  }
+  async function savePhoto(saved: MenuProduct, file: File) {
+    setUploading(true);
+    setProgress(0);
+    setError("");
+    try {
+      const result = await uploadProductImage(
+        shopId,
+        saved.id,
+        file,
+        (value) => {
+          if (stillHere()) setProgress(value);
+        },
+      );
+      if (!stillHere()) return;
+      await cacheProduct(result.product);
+      if (!stillHere()) return;
+      feedback.toast(`"${saved.name}" was created with a photo.`);
+      close();
+    } catch (failure) {
+      if (!stillHere()) return;
+      let message =
+        "Product created. We couldn't confirm the photo upload. Retry the upload or choose Done to add it later.";
+      if (isAxiosError<ApiErrorResponse>(failure)) {
+        const code = failure.response?.status;
+        if (code === 400 || code === 413)
+          message =
+            "Product created. Choose a valid JPEG, PNG or WebP photo up to 5 MB and 16 megapixels.";
+        if (failure.response?.data?.code === "PRODUCT_IMAGE_SAVE_UNCERTAIN") {
+          setUnavailable(true);
+          message =
+            "Product created. The photo save is uncertain. Choose Done and refresh products before uploading again.";
+        }
+        if (code === 401 || code === 403 || code === 404) {
+          setUnavailable(true);
+          message =
+            "Product created, but your access or the product changed. Choose Done and refresh products.";
+        }
+      }
+      setError(message);
+    } finally {
+      if (stillHere()) setUploading(false);
+    }
+  }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (running.current || disabled || (product && !dirty)) return;
+    if (running.current || busy || photoError || (product && !dirty)) return;
+    if (createdRef.current) {
+      if (!photo) {
+        close();
+        return;
+      }
+      running.current = true;
+      try {
+        await savePhoto(createdRef.current, photo);
+      } finally {
+        running.current = false;
+      }
+      return;
+    }
     const invalid: Record<string, string> = {};
     if (
       !name.trim() ||
@@ -255,23 +341,16 @@ export function ProductEditor({
       }
       const result = await mutation.mutateAsync(input);
       if (!stillHere()) return;
-      const key = productsKey(userId, shopId);
-      await client.cancelQueries({ queryKey: key });
+      if (!product) {
+        createdRef.current = result.product;
+        setCreated(result.product);
+      }
+      await cacheProduct(result.product);
       if (!stillHere()) return;
-      client.setQueryData<ProductsResponse>(key, (current) => ({
-        products: [
-          ...(current?.products ?? []).filter(
-            (product) => product.id !== result.product.id,
-          ),
-          result.product,
-        ].sort(
-          (a, b) =>
-            a.sortOrder - b.sortOrder ||
-            a.createdAt.localeCompare(b.createdAt) ||
-            a.id.localeCompare(b.id),
-        ),
-      }));
-      void client.invalidateQueries({ queryKey: key });
+      if (!product && photo) {
+        await savePhoto(result.product, photo);
+        return;
+      }
       feedback.toast(
         `“${result.product.name}” was ${product ? "updated" : "created"}.`,
       );
@@ -420,36 +499,38 @@ export function ProductEditor({
               </div>
               <div className="field">
                 <label htmlFor="product-category">Category</label>
-                <select
+                <SelectField
                   id="product-category"
-                  name="categoryId"
+                  label="Category"
                   value={categoryId}
                   disabled={disabled || categories.isPending}
-                  aria-invalid={Boolean(errors.categoryId)}
-                  aria-describedby={
+                  invalid={Boolean(errors.categoryId)}
+                  describedBy={
                     errors.categoryId ? "product-categoryId-error" : undefined
                   }
-                  onChange={(event) => {
-                    setCategoryId(event.target.value);
+                  onChange={(value) => {
+                    setCategoryId(value);
                     clearField("categoryId");
                   }}
-                >
-                  <option value="">Uncategorized</option>
-                  {product?.categoryId &&
+                  options={[
+                    { value: "", label: "Uncategorized" },
+                    ...(product?.categoryId &&
                     !categories.data?.categories.some(
                       (item) => item.id === product.categoryId,
-                    ) && (
-                      <option value={product.categoryId}>
-                        Current category (not loaded)
-                      </option>
-                    )}
-                  {categories.data?.categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                      {category.isVisible ? "" : " (hidden)"} · /{category.slug}
-                    </option>
-                  ))}
-                </select>
+                    )
+                      ? [
+                          {
+                            value: product.categoryId,
+                            label: "Current category (not loaded)",
+                          },
+                        ]
+                      : []),
+                    ...(categories.data?.categories.map((category) => ({
+                      value: category.id,
+                      label: `${category.name}${category.isVisible ? "" : " (hidden)"} /${category.slug}`,
+                    })) ?? []),
+                  ]}
+                />
                 {fieldError("categoryId")}
               </div>
             </div>
@@ -472,6 +553,38 @@ export function ProductEditor({
                   Refresh categories
                 </button>
               </div>
+            )}
+            {product ? (
+              <ProductImageUpload
+                userId={userId}
+                shopId={shopId}
+                productId={product.id}
+                currentImageUrl={imageSaved}
+                disabled={mutation.isPending || closing || unavailable}
+                onPending={setUploading}
+                onUploaded={(saved) => {
+                  setImageUrl(saved.imageUrl ?? "");
+                  setImageSaved(saved.imageUrl ?? "");
+                  clearField("imageUrl");
+                }}
+              />
+            ) : (
+              <ProductPhotoPicker
+                file={photo}
+                error={photoError || (created ? error : "")}
+                disabled={busy}
+                pending={uploading}
+                progress={progress}
+                onChange={(file, message) => {
+                  setPhoto(file);
+                  setPhotoError(message);
+                  setError("");
+                  if (file) {
+                    setImageUrl("");
+                    clearField("imageUrl");
+                  }
+                }}
+              />
             )}
             <div className="field">
               <label htmlFor="product-description">
@@ -502,19 +615,18 @@ export function ProductEditor({
             </div>
             <div className="field">
               <label htmlFor="product-status">Menu status</label>
-              <select
+              <SelectField
                 id="product-status"
-                name="status"
+                label="Menu status"
                 value={status}
                 disabled={disabled}
-                onChange={(event) =>
-                  setStatus(event.target.value as ProductStatus)
-                }
-              >
-                <option value="AVAILABLE">Available</option>
-                <option value="SOLD_OUT">Sold out</option>
-                <option value="HIDDEN">Hidden</option>
-              </select>
+                onChange={(value) => setStatus(value as ProductStatus)}
+                options={[
+                  { value: "AVAILABLE", label: "Available" },
+                  { value: "SOLD_OUT", label: "Sold out" },
+                  { value: "HIDDEN", label: "Hidden" },
+                ]}
+              />
               <p className="field-hint">
                 {categoryHidden
                   ? "This category is hidden, so its products won’t appear publicly."
@@ -528,24 +640,6 @@ export function ProductEditor({
             <details className="product-display-options">
               <summary>Image & display options</summary>
               <div>
-                {product ? (
-                  <ProductImageUpload
-                    userId={userId}
-                    shopId={shopId}
-                    productId={product.id}
-                    disabled={mutation.isPending || closing || unavailable}
-                    onPending={setUploading}
-                    onUploaded={(saved) => {
-                      setImageUrl(saved.imageUrl ?? "");
-                      setImageSaved(saved.imageUrl ?? "");
-                      clearField("imageUrl");
-                    }}
-                  />
-                ) : (
-                  <p className="field-hint">
-                    Create this product first, then open Edit to upload a photo.
-                  </p>
-                )}
                 <div className="field">
                   <label htmlFor="product-image">
                     Image URL <span className="field-hint">(optional)</span>
@@ -556,7 +650,7 @@ export function ProductEditor({
                     type="url"
                     maxLength={PRODUCT_LIMITS.imageUrlMax}
                     value={imageUrl}
-                    disabled={disabled}
+                    disabled={disabled || Boolean(photo) || Boolean(photoError)}
                     aria-invalid={Boolean(errors.imageUrl)}
                     aria-describedby={`product-image-hint${errors.imageUrl ? " product-imageUrl-error" : ""}`}
                     onChange={(event) => {
@@ -566,7 +660,8 @@ export function ProductEditor({
                     placeholder="https://…"
                   />
                   <p id="product-image-hint" className="field-hint">
-                    Use an existing HTTPS image address.
+                    Use an existing HTTPS image address, or choose a photo
+                    above.
                   </p>
                   {fieldError("imageUrl")}
                 </div>
@@ -604,7 +699,7 @@ export function ProductEditor({
                 </div>
               </div>
             </details>
-            {error && <InlineMessage>{error}</InlineMessage>}
+            {error && !created && <InlineMessage>{error}</InlineMessage>}
             {product && (
               <p className="field-hint">
                 Menu address: <strong>/{product.slug}</strong>. Renaming keeps
@@ -613,17 +708,21 @@ export function ProductEditor({
             )}
             <footer className="category-modal-footer">
               <p className="field-hint" role="status">
-                {mutation.isPending
-                  ? product
-                    ? "Saving changes…"
-                    : "Creating product…"
-                  : dirty
-                    ? product
-                      ? "Unsaved changes"
-                      : "Unsaved product"
-                    : product
-                      ? "No changes yet"
-                      : "Ready for a new favorite."}
+                {uploading
+                  ? `Uploading photo ${progress}%`
+                  : created
+                    ? "Product saved"
+                    : mutation.isPending
+                      ? product
+                        ? "Saving changes…"
+                        : "Creating product…"
+                      : dirty
+                        ? product
+                          ? "Unsaved changes"
+                          : "Unsaved product"
+                        : product
+                          ? "No changes yet"
+                          : "Ready for a new favorite."}
               </p>
               <div className="category-editor-actions">
                 <button
@@ -632,26 +731,36 @@ export function ProductEditor({
                   disabled={mutation.isPending || uploading || closing}
                   onClick={requestClose}
                 >
-                  Cancel
+                  {created ? "Done" : "Cancel"}
                 </button>
-                <button
-                  className="primary-button"
-                  type="submit"
-                  disabled={disabled || Boolean(product && !dirty)}
-                >
-                  {mutation.isPending ? (
-                    <FiLoader className="is-spinning" aria-hidden="true" />
-                  ) : (
-                    <FiPlus aria-hidden="true" />
-                  )}
-                  {mutation.isPending
-                    ? product
-                      ? "Saving…"
-                      : "Creating…"
-                    : product
-                      ? "Save changes"
-                      : "Create product"}
-                </button>
+                {(!created || photo) && (
+                  <button
+                    className="primary-button"
+                    type="submit"
+                    disabled={
+                      busy || Boolean(photoError) || Boolean(product && !dirty)
+                    }
+                  >
+                    {mutation.isPending || uploading ? (
+                      <FiLoader className="is-spinning" aria-hidden="true" />
+                    ) : (
+                      <FiPlus aria-hidden="true" />
+                    )}
+                    {uploading
+                      ? "Uploading photo..."
+                      : created
+                        ? photo
+                          ? "Retry upload"
+                          : "Done"
+                        : mutation.isPending
+                          ? product
+                            ? "Saving…"
+                            : "Creating…"
+                          : product
+                            ? "Save changes"
+                            : "Create product"}
+                  </button>
+                )}
               </div>
             </footer>
           </form>

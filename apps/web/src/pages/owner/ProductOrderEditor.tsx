@@ -8,10 +8,12 @@ export function ProductOrderEditor({
   products,
   onSave,
   onClose,
+  triggerId,
 }: {
   products: MenuProduct[];
   onSave: (productIds: string[], expectedOrder: string[]) => Promise<boolean>;
   onClose: () => void;
+  triggerId: string;
 }) {
   const [original] = useState(() => products);
   const [draft, setDraft] = useState(() => products);
@@ -37,11 +39,9 @@ export function ProductOrderEditor({
       mounted.current = false;
       if (closeTimer.current) clearTimeout(closeTimer.current);
       node?.close();
-      queueMicrotask(() =>
-        document.getElementById("reorder-products-button")?.focus(),
-      );
+      queueMicrotask(() => document.getElementById(triggerId)?.focus());
     };
-  }, []);
+  }, [triggerId]);
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {
