@@ -34,6 +34,7 @@ describe('tenant-scoped product creation', () => {
     imageUrl: null,
     status: 'AVAILABLE',
     isFeatured: false,
+    isArchived: false,
     sortOrder: 0,
     createdAt: new Date('2026-10-09T00:00:00Z'),
   };
@@ -108,6 +109,132 @@ describe('tenant-scoped product creation', () => {
       .patch(`/api/v1/shops/${shop}/products/${id}`)
       .set('Authorization', 'Bearer valid')
       .send(body);
+  const archive = (
+    body: unknown = { isArchived: true, expectedArchived: false },
+    shop = shopId,
+    id = productId,
+  ) =>
+    request(app.getHttpServer())
+      .patch(`/api/v1/shops/${shop}/products/${id}/archive`)
+      .set('Authorization', 'Bearer valid')
+      .send(body);
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'allows %s to archive with scoped conditional writes',
+    async (value) => {
+      role = value;
+      productWrite.mockResolvedValue({ ...product, isArchived: true });
+      const response = await archive().expect(200);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.body.product).toMatchObject({
+        id: productId,
+        isArchived: true,
+        name: 'Latte',
+        price: '12.50',
+        status: 'AVAILABLE',
+      });
+      const query = productWrite.mock.calls[0][0];
+      expect(query.where).toMatchObject({
+        id: productId,
+        shopId,
+        isArchived: false,
+        shop: {
+          id: shopId,
+          members: {
+            some: { userId, role: { in: ['OWNER', 'ADMIN', 'MANAGER'] } },
+          },
+        },
+      });
+      expect(query.data).toEqual({ isArchived: true });
+      expect(shopWrite).not.toHaveBeenCalled();
+      expect(categoryWrite).not.toHaveBeenCalled();
+    },
+  );
+  it('restores without resetting status, category, price or slug', async () => {
+    productWrite.mockResolvedValue({ ...product, status: 'HIDDEN' });
+    const response = await archive({
+      isArchived: false,
+      expectedArchived: true,
+    }).expect(200);
+    expect(response.body.product.status).toBe('HIDDEN');
+    expect(productWrite.mock.calls[0][0].data).toEqual({ isArchived: false });
+    expect(productWrite.mock.calls[0][0].where.isArchived).toBe(true);
+  });
+  it.each(['CASHIER', 'KITCHEN'])(
+    'denies %s archive and restore',
+    async (value) => {
+      role = value;
+      await archive().expect(403);
+      await archive({ isArchived: false, expectedArchived: true }).expect(403);
+      expect(productWrite).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    {},
+    { isArchived: true },
+    { isArchived: 'true', expectedArchived: false },
+    { isArchived: null, expectedArchived: false },
+    { isArchived: true, expectedArchived: null },
+    { isArchived: true, expectedArchived: 'false' },
+    { isArchived: true, expectedArchived: false, shopId: other },
+    { isArchived: true, expectedArchived: false, status: 'HIDDEN' },
+  ])('rejects invalid archive fields (%j)', async (body) => {
+    await archive(body).expect(400);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('rejects foreign products, malformed IDs and nonmembers', async () => {
+    await archive(undefined, other).expect(404);
+    await archive(undefined, shopId, 'bad').expect(400);
+    membership.mockResolvedValue(null);
+    await archive().expect(404);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('denies guests and does not expose destructive deletion', async () => {
+    await request(app.getHttpServer())
+      .patch(`/api/v1/shops/${shopId}/products/${productId}/archive`)
+      .send({ isArchived: true, expectedArchived: false })
+      .expect(401);
+    await request(app.getHttpServer())
+      .delete(`/api/v1/shops/${shopId}/products/${productId}`)
+      .set('Authorization', 'Bearer valid')
+      .expect(404);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('returns 409 for stale archive state without leaking database errors', async () => {
+    productWrite.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('secret', {
+        code: 'P2025',
+        clientVersion: 'test',
+      }),
+    );
+    const response = await archive().expect(409);
+    expect(response.body.code).toBe('PRODUCT_ARCHIVE_CHANGED');
+    expect(JSON.stringify(response.body)).not.toContain('secret');
+  });
+  it('rechecks lost role or missing resources after a conditional archive failure', async () => {
+    productWrite.mockImplementation(async () => {
+      role = 'CASHIER';
+      throw new Prisma.PrismaClientKnownRequestError('lost', {
+        code: 'P2025',
+        clientVersion: 'test',
+      });
+    });
+    await archive().expect(403);
+    role = 'OWNER';
+    productWrite.mockImplementation(async () => {
+      productRead.mockResolvedValue(null);
+      throw new Prisma.PrismaClientKnownRequestError('gone', {
+        code: 'P2025',
+        clientVersion: 'test',
+      });
+    });
+    await archive().expect(404);
+  });
+  it('rejects archival injection through create and edit', async () => {
+    await post({ name: 'Latte', price: '1', isArchived: true }).expect(400);
+    await patch({ isArchived: false }).expect(400);
+    expect(productWrite).not.toHaveBeenCalled();
+    expect(shopWrite).not.toHaveBeenCalled();
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER'])(
     'lets %s edit only product fields, preserving slug and tenant',
     async (value) => {

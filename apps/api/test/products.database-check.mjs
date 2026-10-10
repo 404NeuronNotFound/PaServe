@@ -152,6 +152,96 @@ try {
         assert.equal(customerProduct.imageUrl, null);
         assert.equal(customerProduct.isFeatured, false);
         assert.equal(customerProduct.slug, 'latte');
+        const beforeArchive = await tx.product.findFirstOrThrow({
+          where: { id: created.product.id, shopId: shop.id },
+        });
+        const archived = await service.setArchived(
+          user.id,
+          shop.id,
+          created.product.id,
+          { isArchived: true, expectedArchived: false },
+        );
+        assert.equal(archived.product.isArchived, true);
+        assert.equal(
+          (await publicMenus.read(shop.slug)).products.some(
+            (item) => item.id === created.product.id,
+          ),
+          false,
+        );
+        const archivedRow = await tx.product.findFirstOrThrow({
+          where: { id: created.product.id, shopId: shop.id },
+        });
+        assert.deepEqual(
+          {
+            ...archivedRow,
+            isArchived: false,
+            updatedAt: beforeArchive.updatedAt,
+          },
+          beforeArchive,
+        );
+        assert.equal(
+          (await service.list(user.id, shop.id)).products.some(
+            (item) => item.id === created.product.id && item.isArchived,
+          ),
+          true,
+        );
+        await tx.$executeRawUnsafe('SAVEPOINT stale_archive');
+        await assert.rejects(
+          repository.setArchived(
+            user.id,
+            shop.id,
+            created.product.id,
+            true,
+            false,
+          ),
+          (error) => error.code === 'P2025',
+        );
+        await tx.$executeRawUnsafe('ROLLBACK TO SAVEPOINT stale_archive');
+        await tx.$executeRawUnsafe('SAVEPOINT archived_edit');
+        await assert.rejects(
+          service.update(user.id, shop.id, created.product.id, { price: '1' }),
+          (error) => error.getStatus() === 404,
+        );
+        await tx.$executeRawUnsafe('ROLLBACK TO SAVEPOINT archived_edit');
+        await service.setArchived(user.id, shop.id, created.product.id, {
+          isArchived: false,
+          expectedArchived: true,
+        });
+        assert.equal(
+          (await publicMenus.read(shop.slug)).products.some(
+            (item) => item.id === created.product.id,
+          ),
+          true,
+        );
+        assert.equal(
+          (
+            await tx.product.findFirstOrThrow({
+              where: { id: created.product.id, shopId: shop.id },
+            })
+          ).status,
+          beforeArchive.status,
+        );
+        await assert.rejects(
+          service.setArchived(user.id, other.id, created.product.id, {
+            isArchived: true,
+            expectedArchived: false,
+          }),
+          (error) => error.getStatus() === 404,
+        );
+        await service.setArchived(user.id, shop.id, hidden.product.id, {
+          isArchived: true,
+          expectedArchived: false,
+        });
+        await service.setArchived(user.id, shop.id, hidden.product.id, {
+          isArchived: false,
+          expectedArchived: true,
+        });
+        assert.equal(
+          (await publicMenus.read(shop.slug)).products.some(
+            (item) => item.id === hidden.product.id,
+          ),
+          false,
+        );
         assert.equal(
           menu.products.some((item) => item.id === created.product.id),
           true,

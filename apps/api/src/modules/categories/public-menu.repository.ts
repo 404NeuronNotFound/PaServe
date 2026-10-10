@@ -31,6 +31,7 @@ export class PublicMenuRepository {
         products: {
           where: {
             shopId: shop.id,
+            isArchived: false,
             status: { in: ['AVAILABLE', 'SOLD_OUT'] },
             OR: [
               { categoryId: null },

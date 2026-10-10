@@ -5,6 +5,7 @@ import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.g
 import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './create-product.dto.js';
 import { UpdateProductDto } from './update-product.dto.js';
+import { ProductArchiveDto } from './product-archive.dto.js';
 import {
   ShopResource,
   type ShopResourceRequest,
@@ -14,6 +15,21 @@ import {
 @Roles('OWNER', 'ADMIN', 'MANAGER')
 export class ProductsController {
   constructor(private readonly products: ProductsService) {}
+  @Patch(':productId/archive')
+  @ShopResource('product', 'productId')
+  setArchived(
+    @Body() dto: ProductArchiveDto,
+    @Req() req: ShopResourceRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.products.setArchived(
+      req.user.id,
+      req.shopResource.shopId,
+      req.shopResource.id,
+      dto,
+    );
+  }
   @Patch(':productId')
   @ShopResource('product', 'productId')
   update(

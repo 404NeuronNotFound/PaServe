@@ -15,6 +15,7 @@ const productSelect = {
   imageUrl: true,
   status: true,
   isFeatured: true,
+  isArchived: true,
   sortOrder: true,
   createdAt: true,
 } as const;
@@ -32,6 +33,24 @@ export type ProductCreateData = {
 @Injectable()
 export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
+  setArchived(
+    userId: string,
+    shopId: string,
+    productId: string,
+    isArchived: boolean,
+    expectedArchived: boolean,
+  ) {
+    return this.prisma.product.update({
+      where: {
+        id: productId,
+        shopId,
+        isArchived: expectedArchived,
+        shop: shopAccessWhere(userId, shopId, roles),
+      },
+      data: { isArchived },
+      select: productSelect,
+    });
+  }
   update(
     userId: string,
     shopId: string,
@@ -43,6 +62,7 @@ export class ProductsRepository {
       where: {
         id: productId,
         shopId,
+        isArchived: false,
         shop: shopAccessWhere(userId, shopId, roles),
       },
       data: {

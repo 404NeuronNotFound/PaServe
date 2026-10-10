@@ -17,6 +17,7 @@ import type { CreateProductDto } from './create-product.dto.js';
 import { productSlug } from './product-slug.js';
 import type { UpdateProductDto } from './update-product.dto.js';
 import type { ProductCreateData } from './products.repository.js';
+import type { ProductArchiveDto } from './product-archive.dto.js';
 
 @Injectable()
 export class ProductsService {
@@ -25,6 +26,54 @@ export class ProductsService {
     private readonly members: ShopMembersService,
     private readonly resources: TenantResourcesService,
   ) {}
+  async setArchived(
+    userId: string,
+    shopId: string,
+    productId: string,
+    dto: ProductArchiveDto,
+  ): Promise<CreateProductResponse> {
+    await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
+    await this.resources.requireResource(userId, shopId, 'product', productId);
+    try {
+      const product = await this.repository.setArchived(
+        userId,
+        shopId,
+        productId,
+        dto.isArchived,
+        dto.expectedArchived,
+      );
+      return {
+        product: {
+          ...product,
+          price: product.price.toFixed(2),
+          createdAt: product.createdAt.toISOString(),
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        await this.members.requirePermission(
+          userId,
+          shopId,
+          'shop.menu.manage',
+        );
+        await this.resources.requireResource(
+          userId,
+          shopId,
+          'product',
+          productId,
+        );
+        throw new ConflictException({
+          code: 'PRODUCT_ARCHIVE_CHANGED',
+          message:
+            'The product archive status changed. Refresh products before trying again.',
+        });
+      }
+      throw error;
+    }
+  }
   async update(
     userId: string,
     shopId: string,

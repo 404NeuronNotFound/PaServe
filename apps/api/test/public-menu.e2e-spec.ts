@@ -25,28 +25,26 @@ describe('public menu visibility', () => {
     vi.resetAllMocks();
   });
   it('allows public access while constraining every nested query to the resolved shop and visibility', async () => {
-    findShop
-      .mockResolvedValueOnce({ id: 'shop-a' })
-      .mockResolvedValueOnce({
-        name: 'Cafe',
-        slug: 'cafe',
-        description: null,
-        categories: [],
-        products: [
-          {
-            id: 'product',
-            categoryId: null,
-            name: 'Coffee',
-            slug: 'coffee',
-            description: null,
-            price: new Prisma.Decimal('10'),
-            imageUrl: null,
-            status: 'SOLD_OUT',
-            isFeatured: false,
-            sortOrder: 0,
-          },
-        ],
-      });
+    findShop.mockResolvedValueOnce({ id: 'shop-a' }).mockResolvedValueOnce({
+      name: 'Cafe',
+      slug: 'cafe',
+      description: null,
+      categories: [],
+      products: [
+        {
+          id: 'product',
+          categoryId: null,
+          name: 'Coffee',
+          slug: 'coffee',
+          description: null,
+          price: new Prisma.Decimal('10'),
+          imageUrl: null,
+          status: 'SOLD_OUT',
+          isFeatured: false,
+          sortOrder: 0,
+        },
+      ],
+    });
     const response = await request(app.getHttpServer())
       .get('/api/v1/menu/cafe')
       .expect(200);
@@ -69,6 +67,7 @@ describe('public menu visibility', () => {
           where: {
             shopId: 'shop-a',
             status: { in: ['AVAILABLE', 'SOLD_OUT'] },
+            isArchived: false,
             OR: [
               { categoryId: null },
               { category: { shopId: 'shop-a', isVisible: true } },
