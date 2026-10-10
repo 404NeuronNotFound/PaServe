@@ -209,7 +209,9 @@ export interface ShopMembershipResponse {
 }
 
 export interface UpdateShopRequest {
+  menuLayout?: MenuLayout;
   primaryColor?: string;
+  accentColor?: string;
   name?: string;
   description?: string;
   displayName?: string;
@@ -221,7 +223,9 @@ export interface UpdateShopRequest {
 }
 
 export type ShopSettings = CreateShopResponse["shop"] & {
+  menuLayout?: MenuLayout;
   primaryColor?: string | null;
+  accentColor?: string | null;
   logoUrl?: string | null;
   bannerUrl?: string | null;
   displayName: string | null;
@@ -238,6 +242,14 @@ export interface UpdateShopResponse {
 export type ShopSettingsResponse = UpdateShopResponse;
 
 export const DEFAULT_MENU_PRIMARY_COLOR = "#243329";
+export const MENU_LAYOUTS = ["grid", "list", "compact"] as const;
+export type MenuLayout = (typeof MENU_LAYOUTS)[number];
+export const DEFAULT_MENU_LAYOUT: MenuLayout = "list";
+export const isMenuLayout = (value: unknown): value is MenuLayout =>
+  typeof value === "string" && MENU_LAYOUTS.some((layout) => layout === value);
+export const DEFAULT_MENU_ACCENT_COLOR = "#C9EF83";
+export const SHOP_ACCENT_COLOR_HINT =
+  "Use a six-digit hex color, such as #C9EF83, or leave blank for the default.";
 export const SHOP_PRIMARY_COLOR_HINT =
   "Use a six-digit hex color, such as #243329, or leave blank for the default.";
 export const isValidShopPrimaryColor = (value: string): boolean =>
@@ -555,6 +567,8 @@ export interface PublicMenuResponse {
     logoUrl?: string | null;
     bannerUrl?: string | null;
     primaryColor?: string | null;
+    menuLayout?: MenuLayout;
+    accentColor?: string | null;
   };
   categories: Array<
     Pick<MenuCategory, "id" | "name" | "slug" | "description" | "sortOrder">
