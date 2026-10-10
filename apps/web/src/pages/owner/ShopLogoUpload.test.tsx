@@ -1,3 +1,4 @@
+import { installCropPlatform, selectAndCrop } from "../../test/crop-platform";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -36,6 +37,7 @@ const result = {
   storagePath: "shop/logo/new.webp",
 };
 beforeEach(() => {
+  installCropPlatform();
   vi.stubGlobal(
     "URL",
     Object.assign(URL, {
@@ -47,6 +49,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   useFeedbackStore.getState().clear();
 });
@@ -87,9 +90,9 @@ it("uploads a selected logo and updates shop identities without overwriting text
   vi.mocked(uploadShopLogo).mockResolvedValue(result);
   const { client, onPending } = setup();
   const user = userEvent.setup();
-  await user.upload(screen.getByLabelText("Replace logo"), file());
+  await selectAndCrop(user, screen.getByLabelText(/Logo.*optional/), file());
   expect(
-    screen.getByRole("img", { name: "Selected logo preview logo" }),
+    screen.getByRole("img", { name: "Selected logo photo preview" }),
   ).toHaveAttribute("src", "blob:preview");
   await user.click(screen.getByRole("button", { name: "Upload logo" }));
   expect(uploadShopLogo).toHaveBeenCalledWith(
@@ -98,10 +101,9 @@ it("uploads a selected logo and updates shop identities without overwriting text
     expect.any(Function),
   );
   await vi.waitFor(() =>
-    expect(screen.getByRole("img", { name: "Cafe logo" })).toHaveAttribute(
-      "src",
-      result.shop.logoUrl,
-    ),
+    expect(
+      screen.getByRole("img", { name: "Current logo photo" }),
+    ).toHaveAttribute("src", result.shop.logoUrl),
   );
   expect(
     client.getQueryData(["shops", "member", "shop", "settings"]),
@@ -118,15 +120,15 @@ it("uploads a selected logo and updates shop identities without overwriting text
 });
 it("rejects oversized and unsupported selections without uploading", () => {
   setup();
-  fireEvent.change(screen.getByLabelText("Replace logo"), {
+  fireEvent.change(screen.getByLabelText(/Logo.*optional/), {
     target: {
       files: [new File(["<svg/>"], "logo.svg", { type: "image/svg+xml" })],
     },
   });
   expect(
-    screen.getByText("Choose a JPEG, PNG or WebP logo."),
+    screen.getByText("Choose a JPEG, PNG or WebP image."),
   ).toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText("Replace logo"), {
+  fireEvent.change(screen.getByLabelText(/Logo.*optional/), {
     target: {
       files: [
         new File([new Uint8Array(5 * 1024 * 1024 + 1)], "large.png", {
@@ -136,19 +138,18 @@ it("rejects oversized and unsupported selections without uploading", () => {
     },
   });
   expect(
-    screen.getByText("Choose a logo between 1 byte and 5 MB."),
+    screen.getByText("Choose an image between 1 byte and 5 MB."),
   ).toBeInTheDocument();
   expect(uploadShopLogo).not.toHaveBeenCalled();
 });
 it("keeps the saved logo when the selection is cancelled", async () => {
   const { onDirty } = setup();
   const user = userEvent.setup();
-  await user.upload(screen.getByLabelText("Replace logo"), file());
+  await selectAndCrop(user, screen.getByLabelText(/Logo.*optional/), file());
   await user.click(screen.getByRole("button", { name: "Cancel selection" }));
-  expect(screen.getByRole("img", { name: "Cafe logo" })).toHaveAttribute(
-    "src",
-    membership.shop.logoUrl,
-  );
+  expect(
+    screen.getByRole("img", { name: "Current logo photo" }),
+  ).toHaveAttribute("src", membership.shop.logoUrl);
   expect(onDirty).toHaveBeenLastCalledWith(false);
 });
 it("retains the selection for retry after a known storage failure", async () => {
@@ -158,19 +159,19 @@ it("retains the selection for retry after a known storage failure", async () => 
   });
   setup();
   const user = userEvent.setup();
-  await user.upload(screen.getByLabelText("Replace logo"), file());
+  await selectAndCrop(user, screen.getByLabelText(/Logo.*optional/), file());
   await user.click(screen.getByRole("button", { name: "Upload logo" }));
   await screen.findByText(/Logo uploads are unavailable/);
   expect(screen.getByRole("button", { name: "Upload logo" })).toBeEnabled();
   expect(
-    screen.getByRole("img", { name: "Selected logo preview logo" }),
+    screen.getByRole("img", { name: "Selected logo photo preview" }),
   ).toBeInTheDocument();
 });
 it("locks retries after an uncertain save", async () => {
   vi.mocked(uploadShopLogo).mockRejectedValue(new Error("Disconnected"));
   setup();
   const user = userEvent.setup();
-  await user.upload(screen.getByLabelText("Replace logo"), file());
+  await selectAndCrop(user, screen.getByLabelText(/Logo.*optional/), file());
   await user.click(screen.getByRole("button", { name: "Upload logo" }));
   await screen.findByText(/We could not confirm/);
   expect(screen.getByRole("button", { name: "Upload logo" })).toBeDisabled();
@@ -184,7 +185,7 @@ it("does not repopulate caches after an account change while uploading", async (
   );
   const { client } = setup();
   const user = userEvent.setup();
-  await user.upload(screen.getByLabelText("Replace logo"), file());
+  await selectAndCrop(user, screen.getByLabelText(/Logo.*optional/), file());
   await user.click(screen.getByRole("button", { name: "Upload logo" }));
   client.setQueryData(["auth", "me"], {
     user: { id: "other-user", memberships: [] },

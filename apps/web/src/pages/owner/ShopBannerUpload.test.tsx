@@ -1,3 +1,4 @@
+import { installCropPlatform, selectAndCrop } from "../../test/crop-platform";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -38,6 +39,7 @@ const result = {
   storagePath: "shop/banner/new.webp",
 };
 beforeEach(() => {
+  installCropPlatform();
   vi.stubGlobal(
     "URL",
     Object.assign(URL, {
@@ -49,6 +51,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   useFeedbackStore.getState().clear();
 });
@@ -89,9 +92,9 @@ it("uploads a selected banner and updates saved settings without overwriting tex
   vi.mocked(uploadShopBanner).mockResolvedValue(result);
   const { client, onPending } = setup();
   const user = userEvent.setup();
-  await user.upload(screen.getByLabelText("Replace banner"), file());
+  await selectAndCrop(user, screen.getByLabelText(/Banner.*optional/), file());
   expect(
-    screen.getByRole("img", { name: "Selected preview banner" }),
+    screen.getByRole("img", { name: "Selected banner photo preview" }),
   ).toHaveAttribute("src", "blob:preview");
   await user.click(screen.getByRole("button", { name: "Upload banner" }));
   expect(uploadShopBanner).toHaveBeenCalledWith(
@@ -100,10 +103,9 @@ it("uploads a selected banner and updates saved settings without overwriting tex
     expect.any(Function),
   );
   await vi.waitFor(() =>
-    expect(screen.getByRole("img", { name: "Cafe banner" })).toHaveAttribute(
-      "src",
-      result.shop.bannerUrl,
-    ),
+    expect(
+      screen.getByRole("img", { name: "Current banner photo" }),
+    ).toHaveAttribute("src", result.shop.bannerUrl),
   );
   expect(
     client.getQueryData(["shops", "member", "shop", "settings"]),
@@ -114,15 +116,15 @@ it("uploads a selected banner and updates saved settings without overwriting tex
 });
 it("rejects oversized and unsupported selections without uploading", () => {
   setup();
-  fireEvent.change(screen.getByLabelText("Replace banner"), {
+  fireEvent.change(screen.getByLabelText(/Banner.*optional/), {
     target: {
       files: [new File(["<svg/>"], "banner.svg", { type: "image/svg+xml" })],
     },
   });
   expect(
-    screen.getByText("Choose a JPEG, PNG or WebP banner."),
+    screen.getByText("Choose a JPEG, PNG or WebP image."),
   ).toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText("Replace banner"), {
+  fireEvent.change(screen.getByLabelText(/Banner.*optional/), {
     target: {
       files: [
         new File([new Uint8Array(5 * 1024 * 1024 + 1)], "large.png", {
@@ -132,19 +134,18 @@ it("rejects oversized and unsupported selections without uploading", () => {
     },
   });
   expect(
-    screen.getByText("Choose a banner between 1 byte and 5 MB."),
+    screen.getByText("Choose an image between 1 byte and 5 MB."),
   ).toBeInTheDocument();
   expect(uploadShopBanner).not.toHaveBeenCalled();
 });
 it("keeps the saved banner when the selection is cancelled", async () => {
   const { onDirty } = setup();
   const user = userEvent.setup();
-  await user.upload(screen.getByLabelText("Replace banner"), file());
+  await selectAndCrop(user, screen.getByLabelText(/Banner.*optional/), file());
   await user.click(screen.getByRole("button", { name: "Cancel selection" }));
-  expect(screen.getByRole("img", { name: "Cafe banner" })).toHaveAttribute(
-    "src",
-    membership.shop.bannerUrl,
-  );
+  expect(
+    screen.getByRole("img", { name: "Current banner photo" }),
+  ).toHaveAttribute("src", membership.shop.bannerUrl);
   expect(onDirty).toHaveBeenLastCalledWith(false);
 });
 it("retains the selection for retry after a known storage failure", async () => {
@@ -157,19 +158,19 @@ it("retains the selection for retry after a known storage failure", async () => 
   });
   setup();
   const user = userEvent.setup();
-  await user.upload(screen.getByLabelText("Replace banner"), file());
+  await selectAndCrop(user, screen.getByLabelText(/Banner.*optional/), file());
   await user.click(screen.getByRole("button", { name: "Upload banner" }));
   await screen.findByText(/Banner uploads are unavailable/);
   expect(screen.getByRole("button", { name: "Upload banner" })).toBeEnabled();
   expect(
-    screen.getByRole("img", { name: "Selected preview banner" }),
+    screen.getByRole("img", { name: "Selected banner photo preview" }),
   ).toBeInTheDocument();
 });
 it("locks retries after an uncertain save", async () => {
   vi.mocked(uploadShopBanner).mockRejectedValue(new Error("Disconnected"));
   setup();
   const user = userEvent.setup();
-  await user.upload(screen.getByLabelText("Replace banner"), file());
+  await selectAndCrop(user, screen.getByLabelText(/Banner.*optional/), file());
   await user.click(screen.getByRole("button", { name: "Upload banner" }));
   await screen.findByText(/We could not confirm/);
   expect(screen.getByRole("button", { name: "Upload banner" })).toBeDisabled();
@@ -183,7 +184,7 @@ it("does not repopulate caches after an account change while uploading", async (
   );
   const { client } = setup();
   const user = userEvent.setup();
-  await user.upload(screen.getByLabelText("Replace banner"), file());
+  await selectAndCrop(user, screen.getByLabelText(/Banner.*optional/), file());
   await user.click(screen.getByRole("button", { name: "Upload banner" }));
   client.setQueryData(["auth", "me"], {
     user: { id: "other-user", memberships: [] },

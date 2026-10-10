@@ -72,6 +72,9 @@ it("renders branding drafts with shared menu content while preserving the publis
   });
   await screen.findByRole("heading", { name: "Draft cafe" });
   const region = screen.getByRole("region", { name: "Customer menu preview" });
+  expect(
+    within(region).queryByRole("switch", { name: "Dark appearance" }),
+  ).not.toBeInTheDocument();
   const rendered = region.querySelector<HTMLElement>(".public-menu")!;
   expect(rendered).toHaveAttribute("data-layout", "grid");
   expect(rendered.style.getPropertyValue("--menu-primary")).toBe("#AABBCC");
@@ -92,17 +95,53 @@ it("renders branding drafts with shared menu content while preserving the publis
   expect(
     screen.getByText(/Showing your unsaved branding changes/),
   ).toBeInTheDocument();
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "Desktop" }));
+  const display = screen.getByRole("region", {
+    name: "Menu inside desktop display",
+  });
+  expect(
+    within(display).getByRole("heading", { name: "Draft cafe" }),
+  ).toBeInTheDocument();
+  expect(
+    within(display).getByRole("img", { name: "Draft cafe banner" }),
+  ).toHaveAttribute("src", "blob:banner");
+  expect(
+    display
+      .querySelector<HTMLElement>(".public-menu")!
+      .style.getPropertyValue("--menu-primary"),
+  ).toBe("#AABBCC");
 });
 it("updates immediately when saved menu data is invalidated and switches preview widths", async () => {
   vi.mocked(api.get).mockResolvedValue({ data: menu });
   const { client } = setup();
   await screen.findByRole("heading", { name: "Cafe" });
+  expect(
+    within(screen.getByRole("region", { name: "Menu inside phone" })).getByRole(
+      "heading",
+      { name: "Cafe" },
+    ),
+  ).toBeInTheDocument();
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "Desktop" }));
+  expect(
+    screen.queryByRole("region", { name: "Menu inside phone" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Desktop" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
+  const display = screen.getByRole("region", {
+    name: "Menu inside desktop display",
+  });
+  expect(
+    within(display).getByRole("heading", { name: "Cafe" }),
+  ).toBeInTheDocument();
+  expect(display).toHaveAttribute("tabindex", "0");
+  expect(
+    within(display).queryByRole("switch", { name: "Dark appearance" }),
+  ).not.toBeInTheDocument();
   vi.mocked(api.get).mockResolvedValue({
     data: {
       ...menu,
@@ -119,6 +158,19 @@ it("updates immediately when saved menu data is invalidated and switches preview
   expect(
     screen.queryByRole("region", { name: "Featured" }),
   ).not.toBeInTheDocument();
+  expect(
+    within(display).getByRole("heading", { name: "Updated tea" }),
+  ).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Phone" }));
+  expect(
+    screen.queryByRole("region", { name: "Menu inside desktop display" }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(screen.getByRole("region", { name: "Menu inside phone" })).getByRole(
+      "heading",
+      { name: "Updated tea" },
+    ),
+  ).toBeInTheDocument();
 });
 it("keeps menus scoped to the selected shop on shop switches", async () => {
   vi.mocked(api.get).mockImplementation(async (url) => ({

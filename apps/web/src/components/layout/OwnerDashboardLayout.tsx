@@ -19,6 +19,8 @@ import {
   FiCheck,
   FiLayers,
   FiEye,
+  FiPackage,
+  FiShoppingBag,
 } from "react-icons/fi";
 import type { CurrentUserResponse, UserMembership } from "@paserve/contracts";
 import { hasShopPermission } from "@paserve/contracts";
@@ -253,11 +255,6 @@ export function DashboardFrame({
             </div>
           )}
           <nav aria-label="Shop navigation">
-            {membership?.role === "OWNER" && (
-              <NavLink to={`${shopPath(membership.shopId)}/menu-preview`} onClick={closeNavigation}>
-                <FiEye aria-hidden="true" /> Menu preview
-              </NavLink>
-            )}
             {membership && (
               <NavLink
                 end
@@ -266,6 +263,11 @@ export function DashboardFrame({
               >
                 <FiGrid aria-hidden="true" />
                 Overview
+              </NavLink>
+            )}
+            {membership?.role === "OWNER" && (
+              <NavLink to={`${shopPath(membership.shopId)}/menu-preview`} onClick={closeNavigation}>
+                <FiEye aria-hidden="true" /> Menu preview
               </NavLink>
             )}
             {membership?.role === "OWNER" && (
@@ -293,12 +295,12 @@ export function DashboardFrame({
                   to={`${shopPath(membership.shopId)}/products`}
                   onClick={closeNavigation}
                 >
-                  <FiCoffee aria-hidden="true" />
+                  <FiPackage aria-hidden="true" />
                   Products
                 </NavLink>
               )}
             <NavLink end to="/app/shops" onClick={closeNavigation}>
-              <FiCoffee aria-hidden="true" />
+              <FiShoppingBag aria-hidden="true" />
               Your shops
             </NavLink>
             <NavLink to="/app/account" onClick={closeNavigation}>

@@ -13,6 +13,8 @@ export function ProductPhotoPicker({
   progress = 0,
   hint = "Your photo uploads when you create the product.",
   children,
+  kind = "product",
+  selectedPreviewUrl,
 }: {
   file: File | null;
   disabled: boolean;
@@ -23,6 +25,8 @@ export function ProductPhotoPicker({
   progress?: number;
   hint?: string;
   children?: ReactNode;
+  kind?: "product" | "logo" | "banner";
+  selectedPreviewUrl?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState("");
@@ -34,7 +38,10 @@ export function ProductPhotoPicker({
     },
     [preview, file],
   );
-  const source = file ? preview : currentImageUrl;
+  const title =
+    kind === "product" ? "Photo" : kind === "logo" ? "Logo" : "Banner";
+  const id = `${kind}-photo`;
+  const source = file ? (selectedPreviewUrl ?? preview) : currentImageUrl;
   function select(selected?: File) {
     if (!selected || disabled || pending) return;
     const message = !(PRODUCT_IMAGE_TYPES as readonly string[]).includes(
@@ -44,21 +51,21 @@ export function ProductPhotoPicker({
       : !selected.size || selected.size > PRODUCT_IMAGE_LIMITS.maxBytes
         ? "Choose an image between 1 byte and 5 MB."
         : "";
+    setFailedImage("");
     setPreview(
       !message && URL.createObjectURL ? URL.createObjectURL(selected) : "",
     );
-    setFailedImage("");
     onChange(message ? null : selected, message);
   }
   return (
     <section
-      className="product-photo-panel"
-      aria-label="Product photo"
+      className={`product-photo-panel ${kind}-photo-panel`}
+      aria-label={kind === "product" ? "Product photo" : `Shop ${kind}`}
       aria-busy={pending}
     >
       <div className="product-photo-heading">
-        <label id="product-photo-title" htmlFor="product-photo-file">
-          Photo <span className="field-hint">(optional)</span>
+        <label id={`${id}-title`} htmlFor={`${id}-file`}>
+          {title} <span className="field-hint">(optional)</span>
         </label>
         {(file || currentImageUrl) && (
           <span className="product-photo-state">
@@ -68,13 +75,13 @@ export function ProductPhotoPicker({
       </div>
       <input
         ref={input}
-        id="product-photo-file"
+        id={`${id}-file`}
         className="product-photo-input"
         type="file"
         accept={PRODUCT_IMAGE_TYPES.join(",")}
         disabled={disabled || pending}
         aria-invalid={Boolean(error)}
-        aria-describedby={`product-photo-hint${error ? " product-photo-error" : ""}`}
+        aria-describedby={`${id}-hint${error ? ` ${id}-error` : ""}`}
         onChange={(event) => {
           select(event.target.files?.[0]);
           event.target.value = "";
@@ -84,8 +91,8 @@ export function ProductPhotoPicker({
         className={`product-photo-dropzone${dragging ? " is-dragging" : ""}${source ? " has-photo" : ""}`}
         type="button"
         disabled={disabled || pending}
-        aria-label={file || currentImageUrl ? "Replace photo" : "Choose photo"}
-        aria-describedby="product-photo-hint"
+        aria-label={`${file || currentImageUrl ? "Replace" : "Choose"} ${kind === "product" ? "photo" : kind}`}
+        aria-describedby={`${id}-hint`}
         onClick={() => input.current?.click()}
         onDragOver={(event) => {
           event.preventDefault();
@@ -112,8 +119,8 @@ export function ProductPhotoPicker({
               src={source}
               alt={
                 file
-                  ? "Selected product photo preview"
-                  : "Current product photo"
+                  ? `Selected ${kind} photo preview`
+                  : `Current ${kind} photo`
               }
               onError={() => setFailedImage(source)}
             />
@@ -127,14 +134,18 @@ export function ProductPhotoPicker({
               ? "YOUR NEXT MENU PHOTO"
               : currentImageUrl
                 ? "ON YOUR MENU"
-                : "MAKE IT LOOK DELICIOUS"}
+                : kind === "product"
+                  ? "MAKE IT LOOK DELICIOUS"
+                  : "YOUR SHOP, YOUR STYLE"}
           </span>
           <strong>
             {file
               ? file.name
               : currentImageUrl
                 ? "A fresh look, anytime."
-                : "Add a little appetite."}
+                : kind === "product"
+                  ? "Add a little appetite."
+                  : `Make your ${kind} stand out.`}
           </strong>
           <span>
             {file || currentImageUrl
@@ -143,11 +154,13 @@ export function ProductPhotoPicker({
           </span>
           <span className="product-photo-browse">
             <FiUploadCloud aria-hidden="true" />
-            {file || currentImageUrl ? "Replace photo" : "Choose photo"}
+            {file || currentImageUrl
+              ? `Replace ${kind === "product" ? "photo" : kind}`
+              : `Choose ${kind === "product" ? "photo" : kind}`}
           </span>
         </span>
       </button>
-      <p id="product-photo-hint" className="field-hint">
+      <p id={`${id}-hint`} className="field-hint">
         JPEG, PNG or WebP, up to 5 MB. {hint}
       </p>
       {file && (
@@ -172,7 +185,7 @@ export function ProductPhotoPicker({
             }}
           >
             <FiX aria-hidden="true" />
-            Remove photo
+            {kind === "product" ? "Remove photo" : "Cancel selection"}
           </button>
         </div>
       )}
@@ -191,11 +204,15 @@ export function ProductPhotoPicker({
           Clear selection
         </button>
       )}
-      {error && <InlineMessage id="product-photo-error">{error}</InlineMessage>}
+      {error && <InlineMessage id={`${id}-error`}>{error}</InlineMessage>}
       {pending && (
         <div className="product-photo-progress">
           <progress
-            aria-label="Photo upload progress"
+            aria-label={
+              kind === "product"
+                ? "Photo upload progress"
+                : `${title} upload progress`
+            }
             value={progress}
             max={100}
           />

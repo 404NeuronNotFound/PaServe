@@ -274,7 +274,7 @@ export const SHOP_BANNER_LIMITS = {
   maxPixels: 16_000_000,
   maxDimension: 8192,
   outputWidth: 1920,
-  outputHeight: 1080,
+  outputHeight: 640,
 } as const;
 export const SHOP_BANNER_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export interface ShopBannerResponse {

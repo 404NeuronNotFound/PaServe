@@ -1,3 +1,4 @@
+import { installCropPlatform, selectAndCrop } from "../../test/crop-platform";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -33,6 +34,7 @@ const closeDescriptor = Object.getOwnPropertyDescriptor(
   "close",
 );
 beforeEach(() => {
+  installCropPlatform();
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
     configurable: true,
     value: vi.fn(function (this: HTMLDialogElement) {
@@ -88,13 +90,14 @@ it("saves a banner without losing business edits and locks conflicting controls 
   const business = await screen.findByLabelText("Business name (required)");
   await user.clear(business);
   await user.type(business, "Unsaved new name");
-  await user.upload(
-    screen.getByLabelText("Choose banner"),
+  await selectAndCrop(
+    user,
+    screen.getByLabelText(/Banner.*optional/),
     new File(["image"], "banner.png", { type: "image/png" }),
   );
   await user.click(screen.getByRole("button", { name: "Upload banner" }));
   expect(business).toBeDisabled();
-  expect(screen.getByLabelText("Choose logo")).toBeDisabled();
+  expect(screen.getByLabelText(/Logo.*optional/)).toBeDisabled();
   expect(screen.getByRole("button", { name: "Save settings" })).toBeDisabled();
   complete({
     shop: { ...shop, bannerUrl: "https://example.com/banner.webp" },
@@ -102,10 +105,9 @@ it("saves a banner without losing business edits and locks conflicting controls 
   });
   await vi.waitFor(() => expect(business).toBeEnabled());
   expect(business).toHaveValue("Unsaved new name");
-  expect(screen.getByRole("img", { name: "Cafe A banner" })).toHaveAttribute(
-    "src",
-    "https://example.com/banner.webp",
-  );
+  expect(
+    screen.getByRole("img", { name: "Current banner photo" }),
+  ).toHaveAttribute("src", "https://example.com/banner.webp");
   expect(screen.getByRole("button", { name: "Save settings" })).toBeEnabled();
 });
 afterEach(() => {
@@ -169,10 +171,8 @@ it("previews unsaved branding without publishing it and preserves edits when clo
     screen.getByRole("textbox", { name: "Primary color" }),
     "#AABBCC",
   );
-  await user.selectOptions(
-    screen.getByRole("combobox", { name: "Menu layout" }),
-    "grid",
-  );
+  await user.click(screen.getByRole("combobox", { name: "Menu layout" }));
+  await user.click(screen.getByRole("option", { name: "Grid" }));
   await user.click(screen.getByRole("button", { name: "Preview changes" }));
   const dialog = await screen.findByRole("dialog", { name: "Preview changes" });
   expect(
@@ -222,12 +222,14 @@ it("shows selected branding images before upload and restores saved images when 
   setup();
   const user = userEvent.setup();
   await screen.findByLabelText("Business name (required)");
-  await user.upload(
-    screen.getByLabelText("Replace logo"),
+  await selectAndCrop(
+    user,
+    screen.getByLabelText(/Logo.*optional/),
     new File(["image"], "logo.png", { type: "image/png" }),
   );
-  await user.upload(
-    screen.getByLabelText("Replace banner"),
+  await selectAndCrop(
+    user,
+    screen.getByLabelText(/Banner.*optional/),
     new File(["image"], "banner.png", { type: "image/png" }),
   );
   await user.click(screen.getByRole("button", { name: "Preview changes" }));
@@ -236,13 +238,15 @@ it("shows selected branding images before upload and restores saved images when 
   );
   expect(
     await dialog.findByRole("img", { name: "Cafe A logo" }),
-  ).toHaveAttribute("src", "blob:logo.png");
+  ).toHaveAttribute("src", "blob:logo-cropped.png");
   expect(dialog.getByRole("img", { name: "Cafe A banner" })).toHaveAttribute(
     "src",
-    "blob:banner.png",
+    "blob:banner-cropped.png",
   );
   await user.click(dialog.getByRole("button", { name: "Back to editing" }));
-  await user.click(screen.getAllByRole("button", { name: "Cancel selection" })[1]);
+  await user.click(
+    screen.getAllByRole("button", { name: "Cancel selection" })[1],
+  );
   await user.click(screen.getByRole("button", { name: "Preview changes" }));
   expect(
     await within(
@@ -258,10 +262,15 @@ it("loads the default layout and persists changes through the active shop settin
   const invalidate = vi.spyOn(client, "invalidateQueries");
   const user = userEvent.setup();
   const select = await screen.findByRole("combobox", { name: "Menu layout" });
-  expect(select).toHaveValue("list");
+  expect(select).toHaveTextContent("List");
   for (const menuLayout of ["grid", "compact", "list"] as const) {
     vi.mocked(updateShop).mockResolvedValue({ shop: { ...shop, menuLayout } });
-    await user.selectOptions(select, menuLayout);
+    await user.click(select);
+    await user.click(
+      screen.getByRole("option", {
+        name: menuLayout[0].toUpperCase() + menuLayout.slice(1),
+      }),
+    );
     await user.click(screen.getByRole("button", { name: "Save settings" }));
     await vi.waitFor(() =>
       expect(
@@ -269,7 +278,9 @@ it("loads the default layout and persists changes through the active shop settin
       ).toBeDisabled(),
     );
     expect(updateShop).toHaveBeenLastCalledWith("shop-a", { menuLayout });
-    expect(select).toHaveValue(menuLayout);
+    expect(select).toHaveTextContent(
+      menuLayout[0].toUpperCase() + menuLayout.slice(1),
+    );
   }
   expect(invalidate).toHaveBeenCalledWith({
     queryKey: ["public-menu", "cafe-a"],

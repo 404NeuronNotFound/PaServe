@@ -9,8 +9,6 @@ import {
   SHOP_SETTINGS_LIMITS,
   isValidShopPhone,
   SHOP_PHONE_HINT,
-  DEFAULT_MENU_PRIMARY_COLOR,
-  DEFAULT_MENU_ACCENT_COLOR,
   SHOP_ACCENT_COLOR_HINT,
   MENU_LAYOUTS,
   DEFAULT_MENU_LAYOUT,
@@ -38,6 +36,9 @@ import { FiSave, FiRotateCcw, FiArrowLeft } from "react-icons/fi";
 import { ShopLogoUpload } from "./ShopLogoUpload";
 import { ShopBannerUpload } from "./ShopBannerUpload";
 import { MenuPreviewDialog } from "./MenuPreviewDialog";
+import { BrandColorControl } from "./BrandColorControl";
+import { SelectField } from "../../components/forms/SelectField";
+import "./shop-settings.css";
 
 const fields = [
   {
@@ -262,7 +263,9 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
     if (first)
       requestAnimationFrame(() =>
         form.current
-          ?.querySelector<HTMLElement>(`[name="${first.key}"]`)
+          ?.querySelector<HTMLElement>(
+            `[name="${first.key}"], #settings-${first.key}`,
+          )
           ?.focus(),
       );
   }
@@ -393,46 +396,54 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
       className="shop-context-content profile-card shop-create-card shop-settings-card"
       aria-labelledby="settings-heading"
     >
-      <p className="section-label">{membership.shop.name}</p>
-      <h1 id="settings-heading" ref={heading} tabIndex={-1}>
-        Shop settings
-      </h1>
-      <p className="form-intro">
-        Keep your business details up to date. Contact and operating details are
-        optional.
-      </p>
-      <p className="field-hint">
-        Menu slug: <strong>{shop.slug}</strong>. Changing your name keeps this
-        address.
-      </p>
-      <ShopLogoUpload
-        shopId={shop.id}
-        membershipId={membership.id}
-        name={shop.name}
-        logoUrl={shop.logoUrl}
-        disabled={mutation.isPending || bannerPending}
-        onPending={setLogoPending}
-        onDirty={setLogoDirty}
-        onPreview={setPreviewLogo}
-      />
-      <ShopBannerUpload
-        shopId={shop.id}
-        membershipId={membership.id}
-        name={shop.name}
-        bannerUrl={shop.bannerUrl}
-        disabled={mutation.isPending || logoPending}
-        onPending={setBannerPending}
-        onDirty={setBannerDirty}
-        onPreview={setPreviewBanner}
-      />
-      <button
-        id="preview-settings-changes"
-        className="secondary-button"
-        type="button"
-        onClick={() => setPreviewOpen(true)}
-      >
-        Preview changes
-      </button>
+      <header className="settings-editor-header">
+        <div>
+          <p className="section-label">
+            {membership.shop.name} · MAKE IT YOURS
+          </p>
+          <h1 id="settings-heading" ref={heading} tabIndex={-1}>
+            Shop settings
+          </h1>
+          <p className="form-intro">
+            A recognizable brand. A welcoming menu. Make every detail feel like
+            your shop.
+          </p>
+          <p className="settings-menu-address">
+            Menu slug: <strong>{shop.slug}</strong>. Changing your name keeps
+            this address.
+          </p>
+        </div>
+        <button
+          id="preview-settings-changes"
+          className="secondary-button"
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+        >
+          Preview changes
+        </button>
+      </header>
+      <div className="settings-assets">
+        <ShopLogoUpload
+          shopId={shop.id}
+          membershipId={membership.id}
+          name={shop.name}
+          logoUrl={shop.logoUrl}
+          disabled={mutation.isPending || bannerPending}
+          onPending={setLogoPending}
+          onDirty={setLogoDirty}
+          onPreview={setPreviewLogo}
+        />
+        <ShopBannerUpload
+          shopId={shop.id}
+          membershipId={membership.id}
+          name={shop.name}
+          bannerUrl={shop.bannerUrl}
+          disabled={mutation.isPending || logoPending}
+          onPending={setBannerPending}
+          onDirty={setBannerDirty}
+          onPreview={setPreviewBanner}
+        />
+      </div>
       <form
         ref={form}
         className="registration-form settings-form-grid"
@@ -459,43 +470,27 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                 </label>
                 {(field.key === "primaryColor" ||
                   field.key === "accentColor") && (
-                  <input
-                    type="color"
-                    className="shop-color-picker"
-                    aria-label={`Choose ${field.label.toLowerCase()}`}
-                    aria-describedby={`settings-${field.key}-hint`}
-                    value={
-                      isValidShopPrimaryColor(values[field.key]) &&
-                      values[field.key].trim()
-                        ? normalizeShopPrimaryColor(values[field.key])
-                        : field.key === "primaryColor"
-                          ? DEFAULT_MENU_PRIMARY_COLOR
-                          : DEFAULT_MENU_ACCENT_COLOR
-                    }
+                  <BrandColorControl
+                    kind={field.key}
+                    value={values[field.key]}
                     disabled={busy}
-                    onChange={(event) =>
-                      changeField(field.key, event.target.value)
-                    }
+                    onChange={(value) => changeField(field.key, value)}
                   />
                 )}
                 {field.key === "menuLayout" ? (
-                  <select
+                  <SelectField
                     id="settings-menuLayout"
-                    name="menuLayout"
+                    label="Menu layout"
                     value={values.menuLayout}
                     disabled={busy}
-                    aria-invalid={Boolean(errors.menuLayout)}
-                    aria-describedby={`settings-menuLayout-hint${errors.menuLayout ? " settings-menuLayout-error" : ""}`}
-                    onChange={(event) =>
-                      changeField("menuLayout", event.target.value)
-                    }
-                  >
-                    {MENU_LAYOUTS.map((layout) => (
-                      <option key={layout} value={layout}>
-                        {layout[0].toUpperCase() + layout.slice(1)}
-                      </option>
-                    ))}
-                  </select>
+                    invalid={Boolean(errors.menuLayout)}
+                    describedBy={`settings-menuLayout-hint${errors.menuLayout ? " settings-menuLayout-error" : ""}`}
+                    onChange={(value) => changeField("menuLayout", value)}
+                    options={MENU_LAYOUTS.map((layout) => ({
+                      value: layout,
+                      label: layout[0].toUpperCase() + layout.slice(1),
+                    }))}
+                  />
                 ) : "multiline" in field ? (
                   <textarea
                     id={`settings-${field.key}`}

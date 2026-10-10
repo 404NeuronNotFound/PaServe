@@ -33,7 +33,7 @@ export function PublicMenuView({
           <h1>{shop.name}</h1>
           {shop.description && <p>{shop.description}</p>}
         </div>
-        <AppearanceToggle />
+        {!preview && <AppearanceToggle />}
       </header>
       {!products.length && <p>No items are available on this menu yet.</p>}
       {!!featuredProducts.length && (

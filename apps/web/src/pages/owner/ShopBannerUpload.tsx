@@ -3,15 +3,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { FiUpload } from "react-icons/fi";
 import {
-  SHOP_BANNER_LIMITS,
-  SHOP_BANNER_TYPES,
   type CurrentUserResponse,
   type ShopSettingsResponse,
 } from "@paserve/contracts";
 import { uploadShopBanner } from "../../features/shops/api/banner";
 import { currentUserKey } from "../../features/auth/api/session";
-import { ShopBanner } from "../../components/shops/ShopBanner";
-import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { BrandPhotoPicker } from "./BrandPhotoPicker";
 import { feedback } from "../../app/stores/feedback";
 
 export function ShopBannerUpload({
@@ -51,7 +48,7 @@ export function ShopBannerUpload({
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState(0);
   const [refreshRequired, setRefreshRequired] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
+  const [cropping, setCropping] = useState(false);
   const running = useRef(false);
   const mounted = useRef(false);
   useEffect(() => {
@@ -61,8 +58,8 @@ export function ShopBannerUpload({
     };
   }, []);
   useEffect(() => {
-    onDirty(Boolean(file));
-  }, [file, onDirty]);
+    onDirty(Boolean(file) || cropping);
+  }, [file, cropping, onDirty]);
   useEffect(
     () => () => {
       if (preview) URL.revokeObjectURL?.(preview);
@@ -71,14 +68,14 @@ export function ShopBannerUpload({
   );
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
-      if (file || pending) {
+      if (file || pending || cropping) {
         event.preventDefault();
         event.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [file, pending]);
+  }, [file, pending, cropping]);
   const stillHere = () =>
     mounted.current &&
     client.getQueryData<CurrentUserResponse>(currentUserKey)?.user.id ===
@@ -87,7 +84,6 @@ export function ShopBannerUpload({
     setFile(null);
     setPreview("");
     setError("");
-    if (input.current) input.current.value = "";
   }
   async function upload() {
     if (
@@ -162,73 +158,28 @@ export function ShopBannerUpload({
     }
   }
   return (
-    <section
-      className="shop-banner-upload"
-      aria-labelledby="shop-banner-heading"
-      aria-busy={pending}
+    <BrandPhotoPicker
+      kind="banner"
+      file={file}
+      selectedPreviewUrl={preview}
+      currentImageUrl={savedUrl || ""}
+      disabled={disabled || pending || refreshRequired}
+      error={error}
+      pending={pending}
+      progress={progress}
+      hint={`Crop to a wide, 3:1 frame. Your image saves separately from business details for ${name}.`}
+      onCropping={(value) => {
+        setCropping(value);
+        onPending(value);
+      }}
+      onChange={(selected, message) => {
+        setFile(selected);
+        setError(message);
+        setPreview(
+          selected && URL.createObjectURL ? URL.createObjectURL(selected) : "",
+        );
+      }}
     >
-      <h2 id="shop-banner-heading">Shop banner</h2>
-      <p className="field-hint">
-        Your banner appears at the top of your public menu. Upload saves it
-        separately from business details.
-      </p>
-      <ShopBanner
-        url={file ? preview : savedUrl}
-        name={file ? "Selected preview" : name}
-      />
-      <div className="field">
-        <label htmlFor="shop-banner-file">
-          {savedUrl ? "Replace banner" : "Choose banner"}
-        </label>
-        <input
-          ref={input}
-          id="shop-banner-file"
-          type="file"
-          accept={SHOP_BANNER_TYPES.join(",")}
-          disabled={disabled || pending || refreshRequired}
-          aria-invalid={Boolean(error)}
-          aria-describedby={`shop-banner-hint${error ? " shop-banner-error" : ""}`}
-          onChange={(event) => {
-            const selected = event.target.files?.[0];
-            if (!selected) return;
-            const message = !(SHOP_BANNER_TYPES as readonly string[]).includes(
-              selected.type,
-            )
-              ? "Choose a JPEG, PNG or WebP banner."
-              : !selected.size || selected.size > SHOP_BANNER_LIMITS.maxBytes
-                ? "Choose a banner between 1 byte and 5 MB."
-                : "";
-            setError(message);
-            setFile(message ? null : selected);
-            setPreview(
-              !message && URL.createObjectURL
-                ? URL.createObjectURL(selected)
-                : "",
-            );
-          }}
-        />
-        <p id="shop-banner-hint" className="field-hint">
-          JPEG, PNG or WebP, up to 5 MB and 16 megapixels. A wide image is
-          recommended (1920 x 640). The menu shows a centered 3:1 crop; keep
-          important details near the center.
-        </p>
-      </div>
-      {file && (
-        <p className="field-hint" role="status">
-          {file.name} —{" "}
-          {pending
-            ? "Uploading and saving banner…"
-            : "Selected banner is not saved yet."}
-        </p>
-      )}
-      {pending && (
-        <progress
-          aria-label="Banner upload progress"
-          value={progress}
-          max={100}
-        />
-      )}
-      {error && <InlineMessage id="shop-banner-error">{error}</InlineMessage>}
       <div className="shop-context-actions">
         <button
           type="button"
@@ -237,19 +188,9 @@ export function ShopBannerUpload({
           onClick={() => void upload()}
         >
           <FiUpload aria-hidden="true" />
-          {pending ? "Saving banner…" : "Upload banner"}
+          {pending ? "Saving banner..." : "Upload banner"}
         </button>
-        {file && (
-          <button
-            type="button"
-            className="secondary-button"
-            disabled={disabled || pending || refreshRequired}
-            onClick={clear}
-          >
-            Cancel selection
-          </button>
-        )}
       </div>
-    </section>
+    </BrandPhotoPicker>
   );
 }
