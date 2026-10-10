@@ -13,6 +13,12 @@ describe('Shop slug generation', () => {
     ['North 🥐 Café', 'north-cafe'],
     ['API', 'api-shop'],
     ['admin', 'admin-shop'],
+    ['app', 'app-shop'],
+    ['login', 'login-shop'],
+    ['register', 'register-shop'],
+    ['shops', 'shops-shop'],
+    ['Menu', 'menu-shop'],
+    ['Connection', 'connection-shop'],
     ['茶馆', 'shop'],
     ['☕️ !!!', 'shop'],
   ])('generates a readable, URL-safe slug for %s', (name, expected) => {

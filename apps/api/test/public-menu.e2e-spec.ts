@@ -101,9 +101,24 @@ describe('public menu visibility', () => {
       'slug',
     ]);
   });
-  it('does not reveal missing or inactive shops', async () => {
-    findShop.mockResolvedValue(null);
-    await request(app.getHttpServer()).get('/api/v1/menu/missing').expect(404);
+  it.each(['missing', 'inactive'])('does not reveal the %s shop', async (slug) => {
+    const inactiveShop = { id: 'inactive-shop', slug: 'inactive', isActive: false };
+    findShop.mockImplementation(async ({ where }) =>
+      where.slug === inactiveShop.slug && where.isActive === inactiveShop.isActive
+        ? inactiveShop
+        : null,
+    );
+    const response = await request(app.getHttpServer()).get(`/api/v1/menu/${slug}`).expect(404);
+    expect(response.body).toMatchObject({
+      code: 'MENU_NOT_FOUND',
+      message: 'This menu is unavailable.',
+    });
+    expect(response.body.shop).toBeUndefined();
+    expect(response.body.products).toBeUndefined();
+    expect(findShop).toHaveBeenCalledWith({
+      where: { slug, isActive: true },
+      select: { id: true },
+    });
     expect(findShop).toHaveBeenCalledTimes(1);
   });
   it('derives the featured section from the eligible ordered menu without changing sold-out state', async () => {

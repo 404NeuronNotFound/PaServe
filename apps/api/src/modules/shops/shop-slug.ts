@@ -10,6 +10,8 @@ const reservedNames = new Set([
   'login',
   'register',
   'shops',
+  'menu',
+  'connection',
 ]);
 // These Latin letters do not decompose into an ASCII letter with NFKD.
 const latinLetters: Record<string, string> = {
