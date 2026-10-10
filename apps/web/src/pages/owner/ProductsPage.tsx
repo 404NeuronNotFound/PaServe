@@ -30,6 +30,7 @@ import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { feedback } from "../../app/stores/feedback";
 import "./categories.css";
 import "./products.css";
+import { formatProductPrice } from "../../lib/money";
 
 export function ProductsPage() {
   const membership = useActiveShop();
@@ -246,6 +247,17 @@ function ProductWorkspace({ userId }: { userId: string }) {
                 <li key={product.id}>
                   <span className="product-emblem">
                     <FiCoffee aria-hidden="true" />
+                    {product.imageUrl && (
+                      <img
+                        src={product.imageUrl}
+                        alt=""
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        onError={(event) => {
+                          event.currentTarget.hidden = true;
+                        }}
+                      />
+                    )}
                   </span>
                   <div className="product-card-details">
                     <div className="product-card-title">
@@ -289,7 +301,9 @@ function ProductWorkspace({ userId }: { userId: string }) {
                     </div>
                   </div>
                   <div className="product-card-actions">
-                    <strong className="product-price">{product.price}</strong>
+                    <strong className="product-price">
+                      {formatProductPrice(product.price)}
+                    </strong>
                     {!product.isArchived && (
                       <button
                         id={`edit-product-${product.id}`}

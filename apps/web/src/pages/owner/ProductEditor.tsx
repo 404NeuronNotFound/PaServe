@@ -27,6 +27,8 @@ import { currentUserKey } from "../../features/auth/api/session";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
+import { ProductImageUpload } from "./ProductImageUpload";
+import { formatProductPrice } from "../../lib/money";
 
 export function ProductEditor({
   userId,
@@ -40,6 +42,8 @@ export function ProductEditor({
   product?: MenuProduct;
 }) {
   const client = useQueryClient();
+  const [imageSaved, setImageSaved] = useState(product?.imageUrl ?? "");
+  const [uploading, setUploading] = useState(false);
   const [name, setName] = useState(product?.name ?? ""),
     [price, setPrice] = useState(product?.price ?? ""),
     [categoryId, setCategoryId] = useState(product?.categoryId ?? ""),
@@ -68,7 +72,7 @@ export function ProductEditor({
         price !== product.price ||
         categoryId !== (product.categoryId ?? "") ||
         description !== (product.description ?? "") ||
-        imageUrl !== (product.imageUrl ?? "") ||
+        imageUrl !== imageSaved ||
         featured !== product.isFeatured ||
         status !== product.status ||
         sortOrder !== String(product.sortOrder),
@@ -98,7 +102,7 @@ export function ProductEditor({
     retry: false,
     networkMode: "always",
   });
-  const disabled = mutation.isPending || closing || unavailable;
+  const disabled = mutation.isPending || uploading || closing || unavailable;
   function stillHere() {
     return (
       active.current &&
@@ -142,7 +146,7 @@ export function ProductEditor({
     );
   }
   function requestClose() {
-    if (running.current || closing || discard) return;
+    if (running.current || uploading || closing || discard) return;
     if (dirty) setDiscard(true);
     else close();
   }
@@ -231,7 +235,7 @@ export function ProductEditor({
             ...(values.description !== (product.description ?? "")
               ? { description: values.description }
               : {}),
-            ...(values.imageUrl !== (product.imageUrl ?? "")
+            ...(values.imageUrl !== imageSaved
               ? { imageUrl: values.imageUrl }
               : {}),
             ...(values.status !== product.status
@@ -331,7 +335,7 @@ export function ProductEditor({
           event.preventDefault();
           requestClose();
         }}
-        aria-busy={mutation.isPending}
+        aria-busy={mutation.isPending || uploading}
       >
         <section className="category-editor">
           <header className="category-modal-heading">
@@ -353,7 +357,7 @@ export function ProductEditor({
               type="button"
               className="secondary-button category-modal-close"
               aria-label="Close product form"
-              disabled={mutation.isPending || closing}
+              disabled={mutation.isPending || uploading || closing}
               onClick={requestClose}
             >
               <FiX aria-hidden="true" />
@@ -405,8 +409,13 @@ export function ProductEditor({
                   }}
                 />
                 <p id="product-price-hint" className="field-hint">
-                  Up to two decimal places. Zero is allowed.
+                  PHP · Up to two decimal places. Zero is allowed.
                 </p>
+                {PRODUCT_PRICE_PATTERN.test(price) && (
+                  <p className="field-hint" role="status">
+                    Menu price: <strong>{formatProductPrice(price)}</strong>
+                  </p>
+                )}
                 {fieldError("price")}
               </div>
               <div className="field">
@@ -519,6 +528,24 @@ export function ProductEditor({
             <details className="product-display-options">
               <summary>Image & display options</summary>
               <div>
+                {product ? (
+                  <ProductImageUpload
+                    userId={userId}
+                    shopId={shopId}
+                    productId={product.id}
+                    disabled={mutation.isPending || closing || unavailable}
+                    onPending={setUploading}
+                    onUploaded={(saved) => {
+                      setImageUrl(saved.imageUrl ?? "");
+                      setImageSaved(saved.imageUrl ?? "");
+                      clearField("imageUrl");
+                    }}
+                  />
+                ) : (
+                  <p className="field-hint">
+                    Create this product first, then open Edit to upload a photo.
+                  </p>
+                )}
                 <div className="field">
                   <label htmlFor="product-image">
                     Image URL <span className="field-hint">(optional)</span>
@@ -602,7 +629,7 @@ export function ProductEditor({
                 <button
                   className="secondary-button"
                   type="button"
-                  disabled={mutation.isPending || closing}
+                  disabled={mutation.isPending || uploading || closing}
                   onClick={requestClose}
                 >
                   Cancel

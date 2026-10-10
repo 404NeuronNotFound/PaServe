@@ -18,6 +18,7 @@ import {
   productsKey,
   updateProduct,
   setProductArchived,
+  uploadProductImage,
 } from "../../features/shops/api/products";
 import { listCategories } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
@@ -27,6 +28,7 @@ vi.mock("../../features/shops/api/products", async (original) => ({
   createProduct: vi.fn(),
   updateProduct: vi.fn(),
   setProductArchived: vi.fn(),
+  uploadProductImage: vi.fn(),
   listProducts: vi.fn(),
 }));
 vi.mock("../../features/shops/api/categories", async (original) => ({
@@ -137,6 +139,147 @@ async function edit() {
     modal: within(screen.getByRole("dialog", { name: "Edit product" })),
   };
 }
+it("shows PHP prices consistently in cards and the edit preview", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [{ ...product, price: "1234.56" }],
+  });
+  setup();
+  expect(await screen.findByText("₱1,234.56")).toBeInTheDocument();
+  const { user, modal } = await edit();
+  expect(modal.getByText("₱1,234.56")).toBeInTheDocument();
+  const input = modal.getByLabelText("Price");
+  await user.clear(input);
+  await user.type(input, "0.01");
+  expect(modal.getByText("₱0.01")).toBeInTheDocument();
+  await user.clear(input);
+  await user.type(input, "0");
+  expect(modal.getByText("₱0.00")).toBeInTheDocument();
+});
+it("uploads an image immediately while keeping other edits unsaved", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  const imageProduct = {
+    ...product,
+    imageUrl: "https://example.com/upload.webp",
+  };
+  vi.mocked(uploadProductImage).mockResolvedValue({
+    product: imageProduct,
+    storagePath: "a/p/upload.webp",
+  });
+  vi.mocked(updateProduct).mockResolvedValue({
+    product: { ...imageProduct, name: "Latte changed" },
+  });
+  const { client } = setup();
+  const { user, modal } = await edit();
+  await user.type(modal.getByLabelText("Product name"), " changed");
+  await user.click(modal.getByText("Image & display options"));
+  const file = new File(["image bytes"], "photo.png", { type: "image/png" });
+  await user.upload(modal.getByLabelText("Image file"), file);
+  vi.mocked(listProducts).mockResolvedValue({ products: [imageProduct] });
+  await user.click(modal.getByRole("button", { name: "Upload image" }));
+  await waitFor(() =>
+    expect(uploadProductImage).toHaveBeenCalledWith(
+      "a",
+      "p",
+      file,
+      expect.any(Function),
+    ),
+  );
+  expect(modal.getByLabelText(/Image URL/)).toHaveValue(imageProduct.imageUrl);
+  expect(modal.getByLabelText("Product name")).toHaveValue("Latte changed");
+  expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
+    products: [imageProduct],
+  });
+  expect(useFeedbackStore.getState().notices[0].message).toContain(
+    "image uploaded",
+  );
+  await user.click(modal.getByRole("button", { name: "Save changes" }));
+  await waitFor(() =>
+    expect(updateProduct).toHaveBeenCalledWith("a", "p", {
+      name: "Latte changed",
+    }),
+  );
+});
+it("validates file size and type before uploading", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  setup();
+  const { modal } = await edit();
+  fireEvent.click(modal.getByText("Image & display options"));
+  fireEvent.change(modal.getByLabelText("Image file"), {
+    target: {
+      files: [new File(["svg"], "bad.svg", { type: "image/svg+xml" })],
+    },
+  });
+  expect(
+    modal.getByText("Choose a JPEG, PNG or WebP image."),
+  ).toBeInTheDocument();
+  fireEvent.change(modal.getByLabelText("Image file"), {
+    target: {
+      files: [
+        new File([new Uint8Array(5 * 1024 * 1024 + 1)], "big.png", {
+          type: "image/png",
+        }),
+      ],
+    },
+  });
+  expect(modal.getByText(/between 1 byte and 5 MB/)).toBeInTheDocument();
+  expect(uploadProductImage).not.toHaveBeenCalled();
+});
+it("keeps the previous image and selected file on upload failure", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [{ ...product, imageUrl: "https://example.com/old.webp" }],
+  });
+  vi.mocked(uploadProductImage).mockRejectedValue({
+    isAxiosError: true,
+    response: { status: 503, data: { code: "PRODUCT_STORAGE_UNAVAILABLE" } },
+  });
+  setup();
+  const { user, modal } = await edit();
+  await user.click(modal.getByText("Image & display options"));
+  await user.upload(
+    modal.getByLabelText("Image file"),
+    new File(["png"], "a.png", { type: "image/png" }),
+  );
+  await user.click(modal.getByRole("button", { name: "Upload image" }));
+  expect(
+    await modal.findByText(/Your current image is kept/),
+  ).toBeInTheDocument();
+  expect(modal.getByLabelText(/Image URL/)).toHaveValue(
+    "https://example.com/old.webp",
+  );
+  expect(modal.getByRole("button", { name: "Upload image" })).toBeEnabled();
+  expect(uploadProductImage).toHaveBeenCalledTimes(1);
+});
+it("blocks closing while uploading and ignores completion after unmount", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  let resolve!: (value: { product: MenuProduct; storagePath: string }) => void;
+  vi.mocked(uploadProductImage).mockReturnValue(
+    new Promise((done) => {
+      resolve = done;
+    }),
+  );
+  const { client, unmount } = setup();
+  const { user, modal } = await edit();
+  await user.click(modal.getByText("Image & display options"));
+  await user.upload(
+    modal.getByLabelText("Image file"),
+    new File(["png"], "a.png", { type: "image/png" }),
+  );
+  await user.click(modal.getByRole("button", { name: "Upload image" }));
+  expect(modal.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(
+    modal.getByRole("button", { name: "Close product form" }),
+  ).toBeDisabled();
+  unmount();
+  resolve({
+    product: { ...product, imageUrl: "https://example.com/late.webp" },
+    storagePath: "a/p/late.webp",
+  });
+  await new Promise((done) => setTimeout(done, 20));
+  expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
+    products: [product],
+  });
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
 it("confirms archival, retains the product in the archive and offers Undo", async () => {
   const archived = { ...product, isArchived: true };
   vi.mocked(listProducts).mockResolvedValue({ products: [product] });

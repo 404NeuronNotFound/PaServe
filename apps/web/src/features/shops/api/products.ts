@@ -6,11 +6,33 @@ import type {
   UpdateProductResponse,
   ProductArchiveRequest,
   ProductArchiveResponse,
+  ProductImageResponse,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
 export const productsKey = (userId: string, shopId: string) =>
   ["products", userId, shopId] as const;
+export async function uploadProductImage(
+  shopId: string,
+  productId: string,
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<ProductImageResponse> {
+  const body = new FormData();
+  body.append("file", file);
+  return (
+    await api.post<ProductImageResponse>(
+      `/shops/${encodeURIComponent(shopId)}/products/${encodeURIComponent(productId)}/image`,
+      body,
+      {
+        onUploadProgress: (event) => {
+          if (event.total)
+            onProgress?.(Math.round((event.loaded * 100) / event.total));
+        },
+      },
+    )
+  ).data;
+}
 export async function setProductArchived(
   shopId: string,
   productId: string,
