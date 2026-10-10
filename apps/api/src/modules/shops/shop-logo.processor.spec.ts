@@ -4,7 +4,7 @@ import { ShopLogoProcessor } from './shop-logo.processor.js';
 const processor = new ShopLogoProcessor();
 describe('shop logo processing', () => {
   it.each(['jpeg', 'png', 'webp'] as const)(
-    'fits %s inside 512px without cropping and strips metadata',
+    'normalizes %s to a 512px square and strips metadata',
     async (format) => {
       const buffer = await sharp({
         create: {
@@ -26,7 +26,7 @@ describe('shop logo processing', () => {
       expect(metadata).toMatchObject({
         format: 'webp',
         width: 512,
-        height: 256,
+        height: 512,
       });
       expect(metadata.exif).toBeUndefined();
       expect(metadata.icc).toBeUndefined();

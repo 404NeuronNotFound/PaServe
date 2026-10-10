@@ -4,7 +4,7 @@ import { ShopBannerProcessor } from './shop-banner.processor.js';
 const processor = new ShopBannerProcessor();
 describe('shop banner processing', () => {
   it.each(['jpeg', 'png', 'webp'] as const)(
-    'fits %s inside 1920x1080 without cropping and strips metadata',
+    'normalizes %s to a 1920x640 banner and strips metadata',
     async (format) => {
       const buffer = await sharp({
         create: {
@@ -26,7 +26,7 @@ describe('shop banner processing', () => {
       expect(metadata).toMatchObject({
         format: 'webp',
         width: 1920,
-        height: 960,
+        height: 640,
       });
       expect(metadata.exif).toBeUndefined();
       expect(metadata.icc).toBeUndefined();

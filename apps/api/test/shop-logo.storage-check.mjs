@@ -83,7 +83,7 @@ try {
               height,
               hasAlpha,
             })),
-          { width: 512, height: 256, hasAlpha: true },
+          { width: 512, height: 512, hasAlpha: true },
         );
         assert.equal(
           (await repository.findSettings(user.id, shop.id)).logoUrl,

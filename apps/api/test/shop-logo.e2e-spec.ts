@@ -104,8 +104,8 @@ describe('shop logo upload', () => {
     const metadata = await sharp(storage.upload.mock.calls[0][1]).metadata();
     expect(metadata).toMatchObject({
       format: 'webp',
-      width: 20,
-      height: 10,
+      width: 512,
+      height: 512,
       hasAlpha: true,
     });
     expect(storage.removePrevious).toHaveBeenCalledWith(shopId, shop.logoUrl);

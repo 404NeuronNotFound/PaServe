@@ -109,8 +109,8 @@ describe('shop banner upload', () => {
     const metadata = await sharp(storage.upload.mock.calls[0][1]).metadata();
     expect(metadata).toMatchObject({
       format: 'webp',
-      width: 20,
-      height: 10,
+      width: 1920,
+      height: 640,
       hasAlpha: true,
     });
     expect(storage.removePrevious).toHaveBeenCalledWith(shopId, shop.bannerUrl);

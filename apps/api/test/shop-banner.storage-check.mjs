@@ -83,7 +83,7 @@ try {
               height,
               hasAlpha,
             })),
-          { width: 1920, height: 960, hasAlpha: true },
+          { width: 1920, height: 640, hasAlpha: true },
         );
         assert.equal(
           (await repository.findSettings(user.id, shop.id)).bannerUrl,

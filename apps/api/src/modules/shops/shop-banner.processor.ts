@@ -66,8 +66,7 @@ export class ShopBannerProcessor {
         .resize({
           width: SHOP_BANNER_LIMITS.outputWidth,
           height: SHOP_BANNER_LIMITS.outputHeight,
-          fit: 'inside',
-          withoutEnlargement: true,
+          fit: 'cover',
         })
         .webp({ quality: 90 })
         .toBuffer();

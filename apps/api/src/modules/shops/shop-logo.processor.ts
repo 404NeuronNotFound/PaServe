@@ -66,8 +66,7 @@ export class ShopLogoProcessor {
         .resize({
           width: SHOP_LOGO_LIMITS.outputDimension,
           height: SHOP_LOGO_LIMITS.outputDimension,
-          fit: 'inside',
-          withoutEnlargement: true,
+          fit: 'cover',
         })
         .webp({ quality: 90 })
         .toBuffer();
