@@ -53,6 +53,7 @@ export class PublicMenuRepository {
             imageUrl: true,
             status: true,
             isFeatured: true,
+            featuredSortOrder: true,
             sortOrder: true,
           },
           orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],

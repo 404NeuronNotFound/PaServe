@@ -21,6 +21,7 @@ import type { ProductArchiveDto } from './product-archive.dto.js';
 import type { ProductAvailableDto } from './product-available.dto.js';
 import type { ProductFeaturedDto } from './product-featured.dto.js';
 import type { ReorderProductsDto } from './reorder-products.dto.js';
+import type { ReorderFeaturedProductsDto } from './reorder-featured-products.dto.js';
 
 @Injectable()
 export class ProductsService {
@@ -29,10 +30,27 @@ export class ProductsService {
     private readonly members: ShopMembersService,
     private readonly resources: TenantResourcesService,
   ) {}
+  reorderFeatured(
+    userId: string,
+    shopId: string,
+    dto: ReorderFeaturedProductsDto,
+  ) {
+    return this.reorder(
+      userId,
+      shopId,
+      {
+        productIds: dto.productIds,
+        expectedOrder: dto.expectedOrder,
+        categoryId: null,
+      },
+      true,
+    );
+  }
   async reorder(
     userId: string,
     shopId: string,
     dto: ReorderProductsDto,
+    featured = false,
   ): Promise<ProductsResponse> {
     await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
     if (
@@ -57,6 +75,7 @@ export class ProductsService {
         dto.categoryId,
         dto.productIds,
         dto.expectedOrder,
+        featured,
       );
       return {
         products: products.map((product) => ({

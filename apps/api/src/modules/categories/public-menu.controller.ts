@@ -34,7 +34,13 @@ export class PublicMenuController {
       shop,
       categories,
       products: menuProducts,
-      featuredProducts: menuProducts.filter((product) => product.isFeatured),
+      featuredProducts: menuProducts
+        .filter((product) => product.isFeatured)
+        .sort(
+          (a, b) =>
+            (a.featuredSortOrder ?? a.sortOrder) -
+              (b.featuredSortOrder ?? b.sortOrder) || a.id.localeCompare(b.id),
+        ),
     };
   }
 }

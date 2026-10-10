@@ -137,6 +137,37 @@ describe('public menu visibility', () => {
     });
     expect(response.body.products).toHaveLength(3);
   });
+  it('returns independent featured order while retaining normal product order', async () => {
+    const make = (
+      id: string,
+      sortOrder: number,
+      featuredSortOrder: number,
+    ) => ({
+      id,
+      sortOrder,
+      featuredSortOrder,
+      isFeatured: true,
+      status: 'AVAILABLE',
+      price: new Prisma.Decimal('12.50'),
+    });
+    findShop
+      .mockResolvedValueOnce({ id: 'shop-a' })
+      .mockResolvedValueOnce({
+        name: 'Cafe',
+        slug: 'cafe',
+        description: null,
+        categories: [],
+        products: [make('a', 0, 1), make('b', 1, 0)],
+      });
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/menu/cafe')
+      .expect(200);
+    expect(response.body.products.map((item) => item.id)).toEqual(['a', 'b']);
+    expect(response.body.featuredProducts.map((item) => item.id)).toEqual([
+      'b',
+      'a',
+    ]);
+  });
   it('marks an available public product as orderable', async () => {
     findShop.mockResolvedValueOnce({ id: 'shop-a' }).mockResolvedValueOnce({
       name: 'Cafe',

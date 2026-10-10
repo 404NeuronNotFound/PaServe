@@ -23,6 +23,7 @@ const productSelect = {
   isFeatured: true,
   isArchived: true,
   sortOrder: true,
+  featuredSortOrder: true,
   createdAt: true,
 } as const;
 export type ProductCreateData = {
@@ -45,10 +46,21 @@ export class ProductsRepository {
     categoryId: string | null,
     productIds: string[],
     expectedOrder: string[],
+    featured = false,
   ) {
+    const scope = featured
+      ? { shopId, isFeatured: true, isArchived: false }
+      : { shopId, categoryId, isArchived: false };
+    const orderBy: Prisma.ProductOrderByWithRelationInput[] = [
+      featured ? { featuredSortOrder: 'asc' } : { sortOrder: 'asc' },
+      ...(featured
+        ? [{ id: 'asc' as const }]
+        : [{ createdAt: 'asc' as const }, { id: 'asc' as const }]),
+    ];
     return this.prisma.$transaction(
       async (tx) => {
         if (
+          !featured &&
           categoryId &&
           !(await tx.category.findFirst({
             where: {
@@ -67,13 +79,9 @@ export class ProductsRepository {
           where: shopAccessWhere(userId, shopId, roles),
           select: {
             products: {
-              where: { shopId, categoryId, isArchived: false },
+              where: scope,
               select: { id: true },
-              orderBy: [
-                { sortOrder: 'asc' },
-                { createdAt: 'asc' },
-                { id: 'asc' },
-              ],
+              orderBy,
             },
           },
         });
@@ -102,12 +110,10 @@ export class ProductsRepository {
           await tx.product.update({
             where: {
               id,
-              shopId,
-              categoryId,
-              isArchived: false,
+              ...scope,
               shop: shopAccessWhere(userId, shopId, roles),
             },
-            data: { sortOrder },
+            data: featured ? { featuredSortOrder: sortOrder } : { sortOrder },
             select: { id: true },
           });
         }
@@ -115,13 +121,9 @@ export class ProductsRepository {
           where: shopAccessWhere(userId, shopId, roles),
           select: {
             products: {
-              where: { shopId, categoryId, isArchived: false },
+              where: scope,
               select: productSelect,
-              orderBy: [
-                { sortOrder: 'asc' },
-                { createdAt: 'asc' },
-                { id: 'asc' },
-              ],
+              orderBy,
             },
           },
         });
