@@ -21,6 +21,7 @@ const settingsSelect = {
   operatingHours: true,
   logoUrl: true,
   bannerUrl: true,
+  primaryColor: true,
 } as const;
 
 @Injectable()

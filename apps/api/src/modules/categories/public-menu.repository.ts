@@ -19,6 +19,7 @@ export class PublicMenuRepository {
         description: true,
         logoUrl: true,
         bannerUrl: true,
+        primaryColor: true,
         categories: {
           where: { shopId: shop.id, isVisible: true },
           select: {

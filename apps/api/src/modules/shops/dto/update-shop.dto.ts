@@ -3,6 +3,8 @@ import {
   SHOP_SETTINGS_LIMITS,
   isValidShopPhone,
   SHOP_PHONE_HINT,
+  isValidShopPrimaryColor,
+  SHOP_PRIMARY_COLOR_HINT,
   type UpdateShopRequest,
 } from '@paserve/contracts';
 import { Transform } from 'class-transformer';
@@ -20,6 +22,19 @@ const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
 export class UpdateShopDto implements UpdateShopRequest {
+  @Transform(trim)
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsString({ message: SHOP_PRIMARY_COLOR_HINT })
+  @ValidateBy({
+    name: 'shopPrimaryColor',
+    validator: {
+      validate: (value: unknown) =>
+        typeof value === 'string' && isValidShopPrimaryColor(value),
+      defaultMessage: () => SHOP_PRIMARY_COLOR_HINT,
+    },
+  })
+  primaryColor?: string;
+
   @Transform(trim)
   @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsString({ message: 'Enter your shop name.' })

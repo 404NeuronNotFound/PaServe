@@ -138,6 +138,49 @@ describe('Owner-only shop updates', () => {
     );
   });
 
+  it('normalizes primary color, exposes it in settings, and resets it to null', async () => {
+    const saved = await patch(shopA, { primaryColor: ' #ab12ef ' }).expect(200);
+    expect(saved.body.shop.primaryColor).toBe('#AB12EF');
+    expect(update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: shopA }),
+        data: { primaryColor: '#AB12EF' },
+      }),
+    );
+    findFirst.mockResolvedValue({ ...saved.body.shop, createdAt });
+    const loaded = await request(app.getHttpServer())
+      .get(`/api/v1/shops/${shopA}/settings`)
+      .set('Authorization', 'Bearer valid-token');
+    expect(loaded.body.shop.primaryColor).toBe('#AB12EF');
+    const reset = await patch(shopA, { primaryColor: ' ' }).expect(200);
+    expect(reset.body.shop.primaryColor).toBeNull();
+  });
+
+  it.each([
+    'red',
+    '#abc',
+    '#12345678',
+    '#GG0000',
+    'var(--color)',
+    null,
+    123456,
+    {},
+    [],
+  ])(
+    'rejects invalid primary color %j without writing',
+    async (primaryColor) => {
+      const response = await patch(shopA, { primaryColor }).expect(400);
+      expect(response.body.fieldErrors.primaryColor).toBeDefined();
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('denies color writes outside live owner access', async () => {
+    await patch(shopB, { primaryColor: '#123456' }).expect(403);
+    await patch(missingShop, { primaryColor: '#123456' }).expect(404);
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it('requires an explicit shop target rather than falling back to another membership', async () => {
     await request(app.getHttpServer())
       .patch('/api/v1/shops')

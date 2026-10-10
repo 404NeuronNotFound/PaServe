@@ -8,6 +8,7 @@ import type {
   CreateShopResponse,
   UpdateShopResponse,
 } from '@paserve/contracts';
+import { normalizeShopPrimaryColor } from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
 import { ShopsRepository, type ShopSettingsData } from './shops.repository.js';
 import type { CreateShopDto } from './dto/create-shop.dto.js';
@@ -46,12 +47,15 @@ export class ShopsService {
       'website',
       'address',
       'operatingHours',
+      'primaryColor',
     ] as const;
     const data: ShopSettingsData = {};
     for (const field of fields) {
       const value = dto[field];
       if (value !== undefined) {
         if (field === 'name') data.name = value.trim();
+        else if (field === 'primaryColor')
+          data.primaryColor = normalizeShopPrimaryColor(value) || null;
         else data[field] = value.trim() || null;
       }
     }
