@@ -287,6 +287,66 @@ export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
 export const PRODUCT_PRICE_PATTERN = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
 /** Application currency; product prices are exact decimal strings in PHP. */
 export const PRODUCT_CURRENCY = "PHP" as const;
+export const PRODUCT_VARIANT_LIMITS = {
+  nameMax: 80,
+  sortOrderMax: 1000000,
+} as const;
+export interface CreateProductOptionGroupRequest {
+  name: string;
+  isRequired?: boolean;
+  isAvailable?: boolean;
+  sortOrder?: number;
+}
+export interface CreateProductVariantRequest {
+  name: string;
+  /** Nonnegative PHP surcharge, sent as an exact decimal string. */
+  priceAdjustment: string;
+  optionGroupId?: string | null;
+  /** Base/default choice: must have a zero surcharge. One per choice group. */
+  isDefault?: boolean;
+  isAvailable?: boolean;
+  sortOrder?: number;
+}
+export type UpdateProductOptionGroupRequest = Partial<CreateProductOptionGroupRequest>;
+export type UpdateProductVariantRequest = Partial<CreateProductVariantRequest>;
+export interface CreateRegularVariantRequest {
+  optionGroupId?: string | null;
+  sortOrder?: number;
+}
+export interface ProductOptionGroup {
+  id: string;
+  shopId: string;
+  productId: string;
+  name: string;
+  isRequired: boolean;
+  isAvailable: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface ProductVariant {
+  id: string;
+  shopId: string;
+  productId: string;
+  optionGroupId: string | null;
+  name: string;
+  priceAdjustment: string;
+  isDefault: boolean;
+  isAvailable: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface ProductVariantsResponse {
+  optionGroups: ProductOptionGroup[];
+  variants: ProductVariant[];
+}
+export interface ProductVariantResponse {
+  variant: ProductVariant;
+}
+export interface ProductOptionGroupResponse {
+  optionGroup: ProductOptionGroup;
+}
 export function isValidProductImageUrl(value: string): boolean {
   try {
     const url = new URL(value);
