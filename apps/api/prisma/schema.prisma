@@ -127,11 +127,55 @@ model Product {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  shop         Shop                 @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  category     Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  optionGroups ProductOptionGroup[]
+  variants     ProductVariant[]
 
   @@unique([shopId, slug])
+  @@unique([id, shopId])
   @@index([shopId])
   @@index([categoryId])
   @@map("products")
+}
+
+model ProductOptionGroup {
+  id          String           @id @default(uuid())
+  shopId      String
+  productId   String
+  name        String
+  isRequired  Boolean          @default(true)
+  isAvailable Boolean          @default(true)
+  sortOrder   Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  product     Product          @relation(fields: [productId, shopId], references: [id, shopId], onDelete: Cascade, onUpdate: Restrict)
+  variants    ProductVariant[]
+
+  @@unique([id, shopId])
+  @@unique([id, productId, shopId])
+  @@unique([productId, name])
+  @@index([shopId, productId])
+  @@map("product_option_groups")
+}
+
+model ProductVariant {
+  // SQL maintains the zero-price default CHECK and one-default-per-choice index.
+  id              String              @id @default(uuid())
+  shopId          String
+  productId       String
+  optionGroupId   String?
+  name            String
+  priceAdjustment Decimal             @default(0) @db.Decimal(10, 2)
+  isDefault       Boolean             @default(false)
+  isAvailable     Boolean             @default(true)
+  sortOrder       Int                 @default(0)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  product         Product             @relation(fields: [productId, shopId], references: [id, shopId], onDelete: Cascade, onUpdate: Restrict)
+  optionGroup     ProductOptionGroup? @relation(fields: [optionGroupId, productId, shopId], references: [id, productId, shopId], onDelete: NoAction, onUpdate: Restrict)
+
+  @@unique([id, shopId])
+  @@index([shopId, productId, optionGroupId])
+  @@map("product_variants")
 }
