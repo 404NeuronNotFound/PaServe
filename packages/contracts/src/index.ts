@@ -140,6 +140,7 @@ export interface UserMembership {
     name: string;
     slug: string;
     isActive: boolean;
+    logoUrl?: string | null;
   };
 }
 
@@ -219,6 +220,7 @@ export interface UpdateShopRequest {
 }
 
 export type ShopSettings = CreateShopResponse["shop"] & {
+  logoUrl?: string | null;
   displayName: string | null;
   phone: string | null;
   contactEmail: string | null;
@@ -231,6 +233,18 @@ export interface UpdateShopResponse {
   shop: ShopSettings;
 }
 export type ShopSettingsResponse = UpdateShopResponse;
+
+export const SHOP_LOGO_LIMITS = {
+  maxBytes: 5 * 1024 * 1024,
+  maxPixels: 16_000_000,
+  maxDimension: 8192,
+  outputDimension: 512,
+} as const;
+export const SHOP_LOGO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+export interface ShopLogoResponse {
+  shop: ShopSettings;
+  storagePath: string;
+}
 
 export const CATEGORY_LIMITS = {
   nameMax: 80,
@@ -510,7 +524,7 @@ export interface SetCategoryVisibilityRequest {
 }
 export interface PublicMenuResponse {
   featuredProducts: PublicMenuResponse["products"];
-  shop: { name: string; slug: string; description: string | null };
+  shop: { name: string; slug: string; description: string | null; logoUrl?: string | null };
   categories: Array<
     Pick<MenuCategory, "id" | "name" | "slug" | "description" | "sortOrder">
   >;

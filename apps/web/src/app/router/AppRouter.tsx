@@ -6,6 +6,7 @@ import {
   Routes,
 } from "react-router-dom";
 import { RegisterPage } from "../../pages/public/RegisterPage";
+import { PublicMenuPage } from "../../pages/public/PublicMenuPage";
 import { ConnectionPage } from "../../pages/public/ConnectionPage";
 import { LoginPage } from "../../pages/public/LoginPage";
 import { AccountPage } from "../../pages/owner/AccountPage";
@@ -26,6 +27,7 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/menu/:shopSlug" element={<PublicMenuPage />} />
         <Route path="/" element={<Navigate to="/register" replace />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />

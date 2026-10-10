@@ -1,3 +1,4 @@
+import { ShopLogo } from "../../components/shops/ShopLogo";
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
@@ -173,9 +174,7 @@ export function ShopSelectionPage() {
                   >
                     <div className="selection-card-cover" aria-hidden="true">
                       <span className="selection-card-orbit" />
-                      <span className="selection-card-emblem">
-                        <FiCoffee />
-                      </span>
+                      <ShopLogo url={membership.shop.logoUrl} name={membership.shop.name} className="selection-card-emblem" />
                       <span className="selection-card-mark">✳</span>
                     </div>
                     <div className="selection-card-content">

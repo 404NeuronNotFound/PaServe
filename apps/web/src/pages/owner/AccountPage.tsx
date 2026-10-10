@@ -1,3 +1,4 @@
+import { ShopLogo } from "../../components/shops/ShopLogo";
 import { useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -191,9 +192,7 @@ export function AccountPage() {
                 <ul className="membership-list">
                   {user.memberships.map((membership) => (
                     <li key={membership.id}>
-                      <span className="shop-icon">
-                        <FiCoffee aria-hidden="true" />
-                      </span>
+                      <ShopLogo url={membership.shop.logoUrl} name={membership.shop.name} className="shop-icon" />
                       <div className="membership-details">
                         <strong>{membership.shop.name}</strong>
                         <span>

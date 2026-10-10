@@ -1,8 +1,8 @@
+import { ShopLogo } from "../../components/shops/ShopLogo";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   FiArrowUpRight,
-  FiCoffee,
   FiSettings,
   FiUsers,
   FiUser,
@@ -29,14 +29,12 @@ export function ActiveShopPage() {
           </p>
           <p>Your role: {membership.role.toLowerCase()}</p>
         </div>
-        <span className="shop-overview-emblem" aria-hidden="true">
-          <FiCoffee />
-        </span>
+        <ShopLogo url={membership.shop.logoUrl} name={membership.shop.name} className="shop-overview-emblem" />
       </div>
       <div className="shop-overview-address">
         <span className="section-label">YOUR MENU IDENTITY</span>
         <strong>/{membership.shop.slug}</strong>
-        <span>This address stays with your shop.</span>
+        <Link to={`/menu/${encodeURIComponent(membership.shop.slug)}`}>View public menu</Link>
       </div>
       <nav className="shop-overview-actions" aria-label="Shop actions">
         {membership.role === "OWNER" && (

@@ -26,6 +26,8 @@ import { feedback, useFeedbackStore } from "../../app/stores/feedback";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { FiSave, FiRotateCcw, FiArrowLeft } from "react-icons/fi";
 
+import { ShopLogoUpload } from "./ShopLogoUpload";
+
 const fields = [
   {
     key: "name",
@@ -167,6 +169,8 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
   const [baseline, setBaseline] = useState(() => valuesFrom(shop));
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [error, setError] = useState("");
+  const [logoPending, setLogoPending] = useState(false);
+  const [logoDirty, setLogoDirty] = useState(false);
   const [decision, setDecision] = useState<"reset" | "leave" | null>(null);
   const form = useRef<HTMLFormElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -175,6 +179,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
     mutationFn: (input: UpdateShopRequest) => updateShop(shop.id, input),
     retry: false,
   });
+  const busy = mutation.isPending || logoPending;
   const dirty = fields.some(({ key }) => values[key].trim() !== baseline[key]);
   const resetNoticeKey = `settings-reset:${shop.id}`;
   useEffect(
@@ -187,14 +192,14 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
   );
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
-      if (dirty) {
+      if (dirty || logoDirty || logoPending) {
         event.preventDefault();
         event.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  }, [dirty, logoDirty, logoPending]);
   useEffect(() => {
     document.title = `Shop settings · ${shop.name} · PaServe`;
     heading.current?.focus();
@@ -244,7 +249,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (saving.current) return;
+    if (logoPending || saving.current) return;
     const next: Partial<Record<Field, string>> = {};
     for (const { key } of fields) {
       const message = fieldError(key, values[key]);
@@ -338,6 +343,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
         Menu slug: <strong>{shop.slug}</strong>. Changing your name keeps this
         address.
       </p>
+      <ShopLogoUpload shopId={shop.id} membershipId={membership.id} name={shop.name} logoUrl={shop.logoUrl} disabled={mutation.isPending} onPending={setLogoPending} onDirty={setLogoDirty} />
       <form
         ref={form}
         className="registration-form settings-form-grid"
@@ -369,7 +375,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                     rows={3}
                     maxLength={field.max}
                     value={values[field.key]}
-                    disabled={mutation.isPending}
+                    disabled={busy}
                     aria-invalid={Boolean(errors[field.key])}
                     aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
                     onChange={(event) =>
@@ -422,7 +428,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                     required={field.key === "name"}
                     maxLength={field.max}
                     value={values[field.key]}
-                    disabled={mutation.isPending}
+                    disabled={busy}
                     aria-invalid={Boolean(errors[field.key])}
                     aria-describedby={`settings-${field.key}-hint${errors[field.key] ? ` settings-${field.key}-error` : ""}`}
                     onChange={(event) =>
@@ -464,7 +470,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
         >
           <h2 id="branding-heading">Branding</h2>
           <p className="field-hint">
-            Logo and banner customization are planned for a future update.
+            Banner customization is planned for a future update.
           </p>
         </section>
         {error && (
@@ -480,7 +486,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
           <button
             type="submit"
             className="primary-button"
-            disabled={mutation.isPending || !dirty}
+            disabled={busy || !dirty}
           >
             <FiSave aria-hidden="true" />
             {mutation.isPending ? "Saving…" : "Save settings"}
@@ -488,7 +494,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
           <button
             type="button"
             className="secondary-button"
-            disabled={!dirty || mutation.isPending}
+            disabled={!dirty || busy}
             onClick={() => setDecision("reset")}
           >
             <FiRotateCcw aria-hidden="true" />
@@ -498,7 +504,8 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
             className="secondary-button"
             to={shopPath(shop.id)}
             onClick={(event) => {
-              if (dirty) {
+              if (busy) { event.preventDefault(); return; }
+              if (dirty || logoDirty) {
                 event.preventDefault();
                 setDecision("leave");
               }

@@ -1,3 +1,4 @@
+import { ShopLogo } from "../shops/ShopLogo";
 import {
   useEffect,
   useRef,
@@ -136,9 +137,7 @@ export function DashboardFrame({
               onKeyDown={dropdownKeys}
             >
               <summary aria-label="Active shop">
-                <span className="dashboard-switcher-icon">
-                  <FiCoffee aria-hidden="true" />
-                </span>
+                <ShopLogo url={membership?.shop.logoUrl} name={membership?.shop.name ?? "Shop"} />
                 <span className="dashboard-switcher-label">
                   <span>Active shop</span>
                   <strong>{membership?.shop.name ?? "Choose a shop"}</strong>
@@ -162,7 +161,7 @@ export function DashboardFrame({
                         void navigate(shopPath(item.shopId));
                     }}
                   >
-                    <FiCoffee aria-hidden="true" />
+                    <ShopLogo url={item.shop.logoUrl} name={item.shop.name} />
                     <span>
                       <strong>{item.shop.name}</strong>
                       <small>
@@ -243,9 +242,7 @@ export function DashboardFrame({
           <p className="section-label">YOUR WORKSPACE</p>
           {membership && (
             <div className="dashboard-sidebar-identity">
-              <span className="dashboard-sidebar-emblem">
-                <FiCoffee aria-hidden="true" />
-              </span>
+              <ShopLogo url={membership.shop.logoUrl} name={membership.shop.name} className="dashboard-sidebar-emblem" />
               <div>
                 <strong>{membership.shop.name}</strong>
                 <p className="dashboard-shop-role">
