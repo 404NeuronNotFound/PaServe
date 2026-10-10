@@ -19,6 +19,7 @@ import type {
   UpdateProductOptionGroupDto,
   UpdateProductVariantDto,
   CreateRegularVariantDto,
+  CreateLargeVariantDto,
 } from './product-variants.dto.js';
 
 const groupResponse = (group: ProductOptionGroup) => ({
@@ -108,6 +109,30 @@ export class ProductVariantsService {
       isAvailable: true,
       optionGroupId: dto.optionGroupId,
       sortOrder: dto.sortOrder ?? 0,
+    });
+  }
+  async createLarge(
+    userId: string,
+    shopId: string,
+    productId: string,
+    dto: CreateLargeVariantDto,
+  ) {
+    await this.authorize(userId, shopId, productId);
+    if (!new Prisma.Decimal(dto.priceAdjustment).greaterThan(0))
+      throw new BadRequestException({
+        code: 'LARGE_VARIANT_REQUIRES_SURCHARGE',
+        message: 'Large must add a positive amount to the base product price.',
+        fieldErrors: {
+          priceAdjustment: ['Use an additional price of at least 0.01.'],
+        },
+      });
+    return this.createVariant(userId, shopId, productId, {
+      name: 'Large',
+      priceAdjustment: dto.priceAdjustment,
+      isDefault: false,
+      isAvailable: true,
+      optionGroupId: dto.optionGroupId,
+      sortOrder: dto.sortOrder ?? 1,
     });
   }
   async list(

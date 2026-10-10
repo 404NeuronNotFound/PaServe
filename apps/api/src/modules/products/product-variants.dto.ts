@@ -19,6 +19,7 @@ import {
   type UpdateProductOptionGroupRequest,
   type UpdateProductVariantRequest,
   type CreateRegularVariantRequest,
+  type CreateLargeVariantRequest,
 } from '@paserve/contracts';
 
 const normalize = ({ value }: { value: unknown }) =>
@@ -60,6 +61,14 @@ export class CreateRegularVariantDto implements CreateRegularVariantRequest {
   @Min(0)
   @Max(PRODUCT_VARIANT_LIMITS.sortOrderMax)
   sortOrder?: number;
+}
+export class CreateLargeVariantDto
+  extends CreateRegularVariantDto
+  implements CreateLargeVariantRequest
+{
+  @IsString()
+  @Matches(PRODUCT_PRICE_PATTERN)
+  priceAdjustment!: string;
 }
 export class CreateProductOptionGroupDto
   extends GroupFieldsDto

@@ -164,6 +164,107 @@ describe('product variants management', () => {
       .set('Authorization', 'Bearer valid')
       .send(body);
   it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'allows %s to create Large as a paid upgrade',
+    async (allowed) => {
+      role = allowed;
+      const response = await post('variants/large', {
+        optionGroupId: groupId,
+        priceAdjustment: '30.1',
+      }).expect(201);
+      expect(response.body.variant).toMatchObject({
+        name: 'Large',
+        priceAdjustment: '30.10',
+        isDefault: false,
+        isAvailable: true,
+        optionGroupId: groupId,
+        sortOrder: 1,
+      });
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(writeProduct.mock.calls[0][0].data).not.toHaveProperty('price');
+    },
+  );
+  it.each(['0.01', '99999999.99'])(
+    'accepts exact Large surcharge %s without a group',
+    async (priceAdjustment) => {
+      const response = await post('variants/large', {
+        priceAdjustment,
+        sortOrder: 5,
+      }).expect(201);
+      expect(response.body.variant).toMatchObject({
+        priceAdjustment,
+        optionGroupId: null,
+        isDefault: false,
+        sortOrder: 5,
+      });
+    },
+  );
+  it.each(['0', '0.00'])(
+    'rejects zero Large surcharge %s',
+    async (priceAdjustment) => {
+      const response = await post('variants/large', { priceAdjustment }).expect(
+        400,
+      );
+      expect(response.body.code).toBe('LARGE_VARIANT_REQUIRES_SURCHARGE');
+      expect(writeProduct).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['-1', 'NaN', '1e2', '0.001', '100000000', ' 30 ', 30, null])(
+    'rejects invalid Large surcharge %s',
+    async (priceAdjustment) => {
+      await post('variants/large', { priceAdjustment }).expect(400);
+      expect(writeProduct).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    { name: 'Regular' },
+    { price: '150' },
+    { absolutePrice: '150' },
+    { isDefault: true },
+    { isAvailable: false },
+    { shopId: foreignId },
+    { optionGroupId: 'invalid' },
+    { sortOrder: -1 },
+  ])('rejects Large overrides and invalid fields %j', async (fields) => {
+    await post('variants/large', { priceAdjustment: '30', ...fields }).expect(
+      400,
+    );
+    expect(writeProduct).not.toHaveBeenCalled();
+  });
+  it.each(['CASHIER', 'KITCHEN'])(
+    'blocks %s from creating Large',
+    async (denied) => {
+      role = denied;
+      await post('variants/large', { priceAdjustment: '30' }).expect(403);
+      expect(writeProduct).not.toHaveBeenCalled();
+    },
+  );
+  it('requires a Large surcharge and authentication', async () => {
+    await post('variants/large', {}).expect(400);
+    await request(app.getHttpServer())
+      .post(path('variants/large'))
+      .send({ priceAdjustment: '30' })
+      .expect(401);
+    expect(writeProduct).not.toHaveBeenCalled();
+  });
+  it('rejects Large under a foreign product', async () => {
+    await post('variants/large', { priceAdjustment: '30' }, foreignId).expect(
+      404,
+    );
+    expect(writeProduct).not.toHaveBeenCalled();
+  });
+  it('returns a conflict for duplicate Large choices', async () => {
+    writeProduct.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Duplicate', {
+        code: 'P2002',
+        clientVersion: 'test',
+      }),
+    );
+    expect(
+      (await post('variants/large', { priceAdjustment: '30' }).expect(409)).body
+        .code,
+    ).toBe('VARIANT_CHOICE_CONFLICT');
+  });
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
     'allows %s to create Regular as the explicit default/base option',
     async (allowed) => {
       role = allowed;

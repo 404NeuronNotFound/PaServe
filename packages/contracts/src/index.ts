@@ -313,6 +313,10 @@ export interface CreateRegularVariantRequest {
   optionGroupId?: string | null;
   sortOrder?: number;
 }
+export interface CreateLargeVariantRequest extends CreateRegularVariantRequest {
+  /** Positive PHP surcharge on the product base price, not an absolute price. */
+  priceAdjustment: string;
+}
 export interface ProductOptionGroup {
   id: string;
   shopId: string;

@@ -120,19 +120,55 @@ try {
           })
         ).variant;
         const large = (
-          await service.createVariant(user.id, shop.id, product.id, {
-            name: 'Large',
+          await service.createLarge(user.id, shop.id, product.id, {
             priceAdjustment: '30',
             optionGroupId: size.id,
           })
         ).variant;
         assert.equal(large.isDefault, false);
+        assert.equal(large.name, 'Large');
+        assert.equal(large.priceAdjustment, '30.00');
+        const savedLarge = await repository.findVariant(
+          user.id,
+          shop.id,
+          product.id,
+          large.id,
+        );
+        assert.equal(
+          repricedProduct.price.plus(savedLarge.priceAdjustment).toFixed(2),
+          '175.25',
+        );
+        await assert.rejects(
+          () =>
+            service.createLarge(user.id, shop.id, product.id, {
+              priceAdjustment: '0',
+            }),
+          (error) => error.getStatus() === 400,
+        );
         const rejectedWrite = async (operation, predicate) => {
           await tx.$executeRawUnsafe('SAVEPOINT invalid_regular');
           await assert.rejects(operation, predicate);
           await tx.$executeRawUnsafe('ROLLBACK TO SAVEPOINT invalid_regular');
           await tx.$executeRawUnsafe('RELEASE SAVEPOINT invalid_regular');
         };
+        await rejectedWrite(
+          () =>
+            service.createLarge(user.id, shop.id, product.id, {
+              priceAdjustment: '30',
+              optionGroupId: size.id,
+            }),
+          (error) => error.getStatus() === 409,
+        );
+        for (const optionGroupId of [wrongProductGroup.id, foreignGroup.id]) {
+          await rejectedWrite(
+            () =>
+              service.createLarge(user.id, shop.id, product.id, {
+                priceAdjustment: '30',
+                optionGroupId,
+              }),
+            (error) => error.getStatus() === 404,
+          );
+        }
         for (const optionGroupId of [size.id, null]) {
           await rejectedWrite(
             () =>

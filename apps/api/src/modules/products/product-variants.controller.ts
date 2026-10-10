@@ -22,6 +22,7 @@ import {
   UpdateProductOptionGroupDto,
   UpdateProductVariantDto,
   CreateRegularVariantDto,
+  CreateLargeVariantDto,
 } from './product-variants.dto.js';
 
 @Controller('shops/:shopId/products/:productId')
@@ -29,6 +30,20 @@ import {
 @ShopResource('product', 'productId')
 export class ProductVariantsController {
   constructor(private readonly variants: ProductVariantsService) {}
+  @Post('variants/large')
+  createLarge(
+    @Body() dto: CreateLargeVariantDto,
+    @Req() req: ShopResourceRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.variants.createLarge(
+      req.user.id,
+      req.shopResource.shopId,
+      req.shopResource.id,
+      dto,
+    );
+  }
   @Post('variants/regular')
   createRegular(
     @Body() dto: CreateRegularVariantDto,
