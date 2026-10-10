@@ -33,6 +33,7 @@ describe('public menu visibility', () => {
       bannerUrl: 'https://example.com/shop/banner.webp',
       primaryColor: '#123456',
       accentColor: '#C9EF83',
+      menuLayout: 'grid',
       categories: [],
       products: [
         {
@@ -61,6 +62,7 @@ describe('public menu visibility', () => {
       bannerUrl: 'https://example.com/shop/banner.webp',
       primaryColor: '#123456',
       accentColor: '#C9EF83',
+      menuLayout: 'grid',
     });
     expect(response.body.products[0].price).toBe('10.00');
     expect(response.body.products[0].isOrderable).toBe(false);
@@ -92,6 +94,7 @@ describe('public menu visibility', () => {
       'categories',
       'description',
       'logoUrl',
+      'menuLayout',
       'name',
       'primaryColor',
       'products',

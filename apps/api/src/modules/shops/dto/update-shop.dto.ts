@@ -6,11 +6,14 @@ import {
   isValidShopPrimaryColor,
   SHOP_PRIMARY_COLOR_HINT,
   SHOP_ACCENT_COLOR_HINT,
+  MENU_LAYOUTS,
+  type MenuLayout,
   type UpdateShopRequest,
 } from '@paserve/contracts';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
+  IsIn,
   IsUrl,
   IsString,
   MaxLength,
@@ -23,6 +26,10 @@ const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
 export class UpdateShopDto implements UpdateShopRequest {
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsIn(MENU_LAYOUTS, { message: 'Choose Grid, List, or Compact.' })
+  menuLayout?: MenuLayout;
+
   @Transform(trim)
   @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsString({ message: SHOP_PRIMARY_COLOR_HINT })

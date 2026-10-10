@@ -2,8 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { UpdateShopRequest } from '@paserve/contracts';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
-export type ShopSettingsData = { name?: string } & {
-  [K in Exclude<keyof UpdateShopRequest, 'name'>]?: string | null;
+export type ShopSettingsData = Pick<
+  UpdateShopRequest,
+  'name' | 'menuLayout'
+> & {
+  [K in Exclude<keyof UpdateShopRequest, 'name' | 'menuLayout'>]?:
+    string | null;
 };
 
 const settingsSelect = {
@@ -23,6 +27,7 @@ const settingsSelect = {
   bannerUrl: true,
   primaryColor: true,
   accentColor: true,
+  menuLayout: true,
 } as const;
 
 @Injectable()

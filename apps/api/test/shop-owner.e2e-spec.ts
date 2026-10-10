@@ -137,6 +137,32 @@ describe('Owner-only shop updates', () => {
       }),
     );
   });
+  it.each(['grid', 'list', 'compact'])(
+    'saves supported layout %s for the owner',
+    async (menuLayout) => {
+      const response = await patch(shopA, { menuLayout }).expect(200);
+      expect(response.body.shop.menuLayout).toBe(menuLayout);
+      expect(update).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: shopA }),
+          data: { menuLayout },
+        }),
+      );
+    },
+  );
+  it.each(['', 'Grid', ' grid ', 'other', null, 1, {}, []])(
+    'rejects invalid layout %j',
+    async (menuLayout) => {
+      const response = await patch(shopA, { menuLayout }).expect(400);
+      expect(response.body.fieldErrors.menuLayout).toBeDefined();
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
+  it('denies layout changes outside current owner access', async () => {
+    await patch(shopB, { menuLayout: 'grid' }).expect(403);
+    await patch(missingShop, { menuLayout: 'compact' }).expect(404);
+    expect(update).not.toHaveBeenCalled();
+  });
 
   it('normalizes primary color, exposes it in settings, and resets it to null', async () => {
     const saved = await patch(shopA, { primaryColor: ' #ab12ef ' }).expect(200);

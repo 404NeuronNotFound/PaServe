@@ -65,6 +65,7 @@ model Shop {
   bannerUrl   String?
   primaryColor String? @db.VarChar(7)
   accentColor String? @db.VarChar(7)
+  menuLayout MenuLayout @default(list)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -214,4 +215,9 @@ model ProductAddOn {
   @@index([shopId, productId])
   @@index([addOnId, shopId])
   @@map("product_add_ons")
+}
+enum MenuLayout {
+  grid
+  list
+  compact
 }
