@@ -1,4 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import type { ProductStatus } from '@paserve/contracts';
@@ -33,6 +39,105 @@ export type ProductCreateData = {
 @Injectable()
 export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
+  reorder(
+    userId: string,
+    shopId: string,
+    categoryId: string | null,
+    productIds: string[],
+    expectedOrder: string[],
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        if (
+          categoryId &&
+          !(await tx.category.findFirst({
+            where: {
+              id: categoryId,
+              shopId,
+              shop: shopAccessWhere(userId, shopId, roles),
+            },
+            select: { id: true },
+          }))
+        )
+          throw new NotFoundException({
+            code: 'RESOURCE_NOT_ACCESSIBLE',
+            message: 'This category is unavailable in this shop.',
+          });
+        const shop = await tx.shop.findFirst({
+          where: shopAccessWhere(userId, shopId, roles),
+          select: {
+            products: {
+              where: { shopId, categoryId, isArchived: false },
+              select: { id: true },
+              orderBy: [
+                { sortOrder: 'asc' },
+                { createdAt: 'asc' },
+                { id: 'asc' },
+              ],
+            },
+          },
+        });
+        if (!shop)
+          throw new ForbiddenException({
+            code: 'SHOP_PERMISSION_REQUIRED',
+            message: 'Your menu management access is no longer available.',
+          });
+        const current = shop.products.map((product) => product.id);
+        const currentIds = new Set(current);
+        if (productIds.some((id) => !currentIds.has(id)))
+          throw new NotFoundException({
+            code: 'RESOURCE_NOT_ACCESSIBLE',
+            message: 'One or more products are unavailable in this shop.',
+          });
+        if (
+          current.length !== expectedOrder.length ||
+          current.some((id, index) => id !== expectedOrder[index])
+        )
+          throw new ConflictException({
+            code: 'PRODUCT_ORDER_CHANGED',
+            message:
+              'The product list or order changed. Refresh before saving again.',
+          });
+        for (const [sortOrder, id] of productIds.entries()) {
+          await tx.product.update({
+            where: {
+              id,
+              shopId,
+              categoryId,
+              isArchived: false,
+              shop: shopAccessWhere(userId, shopId, roles),
+            },
+            data: { sortOrder },
+            select: { id: true },
+          });
+        }
+        const result = await tx.shop.findFirst({
+          where: shopAccessWhere(userId, shopId, roles),
+          select: {
+            products: {
+              where: { shopId, categoryId, isArchived: false },
+              select: productSelect,
+              orderBy: [
+                { sortOrder: 'asc' },
+                { createdAt: 'asc' },
+                { id: 'asc' },
+              ],
+            },
+          },
+        });
+        if (!result)
+          throw new ForbiddenException({
+            code: 'SHOP_PERMISSION_REQUIRED',
+            message: 'Your menu management access is no longer available.',
+          });
+        return result.products;
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        timeout: 15000,
+      },
+    );
+  }
   setFeatured(
     userId: string,
     shopId: string,

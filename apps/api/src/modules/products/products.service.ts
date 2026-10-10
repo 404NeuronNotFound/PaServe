@@ -20,6 +20,7 @@ import type { ProductCreateData } from './products.repository.js';
 import type { ProductArchiveDto } from './product-archive.dto.js';
 import type { ProductAvailableDto } from './product-available.dto.js';
 import type { ProductFeaturedDto } from './product-featured.dto.js';
+import type { ReorderProductsDto } from './reorder-products.dto.js';
 
 @Injectable()
 export class ProductsService {
@@ -28,6 +29,60 @@ export class ProductsService {
     private readonly members: ShopMembersService,
     private readonly resources: TenantResourcesService,
   ) {}
+  async reorder(
+    userId: string,
+    shopId: string,
+    dto: ReorderProductsDto,
+  ): Promise<ProductsResponse> {
+    await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
+    if (
+      dto.productIds.length !== dto.expectedOrder.length ||
+      dto.productIds.some((id) => !dto.expectedOrder.includes(id))
+    )
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Provide the same complete product group in both orders.',
+      });
+    if (dto.categoryId)
+      await this.resources.requireResource(
+        userId,
+        shopId,
+        'category',
+        dto.categoryId,
+      );
+    try {
+      const products = await this.repository.reorder(
+        userId,
+        shopId,
+        dto.categoryId,
+        dto.productIds,
+        dto.expectedOrder,
+      );
+      return {
+        products: products.map((product) => ({
+          ...product,
+          price: product.price.toFixed(2),
+          createdAt: product.createdAt.toISOString(),
+        })),
+      };
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025')
+          throw new ForbiddenException({
+            code: 'SHOP_PERMISSION_REQUIRED',
+            message:
+              'Your menu management access or product group changed. Refresh before saving.',
+          });
+        if (error.code === 'P2034')
+          throw new ConflictException({
+            code: 'PRODUCT_ORDER_CHANGED',
+            message:
+              'The menu changed while saving. Refresh before saving again.',
+          });
+      }
+      throw error;
+    }
+  }
   async setFeatured(
     userId: string,
     shopId: string,

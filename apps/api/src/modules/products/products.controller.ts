@@ -23,6 +23,7 @@ import { UpdateProductDto } from './update-product.dto.js';
 import { ProductArchiveDto } from './product-archive.dto.js';
 import { ProductAvailableDto } from './product-available.dto.js';
 import { ProductFeaturedDto } from './product-featured.dto.js';
+import { ReorderProductsDto } from './reorder-products.dto.js';
 import {
   ShopResource,
   type ShopResourceRequest,
@@ -35,6 +36,15 @@ export class ProductsController {
     private readonly products: ProductsService,
     private readonly images: ProductImageService,
   ) {}
+  @Patch('reorder')
+  reorder(
+    @Body() dto: ReorderProductsDto,
+    @Req() req: ShopMemberRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.products.reorder(req.user.id, req.shopMembership.shopId, dto);
+  }
   @Patch(':productId/featured')
   @ShopResource('product', 'productId')
   setFeatured(
