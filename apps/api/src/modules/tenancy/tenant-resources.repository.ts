@@ -3,7 +3,8 @@ import { isUUID } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from './shop-scope.js';
 
-export type TenantResourceKind = 'product' | 'category';
+export const TENANT_RESOURCE_KINDS = ['product', 'category', 'addOn'] as const;
+export type TenantResourceKind = (typeof TENANT_RESOURCE_KINDS)[number];
 
 @Injectable()
 export class TenantResourcesRepository {
@@ -15,7 +16,7 @@ export class TenantResourcesRepository {
     kind: TenantResourceKind,
     resourceId: string,
   ) {
-    if (!['product', 'category'].includes(kind) || !isUUID(resourceId))
+    if (!TENANT_RESOURCE_KINDS.includes(kind) || !isUUID(resourceId))
       throw new BadRequestException({
         code: 'INVALID_RESOURCE_ID',
         message: 'Enter a valid shop resource identifier.',
@@ -28,6 +29,7 @@ export class TenantResourcesRepository {
     const select = { id: true, shopId: true } as const;
     if (kind === 'product')
       return this.prisma.product.findFirst({ where, select });
+    if (kind === 'addOn') return this.prisma.addOn.findFirst({ where, select });
     return this.prisma.category.findFirst({ where, select });
   }
 }

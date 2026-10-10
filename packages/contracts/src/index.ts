@@ -353,6 +353,59 @@ export interface ProductVariantResponse {
 export interface ProductOptionGroupResponse {
   optionGroup: ProductOptionGroup;
 }
+export const ADD_ON_LIMITS = {
+  nameMax: 80,
+  sortOrderMax: 1000000,
+  selectionMax: 50,
+} as const;
+export interface CreateAddOnRequest {
+  name: string;
+  priceAdjustment: string;
+  isAvailable?: boolean;
+  sortOrder?: number;
+}
+export type UpdateAddOnRequest = Partial<CreateAddOnRequest>;
+export interface AddOn {
+  id: string;
+  shopId: string;
+  name: string;
+  priceAdjustment: string;
+  isAvailable: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface AddOnResponse {
+  addOn: AddOn;
+}
+export interface AddOnsResponse {
+  addOns: AddOn[];
+}
+export interface AssignProductAddOnRequest {
+  addOnId: string;
+}
+export interface AddOnSelectionRequest {
+  addOnIds: string[];
+}
+export interface PublicAddOn {
+  id: string;
+  name: string;
+  priceAdjustment: string;
+}
+export interface PublicProductAddOnsResponse {
+  productId: string;
+  isOrderable: boolean;
+  addOns: PublicAddOn[];
+}
+/** One base product plus selected add-ons; variant pricing is a separate pending flow. */
+export interface ProductAddOnQuoteResponse {
+  productId: string;
+  currency: typeof PRODUCT_CURRENCY;
+  basePrice: string;
+  addOns: PublicAddOn[];
+  addOnTotal: string;
+  baseWithAddOnsPrice: string;
+}
 export function isValidProductImageUrl(value: string): boolean {
   try {
     const url = new URL(value);

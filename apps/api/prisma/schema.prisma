@@ -70,6 +70,7 @@ model Shop {
   members    ShopMember[]
   categories Category[]
   products   Product[]
+  addOns     AddOn[]
 
   @@map("shops")
 }
@@ -131,6 +132,7 @@ model Product {
   category     Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   optionGroups ProductOptionGroup[]
   variants     ProductVariant[]
+  addOns       ProductAddOn[]
 
   @@unique([shopId, slug])
   @@unique([id, shopId])
@@ -178,4 +180,36 @@ model ProductVariant {
   @@unique([id, shopId])
   @@index([shopId, productId, optionGroupId])
   @@map("product_variants")
+}
+
+model AddOn {
+  // Preserve the SQL-maintained nonnegative, name and sort-order CHECKs.
+  id              String         @id @default(uuid())
+  shopId          String
+  name            String
+  priceAdjustment Decimal        @default(0) @db.Decimal(10, 2)
+  isAvailable     Boolean        @default(true)
+  sortOrder       Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  shop            Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  products        ProductAddOn[]
+
+  @@unique([id, shopId])
+  @@unique([shopId, name])
+  @@index([shopId])
+  @@map("add_ons")
+}
+
+model ProductAddOn {
+  shopId    String
+  productId String
+  addOnId   String
+  product   Product @relation(fields: [productId, shopId], references: [id, shopId], onDelete: Cascade, onUpdate: Restrict)
+  addOn     AddOn   @relation(fields: [addOnId, shopId], references: [id, shopId], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([productId, addOnId])
+  @@index([shopId, productId])
+  @@index([addOnId, shopId])
+  @@map("product_add_ons")
 }

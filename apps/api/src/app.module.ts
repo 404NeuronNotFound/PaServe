@@ -11,6 +11,7 @@ import { requestValidationPipe } from './common/pipes/request-validation.pipe.js
 import { TenancyModule } from './modules/tenancy/tenancy.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
+import { AddOnsModule } from './modules/add-ons/add-ons.module.js';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ProductsModule } from './modules/products/products.module.js';
     TenancyModule,
     CategoriesModule,
     ProductsModule,
+    AddOnsModule,
   ],
   controllers: [AppController],
   providers: [

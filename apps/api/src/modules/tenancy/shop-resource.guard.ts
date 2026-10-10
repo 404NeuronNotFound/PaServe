@@ -11,7 +11,10 @@ import { Reflector } from '@nestjs/core';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { invalidSession } from '../auth/tokens.service.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
-import type { TenantResourceKind } from './tenant-resources.repository.js';
+import {
+  TENANT_RESOURCE_KINDS,
+  type TenantResourceKind,
+} from './tenant-resources.repository.js';
 import { TenantResourcesService } from './tenant-resources.service.js';
 
 const resourceKey = 'paserve:shop-resource';
@@ -35,7 +38,7 @@ export class ShopResourceGuard implements CanActivate {
     );
     if (
       !policy ||
-      !['product', 'category'].includes(policy.kind) ||
+      !TENANT_RESOURCE_KINDS.includes(policy.kind) ||
       !policy.parameter ||
       policy.parameter === 'shopId'
     )

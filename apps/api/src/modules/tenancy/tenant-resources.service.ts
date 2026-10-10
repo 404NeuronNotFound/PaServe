@@ -7,6 +7,7 @@ import { isUUID } from 'class-validator';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import {
   TenantResourcesRepository,
+  TENANT_RESOURCE_KINDS,
   type TenantResourceKind,
 } from './tenant-resources.repository.js';
 
@@ -25,7 +26,7 @@ export class TenantResourcesService {
   ) {
     // Membership first: knowing a valid resource ID never grants access to its shop.
     const membership = await this.memberships.requireMembership(userId, shopId);
-    if (!['product', 'category'].includes(kind) || !isUUID(resourceId))
+    if (!TENANT_RESOURCE_KINDS.includes(kind) || !isUUID(resourceId))
       throw new BadRequestException({
         code: 'INVALID_RESOURCE_ID',
         message: 'Enter a valid shop resource identifier.',
