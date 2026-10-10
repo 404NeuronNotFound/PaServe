@@ -6,6 +6,7 @@ import type { PublicMenuResponse } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import { formatProductPrice } from "../../lib/money";
 import { ShopLogo } from "../../components/shops/ShopLogo";
+import { ShopBanner } from "../../components/shops/ShopBanner";
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import "./public-menu.css";
 
@@ -51,6 +52,7 @@ export function PublicMenuPage() {
   const { shop, categories, products, featuredProducts } = menu.data;
   return (
     <main className="public-menu">
+      <ShopBanner url={shop.bannerUrl} name={shop.name} />
       <header className="public-menu-header">
         <ShopLogo url={shop.logoUrl} name={shop.name} />
         <div>

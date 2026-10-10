@@ -221,6 +221,7 @@ export interface UpdateShopRequest {
 
 export type ShopSettings = CreateShopResponse["shop"] & {
   logoUrl?: string | null;
+  bannerUrl?: string | null;
   displayName: string | null;
   phone: string | null;
   contactEmail: string | null;
@@ -242,6 +243,19 @@ export const SHOP_LOGO_LIMITS = {
 } as const;
 export const SHOP_LOGO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export interface ShopLogoResponse {
+  shop: ShopSettings;
+  storagePath: string;
+}
+
+export const SHOP_BANNER_LIMITS = {
+  maxBytes: 5 * 1024 * 1024,
+  maxPixels: 16_000_000,
+  maxDimension: 8192,
+  outputWidth: 1920,
+  outputHeight: 1080,
+} as const;
+export const SHOP_BANNER_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+export interface ShopBannerResponse {
   shop: ShopSettings;
   storagePath: string;
 }
@@ -524,7 +538,13 @@ export interface SetCategoryVisibilityRequest {
 }
 export interface PublicMenuResponse {
   featuredProducts: PublicMenuResponse["products"];
-  shop: { name: string; slug: string; description: string | null; logoUrl?: string | null };
+  shop: {
+    name: string;
+    slug: string;
+    description: string | null;
+    logoUrl?: string | null;
+    bannerUrl?: string | null;
+  };
   categories: Array<
     Pick<MenuCategory, "id" | "name" | "slug" | "description" | "sortOrder">
   >;

@@ -7,12 +7,19 @@ import type { ShopSettings, UserMembership } from "@paserve/contracts";
 import { ActiveShopContext } from "../../features/shops/active-shop";
 import { getShopSettings, updateShop } from "../../features/shops/api/context";
 import { ShopSettingsPage } from "./ShopSettingsPage";
+import { uploadShopBanner } from "../../features/shops/api/banner";
 import { useFeedbackStore } from "../../app/stores/feedback";
 import { activeShopKey } from "../../features/shops/active-shop";
 import { FeedbackHost } from "../../components/feedback/FeedbackHost";
 
-const modalDescriptor = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "showModal");
-const closeDescriptor = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "close");
+const modalDescriptor = Object.getOwnPropertyDescriptor(
+  HTMLDialogElement.prototype,
+  "showModal",
+);
+const closeDescriptor = Object.getOwnPropertyDescriptor(
+  HTMLDialogElement.prototype,
+  "close",
+);
 beforeEach(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
     configurable: true,
@@ -31,6 +38,9 @@ beforeEach(() => {
 vi.mock("../../features/shops/api/context", () => ({
   getShopSettings: vi.fn(),
   updateShop: vi.fn(),
+}));
+vi.mock("../../features/shops/api/banner", () => ({
+  uploadShopBanner: vi.fn(),
 }));
 const shop: ShopSettings = {
   id: "shop-a",
@@ -52,13 +62,57 @@ const membership: UserMembership = {
   role: "OWNER",
   shop: { id: shop.id, name: shop.name, slug: shop.slug, isActive: true },
 };
+
+it("saves a banner without losing business edits and locks conflicting controls during upload", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  let complete!: (value: { shop: ShopSettings; storagePath: string }) => void;
+  vi.mocked(uploadShopBanner).mockReturnValue(
+    new Promise((resolve) => {
+      complete = resolve;
+    }),
+  );
+  setup();
+  const user = userEvent.setup();
+  const business = await screen.findByLabelText("Business name (required)");
+  await user.clear(business);
+  await user.type(business, "Unsaved new name");
+  await user.upload(
+    screen.getByLabelText("Choose banner"),
+    new File(["image"], "banner.png", { type: "image/png" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Upload banner" }));
+  expect(business).toBeDisabled();
+  expect(screen.getByLabelText("Choose logo")).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Save settings" })).toBeDisabled();
+  complete({
+    shop: { ...shop, bannerUrl: "https://example.com/banner.webp" },
+    storagePath: "shop-a/banner/new.webp",
+  });
+  await vi.waitFor(() => expect(business).toBeEnabled());
+  expect(business).toHaveValue("Unsaved new name");
+  expect(screen.getByRole("img", { name: "Cafe A banner" })).toHaveAttribute(
+    "src",
+    "https://example.com/banner.webp",
+  );
+  expect(screen.getByRole("button", { name: "Save settings" })).toBeEnabled();
+});
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
   vi.restoreAllMocks();
-  if (modalDescriptor) Object.defineProperty(HTMLDialogElement.prototype, "showModal", modalDescriptor);
+  if (modalDescriptor)
+    Object.defineProperty(
+      HTMLDialogElement.prototype,
+      "showModal",
+      modalDescriptor,
+    );
   else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
-  if (closeDescriptor) Object.defineProperty(HTMLDialogElement.prototype, "close", closeDescriptor);
+  if (closeDescriptor)
+    Object.defineProperty(
+      HTMLDialogElement.prototype,
+      "close",
+      closeDescriptor,
+    );
   else Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
   useFeedbackStore.getState().clear();
 });

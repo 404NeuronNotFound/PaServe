@@ -27,6 +27,7 @@ import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { FiSave, FiRotateCcw, FiArrowLeft } from "react-icons/fi";
 
 import { ShopLogoUpload } from "./ShopLogoUpload";
+import { ShopBannerUpload } from "./ShopBannerUpload";
 
 const fields = [
   {
@@ -171,6 +172,8 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
   const [error, setError] = useState("");
   const [logoPending, setLogoPending] = useState(false);
   const [logoDirty, setLogoDirty] = useState(false);
+  const [bannerPending, setBannerPending] = useState(false);
+  const [bannerDirty, setBannerDirty] = useState(false);
   const [decision, setDecision] = useState<"reset" | "leave" | null>(null);
   const form = useRef<HTMLFormElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -179,7 +182,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
     mutationFn: (input: UpdateShopRequest) => updateShop(shop.id, input),
     retry: false,
   });
-  const busy = mutation.isPending || logoPending;
+  const busy = mutation.isPending || logoPending || bannerPending;
   const dirty = fields.some(({ key }) => values[key].trim() !== baseline[key]);
   const resetNoticeKey = `settings-reset:${shop.id}`;
   useEffect(
@@ -192,14 +195,14 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
   );
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
-      if (dirty || logoDirty || logoPending) {
+      if (dirty || logoDirty || bannerDirty || logoPending || bannerPending) {
         event.preventDefault();
         event.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty, logoDirty, logoPending]);
+  }, [dirty, logoDirty, bannerDirty, logoPending, bannerPending]);
   useEffect(() => {
     document.title = `Shop settings · ${shop.name} · PaServe`;
     heading.current?.focus();
@@ -249,7 +252,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (logoPending || saving.current) return;
+    if (logoPending || bannerPending || saving.current) return;
     const next: Partial<Record<Field, string>> = {};
     for (const { key } of fields) {
       const message = fieldError(key, values[key]);
@@ -343,7 +346,24 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
         Menu slug: <strong>{shop.slug}</strong>. Changing your name keeps this
         address.
       </p>
-      <ShopLogoUpload shopId={shop.id} membershipId={membership.id} name={shop.name} logoUrl={shop.logoUrl} disabled={mutation.isPending} onPending={setLogoPending} onDirty={setLogoDirty} />
+      <ShopLogoUpload
+        shopId={shop.id}
+        membershipId={membership.id}
+        name={shop.name}
+        logoUrl={shop.logoUrl}
+        disabled={mutation.isPending || bannerPending}
+        onPending={setLogoPending}
+        onDirty={setLogoDirty}
+      />
+      <ShopBannerUpload
+        shopId={shop.id}
+        membershipId={membership.id}
+        name={shop.name}
+        bannerUrl={shop.bannerUrl}
+        disabled={mutation.isPending || logoPending}
+        onPending={setBannerPending}
+        onDirty={setBannerDirty}
+      />
       <form
         ref={form}
         className="registration-form settings-form-grid"
@@ -464,15 +484,6 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
             </div>
           </Fragment>
         ))}
-        <section
-          className="settings-branding"
-          aria-labelledby="branding-heading"
-        >
-          <h2 id="branding-heading">Branding</h2>
-          <p className="field-hint">
-            Banner customization is planned for a future update.
-          </p>
-        </section>
         {error && (
           <InlineMessage className="settings-form-error">{error}</InlineMessage>
         )}
@@ -505,7 +516,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
             to={shopPath(shop.id)}
             onClick={(event) => {
               if (busy) { event.preventDefault(); return; }
-              if (dirty || logoDirty) {
+              if (dirty || logoDirty || bannerDirty) {
                 event.preventDefault();
                 setDecision("leave");
               }

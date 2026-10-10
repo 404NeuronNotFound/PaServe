@@ -93,3 +93,45 @@ it("shows a recovery state for unavailable menus", async () => {
     await screen.findByRole("heading", { name: "Menu unavailable" }),
   ).toBeInTheDocument();
 });
+
+it("renders the current shop banner above its menu identity", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      ...menu,
+      shop: { ...menu.shop, bannerUrl: "https://example.com/cafe/banner.webp" },
+    },
+  });
+  setup();
+  const banner = await screen.findByRole("img", { name: "Cafe banner" });
+  expect(banner).toHaveAttribute("src", "https://example.com/cafe/banner.webp");
+  expect(
+    banner.compareDocumentPosition(
+      screen.getByRole("heading", { name: "Cafe" }),
+    ) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
+it("keeps the menu usable when the banner is absent", async () => {
+  vi.mocked(api.get).mockResolvedValue({ data: menu });
+  setup();
+  await screen.findByRole("heading", { name: "Cafe" });
+  expect(
+    screen.queryByRole("img", { name: "Cafe banner" }),
+  ).not.toBeInTheDocument();
+});
+
+it("hides a broken banner while keeping the logo and menu available", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      ...menu,
+      shop: { ...menu.shop, bannerUrl: "https://example.com/broken.webp" },
+    },
+  });
+  setup();
+  fireEvent.error(await screen.findByRole("img", { name: "Cafe banner" }));
+  expect(
+    screen.queryByRole("img", { name: "Cafe banner" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Cafe logo" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Cafe" })).toBeInTheDocument();
+});
