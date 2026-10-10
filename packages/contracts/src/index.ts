@@ -359,7 +359,9 @@ export const ADD_ON_LIMITS = {
   selectionMax: 50,
 } as const;
 export interface CreateAddOnRequest {
+  /** Owner-defined modifier label, including extras or removal instructions. */
   name: string;
+  /** Nonnegative surcharge; use "0.00" for a free modifier or removal. */
   priceAdjustment: string;
   isAvailable?: boolean;
   sortOrder?: number;
@@ -394,8 +396,16 @@ export interface AddOnsResponse {
 export interface AssignProductAddOnRequest {
   addOnId: string;
 }
+export const CUSTOMER_NOTE_MAX_LENGTH = 300;
+/** Plain text: allow line breaks/tabs, reject other controls and bidi overrides. */
+export const CUSTOMER_NOTE_PATTERN = /^[^\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]*$/u;
+export function normalizeCustomerNote(value: string): string | undefined {
+  return value.replace(/\r\n?/g, "\n").trim() || undefined;
+}
 export interface AddOnSelectionRequest {
   addOnIds: string[];
+  /** Optional per-item preparation instruction, rendered only as plain text. */
+  notes?: string;
 }
 export interface PublicAddOn {
   id: string;
@@ -410,6 +420,7 @@ export interface PublicProductAddOnsResponse {
 /** One base product plus selected add-ons; variant pricing is a separate pending flow. */
 export interface ProductAddOnQuoteResponse {
   productId: string;
+  notes?: string;
   currency: typeof PRODUCT_CURRENCY;
   basePrice: string;
   addOns: PublicAddOn[];
