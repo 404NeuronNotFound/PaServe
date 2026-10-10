@@ -54,6 +54,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
   const [fieldError, setFieldError] = useState("");
   const [error, setError] = useState("");
   const [lostAccess, setLostAccess] = useState(false);
+  const [creationUncertain, setCreationUncertain] = useState(false);
   const [editing, setEditing] = useState<MenuCategory | null>(null);
   const [deleting, setDeleting] = useState<MenuCategory | null>(null);
   const [reordering, setReordering] = useState(false);
@@ -280,6 +281,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
     event.preventDefault();
     if (
       submitting.current ||
+      creationUncertain ||
       !authorized ||
       lostAccess ||
       reordering ||
@@ -338,11 +340,12 @@ function CategoryWorkspace({ userId }: { userId: string }) {
           setError("Your session has expired. Sign in again to continue.");
         else if (failure.response?.data.fieldErrors?.name)
           setFieldError(failure.response.data.fieldErrors.name[0]);
-        else if (!failure.response)
+        else if (!failure.response || (status && status >= 500)) {
+          setCreationUncertain(true);
           setError(
             "We couldn’t confirm creation. Refresh the categories before trying again.",
           );
-        else setError("We couldn’t create this category. Please try again.");
+        } else setError("We couldn’t create this category. Please try again.");
       } else setError("We couldn’t create this category. Please try again.");
     } finally {
       submitting.current = false;
@@ -608,7 +611,17 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               }
               onClick={() => {
                 setVisibilityError(null);
-                void query.refetch();
+                void query.refetch().then((result) => {
+                  if (
+                    mounted.current &&
+                    client.getQueryData<CurrentUserResponse>(currentUserKey)
+                      ?.user.id === userId &&
+                    result.isSuccess
+                  ) {
+                    setCreationUncertain(false);
+                    setError("");
+                  }
+                });
               }}
             >
               {query.isFetching ? "Refreshing…" : "Refresh categories"}
@@ -660,7 +673,12 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                 maxLength={CATEGORY_LIMITS.nameMax}
                 value={name}
                 placeholder="e.g. Coffee"
-                disabled={mutation.isPending || lostAccess || requestDenied}
+                disabled={
+                  mutation.isPending ||
+                  creationUncertain ||
+                  lostAccess ||
+                  requestDenied
+                }
                 aria-invalid={Boolean(fieldError)}
                 aria-describedby={`category-name-hint${fieldError ? " category-name-error" : ""}`}
                 onBlur={() => {
@@ -695,6 +713,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               type="submit"
               disabled={
                 mutation.isPending ||
+                creationUncertain ||
                 lostAccess ||
                 requestDenied ||
                 reordering ||

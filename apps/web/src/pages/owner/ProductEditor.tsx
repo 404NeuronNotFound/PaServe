@@ -382,13 +382,14 @@ export function ProductEditor({
           );
           pendingFocus.current = Object.keys(fields)[0] ?? null;
           setErrors(fields);
-        } else if (!failure.response)
+        } else if (!failure.response || (code && code >= 500)) {
+          setUnavailable(true);
           setError(
             product
               ? "We couldn’t confirm the save. Close this form and refresh products before trying again."
               : "We couldn’t confirm creation. Close this form and refresh products before trying again.",
           );
-        else
+        } else
           setError(
             "We couldn’t save the product. Your draft is kept. Please try again.",
           );

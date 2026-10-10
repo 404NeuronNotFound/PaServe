@@ -35,6 +35,7 @@ export function ProductImageUpload({
   const client = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
+  const [refreshRequired, setRefreshRequired] = useState(false);
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState(0);
   const mounted = useRef(false),
@@ -53,7 +54,8 @@ export function ProductImageUpload({
     );
   }
   async function upload() {
-    if (!file || running.current || disabled || !stillHere()) return;
+    if (!file || running.current || disabled || refreshRequired || !stillHere())
+      return;
     running.current = true;
     setPending(true);
     onPending(true);
@@ -88,8 +90,15 @@ export function ProductImageUpload({
     } catch (failure) {
       if (!stillHere()) return;
       let message =
-        "We couldn?t confirm the image save. Close this form and refresh products before trying again.";
+        "We couldn't confirm the image save. Close this form and refresh products before trying again.";
+      // Unknown outcomes and lost access require reconciliation before another upload.
+      setRefreshRequired(true);
       if (isAxiosError(failure) && failure.response) {
+        if (
+          [400, 413].includes(failure.response.status) ||
+          failure.response.data?.code === "PRODUCT_STORAGE_UNAVAILABLE"
+        )
+          setRefreshRequired(false);
         if (failure.response.status === 413)
           message = "Choose an image no larger than 5 MB.";
         else if (failure.response.status === 400)
@@ -116,7 +125,7 @@ export function ProductImageUpload({
       file={file}
       currentImageUrl={currentImageUrl}
       error={error}
-      disabled={disabled || pending}
+      disabled={disabled || pending || refreshRequired}
       pending={pending}
       progress={progress}
       hint="Upload saves the photo; other edits stay in this form."
@@ -129,7 +138,7 @@ export function ProductImageUpload({
         <button
           type="button"
           className="secondary-button"
-          disabled={pending || disabled}
+          disabled={pending || disabled || refreshRequired}
           onClick={() => void upload()}
         >
           {pending ? (
@@ -137,7 +146,7 @@ export function ProductImageUpload({
           ) : (
             <FiUpload aria-hidden="true" />
           )}
-          {pending ? "Uploading?" : "Upload image"}
+          {pending ? "Uploading..." : "Upload image"}
         </button>
       )}
     </ProductPhotoPicker>

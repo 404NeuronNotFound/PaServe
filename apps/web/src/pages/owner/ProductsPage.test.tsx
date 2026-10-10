@@ -1231,6 +1231,9 @@ it("does not automatically retry an uncertain creation", async () => {
   await user.click(modal.getByRole("button", { name: "Create product" }));
   expect(await modal.findByText(/confirm creation/)).toBeInTheDocument();
   expect(createProduct).toHaveBeenCalledTimes(1);
+  expect(modal.getByRole("button", { name: "Create product" })).toBeDisabled();
+  await user.click(modal.getByRole("button", { name: "Create product" }));
+  expect(createProduct).toHaveBeenCalledTimes(1);
   expect(modal.getByLabelText("Price")).toHaveValue("12.50");
 });
 it("protects a draft when Cancel or Escape is used", async () => {
@@ -1452,10 +1455,41 @@ it("supports photo drops, rejects multiple files and releases previews", async (
   });
   expect(modal.getByText("Choose one photo at a time.")).toBeInTheDocument();
   expect(modal.getByRole("button", { name: "Create product" })).toBeDisabled();
-  await user.click(modal.getByRole("button", { name: "Remove photo" }));
+  await user.click(modal.getByRole("button", { name: "Clear selection" }));
   expect(revoke).toHaveBeenCalledWith("blob:photo");
   expect(
     modal.queryByAltText("Selected product photo preview"),
   ).not.toBeInTheDocument();
   expect(modal.getByRole("button", { name: "Create product" })).toBeEnabled();
 });
+
+it.each([
+  { isAxiosError: true },
+  {
+    isAxiosError: true,
+    response: { status: 503, data: { code: "PRODUCT_IMAGE_SAVE_UNCERTAIN" } },
+  },
+  { isAxiosError: true, response: { status: 403, data: {} } },
+])(
+  "blocks photo retries after uncertain saves or access loss",
+  async (failure) => {
+    vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+    vi.mocked(uploadProductImage).mockRejectedValue(failure);
+    setup();
+    const { user, modal } = await edit();
+    await user.upload(
+      modal.getByLabelText(/Photo.*optional/),
+      new File(["png"], "new.png", { type: "image/png" }),
+    );
+    await user.click(modal.getByRole("button", { name: "Upload image" }));
+    await waitFor(() =>
+      expect(
+        modal.getByRole("button", { name: "Upload image" }),
+      ).toBeDisabled(),
+    );
+    expect(modal.getByRole("button", { name: "Replace photo" })).toBeDisabled();
+    await user.click(modal.getByRole("button", { name: "Upload image" }));
+    expect(uploadProductImage).toHaveBeenCalledTimes(1);
+    expect(modal.getByRole("button", { name: "Cancel" })).toBeEnabled();
+  },
+);

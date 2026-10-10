@@ -825,3 +825,42 @@ it("blocks modal dismissal and duplicate saves while an edit is pending", async 
     ).not.toBeInTheDocument(),
   );
 });
+
+it.each([
+  { isAxiosError: true },
+  { isAxiosError: true, response: { status: 503, data: {} } },
+])(
+  "requires a successful refresh after uncertain category creation",
+  async (failure) => {
+    vi.mocked(createCategory).mockRejectedValue(failure);
+    setup();
+    const user = userEvent.setup();
+    await screen.findByText("A place for every favorite.");
+    await user.type(screen.getByRole("textbox"), "Coffee");
+    await user.click(screen.getByRole("button", { name: "Create category" }));
+    await screen.findByText(/confirm creation/);
+    expect(screen.getByRole("textbox")).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Create category" }),
+    ).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Create category" }));
+    expect(createCategory).toHaveBeenCalledTimes(1);
+    vi.mocked(listCategories).mockRejectedValueOnce(new Error("offline"));
+    await user.click(
+      screen.getByRole("button", { name: "Refresh categories" }),
+    );
+    await screen.findByText(/load your categories/);
+    expect(
+      screen.getByRole("button", { name: "Create category" }),
+    ).toBeDisabled();
+    await user.click(
+      screen.getByRole("button", { name: "Refresh categories" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Create category" }),
+      ).toBeEnabled(),
+    );
+    expect(screen.getByRole("textbox")).toHaveValue("Coffee");
+  },
+);

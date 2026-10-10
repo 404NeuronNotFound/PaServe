@@ -100,7 +100,7 @@ export function ProductPhotoPicker({
           setDragging(false);
           if (event.dataTransfer.files.length !== 1) {
             if (!disabled && !pending)
-              onChange(file, "Choose one photo at a time.");
+              onChange(null, "Choose one photo at a time.");
             return;
           }
           select(event.dataTransfer.files[0]);
@@ -148,7 +148,7 @@ export function ProductPhotoPicker({
         </span>
       </button>
       <p id="product-photo-hint" className="field-hint">
-        JPEG, PNG or WebP ? up to 5 MB. {hint}
+        JPEG, PNG or WebP, up to 5 MB. {hint}
       </p>
       {file && (
         <div className="product-photo-selection">
@@ -201,8 +201,8 @@ export function ProductPhotoPicker({
           />
           <p className="field-hint" role="status">
             {progress < 100
-              ? `Uploading? ${progress}%`
-              : "Processing and saving image?"}
+              ? `Uploading... ${progress}%`
+              : "Processing and saving image..."}
           </p>
         </div>
       )}
