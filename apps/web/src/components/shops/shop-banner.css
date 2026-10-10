@@ -1,0 +1,38 @@
+.shop-banner {
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--color-secondary);
+}
+.shop-banner img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.public-menu > .shop-banner {
+  margin-bottom: 24px;
+}
+.shop-banner-upload {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  margin: 24px 0;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+}
+.shop-banner-upload h2,
+.shop-banner-upload p {
+  margin: 0;
+}
+.shop-banner-upload input {
+  max-width: 100%;
+  min-width: 0;
+}
+.shop-banner-upload progress {
+  width: 100%;
+  accent-color: var(--color-primary);
+}
