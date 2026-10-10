@@ -14,9 +14,9 @@ function setup() {
   const client = new QueryClient();
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/menu/cafe"]}>
+      <MemoryRouter initialEntries={["/cafe"]}>
         <Routes>
-          <Route path="/menu/:shopSlug" element={<PublicMenuPage />} />
+          <Route path="/:shopSlug" element={<PublicMenuPage />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -34,6 +34,71 @@ const menu = {
   products: [],
   featuredProducts: [],
 };
+
+it.each(["grid", "list", "compact"])(
+  "applies the complete API branding in %s layout and replaces it on refresh",
+  async (menuLayout) => {
+    const branded = {
+      ...menu,
+      shop: {
+        ...menu.shop,
+        description: "Coffee by the sea",
+        bannerUrl: "https://example.com/banner.webp",
+        primaryColor: "#FFFFFF",
+        accentColor: "#000000",
+        menuLayout,
+      },
+    };
+    vi.mocked(api.get).mockResolvedValue({ data: branded });
+    const client = setup();
+    await screen.findByRole("heading", { name: "Cafe" });
+    expect(screen.getByRole("img", { name: "Cafe logo" })).toHaveAttribute("src", branded.shop.logoUrl);
+    expect(screen.getByRole("img", { name: "Cafe banner" })).toHaveAttribute("src", branded.shop.bannerUrl);
+    expect(screen.getByText("Coffee by the sea")).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("data-layout", menuLayout);
+    const theme = () => screen.getByRole("main").style;
+    expect(theme().getPropertyValue("--menu-primary")).toBe("#FFFFFF");
+    expect(theme().getPropertyValue("--menu-on-primary")).toBe("#000000");
+    expect(theme().getPropertyValue("--menu-accent")).toBe("#000000");
+    expect(theme().getPropertyValue("--menu-on-accent")).toBe("#FFFFFF");
+
+    const updated = {
+      ...branded,
+      shop: {
+        ...branded.shop,
+        logoUrl: "https://example.com/new-logo.webp",
+        bannerUrl: "https://example.com/new-banner.webp",
+        primaryColor: "#123456",
+        accentColor: "#ABCDEF",
+        menuLayout: menuLayout === "grid" ? "compact" : "grid",
+      },
+    };
+    // A new saved image must remain usable after the previous image failed.
+    fireEvent.error(screen.getByRole("img", { name: "Cafe logo" }));
+    fireEvent.error(screen.getByRole("img", { name: "Cafe banner" }));
+    vi.mocked(api.get).mockResolvedValue({ data: updated });
+    await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+    await vi.waitFor(() => expect(screen.getByRole("img", { name: "Cafe logo" })).toHaveAttribute("src", updated.shop.logoUrl));
+    expect(screen.getByRole("img", { name: "Cafe banner" })).toHaveAttribute("src", updated.shop.bannerUrl);
+    expect(screen.getByRole("main")).toHaveAttribute("data-layout", updated.shop.menuLayout);
+    expect(theme().getPropertyValue("--menu-primary")).toBe("#123456");
+    expect(theme().getPropertyValue("--menu-accent")).toBe("#ABCDEF");
+    expect(document.documentElement.style.getPropertyValue("--menu-primary")).toBe("");
+    expect(document.documentElement.style.getPropertyValue("--menu-accent")).toBe("");
+
+    vi.mocked(api.get).mockResolvedValue({ data: { ...menu, shop: {
+      ...menu.shop, logoUrl: null, bannerUrl: null, primaryColor: "invalid",
+      accentColor: "url(unsafe)", menuLayout: "unsupported",
+    } } });
+    await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+    await vi.waitFor(() => expect(screen.queryByRole("img", { name: "Cafe logo" })).not.toBeInTheDocument());
+    expect(screen.queryByRole("img", { name: "Cafe banner" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Cafe" })).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("data-layout", "list");
+    expect(theme().getPropertyValue("--menu-primary")).toBe("#243329");
+    expect(theme().getPropertyValue("--menu-accent")).toBe("#C9EF83");
+  },
+);
 it("changes layout without recreating menu items or changing their content and order", async () => {
   const products = [
     {

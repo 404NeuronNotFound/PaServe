@@ -92,7 +92,12 @@ it("keeps public registration accessible without authenticating", () => {
 });
 
 const publicMenu = {
-  shop: { name: "Cafe North", slug: "cafe-north", description: "Fresh coffee" },
+  shop: {
+    name: "Cafe North", slug: "cafe-north", description: "Fresh coffee",
+    logoUrl: "https://example.com/north-logo.webp",
+    bannerUrl: "https://example.com/north-banner.webp",
+    primaryColor: "#123456", accentColor: "#ABCDEF", menuLayout: "grid",
+  },
   categories: [{ id: "drinks", name: "Drinks" }],
   products: [{
     id: "coffee", categoryId: "drinks", name: "Coffee", price: "120.00",
@@ -151,7 +156,12 @@ it("resolves a new shop context when navigating between public slugs", async () 
   renderAt("/cafe-north");
   await screen.findByRole("heading", { name: "Cafe North" });
   vi.mocked(api.get).mockResolvedValueOnce({ data: {
-    ...publicMenu, shop: { ...publicMenu.shop, name: "Cafe South", slug: "cafe-south" },
+    ...publicMenu, shop: {
+      ...publicMenu.shop, name: "Cafe South", slug: "cafe-south",
+      logoUrl: "https://example.com/south-logo.webp",
+      bannerUrl: "https://example.com/south-banner.webp",
+      primaryColor: "#FFFFFF", accentColor: "#000000", menuLayout: "compact",
+    },
     products: [], categories: [],
   } });
   act(() => {
@@ -160,6 +170,13 @@ it("resolves a new shop context when navigating between public slugs", async () 
   });
   expect(screen.queryByRole("heading", { name: "Cafe North" })).not.toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: "Cafe South" })).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Cafe South logo" })).toHaveAttribute("src", "https://example.com/south-logo.webp");
+  expect(screen.getByRole("img", { name: "Cafe South banner" })).toHaveAttribute("src", "https://example.com/south-banner.webp");
+  expect(screen.queryByRole("img", { name: "Cafe North logo" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("img", { name: "Cafe North banner" })).not.toBeInTheDocument();
+  expect(screen.getByRole("main")).toHaveAttribute("data-layout", "compact");
+  expect(screen.getByRole("main").style.getPropertyValue("--menu-primary")).toBe("#FFFFFF");
+  expect(screen.getByRole("main").style.getPropertyValue("--menu-accent")).toBe("#000000");
   expect(api.get).toHaveBeenLastCalledWith("/menu/cafe-south", { signal: expect.any(AbortSignal) });
   expect(getCurrentUser).not.toHaveBeenCalled();
 });
