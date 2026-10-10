@@ -351,6 +351,12 @@ export interface ProductFeaturedRequest {
 export interface ProductsResponse {
   products: MenuProduct[];
 }
+export const PRODUCT_REORDER_MAX = 500;
+export interface ReorderProductsRequest {
+  categoryId: string | null;
+  productIds: string[];
+  expectedOrder: string[];
+}
 export interface ReorderCategoriesRequest {
   categoryIds: string[];
   expectedOrder: string[];

@@ -16,6 +16,7 @@ import {
 } from "react-icons/fi";
 import {
   hasShopPermission,
+  PRODUCT_REORDER_MAX,
   type CurrentUserResponse,
   type MenuProduct,
   type ProductsResponse,
@@ -30,8 +31,10 @@ import {
   setProductSoldOut,
   setProductHidden,
   setProductFeatured,
+  reorderProducts,
 } from "../../features/shops/api/products";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ProductOrderEditor } from "./ProductOrderEditor";
 import { ProductEditor } from "./ProductEditor";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { feedback } from "../../app/stores/feedback";
@@ -55,6 +58,8 @@ function ProductWorkspace({ userId }: { userId: string }) {
   const membership = useActiveShop();
   const client = useQueryClient();
   const [creating, setCreating] = useState(false);
+  const [ordering, setOrdering] = useState(false);
+  const [orderCategory, setOrderCategory] = useState("");
   const [editing, setEditing] = useState<MenuProduct | null>(null);
   const [archiving, setArchiving] = useState<MenuProduct | null>(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
@@ -79,8 +84,8 @@ function ProductWorkspace({ userId }: { userId: string }) {
     trigger?.focus();
   }, [archiving, archiveBusy, availableBusy]);
   useEffect(() => {
-    editorOpen.current = creating || Boolean(editing);
-  }, [creating, editing]);
+    editorOpen.current = creating || Boolean(editing) || ordering;
+  }, [creating, editing, ordering]);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -214,6 +219,54 @@ function ProductWorkspace({ userId }: { userId: string }) {
       if (stillHere()) setAvailableBusy(null);
     }
   }
+  async function saveOrder(productIds: string[], expectedOrder: string[]) {
+    if (!stillHere()) return false;
+    if (running.current)
+      throw new Error("Wait for the current action to finish.");
+    running.current = true;
+    try {
+      const result = await reorderProducts(membership.shopId, {
+        categoryId: orderCategory || null,
+        productIds,
+        expectedOrder,
+      });
+      if (!stillHere()) return false;
+      const key = productsKey(userId, membership.shopId);
+      await client.cancelQueries({ queryKey: key });
+      if (!stillHere()) return false;
+      const changed = new Map(result.products.map((item) => [item.id, item]));
+      client.setQueryData<ProductsResponse>(key, (current) =>
+        current
+          ? {
+              products: current.products
+                .map((item) => changed.get(item.id) ?? item)
+                .sort(
+                  (a, b) =>
+                    a.sortOrder - b.sortOrder ||
+                    a.createdAt.localeCompare(b.createdAt) ||
+                    a.id.localeCompare(b.id),
+                ),
+            }
+          : current,
+      );
+      void client.invalidateQueries({ queryKey: key });
+      feedback.toast("Product order saved.");
+      return true;
+    } catch (error) {
+      if (!stillHere()) return false;
+      const status = isAxiosError(error) ? error.response?.status : undefined;
+      throw new Error(
+        status === 409
+          ? "Products or their order changed. Cancel and refresh before saving again."
+          : [401, 403, 404].includes(status ?? 0)
+            ? "Your access or this product group changed. Cancel and refresh products."
+            : "We couldn't confirm the saved order. Cancel and refresh before trying again.",
+        { cause: error },
+      );
+    } finally {
+      running.current = false;
+    }
+  }
   async function changeArchive(
     product: MenuProduct,
     isArchived: boolean,
@@ -314,6 +367,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
           disabled={
             creating ||
             Boolean(editing) ||
+            ordering ||
             Boolean(archiving) ||
             archiveBusy ||
             Boolean(availableBusy) ||
@@ -339,6 +393,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
               denied ||
               creating ||
               Boolean(editing) ||
+              ordering ||
               Boolean(archiving) ||
               archiveBusy ||
               Boolean(availableBusy)
@@ -365,6 +420,64 @@ function ProductWorkspace({ userId }: { userId: string }) {
               )
             </label>
           )}
+        {query.isSuccess && (
+          <div className="category-editor-actions product-order-tools">
+            <div className="field">
+              <label htmlFor="product-order-category">Product group</label>
+              <select
+                id="product-order-category"
+                value={orderCategory}
+                disabled={
+                  ordering ||
+                  creating ||
+                  Boolean(editing) ||
+                  Boolean(archiving) ||
+                  archiveBusy ||
+                  Boolean(availableBusy)
+                }
+                onChange={(event) => setOrderCategory(event.target.value)}
+              >
+                <option value="">Uncategorized</option>
+                {categories.data?.categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                    {category.isVisible ? "" : " (hidden)"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              id="reorder-products-button"
+              className="secondary-button"
+              type="button"
+              disabled={
+                ordering ||
+                creating ||
+                Boolean(editing) ||
+                Boolean(archiving) ||
+                archiveBusy ||
+                Boolean(availableBusy) ||
+                denied ||
+                query.data.products.filter(
+                  (item) =>
+                    !item.isArchived &&
+                    item.categoryId === (orderCategory || null),
+                ).length < 2 ||
+                query.data.products.filter(
+                  (item) =>
+                    !item.isArchived &&
+                    item.categoryId === (orderCategory || null),
+                ).length > PRODUCT_REORDER_MAX
+              }
+              onClick={() => setOrdering(true)}
+            >
+              Reorder products
+            </button>
+            <p className="categories-form-note">
+              Choose a group with 2–{PRODUCT_REORDER_MAX} active products.
+            </p>
+          </div>
+        )}
         {archiveError && <InlineMessage>{archiveError}</InlineMessage>}
         {query.isPending ? (
           <InlineMessage tone="info">Loading products…</InlineMessage>
@@ -486,6 +599,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                         disabled={
                           creating ||
                           Boolean(editing) ||
+                          ordering ||
                           Boolean(archiving) ||
                           archiveBusy ||
                           Boolean(availableBusy) ||
@@ -509,6 +623,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                         disabled={
                           creating ||
                           Boolean(editing) ||
+                          ordering ||
                           Boolean(archiving) ||
                           archiveBusy ||
                           Boolean(availableBusy) ||
@@ -530,6 +645,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                         disabled={
                           creating ||
                           Boolean(editing) ||
+                          ordering ||
                           Boolean(archiving) ||
                           archiveBusy ||
                           Boolean(availableBusy) ||
@@ -551,6 +667,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                         disabled={
                           creating ||
                           Boolean(editing) ||
+                          ordering ||
                           Boolean(archiving) ||
                           archiveBusy ||
                           Boolean(availableBusy) ||
@@ -580,6 +697,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                         disabled={
                           creating ||
                           Boolean(editing) ||
+                          ordering ||
                           Boolean(archiving) ||
                           archiveBusy ||
                           Boolean(availableBusy) ||
@@ -599,6 +717,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                       disabled={
                         creating ||
                         Boolean(editing) ||
+                        ordering ||
                         Boolean(archiving) ||
                         archiveBusy ||
                         Boolean(availableBusy) ||
@@ -659,6 +778,16 @@ function ProductWorkspace({ userId }: { userId: string }) {
           error instanceof Error ? error.message : archiveMessage(error)
         }
       />
+      {ordering && query.isSuccess && (
+        <ProductOrderEditor
+          products={query.data.products.filter(
+            (item) =>
+              !item.isArchived && item.categoryId === (orderCategory || null),
+          )}
+          onSave={saveOrder}
+          onClose={() => setOrdering(false)}
+        />
+      )}
       {(creating || editing) && (
         <ProductEditor
           userId={userId}

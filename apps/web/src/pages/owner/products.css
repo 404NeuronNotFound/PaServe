@@ -170,7 +170,8 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
-.product-create-dialog select {
+.product-create-dialog select,
+.product-order-tools select {
   box-sizing: border-box;
   width: 100%;
   min-height: 50px;
@@ -181,6 +182,18 @@
   color: var(--color-text);
   font: inherit;
   font-size: 16px;
+}
+.product-order-tools {
+  align-items: end;
+  margin: 20px 0;
+}
+.product-order-tools .field {
+  min-width: 0;
+  flex: 1 1 220px;
+  max-width: 380px;
+}
+.product-order-dialog .category-order-editor {
+  padding: 24px;
 }
 .product-display-options {
   border: 1px solid var(--color-border);

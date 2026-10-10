@@ -11,11 +11,23 @@ import type {
   ProductSoldOutRequest,
   ProductHiddenRequest,
   ProductFeaturedRequest,
+  ReorderProductsRequest,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
 export const productsKey = (userId: string, shopId: string) =>
   ["products", userId, shopId] as const;
+export async function reorderProducts(
+  shopId: string,
+  input: ReorderProductsRequest,
+): Promise<ProductsResponse> {
+  return (
+    await api.patch<ProductsResponse>(
+      `/shops/${encodeURIComponent(shopId)}/products/reorder`,
+      input,
+    )
+  ).data;
+}
 export async function setProductFeatured(
   shopId: string,
   productId: string,

@@ -23,6 +23,7 @@ import {
   setProductSoldOut,
   setProductHidden,
   setProductFeatured,
+  reorderProducts,
 } from "../../features/shops/api/products";
 import { listCategories } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
@@ -37,6 +38,7 @@ vi.mock("../../features/shops/api/products", async (original) => ({
   setProductSoldOut: vi.fn(),
   setProductHidden: vi.fn(),
   setProductFeatured: vi.fn(),
+  reorderProducts: vi.fn(),
   listProducts: vi.fn(),
 }));
 vi.mock("../../features/shops/api/categories", async (original) => ({
@@ -147,6 +149,95 @@ async function edit() {
     modal: within(screen.getByRole("dialog", { name: "Edit product" })),
   };
 }
+it("saves product moves in one selected group and preserves other products", async () => {
+  const second: MenuProduct = {
+    ...product,
+    id: "second",
+    name: "Mocha",
+    slug: "mocha",
+    sortOrder: 1,
+    status: "HIDDEN",
+  };
+  const other = {
+    ...product,
+    id: "other",
+    name: "Other",
+    categoryId: category.id,
+  };
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [product, second, other],
+  });
+  vi.mocked(reorderProducts).mockResolvedValue({
+    products: [
+      { ...second, sortOrder: 0 },
+      { ...product, sortOrder: 1 },
+    ],
+  });
+  const { client } = setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Reorder products" }),
+  );
+  const modal = within(
+    screen.getByRole("dialog", { name: "Reorder products" }),
+  );
+  expect(modal.queryByText("Other")).not.toBeInTheDocument();
+  await user.click(modal.getByRole("button", { name: "Move Mocha up" }));
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [
+      { ...second, sortOrder: 0 },
+      other,
+      { ...product, sortOrder: 1 },
+    ],
+  });
+  await user.click(modal.getByRole("button", { name: "Save order" }));
+  await waitFor(() =>
+    expect(reorderProducts).toHaveBeenCalledWith("a", {
+      categoryId: null,
+      productIds: ["second", "p"],
+      expectedOrder: ["p", "second"],
+    }),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(
+    (
+      client.getQueryData(productsKey("user-a", "a")) as {
+        products: MenuProduct[];
+      }
+    ).products,
+  ).toContainEqual(other);
+});
+it("preserves a dirty product-order draft on conflict and protects cancellation", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [
+      product,
+      { ...product, id: "second", name: "Mocha", slug: "mocha", sortOrder: 1 },
+    ],
+  });
+  vi.mocked(reorderProducts).mockRejectedValue({
+    isAxiosError: true,
+    response: { status: 409 },
+  });
+  setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Reorder products" }),
+  );
+  const modal = within(
+    screen.getByRole("dialog", { name: "Reorder products" }),
+  );
+  await user.click(modal.getByRole("button", { name: "Move Mocha up" }));
+  await user.click(modal.getByRole("button", { name: "Save order" }));
+  expect(
+    await modal.findByText(/Products or their order changed/),
+  ).toBeInTheDocument();
+  await user.click(modal.getByRole("button", { name: "Cancel" }));
+  expect(
+    screen.getByRole("dialog", { name: "Discard this product order?" }),
+  ).toBeInTheDocument();
+});
 it("features and unfeatures a product while preserving menu status", async () => {
   vi.mocked(listProducts).mockResolvedValue({ products: [product] });
   const saved = { ...product, isFeatured: true };
@@ -771,7 +862,7 @@ it("allows removing a category explicitly without clearing other fields", async 
   vi.mocked(updateProduct).mockResolvedValue({ product });
   setup();
   const { user, modal } = await edit();
-  await screen.findByRole("option", { name: /Coffee/ });
+  await modal.findByRole("option", { name: /Coffee/ });
   await user.selectOptions(modal.getByLabelText("Category"), "");
   await user.click(modal.getByRole("button", { name: "Save changes" }));
   await waitFor(() =>
