@@ -24,15 +24,17 @@ export class PublicMenuController {
         message: 'This menu is unavailable.',
       });
     const { categories, products, ...shop } = result;
+    const menuProducts = products.map((product) => ({
+      ...product,
+      price: product.price.toFixed(2),
+      isOrderable: product.status === 'AVAILABLE',
+      status: product.status as 'AVAILABLE' | 'SOLD_OUT',
+    }));
     return {
       shop,
       categories,
-      products: products.map((product) => ({
-        ...product,
-        price: product.price.toFixed(2),
-        isOrderable: product.status === 'AVAILABLE',
-        status: product.status as 'AVAILABLE' | 'SOLD_OUT',
-      })),
+      products: menuProducts,
+      featuredProducts: menuProducts.filter((product) => product.isFeatured),
     };
   }
 }

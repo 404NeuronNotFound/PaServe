@@ -62,12 +62,45 @@ try {
         assert.equal(saved.product.status, 'AVAILABLE');
         assert.equal(saved.product.price, '12.50');
         assert.equal((await read()).products[0].isOrderable, true);
+        const featured = await service.setFeatured(
+          user.id,
+          shop.id,
+          product.id,
+          { isFeatured: true, expectedFeatured: false },
+        );
+        assert.equal(featured.product.isFeatured, true);
+        assert.equal(featured.product.status, 'AVAILABLE');
+        assert.equal((await read()).featuredProducts[0].id, product.id);
+        await assert.rejects(
+          service.setFeatured(user.id, shop.id, product.id, {
+            isFeatured: false,
+            expectedFeatured: false,
+          }),
+          (e) => e.getStatus?.() === 409,
+        );
+        await assert.rejects(
+          service.setFeatured(user.id, other.id, product.id, {
+            isFeatured: false,
+            expectedFeatured: true,
+          }),
+          (e) => e.getStatus?.() === 404,
+        );
+        await service.setFeatured(user.id, shop.id, product.id, {
+          isFeatured: false,
+          expectedFeatured: true,
+        });
+        assert.equal((await read()).featuredProducts.length, 0);
+        await service.setFeatured(user.id, shop.id, product.id, {
+          isFeatured: true,
+          expectedFeatured: false,
+        });
         const beforeHide = (await service.list(user.id, shop.id)).products[0];
         const hidden = await service.setHidden(user.id, shop.id, product.id, {
           expectedStatus: 'AVAILABLE',
         });
         assert.deepEqual(hidden.product, { ...beforeHide, status: 'HIDDEN' });
         assert.equal((await read()).products.length, 0);
+        assert.equal((await read()).featuredProducts.length, 0);
         assert.equal(
           (await service.list(user.id, shop.id)).products[0].status,
           'HIDDEN',
@@ -102,6 +135,7 @@ try {
         assert.equal(sold.product.price, '12.50');
         assert.equal((await read()).products[0].isOrderable, false);
         assert.equal((await read()).products[0].status, 'SOLD_OUT');
+        assert.equal((await read()).featuredProducts[0].isOrderable, false);
         await assert.rejects(
           service.setSoldOut(user.id, shop.id, product.id, {
             expectedStatus: 'AVAILABLE',
@@ -135,10 +169,12 @@ try {
           data: { isVisible: false },
         });
         assert.equal((await read()).products.length, 0);
+        assert.equal((await read()).featuredProducts.length, 0);
         await service.setSoldOut(user.id, shop.id, product.id, {
           expectedStatus: 'AVAILABLE',
         });
         assert.equal((await read()).products.length, 0);
+        assert.equal((await read()).featuredProducts.length, 0);
         await service.setAvailable(user.id, shop.id, product.id, {
           expectedStatus: 'SOLD_OUT',
         });
@@ -147,6 +183,7 @@ try {
           expectedStatus: 'AVAILABLE',
         });
         assert.equal((await read()).products.length, 0);
+        assert.equal((await read()).featuredProducts.length, 0);
         assert.equal(
           (
             await tx.category.findFirstOrThrow({
@@ -171,9 +208,17 @@ try {
           (e) => e.getStatus?.() === 409,
         );
         assert.equal((await read()).products.length, 0);
+        assert.equal((await read()).featuredProducts.length, 0);
         await assert.rejects(
           service.setHidden(user.id, shop.id, product.id, {
             expectedStatus: 'AVAILABLE',
+          }),
+          (e) => e.getStatus?.() === 409,
+        );
+        await assert.rejects(
+          service.setFeatured(user.id, shop.id, product.id, {
+            isFeatured: false,
+            expectedFeatured: true,
           }),
           (e) => e.getStatus?.() === 409,
         );
@@ -188,6 +233,13 @@ try {
         await assert.rejects(
           service.setAvailable(user.id, shop.id, product.id, {
             expectedStatus: 'HIDDEN',
+          }),
+          (e) => e.getStatus?.() === 403,
+        );
+        await assert.rejects(
+          service.setFeatured(user.id, shop.id, product.id, {
+            isFeatured: false,
+            expectedFeatured: true,
           }),
           (e) => e.getStatus?.() === 403,
         );
@@ -236,7 +288,7 @@ try {
   );
   assert.equal(await prisma.user.count({ where: { email } }), 0);
   console.log(
-    'Available/Sold out/Hidden persistence and editable retention, public orderability, category/archive/shop rules, stale writes, cashier limits and tenant isolation passed. Fixtures rolled back.',
+    'Available/Sold out/Hidden persistence and editable retention, featured persistence/public grouping, public orderability, category/archive/shop rules, stale writes, cashier limits and tenant isolation passed. Fixtures rolled back.',
   );
 } finally {
   await prisma.$disconnect();

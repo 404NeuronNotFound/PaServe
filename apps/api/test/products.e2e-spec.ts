@@ -221,6 +221,101 @@ describe('tenant-scoped product creation', () => {
     request(app.getHttpServer())
       .post(`/api/v1/shops/${shop}/products/${id}/image`)
       .set('Authorization', 'Bearer valid');
+  const feature = (
+    body: unknown = { isFeatured: true, expectedFeatured: false },
+    target = shopId,
+    id = productId,
+  ) =>
+    request(app.getHttpServer())
+      .patch(`/api/v1/shops/${target}/products/${id}/featured`)
+      .set('Authorization', 'Bearer valid')
+      .send(body);
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'allows %s to feature a product with a scoped flag-only write',
+    async (value) => {
+      role = value;
+      productWrite.mockResolvedValue({ ...product, isFeatured: true });
+      const result = await feature().expect(200);
+      expect(result.body.product).toMatchObject({
+        isFeatured: true,
+        status: 'AVAILABLE',
+        price: '12.50',
+      });
+      expect(result.headers['cache-control']).toBe('no-store');
+      expect(productWrite.mock.calls[0][0]).toMatchObject({
+        where: {
+          id: productId,
+          shopId,
+          isArchived: false,
+          isFeatured: false,
+          shop: {
+            isActive: true,
+            members: {
+              some: {
+                userId,
+                role: { in: ['OWNER', 'ADMIN', 'MANAGER'] },
+                user: { isActive: true },
+              },
+            },
+          },
+        },
+        data: { isFeatured: true },
+      });
+    },
+  );
+  it('unfeatures products without changing visibility or availability', async () => {
+    await feature({ isFeatured: false, expectedFeatured: true }).expect(200);
+    expect(productWrite.mock.calls[0][0]).toMatchObject({
+      where: { isFeatured: true },
+      data: { isFeatured: false },
+    });
+  });
+  it.each(['CASHIER', 'KITCHEN'])(
+    'denies %s featured changes',
+    async (value) => {
+      role = value;
+      await feature().expect(403);
+      expect(productWrite).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    {},
+    { isFeatured: true },
+    { isFeatured: 'true', expectedFeatured: false },
+    { isFeatured: true, expectedFeatured: null },
+    { isFeatured: true, expectedFeatured: false, shopId: other },
+    { isFeatured: true, expectedFeatured: false, status: 'AVAILABLE' },
+  ])('rejects invalid featured fields %j', async (body) => {
+    await feature(body).expect(400);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('rejects foreign/malformed feature targets and guests', async () => {
+    await feature(undefined, other).expect(404);
+    await feature(undefined, shopId, 'bad').expect(400);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/shops/${shopId}/products/${productId}/featured`)
+      .send({ isFeatured: true, expectedFeatured: false })
+      .expect(401);
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('returns featured conflicts and denies lost access after failed writes', async () => {
+    productWrite.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('stale', {
+        code: 'P2025',
+        clientVersion: 'test',
+      }),
+    );
+    const result = await feature().expect(409);
+    expect(result.body.code).toBe('PRODUCT_FEATURED_CHANGED');
+    productWrite.mockImplementation(async () => {
+      role = 'CASHIER';
+      throw new Prisma.PrismaClientKnownRequestError('lost', {
+        code: 'P2025',
+        clientVersion: 'test',
+      });
+    });
+    await feature().expect(403);
+  });
   const hide = (
     body: unknown = { expectedStatus: 'AVAILABLE' },
     target = shopId,

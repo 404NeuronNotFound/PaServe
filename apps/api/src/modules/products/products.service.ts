@@ -19,6 +19,7 @@ import type { UpdateProductDto } from './update-product.dto.js';
 import type { ProductCreateData } from './products.repository.js';
 import type { ProductArchiveDto } from './product-archive.dto.js';
 import type { ProductAvailableDto } from './product-available.dto.js';
+import type { ProductFeaturedDto } from './product-featured.dto.js';
 
 @Injectable()
 export class ProductsService {
@@ -27,6 +28,54 @@ export class ProductsService {
     private readonly members: ShopMembersService,
     private readonly resources: TenantResourcesService,
   ) {}
+  async setFeatured(
+    userId: string,
+    shopId: string,
+    productId: string,
+    dto: ProductFeaturedDto,
+  ): Promise<CreateProductResponse> {
+    await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
+    await this.resources.requireResource(userId, shopId, 'product', productId);
+    try {
+      const product = await this.repository.setFeatured(
+        userId,
+        shopId,
+        productId,
+        dto.isFeatured,
+        dto.expectedFeatured,
+      );
+      return {
+        product: {
+          ...product,
+          price: product.price.toFixed(2),
+          createdAt: product.createdAt.toISOString(),
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        await this.members.requirePermission(
+          userId,
+          shopId,
+          'shop.menu.manage',
+        );
+        await this.resources.requireResource(
+          userId,
+          shopId,
+          'product',
+          productId,
+        );
+        throw new ConflictException({
+          code: 'PRODUCT_FEATURED_CHANGED',
+          message:
+            'Featured selection or archive state changed. Refresh products before trying again.',
+        });
+      }
+      throw error;
+    }
+  }
   async setAvailable(
     userId: string,
     shopId: string,

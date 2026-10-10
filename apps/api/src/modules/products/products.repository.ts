@@ -33,6 +33,25 @@ export type ProductCreateData = {
 @Injectable()
 export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
+  setFeatured(
+    userId: string,
+    shopId: string,
+    productId: string,
+    isFeatured: boolean,
+    expectedFeatured: boolean,
+  ) {
+    return this.prisma.product.update({
+      where: {
+        id: productId,
+        shopId,
+        isArchived: false,
+        isFeatured: expectedFeatured,
+        shop: shopAccessWhere(userId, shopId, roles),
+      },
+      data: { isFeatured },
+      select: productSelect,
+    });
+  }
   setAvailable(
     userId: string,
     shopId: string,
