@@ -55,16 +55,21 @@ export function AppRouter() {
           <Route path="onboarding/create-shop" element={<CreateShopPage />} />
         </Route>
         <Route path="/connection" element={<ConnectionPage />} />
-        <Route
-          path="*"
-          element={
-            <main className="connection-page">
-              <h1>Page not found</h1>
-              <a href="/register">Go to registration</a>
-            </main>
-          }
-        />
+        {["api", "admin", "shops", "menu"].map((path) => (
+          <Route key={path} path={`/${path}`} element={<PageNotFound />} />
+        ))}
+        <Route path="/:shopSlug" element={<PublicMenuPage />} />
+        <Route path="*" element={<PageNotFound />} />
       </Routes>
     </BrowserRouter>
+  );
+}
+
+function PageNotFound() {
+  return (
+    <main className="connection-page">
+      <h1>Page not found</h1>
+      <a href="/register">Go to registration</a>
+    </main>
   );
 }

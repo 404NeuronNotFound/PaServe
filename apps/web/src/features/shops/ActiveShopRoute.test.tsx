@@ -74,7 +74,16 @@ it("resolves the only available shop and saves it after live validation", async 
   ).toBeInTheDocument();
   expect(getShopMembership).toHaveBeenCalledWith("a", expect.any(AbortSignal));
   expect(rememberedShop("user-a")).toBe("a");
+  expect(screen.getByRole("link", { name: "View public menu" })).toHaveAttribute("href", "/cafe-a");
 });
+it.each(["menu", "connection"])("keeps older shops with reserved slug %s reachable through the legacy menu link", async (slug) => {
+  const membership = { ...member("a"), shop: { ...member("a").shop, slug } };
+  vi.mocked(getShopMembership).mockResolvedValue(membership);
+  setup("/app/shops/a", [membership]);
+  await screen.findByRole("heading", { name: "Cafe a" });
+  expect(screen.getByRole("link", { name: "View public menu" })).toHaveAttribute("href", `/menu/${slug}`);
+});
+
 it("offers an explicit choice for multiple shops and switches role and context", async () => {
   vi.mocked(getShopMembership).mockImplementation(async (id) =>
     member(id, id === "a" ? "OWNER" : "CASHIER"),

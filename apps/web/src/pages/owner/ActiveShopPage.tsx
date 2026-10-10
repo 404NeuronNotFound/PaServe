@@ -11,6 +11,10 @@ import { useActiveShop, shopPath } from "../../features/shops/active-shop";
 
 export function ActiveShopPage() {
   const membership = useActiveShop();
+  // Older shops could use these names before they became reserved routes.
+  const publicMenuPath = ["menu", "connection"].includes(membership.shop.slug)
+    ? `/menu/${encodeURIComponent(membership.shop.slug)}`
+    : `/${encodeURIComponent(membership.shop.slug)}`;
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     document.title = `${membership.shop.name} · PaServe`;
@@ -34,7 +38,7 @@ export function ActiveShopPage() {
       <div className="shop-overview-address">
         <span className="section-label">YOUR MENU IDENTITY</span>
         <strong>/{membership.shop.slug}</strong>
-        <Link to={`/menu/${encodeURIComponent(membership.shop.slug)}`}>View public menu</Link>
+        <Link to={publicMenuPath}>View public menu</Link>
       </div>
       <nav className="shop-overview-actions" aria-label="Shop actions">
         {membership.role === "OWNER" && (
