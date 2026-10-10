@@ -139,6 +139,29 @@ function setup(role: UserMembership["role"] = "OWNER") {
   );
   return client;
 }
+it("loads the default layout and persists changes through the active shop settings", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  const client = setup();
+  const invalidate = vi.spyOn(client, "invalidateQueries");
+  const user = userEvent.setup();
+  const select = await screen.findByRole("combobox", { name: "Menu layout" });
+  expect(select).toHaveValue("list");
+  for (const menuLayout of ["grid", "compact", "list"] as const) {
+    vi.mocked(updateShop).mockResolvedValue({ shop: { ...shop, menuLayout } });
+    await user.selectOptions(select, menuLayout);
+    await user.click(screen.getByRole("button", { name: "Save settings" }));
+    await vi.waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Save settings" }),
+      ).toBeDisabled(),
+    );
+    expect(updateShop).toHaveBeenLastCalledWith("shop-a", { menuLayout });
+    expect(select).toHaveValue(menuLayout);
+  }
+  expect(invalidate).toHaveBeenCalledWith({
+    queryKey: ["public-menu", "cafe-a"],
+  });
+});
 it("loads current values and saves only changed fields to the active shop", async () => {
   vi.mocked(getShopSettings).mockResolvedValue({ shop });
   vi.mocked(updateShop).mockResolvedValue({

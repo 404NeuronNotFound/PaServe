@@ -12,6 +12,9 @@ import {
   DEFAULT_MENU_PRIMARY_COLOR,
   DEFAULT_MENU_ACCENT_COLOR,
   SHOP_ACCENT_COLOR_HINT,
+  MENU_LAYOUTS,
+  DEFAULT_MENU_LAYOUT,
+  isMenuLayout,
   SHOP_PRIMARY_COLOR_HINT,
   isValidShopPrimaryColor,
   normalizeShopPrimaryColor,
@@ -48,6 +51,12 @@ const fields = [
     label: "Accent color",
     max: 7,
     hint: SHOP_ACCENT_COLOR_HINT,
+  },
+  {
+    key: "menuLayout",
+    label: "Menu layout",
+    max: 7,
+    hint: "Grid shows cards, List shows rows, and Compact uses smaller rows. The same menu items appear in every layout.",
   },
   {
     key: "name",
@@ -111,7 +120,13 @@ const normalizedValue = (key: Field, value: string) =>
     : value.trim();
 const valuesFrom = (shop: ShopSettings) =>
   Object.fromEntries(
-    fields.map(({ key }) => [key, normalizedValue(key, shop[key] ?? "")]),
+    fields.map(({ key }) => [
+      key,
+      normalizedValue(
+        key,
+        shop[key] ?? (key === "menuLayout" ? DEFAULT_MENU_LAYOUT : ""),
+      ),
+    ]),
   ) as Values;
 
 export function ShopSettingsPage() {
@@ -248,6 +263,8 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
   function fieldError(key: Field, value: string): string | undefined {
     const field = fields.find((item) => item.key === key)!;
     const trimmed = value.trim();
+    if (key === "menuLayout" && !isMenuLayout(value))
+      return "Choose Grid, List, or Compact.";
     if (key === "primaryColor" && !isValidShopPrimaryColor(value))
       return SHOP_PRIMARY_COLOR_HINT;
     if (key === "accentColor" && !isValidShopPrimaryColor(value))
@@ -445,7 +462,25 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                     }
                   />
                 )}
-                {"multiline" in field ? (
+                {field.key === "menuLayout" ? (
+                  <select
+                    id="settings-menuLayout"
+                    name="menuLayout"
+                    value={values.menuLayout}
+                    disabled={busy}
+                    aria-invalid={Boolean(errors.menuLayout)}
+                    aria-describedby={`settings-menuLayout-hint${errors.menuLayout ? " settings-menuLayout-error" : ""}`}
+                    onChange={(event) =>
+                      changeField("menuLayout", event.target.value)
+                    }
+                  >
+                    {MENU_LAYOUTS.map((layout) => (
+                      <option key={layout} value={layout}>
+                        {layout[0].toUpperCase() + layout.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                ) : "multiline" in field ? (
                   <textarea
                     id={`settings-${field.key}`}
                     name={field.key}

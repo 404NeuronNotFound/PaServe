@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import type { PublicMenuResponse } from "@paserve/contracts";
+import { isMenuLayout, DEFAULT_MENU_LAYOUT } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import { formatProductPrice } from "../../lib/money";
 import { menuTheme } from "../../lib/menu-theme";
@@ -54,6 +55,9 @@ export function PublicMenuPage() {
   return (
     <main
       className="public-menu"
+      data-layout={
+        isMenuLayout(shop.menuLayout) ? shop.menuLayout : DEFAULT_MENU_LAYOUT
+      }
       style={menuTheme(shop.primaryColor, shop.accentColor)}
     >
       <ShopBanner url={shop.bannerUrl} name={shop.name} />

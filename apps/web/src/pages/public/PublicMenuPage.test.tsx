@@ -34,6 +34,59 @@ const menu = {
   products: [],
   featuredProducts: [],
 };
+it("changes layout without recreating menu items or changing their content and order", async () => {
+  const products = [
+    {
+      id: "tea",
+      categoryId: "drinks",
+      name: "Tea",
+      description: "Fresh tea",
+      price: "15.00",
+      status: "SOLD_OUT",
+      imageUrl: null,
+    },
+    {
+      id: "coffee",
+      categoryId: "drinks",
+      name: "Coffee",
+      description: null,
+      price: "20.00",
+      status: "AVAILABLE",
+      imageUrl: null,
+    },
+  ];
+  const data = (menuLayout: string | undefined) => ({
+    ...menu,
+    shop: { ...menu.shop, menuLayout },
+    categories: [{ id: "drinks", name: "Drinks" }],
+    products,
+  });
+  vi.mocked(api.get).mockResolvedValue({ data: data(undefined) });
+  const client = setup();
+  const tea = await screen.findByRole("heading", { name: "Tea" });
+  expect(screen.getByRole("main")).toHaveAttribute("data-layout", "list");
+  for (const layout of ["grid", "compact", "list", "unsupported"]) {
+    vi.mocked(api.get).mockResolvedValue({ data: data(layout) });
+    await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+    await vi.waitFor(() =>
+      expect(screen.getByRole("main")).toHaveAttribute(
+        "data-layout",
+        layout === "unsupported" ? "list" : layout,
+      ),
+    );
+    expect(screen.getByRole("heading", { name: "Tea" })).toBe(tea);
+    expect(
+      screen
+        .getAllByRole("heading", { level: 3 })
+        .map((item) => item.textContent),
+    ).toEqual(["Tea", "Coffee"]);
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getByText("Fresh tea")).toBeInTheDocument();
+    expect(screen.getByText("Sold out")).toBeInTheDocument();
+    expect(screen.getByText(/15\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/20\.00/)).toBeInTheDocument();
+  }
+});
 it("scopes the persisted brand color to the customer menu", async () => {
   vi.mocked(api.get).mockResolvedValue({
     data: { ...menu, shop: { ...menu.shop, primaryColor: "#AABBCC" } },
