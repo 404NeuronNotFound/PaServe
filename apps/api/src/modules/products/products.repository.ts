@@ -61,12 +61,26 @@ export class ProductsRepository {
       'SOLD_OUT',
     );
   }
+  setHidden(
+    userId: string,
+    shopId: string,
+    productId: string,
+    expectedStatus: ProductStatus,
+  ) {
+    return this.setAvailability(
+      userId,
+      shopId,
+      productId,
+      expectedStatus,
+      'HIDDEN',
+    );
+  }
   private setAvailability(
     userId: string,
     shopId: string,
     productId: string,
     expectedStatus: ProductStatus,
-    status: 'AVAILABLE' | 'SOLD_OUT',
+    status: 'AVAILABLE' | 'SOLD_OUT' | 'HIDDEN',
   ) {
     return this.prisma.product.update({
       where: {
@@ -77,7 +91,9 @@ export class ProductsRepository {
         shop: shopAccessWhere(
           userId,
           shopId,
-          expectedStatus === 'HIDDEN' ? roles : [...roles, 'CASHIER'],
+          expectedStatus === 'HIDDEN' || status === 'HIDDEN'
+            ? roles
+            : [...roles, 'CASHIER'],
         ),
       },
       data: { status },

@@ -33,7 +33,7 @@ export class ProductsService {
     productId: string,
     dto: ProductAvailableDto,
   ): Promise<CreateProductResponse> {
-    return this.changeAvailability(userId, shopId, productId, dto, false);
+    return this.changeAvailability(userId, shopId, productId, dto, 'AVAILABLE');
   }
   async setSoldOut(
     userId: string,
@@ -41,27 +41,38 @@ export class ProductsService {
     productId: string,
     dto: ProductAvailableDto,
   ): Promise<CreateProductResponse> {
-    return this.changeAvailability(userId, shopId, productId, dto, true);
+    return this.changeAvailability(userId, shopId, productId, dto, 'SOLD_OUT');
+  }
+  async setHidden(
+    userId: string,
+    shopId: string,
+    productId: string,
+    dto: ProductAvailableDto,
+  ): Promise<CreateProductResponse> {
+    return this.changeAvailability(userId, shopId, productId, dto, 'HIDDEN');
   }
   private async changeAvailability(
     userId: string,
     shopId: string,
     productId: string,
     dto: ProductAvailableDto,
-    soldOut: boolean,
+    targetStatus: 'AVAILABLE' | 'SOLD_OUT' | 'HIDDEN',
   ): Promise<CreateProductResponse> {
     await this.members.requirePermission(
       userId,
       shopId,
       'shop.menu.availability.update',
     );
-    if (dto.expectedStatus === 'HIDDEN')
+    if (dto.expectedStatus === 'HIDDEN' || targetStatus === 'HIDDEN')
       await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
     await this.resources.requireResource(userId, shopId, 'product', productId);
     try {
-      const write = soldOut
-        ? this.repository.setSoldOut.bind(this.repository)
-        : this.repository.setAvailable.bind(this.repository);
+      const write =
+        targetStatus === 'HIDDEN'
+          ? this.repository.setHidden.bind(this.repository)
+          : targetStatus === 'SOLD_OUT'
+            ? this.repository.setSoldOut.bind(this.repository)
+            : this.repository.setAvailable.bind(this.repository);
       const product = await write(
         userId,
         shopId,
@@ -85,7 +96,7 @@ export class ProductsService {
           shopId,
           'shop.menu.availability.update',
         );
-        if (dto.expectedStatus === 'HIDDEN')
+        if (dto.expectedStatus === 'HIDDEN' || targetStatus === 'HIDDEN')
           await this.members.requirePermission(
             userId,
             shopId,

@@ -62,6 +62,39 @@ try {
         assert.equal(saved.product.status, 'AVAILABLE');
         assert.equal(saved.product.price, '12.50');
         assert.equal((await read()).products[0].isOrderable, true);
+        const beforeHide = (await service.list(user.id, shop.id)).products[0];
+        const hidden = await service.setHidden(user.id, shop.id, product.id, {
+          expectedStatus: 'AVAILABLE',
+        });
+        assert.deepEqual(hidden.product, { ...beforeHide, status: 'HIDDEN' });
+        assert.equal((await read()).products.length, 0);
+        assert.equal(
+          (await service.list(user.id, shop.id)).products[0].status,
+          'HIDDEN',
+        );
+        await assert.rejects(
+          service.setHidden(user.id, shop.id, product.id, {
+            expectedStatus: 'AVAILABLE',
+          }),
+          (e) => e.getStatus?.() === 409,
+        );
+        await assert.rejects(
+          service.setHidden(user.id, other.id, product.id, {
+            expectedStatus: 'HIDDEN',
+          }),
+          (e) => e.getStatus?.() === 404,
+        );
+        await service.update(user.id, shop.id, product.id, {
+          description: 'Still editable',
+        });
+        assert.equal(
+          (await service.list(user.id, shop.id)).products[0].description,
+          'Still editable',
+        );
+        await service.setAvailable(user.id, shop.id, product.id, {
+          expectedStatus: 'HIDDEN',
+        });
+        assert.equal((await read()).products[0].isOrderable, true);
         const sold = await service.setSoldOut(user.id, shop.id, product.id, {
           expectedStatus: 'AVAILABLE',
         });
@@ -138,6 +171,12 @@ try {
           (e) => e.getStatus?.() === 409,
         );
         assert.equal((await read()).products.length, 0);
+        await assert.rejects(
+          service.setHidden(user.id, shop.id, product.id, {
+            expectedStatus: 'AVAILABLE',
+          }),
+          (e) => e.getStatus?.() === 409,
+        );
         await tx.product.update({
           where: { id: product.id, shopId: shop.id },
           data: { isArchived: false, status: 'HIDDEN' },
@@ -172,6 +211,12 @@ try {
           where: { userId_shopId: { userId: user.id, shopId: shop.id } },
           data: { role: 'KITCHEN' },
         });
+        await assert.rejects(
+          service.setHidden(user.id, shop.id, product.id, {
+            expectedStatus: 'AVAILABLE',
+          }),
+          (e) => e.getStatus?.() === 403,
+        );
         await tx.$executeRawUnsafe('SAVEPOINT lost_role');
         await assert.rejects(
           repository.setAvailable(user.id, shop.id, product.id, 'AVAILABLE'),
@@ -191,7 +236,7 @@ try {
   );
   assert.equal(await prisma.user.count({ where: { email } }), 0);
   console.log(
-    'Available/Sold out persistence, public orderability, category/archive/shop rules, stale writes, cashier limits and tenant isolation passed. Fixtures rolled back.',
+    'Available/Sold out/Hidden persistence and editable retention, public orderability, category/archive/shop rules, stale writes, cashier limits and tenant isolation passed. Fixtures rolled back.',
   );
 } finally {
   await prisma.$disconnect();
