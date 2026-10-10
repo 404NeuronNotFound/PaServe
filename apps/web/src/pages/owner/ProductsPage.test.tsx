@@ -19,6 +19,7 @@ import {
   updateProduct,
   setProductArchived,
   uploadProductImage,
+  setProductAvailable,
 } from "../../features/shops/api/products";
 import { listCategories } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
@@ -29,6 +30,7 @@ vi.mock("../../features/shops/api/products", async (original) => ({
   updateProduct: vi.fn(),
   setProductArchived: vi.fn(),
   uploadProductImage: vi.fn(),
+  setProductAvailable: vi.fn(),
   listProducts: vi.fn(),
 }));
 vi.mock("../../features/shops/api/categories", async (original) => ({
@@ -139,6 +141,77 @@ async function edit() {
     modal: within(screen.getByRole("dialog", { name: "Edit product" })),
   };
 }
+it("makes a sold-out product available with inline category context and a toast", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [{ ...product, status: "SOLD_OUT", categoryId: category.id }],
+  });
+  const saved = { ...product, categoryId: category.id };
+  vi.mocked(setProductAvailable).mockResolvedValue({ product: saved });
+  setup();
+  const user = userEvent.setup();
+  const trigger = await screen.findByRole("button", {
+    name: "Make Latte available",
+  });
+  vi.mocked(listProducts).mockResolvedValue({ products: [saved] });
+  await user.click(trigger);
+  await waitFor(() =>
+    expect(setProductAvailable).toHaveBeenCalledWith("a", "p", {
+      expectedStatus: "SOLD_OUT",
+    }),
+  );
+  expect(
+    await screen.findByText("Category hidden · Not shown on the menu"),
+  ).toBeInTheDocument();
+  expect(useFeedbackStore.getState().notices[0].message).toContain(
+    "category is still hidden",
+  );
+});
+it("keeps the product unchanged when availability conflicts", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [{ ...product, status: "SOLD_OUT" }],
+  });
+  vi.mocked(setProductAvailable).mockRejectedValue({
+    isAxiosError: true,
+    response: { status: 409 },
+  });
+  setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Make Latte available" }),
+  );
+  expect(
+    await screen.findByText(/Product status changed elsewhere/),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Make Latte available" }),
+  ).toBeEnabled();
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+it("blocks other actions while availability is pending and ignores late responses", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [{ ...product, status: "SOLD_OUT" }],
+  });
+  let resolve!: (value: { product: MenuProduct }) => void;
+  vi.mocked(setProductAvailable).mockReturnValue(
+    new Promise((done) => {
+      resolve = done;
+    }),
+  );
+  const { client, unmount } = setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Make Latte available" }),
+  );
+  expect(screen.getByRole("button", { name: "Edit Latte" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Create product" })).toBeDisabled();
+  unmount();
+  resolve({ product });
+  await new Promise((done) => setTimeout(done, 20));
+  expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
+    products: [{ ...product, status: "SOLD_OUT" }],
+  });
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
 it("shows PHP prices consistently in cards and the edit preview", async () => {
   vi.mocked(listProducts).mockResolvedValue({
     products: [{ ...product, price: "1234.56" }],

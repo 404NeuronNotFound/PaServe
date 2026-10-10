@@ -7,11 +7,24 @@ import type {
   ProductArchiveRequest,
   ProductArchiveResponse,
   ProductImageResponse,
+  ProductAvailableRequest,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
 export const productsKey = (userId: string, shopId: string) =>
   ["products", userId, shopId] as const;
+export async function setProductAvailable(
+  shopId: string,
+  productId: string,
+  input: ProductAvailableRequest,
+): Promise<CreateProductResponse> {
+  return (
+    await api.patch<CreateProductResponse>(
+      `/shops/${encodeURIComponent(shopId)}/products/${encodeURIComponent(productId)}/available`,
+      input,
+    )
+  ).data;
+}
 export async function uploadProductImage(
   shopId: string,
   productId: string,

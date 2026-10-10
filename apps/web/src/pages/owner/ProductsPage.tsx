@@ -10,6 +10,7 @@ import {
   FiEdit2,
   FiArchive,
   FiRotateCcw,
+  FiCheckCircle,
 } from "react-icons/fi";
 import {
   hasShopPermission,
@@ -23,6 +24,7 @@ import {
   productsKey,
   listProducts,
   setProductArchived,
+  setProductAvailable,
 } from "../../features/shops/api/products";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { ProductEditor } from "./ProductEditor";
@@ -31,6 +33,10 @@ import { feedback } from "../../app/stores/feedback";
 import "./categories.css";
 import "./products.css";
 import { formatProductPrice } from "../../lib/money";
+import {
+  categoriesKey,
+  listCategories,
+} from "../../features/shops/api/categories";
 
 export function ProductsPage() {
   const membership = useActiveShop();
@@ -49,18 +55,24 @@ function ProductWorkspace({ userId }: { userId: string }) {
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [archiveError, setArchiveError] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [availableBusy, setAvailableBusy] = useState<string | null>(null);
+  const [availableError, setAvailableError] = useState<{
+    id: string;
+    message: string;
+  } | null>(null);
   const mounted = useRef(false),
     running = useRef(false),
     editorOpen = useRef(false),
     returnFocus = useRef<string | null>(null);
   useEffect(() => {
-    if (archiving || archiveBusy || !returnFocus.current) return;
+    if (archiving || archiveBusy || availableBusy || !returnFocus.current)
+      return;
     const trigger =
       document.getElementById(returnFocus.current) ??
       document.getElementById("create-product-button");
     returnFocus.current = null;
     trigger?.focus();
-  }, [archiving, archiveBusy]);
+  }, [archiving, archiveBusy, availableBusy]);
   useEffect(() => {
     editorOpen.current = creating || Boolean(editing);
   }, [creating, editing]);
@@ -87,6 +99,55 @@ function ProductWorkspace({ userId }: { userId: string }) {
         return "We couldn’t confirm the change. Refresh products before trying again.";
     }
     return "We couldn’t change the archive status. Please try again.";
+  }
+  async function makeAvailable(product: MenuProduct) {
+    if (!stillHere() || running.current || editorOpen.current) return;
+    running.current = true;
+    setAvailableBusy(product.id);
+    setAvailableError(null);
+    try {
+      const result = await setProductAvailable(membership.shopId, product.id, {
+        expectedStatus: product.status,
+      });
+      if (!stillHere()) return;
+      const key = productsKey(userId, membership.shopId);
+      await client.cancelQueries({ queryKey: key });
+      if (!stillHere()) return;
+      returnFocus.current = `edit-product-${product.id}`;
+      client.setQueryData<ProductsResponse>(key, (current) =>
+        current
+          ? {
+              products: current.products.map((item) =>
+                item.id === product.id ? result.product : item,
+              ),
+            }
+          : current,
+      );
+      void client.invalidateQueries({ queryKey: key });
+      const category = categories.data?.categories.find(
+        (item) => item.id === product.categoryId,
+      );
+      feedback.toast(
+        category && !category.isVisible
+          ? `“${result.product.name}” is available. Its category is still hidden.`
+          : `“${result.product.name}” is available. Category visibility still applies.`,
+      );
+    } catch (error) {
+      if (!stillHere()) return;
+      const status = isAxiosError(error) ? error.response?.status : undefined;
+      setAvailableError({
+        id: product.id,
+        message:
+          status === 409
+            ? "Product status changed elsewhere. Refresh products before trying again."
+            : [401, 403, 404].includes(status ?? 0)
+              ? "The product or your access changed. Refresh products to continue."
+              : "We couldn’t confirm availability. Refresh products before trying again.",
+      });
+    } finally {
+      running.current = false;
+      if (stillHere()) setAvailableBusy(null);
+    }
   }
   async function changeArchive(
     product: MenuProduct,
@@ -143,6 +204,13 @@ function ProductWorkspace({ userId }: { userId: string }) {
     }
   }
   const allowed = hasShopPermission(membership.role, "shop.menu.manage");
+  const categories = useQuery({
+    queryKey: categoriesKey(userId, membership.shopId),
+    queryFn: ({ signal }) => listCategories(membership.shopId, signal),
+    enabled: allowed,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
   const query = useQuery({
     queryKey: productsKey(userId, membership.shopId),
     queryFn: ({ signal }) => listProducts(membership.shopId, signal),
@@ -183,6 +251,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
             Boolean(editing) ||
             Boolean(archiving) ||
             archiveBusy ||
+            Boolean(availableBusy) ||
             denied
           }
           onClick={() => setCreating(true)}
@@ -206,7 +275,8 @@ function ProductWorkspace({ userId }: { userId: string }) {
               creating ||
               Boolean(editing) ||
               Boolean(archiving) ||
-              archiveBusy
+              archiveBusy ||
+              Boolean(availableBusy)
             }
             onClick={() => void query.refetch()}
           >
@@ -269,6 +339,24 @@ function ProductWorkspace({ userId }: { userId: string }) {
                         </span>
                       )}
                     </div>
+                    {!product.isArchived && product.status === "AVAILABLE" && (
+                      <p className="field-hint">
+                        {!product.categoryId
+                          ? "Shown on the menu · Available to order"
+                          : categories.data?.categories.find(
+                                (item) => item.id === product.categoryId,
+                              )?.isVisible === true
+                            ? "Shown on the menu · Available to order"
+                            : categories.data?.categories.find(
+                                  (item) => item.id === product.categoryId,
+                                )?.isVisible === false
+                              ? "Category hidden · Not shown on the menu"
+                              : "Availability follows category visibility"}
+                      </p>
+                    )}
+                    {availableError?.id === product.id && (
+                      <InlineMessage>{availableError.message}</InlineMessage>
+                    )}
                     <small>/{product.slug}</small>
                     {product.description && <p>{product.description}</p>}
                     <div className="product-card-meta">
@@ -304,6 +392,27 @@ function ProductWorkspace({ userId }: { userId: string }) {
                     <strong className="product-price">
                       {formatProductPrice(product.price)}
                     </strong>
+                    {!product.isArchived && product.status !== "AVAILABLE" && (
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        aria-label={`Make ${product.name} available`}
+                        disabled={
+                          creating ||
+                          Boolean(editing) ||
+                          Boolean(archiving) ||
+                          archiveBusy ||
+                          Boolean(availableBusy) ||
+                          denied
+                        }
+                        onClick={() => void makeAvailable(product)}
+                      >
+                        <FiCheckCircle aria-hidden="true" />
+                        {availableBusy === product.id
+                          ? "Updating…"
+                          : "Make available"}
+                      </button>
+                    )}
                     {!product.isArchived && (
                       <button
                         id={`edit-product-${product.id}`}
@@ -315,6 +424,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                           Boolean(editing) ||
                           Boolean(archiving) ||
                           archiveBusy ||
+                          Boolean(availableBusy) ||
                           denied
                         }
                         onClick={() => setEditing(product)}
@@ -333,6 +443,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                         Boolean(editing) ||
                         Boolean(archiving) ||
                         archiveBusy ||
+                        Boolean(availableBusy) ||
                         denied
                       }
                       onClick={() =>
