@@ -20,6 +20,7 @@ const settingsSelect = {
   address: true,
   operatingHours: true,
   logoUrl: true,
+  bannerUrl: true,
 } as const;
 
 @Injectable()
@@ -54,6 +55,22 @@ export class ShopsRepository {
       // Check ownership in the write too, in case it changed after the guard.
       where: shopAccessWhere(userId, shopId, ['OWNER']),
       data,
+      select: settingsSelect,
+    });
+  }
+
+  updateBanner(
+    userId: string,
+    shopId: string,
+    expectedBannerUrl: string | null,
+    bannerUrl: string,
+  ) {
+    return this.prisma.shop.update({
+      where: {
+        ...shopAccessWhere(userId, shopId, ['OWNER']),
+        bannerUrl: expectedBannerUrl,
+      },
+      data: { bannerUrl },
       select: settingsSelect,
     });
   }

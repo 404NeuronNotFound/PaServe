@@ -30,6 +30,7 @@ describe('public menu visibility', () => {
       slug: 'cafe',
       description: null,
       logoUrl: 'https://example.com/shop/logo.webp',
+      bannerUrl: 'https://example.com/shop/banner.webp',
       categories: [],
       products: [
         {
@@ -55,6 +56,7 @@ describe('public menu visibility', () => {
       slug: 'cafe',
       description: null,
       logoUrl: 'https://example.com/shop/logo.webp',
+      bannerUrl: 'https://example.com/shop/banner.webp',
     });
     expect(response.body.products[0].price).toBe('10.00');
     expect(response.body.products[0].isOrderable).toBe(false);
@@ -81,6 +83,7 @@ describe('public menu visibility', () => {
       },
     });
     expect(Object.keys(findShop.mock.calls[1][0].select).sort()).toEqual([
+      'bannerUrl',
       'categories',
       'description',
       'logoUrl',
