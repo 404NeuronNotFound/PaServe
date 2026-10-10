@@ -1,4 +1,19 @@
-import { Controller, Body, Post, Get, Patch, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Body,
+  Post,
+  Get,
+  Patch,
+  Req,
+  Res,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { PRODUCT_IMAGE_LIMITS } from '@paserve/contracts';
+import { ProductImageService } from './product-image.service.js';
+import type { ProductImageFile } from './product-image.processor.js';
+import { EmptyDto } from '../auth/dto/empty.dto.js';
 import type { Response } from 'express';
 import { Roles } from '../shop-members/decorators/roles.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
@@ -14,7 +29,36 @@ import {
 @Controller('shops/:shopId/products')
 @Roles('OWNER', 'ADMIN', 'MANAGER')
 export class ProductsController {
-  constructor(private readonly products: ProductsService) {}
+  constructor(
+    private readonly products: ProductsService,
+    private readonly images: ProductImageService,
+  ) {}
+  @Post(':productId/image')
+  @ShopResource('product', 'productId')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: PRODUCT_IMAGE_LIMITS.maxBytes,
+        files: 1,
+        fields: 0,
+        parts: 2,
+      },
+    }),
+  )
+  uploadImage(
+    @UploadedFile() file: ProductImageFile | undefined,
+    @Body() _dto: EmptyDto,
+    @Req() req: ShopResourceRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.images.upload(
+      req.user.id,
+      req.shopResource.shopId,
+      req.shopResource.id,
+      file,
+    );
+  }
   @Patch(':productId/archive')
   @ShopResource('product', 'productId')
   setArchived(

@@ -6,6 +6,8 @@ import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { Prisma } from '../src/generated/prisma/client.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
+import { ProductImageStorage } from '../src/modules/products/product-image.storage.js';
+import sharp from 'sharp';
 
 describe('tenant-scoped product creation', () => {
   let app: INestApplication<App>;
@@ -22,6 +24,9 @@ describe('tenant-scoped product creation', () => {
     currentUser = vi.fn();
   const productRead = vi.fn(),
     productWrite = vi.fn();
+  const uploadImage = vi.fn(),
+    removeImage = vi.fn();
+  let png: Buffer;
   let role: string;
   const product = {
     id: productId,
@@ -39,6 +44,11 @@ describe('tenant-scoped product creation', () => {
     createdAt: new Date('2026-10-09T00:00:00Z'),
   };
   beforeAll(async () => {
+    png = await sharp({
+      create: { width: 2, height: 2, channels: 3, background: 'red' },
+    })
+      .png()
+      .toBuffer();
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(AuthService)
       .useValue({ currentUser })
@@ -49,6 +59,8 @@ describe('tenant-scoped product creation', () => {
         category: { update: categoryWrite, findFirst: categoryRead },
         product: { findFirst: productRead, update: productWrite },
       })
+      .overrideProvider(ProductImageStorage)
+      .useValue({ upload: uploadImage, remove: removeImage })
       .compile();
     app = module.createNestApplication();
     app.setGlobalPrefix('api/v1');
@@ -91,6 +103,12 @@ describe('tenant-scoped product creation', () => {
       name: 'Iced latte',
       price: new Prisma.Decimal('15'),
     });
+    uploadImage.mockResolvedValue({
+      storagePath: `${shopId}/${productId}/image.webp`,
+      imageUrl:
+        'https://example.supabase.co/storage/v1/object/public/product-media/image.webp',
+    });
+    removeImage.mockResolvedValue(undefined);
   });
   const post = (
     body: unknown = { name: 'Latte', price: '12.50' },
@@ -104,6 +122,119 @@ describe('tenant-scoped product creation', () => {
     request(app.getHttpServer())
       .get(`/api/v1/shops/${shopId}/products`)
       .set('Authorization', 'Bearer valid');
+  const imageRequest = (shop = shopId, id = productId) =>
+    request(app.getHttpServer())
+      .post(`/api/v1/shops/${shop}/products/${id}/image`)
+      .set('Authorization', 'Bearer valid');
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'lets %s upload a decoded image and persist only the resulting URL',
+    async (value) => {
+      role = value;
+      const response = await imageRequest()
+        .attach('file', png, {
+          filename: '../../unsafe.png',
+          contentType: 'image/png',
+        })
+        .expect(201);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.body.storagePath).toContain(shopId);
+      const buffer = uploadImage.mock.calls[0][2] as Buffer;
+      expect((await sharp(buffer).metadata()).format).toBe('webp');
+      expect(uploadImage).toHaveBeenCalledWith(
+        shopId,
+        productId,
+        expect.any(Buffer),
+      );
+      const query = productWrite.mock.calls[0][0];
+      expect(query.where).toMatchObject({
+        id: productId,
+        shopId,
+        isArchived: false,
+        shop: { members: { some: { userId } } },
+      });
+      expect(query.data).toEqual({
+        imageUrl:
+          'https://example.supabase.co/storage/v1/object/public/product-media/image.webp',
+      });
+      expect(removeImage).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['CASHIER', 'KITCHEN'])(
+    'denies %s before accepting media',
+    async (value) => {
+      role = value;
+      await imageRequest()
+        .attach('file', png, { filename: 'a.png', contentType: 'image/png' })
+        .expect(403);
+      expect(uploadImage).not.toHaveBeenCalled();
+      expect(productWrite).not.toHaveBeenCalled();
+    },
+  );
+  it('rejects guests, foreign products, malformed IDs and archived products before upload', async () => {
+    await request(app.getHttpServer())
+      .post(`/api/v1/shops/${shopId}/products/${productId}/image`)
+      .attach('file', png, 'a.png')
+      .expect(401);
+    await imageRequest(other).attach('file', png, 'a.png').expect(404);
+    await imageRequest(shopId, 'bad').attach('file', png, 'a.png').expect(400);
+    productRead.mockImplementation(async ({ where }) =>
+      where.isArchived === false ? null : { id: productId, shopId },
+    );
+    await imageRequest().attach('file', png, 'a.png').expect(404);
+    expect(uploadImage).not.toHaveBeenCalled();
+  });
+  it('rejects missing, forged, mismatched and oversized images without uploads', async () => {
+    await imageRequest().send({}).expect(400);
+    await imageRequest()
+      .attach('file', Buffer.from('<svg onload="alert(1)"/>'), {
+        filename: 'fake.png',
+        contentType: 'image/png',
+      })
+      .expect(400);
+    await imageRequest()
+      .attach('file', png, { filename: 'a.jpg', contentType: 'image/jpeg' })
+      .expect(400);
+    await imageRequest()
+      .attach('file', Buffer.alloc(5 * 1024 * 1024 + 1), {
+        filename: 'a.png',
+        contentType: 'image/png',
+      })
+      .expect(413);
+    expect(uploadImage).not.toHaveBeenCalled();
+    expect(productWrite).not.toHaveBeenCalled();
+  });
+  it('rejects client paths and extra multipart files', async () => {
+    await imageRequest()
+      .field('shopId', other)
+      .attach('file', png, 'a.png')
+      .expect(400);
+    await imageRequest()
+      .attach('file', png, 'a.png')
+      .attach('file', png, 'b.png')
+      .expect(400);
+    expect(uploadImage).not.toHaveBeenCalled();
+  });
+  it('cleans up only the new object after access or archive state changes at write time', async () => {
+    productWrite.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('lost', {
+        code: 'P2025',
+        clientVersion: 'test',
+      }),
+    );
+    await imageRequest().attach('file', png, 'a.png').expect(404);
+    expect(removeImage).toHaveBeenCalledExactlyOnceWith(
+      `${shopId}/${productId}/image.webp`,
+    );
+  });
+  it('keeps uploaded bytes on uncertain database failure instead of breaking a possibly saved URL', async () => {
+    productWrite.mockRejectedValue(new Error('secret database detail'));
+    const response = await imageRequest()
+      .attach('file', png, 'a.png')
+      .expect(503);
+    expect(response.body.code).toBe('PRODUCT_IMAGE_SAVE_UNCERTAIN');
+    expect(removeImage).not.toHaveBeenCalled();
+    expect(JSON.stringify(response.body)).not.toContain('secret');
+  });
   const patch = (body: unknown, shop = shopId, id = productId) =>
     request(app.getHttpServer())
       .patch(`/api/v1/shops/${shop}/products/${id}`)
@@ -304,6 +435,17 @@ describe('tenant-scoped product creation', () => {
     { price: '1.001' },
     { price: -1 },
     { price: null },
+    ...[
+      '-0.01',
+      '+1',
+      '1e2',
+      'NaN',
+      'Infinity',
+      '100000000',
+      '01',
+      '.50',
+      ' 1 ',
+    ].map((price) => ({ price })),
     { categoryId: 'bad' },
     { status: null },
     { isFeatured: 'true' },

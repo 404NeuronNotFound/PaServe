@@ -33,6 +33,17 @@ export type ProductCreateData = {
 @Injectable()
 export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
+  findForImage(userId: string, shopId: string, productId: string) {
+    return this.prisma.product.findFirst({
+      where: {
+        id: productId,
+        shopId,
+        isArchived: false,
+        shop: shopAccessWhere(userId, shopId, roles),
+      },
+      select: { id: true },
+    });
+  }
   setArchived(
     userId: string,
     shopId: string,
