@@ -90,6 +90,7 @@ export class ShopMembersService {
         name: membership.shop.name,
         slug: membership.shop.slug,
         isActive: membership.shop.isActive,
+        logoUrl: membership.shop.logoUrl,
       },
     };
   }

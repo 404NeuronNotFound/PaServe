@@ -67,7 +67,13 @@ export class AuthRepository {
                 shopId: true,
                 role: true,
                 shop: {
-                  select: { id: true, name: true, slug: true, isActive: true },
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    isActive: true,
+                    logoUrl: true,
+                  },
                 },
               },
             },

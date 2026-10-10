@@ -19,6 +19,7 @@ const settingsSelect = {
   website: true,
   address: true,
   operatingHours: true,
+  logoUrl: true,
 } as const;
 
 @Injectable()
@@ -28,6 +29,22 @@ export class ShopsRepository {
   findSettings(userId: string, shopId: string) {
     return this.prisma.shop.findFirst({
       where: shopAccessWhere(userId, shopId, ['OWNER']),
+      select: settingsSelect,
+    });
+  }
+
+  updateLogo(
+    userId: string,
+    shopId: string,
+    expectedLogoUrl: string | null,
+    logoUrl: string,
+  ) {
+    return this.prisma.shop.update({
+      where: {
+        ...shopAccessWhere(userId, shopId, ['OWNER']),
+        logoUrl: expectedLogoUrl,
+      },
+      data: { logoUrl },
       select: settingsSelect,
     });
   }

@@ -32,6 +32,7 @@ describe('Login and session HTTP flow', () => {
         name: string;
         slug: string;
         isActive: boolean;
+        logoUrl?: string | null;
         privateData: string;
       };
     }[],
@@ -218,6 +219,7 @@ describe('Login and session HTTP flow', () => {
           slug: 'corner-cafe',
           isActive: true,
           privateData: 'must stay private',
+          logoUrl: 'https://example.com/corner-cafe/logo.webp',
         },
       },
     ];
@@ -239,6 +241,7 @@ describe('Login and session HTTP flow', () => {
                 name: 'Corner Cafe',
                 slug: 'corner-cafe',
                 isActive: true,
+                logoUrl: 'https://example.com/corner-cafe/logo.webp',
               },
             },
           ],

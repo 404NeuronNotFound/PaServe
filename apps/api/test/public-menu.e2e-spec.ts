@@ -29,6 +29,7 @@ describe('public menu visibility', () => {
       name: 'Cafe',
       slug: 'cafe',
       description: null,
+      logoUrl: 'https://example.com/shop/logo.webp',
       categories: [],
       products: [
         {
@@ -53,6 +54,7 @@ describe('public menu visibility', () => {
       name: 'Cafe',
       slug: 'cafe',
       description: null,
+      logoUrl: 'https://example.com/shop/logo.webp',
     });
     expect(response.body.products[0].price).toBe('10.00');
     expect(response.body.products[0].isOrderable).toBe(false);
@@ -81,6 +83,7 @@ describe('public menu visibility', () => {
     expect(Object.keys(findShop.mock.calls[1][0].select).sort()).toEqual([
       'categories',
       'description',
+      'logoUrl',
       'name',
       'products',
       'slug',
@@ -98,19 +101,17 @@ describe('public menu visibility', () => {
       status,
       price: new Prisma.Decimal('12.50'),
     });
-    findShop
-      .mockResolvedValueOnce({ id: 'shop-a' })
-      .mockResolvedValueOnce({
-        name: 'Cafe',
-        slug: 'cafe',
-        description: null,
-        categories: [],
-        products: [
-          make('first', true),
-          make('normal', false),
-          make('sold', true, 'SOLD_OUT'),
-        ],
-      });
+    findShop.mockResolvedValueOnce({ id: 'shop-a' }).mockResolvedValueOnce({
+      name: 'Cafe',
+      slug: 'cafe',
+      description: null,
+      categories: [],
+      products: [
+        make('first', true),
+        make('normal', false),
+        make('sold', true, 'SOLD_OUT'),
+      ],
+    });
     const response = await request(app.getHttpServer())
       .get('/api/v1/menu/cafe')
       .expect(200);

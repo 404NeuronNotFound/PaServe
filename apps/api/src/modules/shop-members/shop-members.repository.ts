@@ -13,7 +13,15 @@ export class ShopMembersRepository {
         shopId: true,
         role: true,
         user: { select: { isActive: true } },
-        shop: { select: { id: true, name: true, slug: true, isActive: true } },
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            isActive: true,
+            logoUrl: true,
+          },
+        },
       },
     });
   }
