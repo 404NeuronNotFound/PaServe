@@ -48,14 +48,15 @@ export class ShopsService {
       'address',
       'operatingHours',
       'primaryColor',
+      'accentColor',
     ] as const;
     const data: ShopSettingsData = {};
     for (const field of fields) {
       const value = dto[field];
       if (value !== undefined) {
         if (field === 'name') data.name = value.trim();
-        else if (field === 'primaryColor')
-          data.primaryColor = normalizeShopPrimaryColor(value) || null;
+        else if (field === 'primaryColor' || field === 'accentColor')
+          data[field] = normalizeShopPrimaryColor(value) || null;
         else data[field] = value.trim() || null;
       }
     }

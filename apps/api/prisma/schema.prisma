@@ -64,6 +64,7 @@ model Shop {
   logoUrl     String?
   bannerUrl   String?
   primaryColor String? @db.VarChar(7)
+  accentColor String? @db.VarChar(7)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

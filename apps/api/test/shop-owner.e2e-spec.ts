@@ -181,6 +181,46 @@ describe('Owner-only shop updates', () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it('normalizes accent color, exposes it in settings, and resets it to null', async () => {
+    const saved = await patch(shopA, { accentColor: ' #ab12ef ' }).expect(200);
+    expect(saved.body.shop.accentColor).toBe('#AB12EF');
+    expect(update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: shopA }),
+        data: { accentColor: '#AB12EF' },
+      }),
+    );
+    findFirst.mockResolvedValue({ ...saved.body.shop, createdAt });
+    const loaded = await request(app.getHttpServer())
+      .get(`/api/v1/shops/${shopA}/settings`)
+      .set('Authorization', 'Bearer valid-token');
+    expect(loaded.body.shop.accentColor).toBe('#AB12EF');
+    const reset = await patch(shopA, { accentColor: ' ' }).expect(200);
+    expect(reset.body.shop.accentColor).toBeNull();
+  });
+
+  it.each([
+    'red',
+    '#abc',
+    '#12345678',
+    '#GG0000',
+    'var(--color)',
+    null,
+    123456,
+    {},
+    [],
+  ])('rejects invalid accent color %j without writing', async (accentColor) => {
+    const response = await patch(shopA, { accentColor }).expect(400);
+    expect(response.body.fieldErrors.accentColor).toBeDefined();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('denies accent writes outside live owner access', async () => {
+    await patch(shopB, { accentColor: '#123456' }).expect(403);
+    await patch(missingShop, { accentColor: '#123456' }).expect(404);
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it('requires an explicit shop target rather than falling back to another membership', async () => {
     await request(app.getHttpServer())
       .patch('/api/v1/shops')

@@ -5,6 +5,7 @@ import {
   SHOP_PHONE_HINT,
   isValidShopPrimaryColor,
   SHOP_PRIMARY_COLOR_HINT,
+  SHOP_ACCENT_COLOR_HINT,
   type UpdateShopRequest,
 } from '@paserve/contracts';
 import { Transform } from 'class-transformer';
@@ -34,6 +35,19 @@ export class UpdateShopDto implements UpdateShopRequest {
     },
   })
   primaryColor?: string;
+
+  @Transform(trim)
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsString({ message: SHOP_ACCENT_COLOR_HINT })
+  @ValidateBy({
+    name: 'shopAccentColor',
+    validator: {
+      validate: (value: unknown) =>
+        typeof value === 'string' && isValidShopPrimaryColor(value),
+      defaultMessage: () => SHOP_ACCENT_COLOR_HINT,
+    },
+  })
+  accentColor?: string;
 
   @Transform(trim)
   @ValidateIf((_object, value: unknown) => value !== undefined)

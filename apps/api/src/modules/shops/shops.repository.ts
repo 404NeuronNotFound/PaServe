@@ -22,6 +22,7 @@ const settingsSelect = {
   logoUrl: true,
   bannerUrl: true,
   primaryColor: true,
+  accentColor: true,
 } as const;
 
 @Injectable()
