@@ -22,6 +22,7 @@ import {
   setProductAvailable,
   setProductSoldOut,
   setProductHidden,
+  setProductFeatured,
 } from "../../features/shops/api/products";
 import { listCategories } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
@@ -35,6 +36,7 @@ vi.mock("../../features/shops/api/products", async (original) => ({
   setProductAvailable: vi.fn(),
   setProductSoldOut: vi.fn(),
   setProductHidden: vi.fn(),
+  setProductFeatured: vi.fn(),
   listProducts: vi.fn(),
 }));
 vi.mock("../../features/shops/api/categories", async (original) => ({
@@ -145,6 +147,76 @@ async function edit() {
     modal: within(screen.getByRole("dialog", { name: "Edit product" })),
   };
 }
+it("features and unfeatures a product while preserving menu status", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  const saved = { ...product, isFeatured: true };
+  vi.mocked(setProductFeatured)
+    .mockResolvedValueOnce({ product: saved })
+    .mockResolvedValueOnce({ product });
+  const { client } = setup();
+  const user = userEvent.setup();
+  const trigger = await screen.findByRole("button", { name: "Feature Latte" });
+  vi.mocked(listProducts).mockResolvedValue({ products: [saved] });
+  await user.click(trigger);
+  const undo = await screen.findByRole("button", { name: "Unfeature Latte" });
+  expect(undo).toHaveAttribute("aria-pressed", "true");
+  expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
+    products: [saved],
+  });
+  expect(setProductFeatured).toHaveBeenCalledWith("a", "p", {
+    isFeatured: true,
+    expectedFeatured: false,
+  });
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  await user.click(undo);
+  expect(
+    await screen.findByRole("button", { name: "Feature Latte" }),
+  ).toHaveAttribute("aria-pressed", "false");
+  expect(setProductFeatured).toHaveBeenLastCalledWith("a", "p", {
+    isFeatured: false,
+    expectedFeatured: true,
+  });
+});
+it("retains the feature state on conflict and explains recovery inline", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  vi.mocked(setProductFeatured).mockRejectedValue({
+    isAxiosError: true,
+    response: { status: 409 },
+  });
+  setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Feature Latte" }),
+  );
+  expect(
+    await screen.findByText(/Featured selection changed elsewhere/),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Feature Latte" })).toBeEnabled();
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+it("prevents duplicate featured changes and ignores late results", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  let resolve!: (value: { product: MenuProduct }) => void;
+  vi.mocked(setProductFeatured).mockReturnValue(
+    new Promise((done) => {
+      resolve = done;
+    }),
+  );
+  const { client, unmount } = setup();
+  const user = userEvent.setup();
+  await user.dblClick(
+    await screen.findByRole("button", { name: "Feature Latte" }),
+  );
+  expect(setProductFeatured).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Edit Latte" })).toBeDisabled();
+  unmount();
+  resolve({ product: { ...product, isFeatured: true } });
+  await new Promise((done) => setTimeout(done, 20));
+  expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
+    products: [product],
+  });
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
 it("hides a product without deleting its card and keeps Edit and Make available", async () => {
   vi.mocked(listProducts).mockResolvedValue({ products: [product] });
   const saved: MenuProduct = { ...product, status: "HIDDEN" };

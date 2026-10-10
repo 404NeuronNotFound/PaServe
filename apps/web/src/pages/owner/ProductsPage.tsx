@@ -29,6 +29,7 @@ import {
   setProductAvailable,
   setProductSoldOut,
   setProductHidden,
+  setProductFeatured,
 } from "../../features/shops/api/products";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { ProductEditor } from "./ProductEditor";
@@ -160,6 +161,53 @@ function ProductWorkspace({ userId }: { userId: string }) {
             : [401, 403, 404].includes(status ?? 0)
               ? "The product or your access changed. Refresh products to continue."
               : "We couldn’t confirm availability. Refresh products before trying again.",
+      });
+    } finally {
+      running.current = false;
+      if (stillHere()) setAvailableBusy(null);
+    }
+  }
+  async function changeFeatured(product: MenuProduct) {
+    if (!stillHere() || running.current || editorOpen.current) return;
+    running.current = true;
+    setAvailableBusy(product.id);
+    setAvailableError(null);
+    try {
+      const result = await setProductFeatured(membership.shopId, product.id, {
+        isFeatured: !product.isFeatured,
+        expectedFeatured: product.isFeatured,
+      });
+      if (!stillHere()) return;
+      const key = productsKey(userId, membership.shopId);
+      await client.cancelQueries({ queryKey: key });
+      if (!stillHere()) return;
+      returnFocus.current = `feature-product-${product.id}`;
+      client.setQueryData<ProductsResponse>(key, (current) =>
+        current
+          ? {
+              products: current.products.map((item) =>
+                item.id === product.id ? result.product : item,
+              ),
+            }
+          : current,
+      );
+      void client.invalidateQueries({ queryKey: key });
+      feedback.toast(
+        result.product.isFeatured
+          ? `${result.product.name} is featured. Menu visibility still applies.`
+          : `${result.product.name} was removed from featured.`,
+      );
+    } catch (error) {
+      if (!stillHere()) return;
+      const status = isAxiosError(error) ? error.response?.status : undefined;
+      setAvailableError({
+        id: product.id,
+        message:
+          status === 409
+            ? "Featured selection changed elsewhere. Refresh products before trying again."
+            : [401, 403, 404].includes(status ?? 0)
+              ? "The product or your access changed. Refresh products to continue."
+              : "We couldn’t confirm the featured change. Refresh products before trying again.",
       });
     } finally {
       running.current = false;
@@ -428,6 +476,31 @@ function ProductWorkspace({ userId }: { userId: string }) {
                     <strong className="product-price">
                       {formatProductPrice(product.price)}
                     </strong>
+                    {!product.isArchived && (
+                      <button
+                        id={`feature-product-${product.id}`}
+                        className="secondary-button"
+                        type="button"
+                        aria-pressed={product.isFeatured}
+                        aria-label={`${product.isFeatured ? "Unfeature" : "Feature"} ${product.name}`}
+                        disabled={
+                          creating ||
+                          Boolean(editing) ||
+                          Boolean(archiving) ||
+                          archiveBusy ||
+                          Boolean(availableBusy) ||
+                          denied
+                        }
+                        onClick={() => void changeFeatured(product)}
+                      >
+                        <FiStar aria-hidden="true" />
+                        {availableBusy === product.id
+                          ? "Updating…"
+                          : product.isFeatured
+                            ? "Unfeature"
+                            : "Feature"}
+                      </button>
+                    )}
                     {!product.isArchived && product.status !== "HIDDEN" && (
                       <button
                         className="secondary-button"

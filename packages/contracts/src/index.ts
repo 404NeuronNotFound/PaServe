@@ -344,6 +344,10 @@ export interface ProductAvailableRequest {
 }
 export type ProductSoldOutRequest = ProductAvailableRequest;
 export type ProductHiddenRequest = ProductAvailableRequest;
+export interface ProductFeaturedRequest {
+  isFeatured: boolean;
+  expectedFeatured: boolean;
+}
 export interface ProductsResponse {
   products: MenuProduct[];
 }
@@ -356,6 +360,7 @@ export interface SetCategoryVisibilityRequest {
   expectedVisibility: boolean;
 }
 export interface PublicMenuResponse {
+  featuredProducts: PublicMenuResponse["products"];
   shop: { name: string; slug: string; description: string | null };
   categories: Array<
     Pick<MenuCategory, "id" | "name" | "slug" | "description" | "sortOrder">
