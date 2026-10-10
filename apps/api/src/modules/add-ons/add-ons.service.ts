@@ -21,6 +21,7 @@ import type {
   UpdateAddOnDto,
   AddOnSelectionDto,
   CreateExtraShotDto,
+  CreateOatMilkDto,
 } from './add-ons.dto.js';
 
 const serialize = (addOn: AddOn) => ({
@@ -110,6 +111,27 @@ export class AddOnsService {
       });
     return this.create(userId, shopId, {
       name: 'Extra Shot',
+      priceAdjustment: dto.priceAdjustment,
+      isAvailable: true,
+      sortOrder: dto.sortOrder ?? 0,
+    });
+  }
+  async createOatMilk(
+    userId: string,
+    shopId: string,
+    dto: CreateOatMilkDto,
+  ): Promise<AddOnResponse> {
+    await this.authorize(userId, shopId);
+    if (!new Prisma.Decimal(dto.priceAdjustment).greaterThan(0))
+      throw new BadRequestException({
+        code: 'OAT_MILK_REQUIRES_SURCHARGE',
+        message: 'Oat Milk must have a positive additional price.',
+        fieldErrors: {
+          priceAdjustment: ['Use an additional price of at least 0.01.'],
+        },
+      });
+    return this.create(userId, shopId, {
+      name: 'Oat Milk',
       priceAdjustment: dto.priceAdjustment,
       isAvailable: true,
       sortOrder: dto.sortOrder ?? 0,

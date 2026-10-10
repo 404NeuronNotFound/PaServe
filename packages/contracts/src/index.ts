@@ -370,6 +370,11 @@ export interface CreateExtraShotRequest {
   priceAdjustment: string;
   sortOrder?: number;
 }
+export interface CreateOatMilkRequest {
+  /** Positive owner-configured PHP surcharge for the Oat Milk modifier. */
+  priceAdjustment: string;
+  sortOrder?: number;
+}
 export interface AddOn {
   id: string;
   shopId: string;

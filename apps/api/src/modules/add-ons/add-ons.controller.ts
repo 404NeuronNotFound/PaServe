@@ -24,12 +24,26 @@ import {
   AssignProductAddOnDto,
   AddOnSelectionDto,
   CreateExtraShotDto,
+  CreateOatMilkDto,
 } from './add-ons.dto.js';
 
 @Controller('shops/:shopId/add-ons')
 @Roles('OWNER', 'ADMIN', 'MANAGER')
 export class AddOnsController {
   constructor(private readonly addOns: AddOnsService) {}
+  @Post('oat-milk')
+  createOatMilk(
+    @Body() dto: CreateOatMilkDto,
+    @Req() req: ShopMemberRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.addOns.createOatMilk(
+      req.user.id,
+      req.shopMembership.shopId,
+      dto,
+    );
+  }
   @Post('extra-shot')
   createExtraShot(
     @Body() dto: CreateExtraShotDto,

@@ -22,6 +22,7 @@ import {
   type AssignProductAddOnRequest,
   type AddOnSelectionRequest,
   type CreateExtraShotRequest,
+  type CreateOatMilkRequest,
 } from '@paserve/contracts';
 
 const normalize = ({ value }: { value: unknown }) =>
@@ -70,7 +71,7 @@ export class UpdateAddOnDto
   @Matches(PRODUCT_PRICE_PATTERN)
   priceAdjustment?: string;
 }
-export class CreateExtraShotDto implements CreateExtraShotRequest {
+class PricedAddOnPresetDto {
   @IsString()
   @Matches(PRODUCT_PRICE_PATTERN)
   priceAdjustment!: string;
@@ -81,6 +82,12 @@ export class CreateExtraShotDto implements CreateExtraShotRequest {
   @Max(ADD_ON_LIMITS.sortOrderMax)
   sortOrder?: number;
 }
+export class CreateExtraShotDto
+  extends PricedAddOnPresetDto
+  implements CreateExtraShotRequest {}
+export class CreateOatMilkDto
+  extends PricedAddOnPresetDto
+  implements CreateOatMilkRequest {}
 export class AssignProductAddOnDto implements AssignProductAddOnRequest {
   @IsUUID('4')
   addOnId!: string;

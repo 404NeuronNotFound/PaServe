@@ -305,6 +305,129 @@ describe('add-on management and product selection', () => {
       .expect(200);
     await quote({ addOnIds: [shotId] }).expect(400);
   });
+  const createOatMilk = (body: object) =>
+    request(app.getHttpServer())
+      .post(`${root}/oat-milk`)
+      .set('Authorization', 'Bearer valid')
+      .send(body);
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'allows %s to create a priced Oat Milk example',
+    async (allowed) => {
+      role = allowed;
+      const response = await createOatMilk({
+        priceAdjustment: '25.2',
+      }).expect(201);
+      expect(response.body.addOn).toMatchObject({
+        name: 'Oat Milk',
+        priceAdjustment: '25.20',
+        isAvailable: true,
+        sortOrder: 0,
+      });
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(writeShop.mock.calls[0][0].where).toMatchObject({
+        id: shopId,
+        isActive: true,
+        members: { some: { userId, user: { isActive: true } } },
+      });
+    },
+  );
+  it.each(['0.01', '99999999.99'])(
+    'supports exact Oat Milk price %s and custom ordering',
+    async (priceAdjustment) => {
+      expect(
+        (await createOatMilk({ priceAdjustment, sortOrder: 5 }).expect(201))
+          .body.addOn,
+      ).toMatchObject({ priceAdjustment, sortOrder: 5 });
+    },
+  );
+  it.each(['0', '0.00'])(
+    'rejects an unpriced Oat Milk %s',
+    async (priceAdjustment) => {
+      expect(
+        (await createOatMilk({ priceAdjustment }).expect(400)).body.code,
+      ).toBe('OAT_MILK_REQUIRES_SURCHARGE');
+      expect(writeShop).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['-1', 'NaN', '1e2', '0.001', '100000000', ' 30 ', 30, null])(
+    'rejects invalid Oat Milk surcharge %s',
+    async (priceAdjustment) => {
+      await createOatMilk({ priceAdjustment }).expect(400);
+      expect(writeShop).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    { name: 'Soy Milk' },
+    { price: '150' },
+    { quantity: 2 },
+    { isAvailable: false },
+    { shopId: otherShop },
+    { productId },
+    { sortOrder: -1 },
+  ])('rejects Oat Milk overrides and invalid fields %j', async (fields) => {
+    await createOatMilk({ priceAdjustment: '30', ...fields }).expect(400);
+    expect(writeShop).not.toHaveBeenCalled();
+  });
+  it.each(['CASHIER', 'KITCHEN'])(
+    'blocks %s from creating Oat Milk',
+    async (denied) => {
+      role = denied;
+      await createOatMilk({ priceAdjustment: '30' }).expect(403);
+      expect(writeShop).not.toHaveBeenCalled();
+    },
+  );
+  it('requires an Oat Milk price and owner authentication', async () => {
+    await createOatMilk({}).expect(400);
+    await request(app.getHttpServer())
+      .post(`${root}/oat-milk`)
+      .send({ priceAdjustment: '30' })
+      .expect(401);
+  });
+  it('returns a conflict without replacing an existing Oat Milk', async () => {
+    writeShop.mockRejectedValue(duplicate());
+    expect(
+      (await createOatMilk({ priceAdjustment: '30' }).expect(409)).body.code,
+    ).toBe('ADD_ON_CONFLICT');
+  });
+  it('includes Oat Milk once in the production quote and rejects it after detachment', async () => {
+    const response = await quote({ addOnIds: [oatId] }).expect(201);
+    expect(response.body).toMatchObject({
+      addOnTotal: '25.20',
+      baseWithAddOnsPrice: '145.20',
+      addOns: [{ id: oatId, name: 'Oat Milk', priceAdjustment: '25.20' }],
+    });
+    await quote({ addOnIds: [oatId, oatId] }).expect(400);
+    await request(app.getHttpServer())
+      .delete(`${productPath}/${oatId}`)
+      .set('Authorization', 'Bearer valid')
+      .expect(200);
+    await quote({ addOnIds: [oatId] }).expect(400);
+  });
+  it.each(['Soy Milk', 'Almond Milk', 'Coconut Milk'])(
+    'supports custom milk modifier %s through the generic API',
+    async (name) => {
+      const response = await create({ name, priceAdjustment: '18.75' }).expect(
+        201,
+      );
+      expect(response.body.addOn).toMatchObject({
+        name,
+        priceAdjustment: '18.75',
+      });
+    },
+  );
+  it('rejects disabled Oat Milk and accepts it again when enabled', async () => {
+    const update = (isAvailable: boolean) =>
+      request(app.getHttpServer())
+        .patch(`${root}/${oatId}`)
+        .set('Authorization', 'Bearer valid')
+        .send({ isAvailable });
+    await update(false).expect(200);
+    await quote({ addOnIds: [oatId] }).expect(400);
+    await update(true).expect(200);
+    expect(
+      (await quote({ addOnIds: [oatId] }).expect(201)).body.baseWithAddOnsPrice,
+    ).toBe('145.20');
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER'])(
     'allows %s to manage reusable add-ons and product eligibility',
     async (allowed) => {

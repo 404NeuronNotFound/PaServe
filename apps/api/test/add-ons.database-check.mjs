@@ -89,8 +89,7 @@ try {
           })
         ).addOn;
         const oat = (
-          await service.create(user.id, shop.id, {
-            name: 'Oat Milk',
+          await service.createOatMilk(user.id, shop.id, {
             priceAdjustment: '25.2',
           })
         ).addOn;
@@ -127,6 +126,14 @@ try {
             service.createExtraShot(user.id, shop.id, { priceAdjustment: '0' }),
           (error) => error.getStatus() === 400,
         );
+        assert.equal(oat.name, 'Oat Milk');
+        assert.equal(oat.priceAdjustment, '25.20');
+        assert.equal(oat.isAvailable, true);
+        await assert.rejects(
+          () =>
+            service.createOatMilk(user.id, shop.id, { priceAdjustment: '0' }),
+          (error) => error.getResponse().code === 'OAT_MILK_REQUIRES_SURCHARGE',
+        );
         assert.equal(cheese.priceAdjustment, '0.00');
         assert.equal((await service.list(user.id, shop.id)).addOns.length, 5);
         for (const addOn of [shot, oat, syrup])
@@ -153,6 +160,16 @@ try {
         });
         assert.equal(quote.addOnTotal, '55.30');
         assert.equal(quote.baseWithAddOnsPrice, '175.30');
+        assert.equal(
+          (await service.quote(shop.slug, product.id, { addOnIds: [oat.id] }))
+            .baseWithAddOnsPrice,
+          '145.20',
+        );
+        await assert.rejects(
+          () => service.quote(shop.slug, food.id, { addOnIds: [oat.id] }),
+          (error) => error.getResponse().code === 'ADD_ON_SELECTION_INVALID',
+        );
+
         assert.equal(
           (await service.quote(shop.slug, product.id, { addOnIds: [shot.id] }))
             .baseWithAddOnsPrice,
@@ -222,6 +239,22 @@ try {
           () => service.quote(shop.slug, product.id, { addOnIds: [oat.id] }),
           (error) => error.getStatus() === 400,
         );
+        // Milk alternatives are owner data, with no schema-specific categories.
+        for (const name of ['Soy Milk', 'Almond Milk', 'Coconut Milk']) {
+          const alternative = (
+            await service.create(user.id, shop.id, {
+              name,
+              priceAdjustment: '18.75',
+            })
+          ).addOn;
+          await service.assign(user.id, shop.id, product.id, alternative.id);
+          const alternativeQuote = await service.quote(shop.slug, product.id, {
+            addOnIds: [alternative.id],
+          });
+          assert.equal(alternativeQuote.addOns[0].name, name);
+          assert.equal(alternativeQuote.addOnTotal, '18.75');
+          assert.equal(alternativeQuote.baseWithAddOnsPrice, '143.76');
+        }
         const rejectedWrite = async (operation, predicate) => {
           await tx.$executeRawUnsafe('SAVEPOINT invalid_addon');
           await assert.rejects(operation, predicate);
