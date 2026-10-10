@@ -270,8 +270,23 @@ export const PRODUCT_LIMITS = {
   sortOrderMax: 2147483647,
 } as const;
 export const PRODUCT_STATUSES = ["AVAILABLE", "SOLD_OUT", "HIDDEN"] as const;
+export const PRODUCT_IMAGE_LIMITS = {
+  maxBytes: 5 * 1024 * 1024,
+  maxPixels: 16_000_000,
+  maxDimension: 8192,
+} as const;
+export const PRODUCT_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+export interface ProductImageResponse extends CreateProductResponse {
+  storagePath: string;
+}
 export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
 export const PRODUCT_PRICE_PATTERN = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
+/** Application currency; product prices are exact decimal strings in PHP. */
+export const PRODUCT_CURRENCY = "PHP" as const;
 export function isValidProductImageUrl(value: string): boolean {
   try {
     const url = new URL(value);
