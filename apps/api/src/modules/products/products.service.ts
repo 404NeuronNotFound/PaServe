@@ -10,6 +10,7 @@ import type {
   ProductsResponse,
 } from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
+import { isTransactionConflict } from '../../database/transaction-conflict.js';
 import { ProductsRepository } from './products.repository.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import { TenantResourcesService } from '../tenancy/tenant-resources.service.js';
@@ -85,18 +86,17 @@ export class ProductsService {
         })),
       };
     } catch (error) {
+      if (isTransactionConflict(error))
+        throw new ConflictException({
+          code: 'PRODUCT_ORDER_CHANGED',
+          message: 'The menu changed while saving. Refresh before saving again.',
+        });
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025')
           throw new ForbiddenException({
             code: 'SHOP_PERMISSION_REQUIRED',
             message:
               'Your menu management access or product group changed. Refresh before saving.',
-          });
-        if (error.code === 'P2034')
-          throw new ConflictException({
-            code: 'PRODUCT_ORDER_CHANGED',
-            message:
-              'The menu changed while saving. Refresh before saving again.',
           });
       }
       throw error;

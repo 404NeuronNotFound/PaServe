@@ -222,4 +222,14 @@ describe('featured ordering', () => {
       .expect(401);
     expect(transaction).not.toHaveBeenCalled();
   });
+  it('reports adapter commit conflicts without retrying featured ordering', async () => {
+    const error = new Error('TransactionWriteConflict', {
+      cause: { kind: 'TransactionWriteConflict', originalCode: '40001' },
+    });
+    error.name = 'DriverAdapterError';
+    transaction.mockRejectedValue(error);
+    const response = await save().expect(409);
+    expect(response.body.code).toBe('PRODUCT_ORDER_CHANGED');
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
 });

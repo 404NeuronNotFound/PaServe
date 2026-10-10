@@ -229,4 +229,14 @@ describe('category reordering', () => {
     expect(response.body.code).toBe('CATEGORY_ORDER_CHANGED');
     expect(transaction).toHaveBeenCalledTimes(1);
   });
+  it('reports adapter commit conflicts without retrying the batch', async () => {
+    const error = new Error('TransactionWriteConflict', {
+      cause: { kind: 'TransactionWriteConflict', originalCode: '40001' },
+    });
+    error.name = 'DriverAdapterError';
+    transaction.mockRejectedValue(error);
+    const response = await reorder().expect(409);
+    expect(response.body.code).toBe('CATEGORY_ORDER_CHANGED');
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
 });

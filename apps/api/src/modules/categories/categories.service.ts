@@ -10,6 +10,7 @@ import type {
   CreateCategoryResponse,
 } from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
+import { isTransactionConflict } from '../../database/transaction-conflict.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import { CategoriesRepository } from './categories.repository.js';
 import { categorySlug } from './category-slug.js';
@@ -60,14 +61,13 @@ export class CategoriesService {
         })),
       };
     } catch (error) {
+      if (isTransactionConflict(error))
+        throw new ConflictException({
+          code: 'CATEGORY_ORDER_CHANGED',
+          message: 'The menu changed while saving. Refresh before saving again.',
+        });
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') throw lostAccess();
-        if (error.code === 'P2034')
-          throw new ConflictException({
-            code: 'CATEGORY_ORDER_CHANGED',
-            message:
-              'The menu changed while saving. Refresh before saving again.',
-          });
       }
       throw error;
     }
