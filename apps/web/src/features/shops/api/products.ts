@@ -8,11 +8,24 @@ import type {
   ProductArchiveResponse,
   ProductImageResponse,
   ProductAvailableRequest,
+  ProductSoldOutRequest,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
 export const productsKey = (userId: string, shopId: string) =>
   ["products", userId, shopId] as const;
+export async function setProductSoldOut(
+  shopId: string,
+  productId: string,
+  input: ProductSoldOutRequest,
+): Promise<CreateProductResponse> {
+  return (
+    await api.patch<CreateProductResponse>(
+      `/shops/${encodeURIComponent(shopId)}/products/${encodeURIComponent(productId)}/sold-out`,
+      input,
+    )
+  ).data;
+}
 export async function setProductAvailable(
   shopId: string,
   productId: string,

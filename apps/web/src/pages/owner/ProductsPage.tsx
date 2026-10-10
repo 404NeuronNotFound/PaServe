@@ -11,6 +11,7 @@ import {
   FiArchive,
   FiRotateCcw,
   FiCheckCircle,
+  FiSlash,
 } from "react-icons/fi";
 import {
   hasShopPermission,
@@ -25,6 +26,7 @@ import {
   listProducts,
   setProductArchived,
   setProductAvailable,
+  setProductSoldOut,
 } from "../../features/shops/api/products";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { ProductEditor } from "./ProductEditor";
@@ -100,13 +102,14 @@ function ProductWorkspace({ userId }: { userId: string }) {
     }
     return "We couldn’t change the archive status. Please try again.";
   }
-  async function makeAvailable(product: MenuProduct) {
+  async function changeAvailability(product: MenuProduct, soldOut = false) {
     if (!stillHere() || running.current || editorOpen.current) return;
     running.current = true;
     setAvailableBusy(product.id);
     setAvailableError(null);
     try {
-      const result = await setProductAvailable(membership.shopId, product.id, {
+      const write = soldOut ? setProductSoldOut : setProductAvailable;
+      const result = await write(membership.shopId, product.id, {
         expectedStatus: product.status,
       });
       if (!stillHere()) return;
@@ -128,9 +131,11 @@ function ProductWorkspace({ userId }: { userId: string }) {
         (item) => item.id === product.categoryId,
       );
       feedback.toast(
-        category && !category.isVisible
-          ? `“${result.product.name}” is available. Its category is still hidden.`
-          : `“${result.product.name}” is available. Category visibility still applies.`,
+        soldOut
+          ? `“${result.product.name}” is sold out.${category && !category.isVisible ? " Its category is still hidden." : ""}`
+          : category && !category.isVisible
+            ? `“${result.product.name}” is available. Its category is still hidden.`
+            : `“${result.product.name}” is available. Category visibility still applies.`,
       );
     } catch (error) {
       if (!stillHere()) return;
@@ -357,6 +362,20 @@ function ProductWorkspace({ userId }: { userId: string }) {
                     {availableError?.id === product.id && (
                       <InlineMessage>{availableError.message}</InlineMessage>
                     )}
+                    {!product.isArchived && product.status === "SOLD_OUT" && (
+                      <p className="field-hint">
+                        {!product.categoryId ||
+                        categories.data?.categories.find(
+                          (item) => item.id === product.categoryId,
+                        )?.isVisible === true
+                          ? "Shown on the menu · Sold out"
+                          : categories.data?.categories.find(
+                                (item) => item.id === product.categoryId,
+                              )?.isVisible === false
+                            ? "Category hidden · Not shown on the menu"
+                            : "Menu visibility follows category visibility"}
+                      </p>
+                    )}
                     <small>/{product.slug}</small>
                     {product.description && <p>{product.description}</p>}
                     <div className="product-card-meta">
@@ -405,13 +424,39 @@ function ProductWorkspace({ userId }: { userId: string }) {
                           Boolean(availableBusy) ||
                           denied
                         }
-                        onClick={() => void makeAvailable(product)}
+                        onClick={() => void changeAvailability(product)}
                       >
                         <FiCheckCircle aria-hidden="true" />
                         {availableBusy === product.id
                           ? "Updating…"
                           : "Make available"}
                       </button>
+                    )}
+                    {!product.isArchived && product.status === "AVAILABLE" && (
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        aria-label={`Mark ${product.name} sold out`}
+                        disabled={
+                          creating ||
+                          Boolean(editing) ||
+                          Boolean(archiving) ||
+                          archiveBusy ||
+                          Boolean(availableBusy) ||
+                          denied
+                        }
+                        onClick={() => void changeAvailability(product, true)}
+                      >
+                        <FiSlash aria-hidden="true" />
+                        {availableBusy === product.id
+                          ? "Updating…"
+                          : "Mark sold out"}
+                      </button>
+                    )}
+                    {!product.isArchived && product.status === "SOLD_OUT" && (
+                      <span className="field-hint">
+                        Temporarily unavailable
+                      </span>
                     )}
                     {!product.isArchived && (
                       <button

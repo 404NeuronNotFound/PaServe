@@ -20,6 +20,7 @@ import {
   setProductArchived,
   uploadProductImage,
   setProductAvailable,
+  setProductSoldOut,
 } from "../../features/shops/api/products";
 import { listCategories } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
@@ -31,6 +32,7 @@ vi.mock("../../features/shops/api/products", async (original) => ({
   setProductArchived: vi.fn(),
   uploadProductImage: vi.fn(),
   setProductAvailable: vi.fn(),
+  setProductSoldOut: vi.fn(),
   listProducts: vi.fn(),
 }));
 vi.mock("../../features/shops/api/categories", async (original) => ({
@@ -141,6 +143,77 @@ async function edit() {
     modal: within(screen.getByRole("dialog", { name: "Edit product" })),
   };
 }
+it("marks a product sold out and offers Make available without a confirmation", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  const saved: MenuProduct = { ...product, status: "SOLD_OUT" };
+  vi.mocked(setProductSoldOut).mockResolvedValue({ product: saved });
+  setup();
+  const user = userEvent.setup();
+  const trigger = await screen.findByRole("button", {
+    name: "Mark Latte sold out",
+  });
+  vi.mocked(listProducts).mockResolvedValue({ products: [saved] });
+  await user.click(trigger);
+  await waitFor(() =>
+    expect(setProductSoldOut).toHaveBeenCalledWith("a", "p", {
+      expectedStatus: "AVAILABLE",
+    }),
+  );
+  expect(
+    await screen.findByRole("button", { name: "Make Latte available" }),
+  ).toBeEnabled();
+  expect(screen.getByText("Temporarily unavailable")).toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(useFeedbackStore.getState().notices[0].message).toContain(
+    "is sold out",
+  );
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Edit Latte" })).toHaveFocus(),
+  );
+});
+it("preserves status and explains sold out conflicts inline", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  vi.mocked(setProductSoldOut).mockRejectedValue({
+    isAxiosError: true,
+    response: { status: 409 },
+  });
+  setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Mark Latte sold out" }),
+  );
+  expect(
+    await screen.findByText(/Product status changed elsewhere/),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Mark Latte sold out" }),
+  ).toBeEnabled();
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+it("blocks duplicate sold out actions and ignores completion after unmount", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  let resolve!: (value: { product: MenuProduct }) => void;
+  vi.mocked(setProductSoldOut).mockReturnValue(
+    new Promise((done) => {
+      resolve = done;
+    }),
+  );
+  const { client, unmount } = setup();
+  const user = userEvent.setup();
+  const button = await screen.findByRole("button", {
+    name: "Mark Latte sold out",
+  });
+  await user.dblClick(button);
+  expect(setProductSoldOut).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Edit Latte" })).toBeDisabled();
+  unmount();
+  resolve({ product: { ...product, status: "SOLD_OUT" } });
+  await new Promise((done) => setTimeout(done, 20));
+  expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
+    products: [product],
+  });
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
 it("makes a sold-out product available with inline category context and a toast", async () => {
   vi.mocked(listProducts).mockResolvedValue({
     products: [{ ...product, status: "SOLD_OUT", categoryId: category.id }],
