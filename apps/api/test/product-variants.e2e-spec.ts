@@ -163,6 +163,86 @@ describe('product variants management', () => {
       .patch(path(suffix))
       .set('Authorization', 'Bearer valid')
       .send(body);
+  it.each([
+    ['Small', '0'],
+    ['Medium', '15'],
+    ['Hot', '0'],
+    ['Iced', '5'],
+    ['Vanilla', '10.25'],
+    ['Hazelnut', '12'],
+    ['Single', '0'],
+    ['Double', '25'],
+    ['250 ml', '0'],
+    ['500 ml', '20'],
+    ['Family serving', '45'],
+    ['Extra spicy', '0'],
+    ['抹茶', '10'],
+  ])(
+    'creates custom option %s through the generic API',
+    async (name, priceAdjustment) => {
+      const response = await post('variants', {
+        name,
+        priceAdjustment,
+        optionGroupId: groupId,
+      }).expect(201);
+      expect(response.body.variant).toMatchObject({
+        name,
+        priceAdjustment: new Prisma.Decimal(priceAdjustment).toFixed(2),
+        optionGroupId: groupId,
+        isDefault: false,
+      });
+    },
+  );
+  it.each(['Flavor', 'Serving size', 'Heat level'])(
+    'creates owner-defined group %s without a fixed type',
+    async (name) => {
+      const response = await post('option-groups', {
+        name,
+        isRequired: false,
+      }).expect(201);
+      expect(response.body.optionGroup).toMatchObject({
+        name,
+        isRequired: false,
+      });
+    },
+  );
+  it('normalizes custom names and supports a named base choice other than Regular', async () => {
+    const response = await post('variants', {
+      name: '  Small   cup  ',
+      priceAdjustment: '0',
+      isDefault: true,
+    }).expect(201);
+    expect(response.body.variant).toMatchObject({
+      name: 'Small cup',
+      priceAdjustment: '0.00',
+      isDefault: true,
+      optionGroupId: null,
+    });
+  });
+  it('renames a custom choice and changes its surcharge and group through the generic API', async () => {
+    const response = await patch(`variants/${variantId}`, {
+      name: 'Salted Caramel',
+      priceAdjustment: '12.50',
+      optionGroupId: groupId,
+      sortOrder: 3,
+    }).expect(200);
+    expect(response.body.variant).toMatchObject({
+      id: variantId,
+      name: 'Salted Caramel',
+      priceAdjustment: '12.50',
+      optionGroupId: groupId,
+      sortOrder: 3,
+    });
+  });
+  it('renames a custom option group while preserving its identity', async () => {
+    const response = await patch(`option-groups/${groupId}`, {
+      name: 'Serving size',
+    }).expect(200);
+    expect(response.body.optionGroup).toMatchObject({
+      id: groupId,
+      name: 'Serving size',
+    });
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER'])(
     'allows %s to create Large as a paid upgrade',
     async (allowed) => {

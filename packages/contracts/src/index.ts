@@ -292,12 +292,14 @@ export const PRODUCT_VARIANT_LIMITS = {
   sortOrderMax: 1000000,
 } as const;
 export interface CreateProductOptionGroupRequest {
+  /** Owner-defined label, e.g. Size, Temperature, Flavor or Serving size. */
   name: string;
   isRequired?: boolean;
   isAvailable?: boolean;
   sortOrder?: number;
 }
 export interface CreateProductVariantRequest {
+  /** Owner-defined choice label; adding choices never requires a new enum member. */
   name: string;
   /** Nonnegative PHP surcharge, sent as an exact decimal string. */
   priceAdjustment: string;
