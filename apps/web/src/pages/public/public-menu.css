@@ -1,0 +1,84 @@
+.public-menu {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px;
+  color: var(--color-text);
+}
+.public-menu-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+.public-menu-header > div {
+  flex: 1;
+  min-width: 0;
+}
+.public-menu-header h1 {
+  overflow-wrap: anywhere;
+  margin: 4px 0 12px;
+  font-family: Georgia, serif;
+}
+.public-menu-header .shop-logo {
+  width: 88px;
+  height: 88px;
+}
+.public-menu-section {
+  margin-top: 32px;
+}
+.public-menu-section h2 {
+  font-family: Georgia, serif;
+}
+.public-menu-section ul {
+  list-style: none;
+  padding: 0;
+}
+.public-menu-section li {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+.public-menu-section li > div {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.public-menu-section h3 {
+  margin: 0;
+}
+.public-menu-section p {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.public-menu-section img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.public-menu-section li > strong {
+  white-space: nowrap;
+}
+@media (max-width: 520px) {
+  .public-menu-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .public-menu-header .shop-logo {
+    width: 60px;
+    height: 60px;
+  }
+  .public-menu-section li {
+    flex-wrap: wrap;
+    padding: 16px;
+  }
+  .public-menu-section li > strong {
+    margin-left: auto;
+  }
+}

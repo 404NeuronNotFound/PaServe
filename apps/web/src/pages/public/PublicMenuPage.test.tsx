@@ -1,0 +1,95 @@
+import { afterEach, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { PublicMenuPage } from "./PublicMenuPage";
+import { api } from "../../lib/api/client";
+
+vi.mock("../../lib/api/client", () => ({ api: { get: vi.fn() } }));
+afterEach(() => {
+  cleanup();
+  vi.resetAllMocks();
+});
+function setup() {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={["/menu/cafe"]}>
+        <Routes>
+          <Route path="/menu/:shopSlug" element={<PublicMenuPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+const menu = {
+  shop: {
+    name: "Cafe",
+    slug: "cafe",
+    description: null,
+    logoUrl: "https://example.com/logo.webp",
+  },
+  categories: [],
+  products: [],
+  featuredProducts: [],
+};
+it("displays the persisted shop logo on a public route", async () => {
+  vi.mocked(api.get).mockResolvedValue({ data: menu });
+  setup();
+  expect(await screen.findByRole("img", { name: "Cafe logo" })).toHaveAttribute(
+    "src",
+    menu.shop.logoUrl,
+  );
+  expect(screen.getByRole("heading", { name: "Cafe" })).toBeInTheDocument();
+  expect(screen.getByText(/No items are available/)).toBeInTheDocument();
+  expect(api.get).toHaveBeenCalledWith("/menu/cafe", {
+    signal: expect.any(AbortSignal),
+  });
+});
+it("falls back to shop identity when a logo is missing or fails to load", async () => {
+  vi.mocked(api.get).mockResolvedValue({ data: menu });
+  setup();
+  fireEvent.error(await screen.findByRole("img", { name: "Cafe logo" }));
+  expect(
+    screen.queryByRole("img", { name: "Cafe logo" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Cafe" })).toBeInTheDocument();
+});
+it("renders saved category and product order with sold-out labels", async () => {
+  const product = {
+    id: "a",
+    name: "Coffee",
+    categoryId: "drinks",
+    price: "12.50",
+    description: null,
+    imageUrl: null,
+    status: "SOLD_OUT",
+  };
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      ...menu,
+      categories: [{ id: "drinks", name: "Drinks" }],
+      products: [
+        product,
+        { ...product, id: "b", name: "Tea", status: "AVAILABLE" },
+      ],
+    },
+  });
+  setup();
+  await screen.findByRole("heading", { name: "Drinks" });
+  expect(
+    screen
+      .getAllByRole("heading", { level: 3 })
+      .map((item) => item.textContent),
+  ).toEqual(["Coffee", "Tea"]);
+  expect(screen.getByText("Sold out")).toBeInTheDocument();
+});
+it("shows a recovery state for unavailable menus", async () => {
+  vi.mocked(api.get).mockRejectedValue({
+    isAxiosError: true,
+    response: { status: 404 },
+  });
+  setup();
+  expect(
+    await screen.findByRole("heading", { name: "Menu unavailable" }),
+  ).toBeInTheDocument();
+});
