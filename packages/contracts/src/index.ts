@@ -306,6 +306,7 @@ export interface MenuProduct {
   status: ProductStatus;
   imageUrl: string | null;
   isFeatured: boolean;
+  isArchived: boolean;
   sortOrder: number;
   createdAt: string;
 }
@@ -318,6 +319,11 @@ export interface UpdateProductRequest extends Partial<
   categoryId?: string | null;
 }
 export type UpdateProductResponse = CreateProductResponse;
+export interface ProductArchiveRequest {
+  isArchived: boolean;
+  expectedArchived: boolean;
+}
+export type ProductArchiveResponse = CreateProductResponse;
 export interface ProductsResponse {
   products: MenuProduct[];
 }
