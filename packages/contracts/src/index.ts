@@ -342,6 +342,7 @@ export type ProductArchiveResponse = CreateProductResponse;
 export interface ProductAvailableRequest {
   expectedStatus: ProductStatus;
 }
+export type ProductSoldOutRequest = ProductAvailableRequest;
 export interface ProductsResponse {
   products: MenuProduct[];
 }
