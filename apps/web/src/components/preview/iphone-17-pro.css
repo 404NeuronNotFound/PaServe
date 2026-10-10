@@ -1,0 +1,212 @@
+/* Graphite finish, bezel geometry and device proportions adapted from Cult UI. */
+.iphone-preview-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+.iphone-17-pro {
+  container: iphone-device / inline-size;
+  position: relative;
+  /* Fixed simulated device dimensions; the outer viewport scales the frame.
+     An automatic height lets long menus override the preferred aspect ratio. */
+  width: 390px;
+  height: 816px;
+  flex: 0 0 auto;
+  padding: 3px;
+  box-sizing: border-box;
+  border-radius: 48px;
+  background: linear-gradient(
+    145deg,
+    #8b8e93 0%,
+    #45484d 10%,
+    #26282d 28%,
+    #55585e 50%,
+    #8a8d93 70%,
+    #3b3d42 88%,
+    #22242a 100%
+  );
+  box-shadow:
+    inset 0 1px 0 #ffffff80,
+    inset 1px 0 0 #ffffff30,
+    inset -1px 0 0 #0006,
+    0 8px 12px -6px #0005,
+    0 32px 64px -16px #0005;
+}
+.iphone-bezel {
+  height: 100%;
+  padding: 3px;
+  box-sizing: border-box;
+  border-radius: 45px;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+.iphone-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 42px;
+  padding-top: 56px;
+  padding-bottom: 24px;
+  box-sizing: border-box;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.iphone-status-bar {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  font:
+    600 14px/1 system-ui,
+    sans-serif;
+  pointer-events: none;
+}
+.iphone-status-icons,
+.iphone-signal {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.iphone-status-icons > svg {
+  width: 14px;
+  height: 14px;
+}
+.iphone-signal {
+  align-items: flex-end;
+  gap: 1px;
+}
+.iphone-signal i {
+  width: 3px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.iphone-battery {
+  position: relative;
+  width: 24px;
+  height: 12px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 1px;
+  box-sizing: border-box;
+}
+.iphone-battery i {
+  display: block;
+  height: 100%;
+  width: 94%;
+  border-radius: 2px;
+  background: currentColor;
+}
+.iphone-battery::after {
+  content: "";
+  position: absolute;
+  left: 100%;
+  top: 3px;
+  width: 2px;
+  height: 4px;
+  background: currentColor;
+}
+.iphone-dynamic-island {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 32px;
+  border-radius: 16px;
+  background: #000;
+  pointer-events: none;
+}
+.iphone-dynamic-island i {
+  position: absolute;
+  right: 12px;
+  top: 11px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    #2a3a5a 0%,
+    #0f1520 60%,
+    #000 100%
+  );
+  box-shadow: inset 0 0 2px #6496ff4d;
+}
+.iphone-menu-screen {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.iphone-menu-screen:focus-visible {
+  outline: 2px solid var(--color-muted);
+  outline-offset: -2px;
+}
+.iphone-home-indicator {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 4px;
+  width: 128px;
+  border-radius: 999px;
+  background: var(--color-text);
+  pointer-events: none;
+}
+.iphone-side-button {
+  position: absolute;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    #424246 0%,
+    #3a3a3e 30%,
+    #363839 50%,
+    #3a3a3e 70%,
+    #424246 100%
+  );
+  box-shadow:
+    1px 0 1px #fff3,
+    2px 1px 3px #0004;
+  pointer-events: none;
+}
+.iphone-side-button.power {
+  right: -3px;
+  top: 28%;
+  height: 65px;
+}
+.iphone-side-button.action {
+  left: -3px;
+  top: 20%;
+  height: 22px;
+}
+.iphone-side-button.volume-up {
+  left: -3px;
+  top: 27%;
+  height: 40px;
+}
+.iphone-side-button.volume-down {
+  left: -3px;
+  top: 36%;
+  height: 40px;
+}
+@container iphone-device (max-width: 280px) {
+  .iphone-status-bar {
+    padding-inline: 16px;
+    font-size: 12px;
+  }
+  .iphone-dynamic-island {
+    width: 80px;
+  }
+  .iphone-status-icons {
+    gap: 3px;
+  }
+}
