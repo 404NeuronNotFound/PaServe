@@ -37,6 +37,7 @@ import { FiSave, FiRotateCcw, FiArrowLeft } from "react-icons/fi";
 
 import { ShopLogoUpload } from "./ShopLogoUpload";
 import { ShopBannerUpload } from "./ShopBannerUpload";
+import { MenuPreviewDialog } from "./MenuPreviewDialog";
 
 const fields = [
   {
@@ -214,6 +215,11 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
   const [logoDirty, setLogoDirty] = useState(false);
   const [bannerPending, setBannerPending] = useState(false);
   const [bannerDirty, setBannerDirty] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLogo, setPreviewLogo] = useState<string | null | undefined>();
+  const [previewBanner, setPreviewBanner] = useState<
+    string | null | undefined
+  >();
   const [decision, setDecision] = useState<"reset" | "leave" | null>(null);
   const form = useRef<HTMLFormElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -407,6 +413,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
         disabled={mutation.isPending || bannerPending}
         onPending={setLogoPending}
         onDirty={setLogoDirty}
+        onPreview={setPreviewLogo}
       />
       <ShopBannerUpload
         shopId={shop.id}
@@ -416,7 +423,16 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
         disabled={mutation.isPending || logoPending}
         onPending={setBannerPending}
         onDirty={setBannerDirty}
+        onPreview={setPreviewBanner}
       />
+      <button
+        id="preview-settings-changes"
+        className="secondary-button"
+        type="button"
+        onClick={() => setPreviewOpen(true)}
+      >
+        Preview changes
+      </button>
       <form
         ref={form}
         className="registration-form settings-form-grid"
@@ -622,6 +638,29 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
           </Link>
         </div>
       </form>
+      {previewOpen && (
+        <MenuPreviewDialog
+          onClose={() => setPreviewOpen(false)}
+          unsaved={dirty || logoDirty || bannerDirty}
+          draft={{
+            name: values.name.trim() || shop.name,
+            description: values.description.trim() || null,
+            primaryColor: isValidShopPrimaryColor(values.primaryColor)
+              ? normalizeShopPrimaryColor(values.primaryColor) || null
+              : shop.primaryColor,
+            accentColor: isValidShopPrimaryColor(values.accentColor)
+              ? normalizeShopPrimaryColor(values.accentColor) || null
+              : shop.accentColor,
+            menuLayout: isMenuLayout(values.menuLayout)
+              ? values.menuLayout
+              : shop.menuLayout,
+            ...(previewLogo === undefined ? {} : { logoUrl: previewLogo }),
+            ...(previewBanner === undefined
+              ? {}
+              : { bannerUrl: previewBanner }),
+          }}
+        />
+      )}
       <DecisionDialog
         open={decision !== null}
         title="Discard unsaved changes?"

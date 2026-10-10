@@ -39,6 +39,7 @@ it.each([
   "/app/onboarding/create-shop",
   "/app/shops",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e",
+  "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/menu-preview",
 ])("redirects guests entering %s directly to login", async (path) => {
   const error = new AxiosError("Unauthorized");
   error.response = {

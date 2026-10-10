@@ -23,7 +23,7 @@
   border: 1px solid var(--color-border);
   border-radius: 6px;
   background: var(--menu-primary, #243329);
-  color: var(--menu-on-primary, #FFFFFF);
+  color: var(--menu-on-primary, #ffffff);
 }
 .public-menu-header h1 {
   overflow-wrap: anywhere;
@@ -70,7 +70,7 @@
   padding: 4px 10px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: var(--menu-accent, #C9EF83);
+  background: var(--menu-accent, #c9ef83);
   color: var(--menu-on-accent, #000000);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -122,6 +122,26 @@
   height: 44px;
 }
 @media (max-width: 520px) {
+  .public-menu:not([data-preview])[data-layout="grid"] .public-menu-section ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .public-menu:not([data-preview]) .public-menu-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .public-menu:not([data-preview]) .public-menu-header .shop-logo {
+    width: 60px;
+    height: 60px;
+  }
+  .public-menu:not([data-preview]) .public-menu-section li {
+    flex-wrap: wrap;
+    padding: 16px;
+  }
+  .public-menu:not([data-preview]) .public-menu-section li > strong {
+    margin-left: auto;
+  }
+}
+@container menu-preview (max-width: 520px) {
   .public-menu[data-layout="grid"] .public-menu-section ul {
     grid-template-columns: minmax(0, 1fr);
   }

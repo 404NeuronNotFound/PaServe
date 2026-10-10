@@ -19,6 +19,7 @@ export function PublicMenuView({
   return (
     <Root
       className="public-menu"
+      data-preview={preview ? "true" : undefined}
       data-layout={
         isMenuLayout(shop.menuLayout) ? shop.menuLayout : DEFAULT_MENU_LAYOUT
       }

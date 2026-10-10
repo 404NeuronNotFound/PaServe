@@ -22,11 +22,13 @@ export function CategoryEditor({
   category,
   userId,
   shopId,
+  shopSlug,
   onClose,
 }: {
   category: MenuCategory;
   userId: string;
   shopId: string;
+  shopSlug?: string;
   onClose: () => void;
 }) {
   const client = useQueryClient();
@@ -136,6 +138,8 @@ export function CategoryEditor({
         queryKey: categoriesKey(userId, shopId),
       });
       feedback.toast("Category details saved.");
+      if (shopSlug)
+        void client.invalidateQueries({ queryKey: ["public-menu", shopSlug] });
       finishClose();
     } catch (failure) {
       if (

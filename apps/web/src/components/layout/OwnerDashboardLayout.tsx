@@ -18,6 +18,7 @@ import {
   FiChevronDown,
   FiCheck,
   FiLayers,
+  FiEye,
 } from "react-icons/fi";
 import type { CurrentUserResponse, UserMembership } from "@paserve/contracts";
 import { hasShopPermission } from "@paserve/contracts";
@@ -252,6 +253,11 @@ export function DashboardFrame({
             </div>
           )}
           <nav aria-label="Shop navigation">
+            {membership?.role === "OWNER" && (
+              <NavLink to={`${shopPath(membership.shopId)}/menu-preview`} onClick={closeNavigation}>
+                <FiEye aria-hidden="true" /> Menu preview
+              </NavLink>
+            )}
             {membership && (
               <NavLink
                 end

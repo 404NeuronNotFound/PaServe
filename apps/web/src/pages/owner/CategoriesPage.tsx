@@ -140,6 +140,9 @@ function CategoryWorkspace({ userId }: { userId: string }) {
       );
       void client.invalidateQueries({ queryKey: publicKey });
       void client.invalidateQueries({ queryKey: key });
+      void client.invalidateQueries({
+        queryKey: ["public-menu", membership.shop.slug],
+      });
       if (!undo)
         feedback.snackbar(
           "Category order saved.",
@@ -329,6 +332,9 @@ function CategoryWorkspace({ userId }: { userId: string }) {
         ),
       }));
       void client.invalidateQueries({ queryKey: key });
+      void client.invalidateQueries({
+        queryKey: ["public-menu", membership.shop.slug],
+      });
       setName("");
       feedback.toast(`“${result.category.name}” was created.`);
     } catch (failure) {
@@ -642,6 +648,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               category={editing}
               userId={userId}
               shopId={shopId}
+              shopSlug={membership.shop.slug}
               onClose={() => {
                 setEditing(null);
                 queueMicrotask(() =>
@@ -768,6 +775,9 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               : current,
           );
           void client.invalidateQueries({ queryKey: key });
+          void client.invalidateQueries({
+            queryKey: ["public-menu", membership.shop.slug],
+          });
           feedback.toast(
             "Category deleted. Linked products were kept in Uncategorized.",
           );

@@ -165,6 +165,9 @@ function ProductWorkspace({ userId }: { userId: string }) {
           : current,
       );
       void client.invalidateQueries({ queryKey: key });
+      void client.invalidateQueries({
+        queryKey: ["public-menu", membership.shop.slug],
+      });
       const category = categories.data?.categories.find(
         (item) => item.id === product.categoryId,
       );
@@ -347,6 +350,9 @@ function ProductWorkspace({ userId }: { userId: string }) {
           : current,
       );
       void client.invalidateQueries({ queryKey: key });
+      void client.invalidateQueries({
+        queryKey: ["public-menu", membership.shop.slug],
+      });
       if (undo || !isArchived)
         feedback.toast(`“${result.product.name}” was restored.`);
       else

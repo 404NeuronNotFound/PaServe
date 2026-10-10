@@ -16,6 +16,8 @@ import {
 import { rememberShop, rememberedShop } from "../../features/shops/active-shop";
 import { ActiveShopPage } from "../../pages/owner/ActiveShopPage";
 import { ShopSettingsPage } from "../../pages/owner/ShopSettingsPage";
+import { MenuPreviewPage } from "../../pages/owner/MenuPreviewPage";
+import { api } from "../../lib/api/client";
 import { useFeedbackStore } from "../../app/stores/feedback";
 
 vi.mock("../../features/auth/api/session", () => ({
@@ -111,6 +113,7 @@ function setup(path = "/app/shops/a") {
             <Route element={<OwnerDashboardLayout />}>
               <Route index element={<ActiveShopPage />} />
               <Route path="settings" element={<ShopSettingsPage />} />
+              <Route path="menu-preview" element={<MenuPreviewPage />} />
             </Route>
           </Route>
           <Route path="/app/account" element={<h1>Your account page</h1>} />
@@ -122,6 +125,27 @@ function setup(path = "/app/shops/a") {
   );
   return client;
 }
+it("lets the owner inspect the menu within the authenticated workspace", async () => {
+  const getMenu = vi.spyOn(api, "get").mockResolvedValue({ data: {
+    shop: { name: "Cafe A", slug: "cafe-a", description: null, menuLayout: "grid" },
+    categories: [], products: [], featuredProducts: [],
+  } });
+  try {
+    setup();
+    const user = userEvent.setup();
+    await screen.findByRole("heading", { name: "Cafe A" });
+    await user.click(screen.getByRole("link", { name: "Menu preview" }));
+    expect(await screen.findByRole("heading", { name: "Menu preview" })).toBeInTheDocument();
+    const preview = screen.getByRole("region", { name: "Customer menu preview" });
+    expect(await within(preview).findByRole("heading", { name: "Cafe A" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Account menu")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Shop navigation" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Menu preview" })).toHaveAttribute("aria-current", "page");
+    expect(getMenu).toHaveBeenCalledWith("/menu/cafe-a", { signal: expect.any(AbortSignal) });
+    expect(logoutAccount).not.toHaveBeenCalled();
+    expect(screen.queryByRole("heading", { name: "Sign in" })).not.toBeInTheDocument();
+  } finally { getMenu.mockRestore(); }
+});
 function denied(status: number) {
   const error = new AxiosError("Denied");
   error.response = {

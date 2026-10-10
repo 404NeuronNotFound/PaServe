@@ -21,6 +21,7 @@ import { ActiveShopPage } from "../../pages/owner/ActiveShopPage";
 import { ShopSettingsPage } from "../../pages/owner/ShopSettingsPage";
 import { CategoriesPage } from "../../pages/owner/CategoriesPage";
 import { ProductsPage } from "../../pages/owner/ProductsPage";
+import { MenuPreviewPage } from "../../pages/owner/MenuPreviewPage";
 import { OwnerDashboardLayout } from "../../components/layout/OwnerDashboardLayout";
 
 export function AppRouter() {
@@ -47,6 +48,7 @@ export function AppRouter() {
               <Route path="settings" element={<ShopSettingsPage />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="products" element={<ProductsPage />} />
+              <Route path="menu-preview" element={<MenuPreviewPage />} />
             </Route>
           </Route>
           <Route path="account" element={<AccountPage />} />

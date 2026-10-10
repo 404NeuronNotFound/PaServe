@@ -24,6 +24,7 @@ export function ShopLogoUpload({
   disabled,
   onPending,
   onDirty,
+  onPreview,
 }: {
   shopId: string;
   membershipId: string;
@@ -32,6 +33,7 @@ export function ShopLogoUpload({
   disabled: boolean;
   onPending: (value: boolean) => void;
   onDirty: (value: boolean) => void;
+  onPreview?: (url: string | null) => void;
 }) {
   const client = useQueryClient();
   const userId =
@@ -44,6 +46,9 @@ export function ShopLogoUpload({
   } | null>(null);
   const savedUrl =
     uploadedLogo?.previous === logoUrl ? uploadedLogo?.url : logoUrl;
+  useEffect(() => {
+    onPreview?.(preview || savedUrl || null);
+  }, [preview, savedUrl, onPreview]);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState(0);

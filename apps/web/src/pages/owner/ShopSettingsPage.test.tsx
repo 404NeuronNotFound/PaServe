@@ -17,6 +17,12 @@ import { uploadShopBanner } from "../../features/shops/api/banner";
 import { useFeedbackStore } from "../../app/stores/feedback";
 import { activeShopKey } from "../../features/shops/active-shop";
 import { FeedbackHost } from "../../components/feedback/FeedbackHost";
+import { api } from "../../lib/api/client";
+vi.mock("../../lib/api/client", async (original) => {
+  const actual = await original<typeof import("../../lib/api/client")>();
+  actual.api.get = vi.fn();
+  return actual;
+});
 
 const modalDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
@@ -106,6 +112,7 @@ afterEach(() => {
   cleanup();
   vi.resetAllMocks();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   if (modalDescriptor)
     Object.defineProperty(
       HTMLDialogElement.prototype,
@@ -139,6 +146,112 @@ function setup(role: UserMembership["role"] = "OWNER") {
   );
   return client;
 }
+it("previews unsaved branding without publishing it and preserves edits when closing", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  const published = {
+    shop: {
+      name: shop.name,
+      slug: shop.slug,
+      description: null,
+      menuLayout: "list",
+    },
+    products: [],
+    categories: [],
+    featuredProducts: [],
+  };
+  vi.mocked(api.get).mockResolvedValue({ data: published });
+  const client = setup();
+  const user = userEvent.setup();
+  const name = await screen.findByLabelText("Business name (required)");
+  await user.clear(name);
+  await user.type(name, "Draft shop");
+  await user.type(
+    screen.getByRole("textbox", { name: "Primary color" }),
+    "#AABBCC",
+  );
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Menu layout" }),
+    "grid",
+  );
+  await user.click(screen.getByRole("button", { name: "Preview changes" }));
+  const dialog = await screen.findByRole("dialog", { name: "Preview changes" });
+  expect(
+    await within(dialog).findByRole("heading", { name: "Draft shop" }),
+  ).toBeInTheDocument();
+  const preview = dialog.querySelector<HTMLElement>(".public-menu")!;
+  expect(preview).toHaveAttribute("data-layout", "grid");
+  expect(preview.style.getPropertyValue("--menu-primary")).toBe("#AABBCC");
+  expect(client.getQueryData(["public-menu", shop.slug])).toEqual(published);
+  await user.click(
+    within(dialog).getByRole("button", { name: "Back to editing" }),
+  );
+  expect(name).toHaveValue("Draft shop");
+  await vi.waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Preview changes" }),
+    ).toHaveFocus(),
+  );
+  expect(updateShop).not.toHaveBeenCalled();
+});
+it("shows selected branding images before upload and restores saved images when selections are removed", async () => {
+  const NativeURL = URL;
+  vi.stubGlobal(
+    "URL",
+    class extends NativeURL {
+      static createObjectURL(file: File) {
+        return `blob:${file.name}`;
+      }
+      static revokeObjectURL = vi.fn();
+    },
+  );
+  vi.mocked(getShopSettings).mockResolvedValue({
+    shop: {
+      ...shop,
+      logoUrl: "https://example.com/saved-logo.png",
+      bannerUrl: "https://example.com/saved-banner.png",
+    },
+  });
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      shop: { name: shop.name, slug: shop.slug, description: null },
+      products: [],
+      categories: [],
+      featuredProducts: [],
+    },
+  });
+  setup();
+  const user = userEvent.setup();
+  await screen.findByLabelText("Business name (required)");
+  await user.upload(
+    screen.getByLabelText("Replace logo"),
+    new File(["image"], "logo.png", { type: "image/png" }),
+  );
+  await user.upload(
+    screen.getByLabelText("Replace banner"),
+    new File(["image"], "banner.png", { type: "image/png" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Preview changes" }));
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Preview changes" }),
+  );
+  expect(
+    await dialog.findByRole("img", { name: "Cafe A logo" }),
+  ).toHaveAttribute("src", "blob:logo.png");
+  expect(dialog.getByRole("img", { name: "Cafe A banner" })).toHaveAttribute(
+    "src",
+    "blob:banner.png",
+  );
+  await user.click(dialog.getByRole("button", { name: "Back to editing" }));
+  await user.click(screen.getAllByRole("button", { name: "Cancel selection" })[1]);
+  await user.click(screen.getByRole("button", { name: "Preview changes" }));
+  expect(
+    await within(
+      screen.getByRole("dialog", { name: "Preview changes" }),
+    ).findByRole("img", { name: "Cafe A banner" }),
+  ).toHaveAttribute("src", "https://example.com/saved-banner.png");
+  expect(uploadShopBanner).not.toHaveBeenCalled();
+  expect(updateShop).not.toHaveBeenCalled();
+});
 it("loads the default layout and persists changes through the active shop settings", async () => {
   vi.mocked(getShopSettings).mockResolvedValue({ shop });
   const client = setup();
