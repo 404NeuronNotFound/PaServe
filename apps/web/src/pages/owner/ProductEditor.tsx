@@ -36,11 +36,13 @@ import { formatProductPrice } from "../../lib/money";
 export function ProductEditor({
   userId,
   shopId,
+  shopSlug,
   onClose,
   product,
 }: {
   userId: string;
   shopId: string;
+  shopSlug?: string;
   onClose: () => void;
   product?: MenuProduct;
 }) {
@@ -201,6 +203,8 @@ export function ProductEditor({
       ),
     }));
     void client.invalidateQueries({ queryKey: key });
+    if (shopSlug)
+      void client.invalidateQueries({ queryKey: ["public-menu", shopSlug] });
   }
   async function savePhoto(saved: MenuProduct, file: File) {
     setUploading(true);

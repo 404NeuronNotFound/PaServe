@@ -9,11 +9,13 @@ export function ProductOrderEditor({
   onSave,
   onClose,
   triggerId,
+  featured = false,
 }: {
   products: MenuProduct[];
   onSave: (productIds: string[], expectedOrder: string[]) => Promise<boolean>;
   onClose: () => void;
   triggerId: string;
+  featured?: boolean;
 }) {
   const [original] = useState(() => products);
   const [draft, setDraft] = useState(() => products);
@@ -113,11 +115,12 @@ export function ProductOrderEditor({
         aria-busy={pending}
       >
         <h3 id="category-order-title" ref={title} tabIndex={-1}>
-          Reorder products
+          {featured ? "Reorder featured items" : "Reorder products"}
         </h3>
         <p>
-          Move products into the order you want guests to see. Hidden products
-          keep their place. Archived products are excluded.
+          {featured
+            ? "Arrange your highlighted products across categories. This changes only the Featured section. Hidden products keep their place until visible; archived products are excluded."
+            : "Move products into the order you want guests to see. Hidden products keep their place. Archived products are excluded."}
         </p>
         <ol className="category-order-list">
           {draft.map((product, index) => (

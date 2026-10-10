@@ -516,6 +516,7 @@ export interface MenuProduct {
   isFeatured: boolean;
   isArchived: boolean;
   sortOrder: number;
+  featuredSortOrder?: number;
   createdAt: string;
 }
 export interface CreateProductResponse {
@@ -540,6 +541,10 @@ export type ProductHiddenRequest = ProductAvailableRequest;
 export interface ProductFeaturedRequest {
   isFeatured: boolean;
   expectedFeatured: boolean;
+}
+export interface ReorderFeaturedProductsRequest {
+  productIds: string[];
+  expectedOrder: string[];
 }
 export interface ProductsResponse {
   products: MenuProduct[];
@@ -585,5 +590,6 @@ export interface PublicMenuResponse {
     isOrderable: boolean;
     isFeatured: boolean;
     sortOrder: number;
+    featuredSortOrder?: number;
   }>;
 }

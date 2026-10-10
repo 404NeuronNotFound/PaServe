@@ -770,3 +770,28 @@
     transition: none;
   }
 }
+.featured-order-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+.featured-order-toolbar > div {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.featured-order-toolbar strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.featured-order-toolbar p {
+  margin: 8px 0 0;
+  color: var(--color-muted);
+}

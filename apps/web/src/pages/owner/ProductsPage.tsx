@@ -30,6 +30,10 @@ import {
 } from "@paserve/contracts";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { withProductOrder } from "../../features/shops/product-menu-order";
+import {
+  withFeaturedOrder,
+  withFeaturedSelection,
+} from "../../features/shops/featured-menu";
 import { currentUserKey } from "../../features/auth/api/session";
 import {
   productsKey,
@@ -40,6 +44,7 @@ import {
   setProductHidden,
   setProductFeatured,
   reorderProducts,
+  reorderFeaturedProducts,
 } from "../../features/shops/api/products";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { ProductActionsMenu } from "./ProductActionsMenu";
@@ -68,6 +73,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
   const client = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [ordering, setOrdering] = useState(false);
+  const [featuredOrdering, setFeaturedOrdering] = useState(false);
   const [orderCategory, setOrderCategory] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -200,7 +206,11 @@ function ProductWorkspace({ userId }: { userId: string }) {
       });
       if (!stillHere()) return;
       const key = productsKey(userId, membership.shopId);
-      await client.cancelQueries({ queryKey: key });
+      const publicKey = ["public-menu", membership.shop.slug];
+      await Promise.all([
+        client.cancelQueries({ queryKey: key }),
+        client.cancelQueries({ queryKey: publicKey }),
+      ]);
       if (!stillHere()) return;
       returnFocus.current = `more-product-${product.id}`;
       client.setQueryData<ProductsResponse>(key, (current) =>
@@ -213,6 +223,10 @@ function ProductWorkspace({ userId }: { userId: string }) {
           : current,
       );
       void client.invalidateQueries({ queryKey: key });
+      client.setQueryData<PublicMenuResponse>(publicKey, (current) =>
+        current ? withFeaturedSelection(current, result.product) : current,
+      );
+      void client.invalidateQueries({ queryKey: publicKey });
       feedback.toast(
         result.product.isFeatured
           ? `${result.product.name} is featured. Menu visibility still applies.`
@@ -241,11 +255,16 @@ function ProductWorkspace({ userId }: { userId: string }) {
       throw new Error("Wait for the current action to finish.");
     running.current = true;
     try {
-      const result = await reorderProducts(membership.shopId, {
-        categoryId: orderCategory || null,
-        productIds,
-        expectedOrder,
-      });
+      const result = featuredOrdering
+        ? await reorderFeaturedProducts(membership.shopId, {
+            productIds,
+            expectedOrder,
+          })
+        : await reorderProducts(membership.shopId, {
+            categoryId: orderCategory || null,
+            productIds,
+            expectedOrder,
+          });
       if (!stillHere()) return false;
       const key = productsKey(userId, membership.shopId);
       const publicKey = ["public-menu", membership.shop.slug];
@@ -272,11 +291,15 @@ function ProductWorkspace({ userId }: { userId: string }) {
       void client.invalidateQueries({ queryKey: key });
       client.setQueryData<PublicMenuResponse>(publicKey, (current) =>
         current
-          ? withProductOrder(current, orderCategory || null, result.products)
+          ? featuredOrdering
+            ? withFeaturedOrder(current, result.products)
+            : withProductOrder(current, orderCategory || null, result.products)
           : current,
       );
       void client.invalidateQueries({ queryKey: publicKey });
-      feedback.toast("Product order saved.");
+      feedback.toast(
+        featuredOrdering ? "Featured order saved." : "Product order saved.",
+      );
       return true;
     } catch (error) {
       if (!stillHere()) return false;
@@ -459,6 +482,13 @@ function ProductWorkspace({ userId }: { userId: string }) {
     }))
     .filter((group) => group.products.length > 0);
   const hasFilters = Boolean(search || categoryFilter || statusFilter);
+  const featuredProducts = (query.data?.products ?? [])
+    .filter((item) => item.isFeatured && !item.isArchived)
+    .sort(
+      (a, b) =>
+        (a.featuredSortOrder ?? a.sortOrder) -
+          (b.featuredSortOrder ?? b.sortOrder) || a.id.localeCompare(b.id),
+    );
   const browsingLocked =
     creating ||
     Boolean(editing) ||
@@ -526,6 +556,42 @@ function ProductWorkspace({ userId }: { userId: string }) {
             {query.isFetching ? "Refreshing…" : "Refresh products"}
           </button>
         </div>
+        {query.isSuccess && !denied && (
+          <div className="featured-order-toolbar">
+            <div>
+              <strong>
+                <FiStar aria-hidden="true" /> Featured items ·{" "}
+                {featuredProducts.length}
+              </strong>
+              <p>
+                Select Feature in a product’s More menu, then arrange your
+                highlights here. Menu visibility still applies.
+              </p>
+            </div>
+            <button
+              id="reorder-featured-items"
+              className="secondary-button"
+              type="button"
+              disabled={
+                browsingLocked ||
+                query.isFetching ||
+                featuredProducts.length < 2 ||
+                featuredProducts.length > PRODUCT_REORDER_MAX
+              }
+              title={
+                featuredProducts.length > PRODUCT_REORDER_MAX
+                  ? `Reordering supports up to ${PRODUCT_REORDER_MAX} featured items.`
+                  : undefined
+              }
+              onClick={() => {
+                setFeaturedOrdering(true);
+                setOrdering(true);
+              }}
+            >
+              <FiMove aria-hidden="true" /> Reorder featured items
+            </button>
+          </div>
+        )}
         {query.isSuccess && query.data.products.length > 0 && (
           <div className="product-browse-controls" ref={browseControls}>
             <div className="product-filter-fields">
@@ -712,6 +778,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                         group.activeCount > PRODUCT_REORDER_MAX
                       }
                       onClick={() => {
+                        setFeaturedOrdering(false);
                         setOrderCategory(group.categoryId || "");
                         setOrdering(true);
                       }}
@@ -1083,11 +1150,21 @@ function ProductWorkspace({ userId }: { userId: string }) {
       />
       {ordering && query.isSuccess && (
         <ProductOrderEditor
-          triggerId={`reorder-products-${orderCategory || "uncategorized"}`}
-          products={query.data.products.filter(
-            (item) =>
-              !item.isArchived && item.categoryId === (orderCategory || null),
-          )}
+          featured={featuredOrdering}
+          triggerId={
+            featuredOrdering
+              ? "reorder-featured-items"
+              : `reorder-products-${orderCategory || "uncategorized"}`
+          }
+          products={
+            featuredOrdering
+              ? featuredProducts
+              : query.data.products.filter(
+                  (item) =>
+                    !item.isArchived &&
+                    item.categoryId === (orderCategory || null),
+                )
+          }
           onSave={saveOrder}
           onClose={() => setOrdering(false)}
         />
@@ -1096,6 +1173,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
         <ProductEditor
           userId={userId}
           shopId={membership.shopId}
+          shopSlug={membership.shop.slug}
           product={editing ?? undefined}
           onClose={() => {
             setCreating(false);

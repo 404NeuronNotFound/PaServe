@@ -29,6 +29,6 @@ export function withProductOrder(
   return {
     ...menu,
     products: reorder(menu.products),
-    featuredProducts: reorder(menu.featuredProducts),
+    featuredProducts: menu.featuredProducts,
   };
 }

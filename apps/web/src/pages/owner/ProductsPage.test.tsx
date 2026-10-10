@@ -24,6 +24,7 @@ import {
   setProductHidden,
   setProductFeatured,
   reorderProducts,
+  reorderFeaturedProducts,
 } from "../../features/shops/api/products";
 import { listCategories } from "../../features/shops/api/categories";
 import { useFeedbackStore } from "../../app/stores/feedback";
@@ -39,6 +40,7 @@ vi.mock("../../features/shops/api/products", async (original) => ({
   setProductHidden: vi.fn(),
   setProductFeatured: vi.fn(),
   reorderProducts: vi.fn(),
+  reorderFeaturedProducts: vi.fn(),
   listProducts: vi.fn(),
 }));
 vi.mock("../../features/shops/api/categories", async (original) => ({
@@ -441,6 +443,91 @@ it("preserves a dirty product-order draft on conflict and protects cancellation"
   await user.click(modal.getByRole("button", { name: "Cancel" }));
   expect(
     screen.getByRole("dialog", { name: "Discard this product order?" }),
+  ).toBeInTheDocument();
+});
+it("arranges the complete featured selection across categories despite active filters", async () => {
+  const a = { ...product, isFeatured: true, featuredSortOrder: 0 };
+  const b = {
+    ...product,
+    id: "b",
+    name: "Mocha",
+    slug: "mocha",
+    categoryId: category.id,
+    status: "HIDDEN" as const,
+    isFeatured: true,
+    featuredSortOrder: 1,
+  };
+  const archived = { ...b, id: "archived", name: "Archived", isArchived: true };
+  vi.mocked(listProducts).mockResolvedValue({ products: [a, b, archived] });
+  vi.mocked(reorderFeaturedProducts).mockResolvedValue({
+    products: [
+      { ...b, featuredSortOrder: 0 },
+      { ...a, featuredSortOrder: 1 },
+    ],
+  });
+  const { client } = setup();
+  const publicKey = ["public-menu", "cafe-a"];
+  client.setQueryData(publicKey, { products: [a], featuredProducts: [a] });
+  const user = userEvent.setup();
+  await screen.findByRole("button", { name: "Reorder featured items" });
+  await user.type(screen.getByLabelText("Find a product"), "Latte");
+  await user.click(
+    screen.getByRole("button", { name: "Reorder featured items" }),
+  );
+  const modal = within(
+    screen.getByRole("dialog", { name: "Reorder featured items" }),
+  );
+  expect(modal.getByText("Mocha")).toBeInTheDocument();
+  expect(modal.queryByText("Archived")).not.toBeInTheDocument();
+  await user.click(modal.getByRole("button", { name: "Move Mocha up" }));
+  await user.click(modal.getByRole("button", { name: "Save order" }));
+  await waitFor(() =>
+    expect(reorderFeaturedProducts).toHaveBeenCalledWith("a", {
+      productIds: ["b", "p"],
+      expectedOrder: ["p", "b"],
+    }),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(reorderProducts).not.toHaveBeenCalled();
+  expect(client.getQueryData(publicKey)).toEqual({
+    products: [{ ...a, featuredSortOrder: 1 }],
+    featuredProducts: [{ ...a, featuredSortOrder: 1 }],
+  });
+});
+it("keeps the featured-order draft on a stale save", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [
+      { ...product, isFeatured: true },
+      {
+        ...product,
+        id: "b",
+        name: "Mocha",
+        isFeatured: true,
+        featuredSortOrder: 1,
+      },
+    ],
+  });
+  vi.mocked(reorderFeaturedProducts).mockRejectedValue({
+    isAxiosError: true,
+    response: { status: 409 },
+  });
+  setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Reorder featured items" }),
+  );
+  const modal = within(
+    screen.getByRole("dialog", { name: "Reorder featured items" }),
+  );
+  await user.click(modal.getByRole("button", { name: "Move Mocha up" }));
+  await user.click(modal.getByRole("button", { name: "Save order" }));
+  expect(
+    await modal.findByText(/Products or their order changed/),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("dialog", { name: "Reorder featured items" }),
   ).toBeInTheDocument();
 });
 it("features and unfeatures a product while preserving menu status", async () => {

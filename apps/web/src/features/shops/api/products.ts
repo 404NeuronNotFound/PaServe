@@ -12,6 +12,7 @@ import type {
   ProductHiddenRequest,
   ProductFeaturedRequest,
   ReorderProductsRequest,
+  ReorderFeaturedProductsRequest,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
@@ -24,6 +25,17 @@ export async function reorderProducts(
   return (
     await api.patch<ProductsResponse>(
       `/shops/${encodeURIComponent(shopId)}/products/reorder`,
+      input,
+    )
+  ).data;
+}
+export async function reorderFeaturedProducts(
+  shopId: string,
+  input: ReorderFeaturedProductsRequest,
+): Promise<ProductsResponse> {
+  return (
+    await api.patch<ProductsResponse>(
+      `/shops/${encodeURIComponent(shopId)}/products/featured/reorder`,
       input,
     )
   ).data;
