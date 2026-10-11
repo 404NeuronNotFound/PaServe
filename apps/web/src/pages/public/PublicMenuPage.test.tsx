@@ -36,6 +36,102 @@ const menu = {
 };
 
 it.each(["grid", "list", "compact"])(
+  "renders category descriptions in configured order and reflects visibility/order refreshes in %s",
+  async (menuLayout) => {
+    const category = (id: string, name: string, sortOrder: number) => ({
+      id, name, slug: id, description: `${name} description`, sortOrder,
+    });
+    const product = (id: string, categoryId: string | null) => ({
+      id, categoryId, name: id, slug: id, price: "20.00", description: null,
+      imageUrl: null, status: "AVAILABLE", isOrderable: true,
+      isFeatured: false, sortOrder: 0,
+    });
+    const desserts = category("desserts", "Zesty desserts", 0);
+    const drinks = category("drinks", "Artisan drinks", 1);
+    const empty = category("empty", "Empty category", 2);
+    const pastry = product("Pastry", "desserts");
+    const coffee = product("Coffee", "drinks");
+    const miscellaneous = product("Miscellaneous", null);
+    const data = { ...menu, shop: { ...menu.shop, menuLayout },
+      categories: [desserts, drinks, empty],
+      products: [coffee, miscellaneous, pastry],
+    };
+    vi.mocked(api.get).mockResolvedValue({ data });
+    const client = setup();
+    await screen.findByRole("heading", { name: "Cafe" });
+    const headings = () => screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+    expect(headings()).toEqual(["Zesty desserts", "Artisan drinks", "Uncategorized"]);
+    expect(screen.getByText("Zesty desserts description")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Empty category" })).not.toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Zesty desserts" })).getByRole("heading", { name: "Pastry" })).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Artisan drinks" })).getByRole("heading", { name: "Coffee" })).toBeInTheDocument();
+
+    // The public API omits hidden categories and their products.
+    vi.mocked(api.get).mockResolvedValue({ data: { ...data,
+      categories: [drinks, empty], products: [coffee, miscellaneous],
+    } });
+    await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+    await vi.waitFor(() => expect(headings()).toEqual(["Artisan drinks", "Uncategorized"]));
+    expect(screen.queryByText("Zesty desserts description")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Pastry" })).not.toBeInTheDocument();
+
+    // Showing it again with a new configured order restores the correct section.
+    vi.mocked(api.get).mockResolvedValue({ data: { ...data,
+      categories: [{ ...drinks, sortOrder: 0 }, { ...desserts, sortOrder: 1 }, empty],
+    } });
+    await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+    await vi.waitFor(() => expect(headings()).toEqual(["Artisan drinks", "Zesty desserts", "Uncategorized"]));
+    expect(screen.getByRole("heading", { name: "Pastry" })).toBeInTheDocument();
+  },
+);
+
+it("keeps a menu without visible categories usable", async () => {
+  vi.mocked(api.get).mockResolvedValue({ data: menu });
+  setup();
+  await screen.findByRole("heading", { name: "Cafe" });
+  expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+  expect(screen.getByText("No items are available on this menu yet.")).toBeInTheDocument();
+});
+
+it.each(["grid", "list", "compact"])(
+  "removes excluded products from categories and Featured after a public refetch in %s",
+  async (menuLayout) => {
+    const make = (id: string, categoryId: string | null, isFeatured = false) => ({
+      id, name: id, slug: id, categoryId, description: `${id} description`,
+      price: "1234.50", imageUrl: null, status: "AVAILABLE",
+      isOrderable: true, isFeatured, sortOrder: 0,
+    });
+    const retained = make("Retained drink", "drinks");
+    const hidden = make("Now hidden", "drinks", true);
+    const archived = make("Now archived", "drinks", true);
+    const deleted = make("Now deleted", "drinks", true);
+    const uncategorized = make("Uncategorized item", null);
+    const data = { ...menu, shop: { ...menu.shop, menuLayout },
+      categories: [{ id: "drinks", name: "Drinks", slug: "drinks", description: null, sortOrder: 0 }],
+      products: [retained, hidden, archived, deleted, uncategorized],
+      featuredProducts: [hidden, archived, deleted],
+    };
+    vi.mocked(api.get).mockResolvedValue({ data });
+    const client = setup();
+    await screen.findByRole("heading", { name: "Retained drink" });
+    expect(screen.getByRole("region", { name: "Featured" })).toBeInTheDocument();
+    // Fresh public API responses omit hidden, archived, and physically deleted records.
+    vi.mocked(api.get).mockResolvedValue({ data: {
+      ...data, products: [retained, uncategorized], featuredProducts: [],
+    } });
+    await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+    await vi.waitFor(() => expect(screen.queryByRole("region", { name: "Featured" })).not.toBeInTheDocument());
+    for (const name of ["Now hidden", "Now archived", "Now deleted"]) {
+      expect(screen.queryByRole("heading", { name })).not.toBeInTheDocument();
+      expect(screen.queryByText(`${name} description`)).not.toBeInTheDocument();
+    }
+    expect(within(screen.getByRole("region", { name: "Drinks" })).getByRole("heading", { name: "Retained drink" })).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Uncategorized" })).getByRole("heading", { name: "Uncategorized item" })).toBeInTheDocument();
+    expect(screen.getAllByText(/1,234\.50/)).toHaveLength(2);
+  },
+);
+
+it.each(["grid", "list", "compact"])(
   "applies the complete API branding in %s layout and replaces it on refresh",
   async (menuLayout) => {
     const branded = {

@@ -170,6 +170,8 @@ it("resolves a new shop context when navigating between public slugs", async () 
   });
   expect(screen.queryByRole("heading", { name: "Cafe North" })).not.toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: "Cafe South" })).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Drinks" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Coffee" })).not.toBeInTheDocument();
   expect(screen.getByRole("img", { name: "Cafe South logo" })).toHaveAttribute("src", "https://example.com/south-logo.webp");
   expect(screen.getByRole("img", { name: "Cafe South banner" })).toHaveAttribute("src", "https://example.com/south-banner.webp");
   expect(screen.queryByRole("img", { name: "Cafe North logo" })).not.toBeInTheDocument();
@@ -190,6 +192,30 @@ it.each(["/api", "/admin", "/shops", "/menu", "/unknown/nested"])(
     expect(getCurrentUser).not.toHaveBeenCalled();
   },
 );
+
+it("uses the current shop's price when shops sell products with the same name", async () => {
+  vi.mocked(api.get).mockImplementation(async (url) => {
+    const south = url === "/menu/cafe-south";
+    const product = { ...publicMenu.products[0], id: south ? "south-coffee" : "north-coffee", price: south ? "250.99" : "120.01" };
+    return { data: { ...publicMenu,
+      shop: { ...publicMenu.shop, name: south ? "Cafe South" : "Cafe North", slug: south ? "cafe-south" : "cafe-north" },
+      products: [product], featuredProducts: [],
+    } };
+  });
+  renderAt("/cafe-north");
+  expect(await screen.findByRole("heading", { name: "Cafe North" })).toBeInTheDocument();
+  expect(screen.getByText("₱120.01")).toBeInTheDocument();
+  expect(screen.queryByText("₱250.99")).not.toBeInTheDocument();
+  act(() => {
+    window.history.pushState(null, "", "/cafe-south");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+  expect(await screen.findByRole("heading", { name: "Cafe South" })).toBeInTheDocument();
+  expect(screen.getByText("₱250.99")).toBeInTheDocument();
+  expect(screen.queryByText("₱120.01")).not.toBeInTheDocument();
+  expect(screen.getAllByRole("heading", { name: "Coffee" })).toHaveLength(1);
+  expect(getCurrentUser).not.toHaveBeenCalled();
+});
 
 it("keeps sign in accessible without resolving a shop", () => {
   renderAt("/login");
