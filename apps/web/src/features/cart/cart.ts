@@ -5,6 +5,12 @@ export interface CartItem extends ProductSelectionQuoteResponse {
   lineId: string;
 }
 export const EMPTY_CART: CartItem[] = [];
+export function cartItemsForShop(
+  shops: Record<string, CartItem[]>,
+  slug: string,
+): CartItem[] {
+  return Object.hasOwn(shops, slug) ? shops[slug] : EMPTY_CART;
+}
 interface CartState {
   shops: Record<string, CartItem[]>;
   add: (slug: string, quote: ProductSelectionQuoteResponse) => void;
@@ -18,7 +24,7 @@ export const useCart = create<CartState>((set) => ({
       shops: {
         ...state.shops,
         [slug]: [
-          ...(state.shops[slug] ?? []),
+          ...cartItemsForShop(state.shops, slug),
           { ...quote, lineId: crypto.randomUUID() },
         ],
       },
@@ -27,7 +33,7 @@ export const useCart = create<CartState>((set) => ({
     set((state) => ({
       shops: {
         ...state.shops,
-        [slug]: (state.shops[slug] ?? []).filter(
+        [slug]: cartItemsForShop(state.shops, slug).filter(
           (item) => item.lineId !== lineId,
         ),
       },

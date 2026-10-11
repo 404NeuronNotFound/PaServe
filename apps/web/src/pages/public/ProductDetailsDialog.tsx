@@ -40,13 +40,17 @@ export function ProductDetailsDialog({
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
-  const [pending, setPending] = useState(false);
+  const [pendingVersion, setPendingVersion] = useState<number | null>(null);
   return (
     <CustomerDialog
       title={details.data?.product.name ?? product.name}
       shop={shop}
       onClose={onClose}
-      pending={pending}
+      pending={
+        pendingVersion === details.dataUpdatedAt &&
+        !details.isFetching &&
+        !details.isError
+      }
     >
       {details.isPending || details.isFetching ? (
         <p role="status">Loading product details…</p>
@@ -69,7 +73,9 @@ export function ProductDetailsDialog({
           shopSlug={shop.slug}
           preview={preview}
           onClose={onClose}
-          onPending={setPending}
+          onPending={(value) =>
+            setPendingVersion(value ? details.dataUpdatedAt : null)
+          }
           onRefresh={() => void details.refetch()}
         />
       )}

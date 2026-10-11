@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { FiShoppingBag } from "react-icons/fi";
 import type { PublicMenuResponse } from "@paserve/contracts";
-import { EMPTY_CART, sumPrices, useCart } from "../../features/cart/cart";
+import { cartItemsForShop, sumPrices, useCart } from "../../features/cart/cart";
 import { formatCartPrice } from "../../lib/money";
 import { CustomerNote } from "../../components/forms/CustomerNote";
 import { CustomerDialog } from "./CustomerDialog";
 
 export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
-  const items = useCart((state) => state.shops[shop.slug] ?? EMPTY_CART);
+  const items = useCart((state) => cartItemsForShop(state.shops, shop.slug));
   const [open, setOpen] = useState(false);
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
   return (

@@ -645,6 +645,35 @@ it("does not add late quotes after leaving the current menu", async () => {
   await act(async () => resolve({ data: { productId: product.id } }));
   expect(useCart.getState().shops).toEqual({});
 });
+it("unlocks refreshed details and ignores a quote from the replaced form", async () => {
+  let resolveQuote!: (value: unknown) => void;
+  vi.mocked(api.post).mockReturnValue(
+    new Promise((done) => {
+      resolveQuote = done;
+    }),
+  );
+  const view = setup();
+  const { user, dialog } = await openDetails();
+  await user.click(within(dialog).getByRole("button", { name: "Add to cart" }));
+  expect(within(dialog).getByRole("button", { name: "Close" })).toBeDisabled();
+  vi.mocked(api.get).mockResolvedValue({
+    data: { ...details, product: { ...product, price: "125.01" } },
+  });
+  await act(async () => {
+    await view.client.invalidateQueries({
+      queryKey: ["public-product", "cafe", product.id],
+    });
+  });
+  await within(dialog).findByLabelText(/Quantity/);
+  expect(within(dialog).getByRole("button", { name: "Close" })).toBeEnabled();
+  expect(
+    within(dialog).getByRole("button", { name: "Add to cart" }),
+  ).toBeEnabled();
+  await act(async () => resolveQuote({ data: { productId: product.id } }));
+  expect(useCart.getState().shops).toEqual({});
+  await user.click(within(dialog).getByRole("button", { name: "Close" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
 it("does not modify the customer cart from an owner preview", async () => {
   setup(menu, true);
   const { dialog } = await openDetails();

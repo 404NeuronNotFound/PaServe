@@ -161,3 +161,13 @@ it("keeps the cart accessible when the public menu becomes empty", () => {
   ).toBeInTheDocument();
   expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
 });
+it("renders the public cart for a valid constructor shop slug", () => {
+  render(
+    <PublicMenuView
+      menu={{ ...menu, shop: { ...menu.shop, slug: "constructor" } }}
+    />,
+  );
+  expect(
+    screen.getByRole("button", { name: "View cart (0)" }),
+  ).toBeInTheDocument();
+});
