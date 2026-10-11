@@ -4,15 +4,32 @@ import { PrismaService } from '../../database/prisma.service.js';
 @Injectable()
 export class PublicMenuRepository {
   constructor(private readonly prisma: PrismaService) {}
-  async read(slug: string) {
+  async read(slug: string, tableCode?: string) {
     // Public slugs resolve only active shops. All child queries repeat the resolved tenant.
     const shop = await this.prisma.shop.findFirst({
-      where: { slug, isActive: true },
+      where: {
+        slug,
+        isActive: true,
+        ...(tableCode
+          ? { tables: { some: { code: tableCode, isActive: true } } }
+          : {}),
+      },
       select: { id: true },
     });
     if (!shop) return null;
     return this.prisma.shop.findFirst({
-      where: { id: shop.id, slug, isActive: true },
+      where: {
+        id: shop.id,
+        slug,
+        isActive: true,
+        ...(tableCode
+          ? {
+              tables: {
+                some: { shopId: shop.id, code: tableCode, isActive: true },
+              },
+            }
+          : {}),
+      },
       select: {
         name: true,
         slug: true,

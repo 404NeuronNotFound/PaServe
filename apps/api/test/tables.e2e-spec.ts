@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { Prisma } from '../src/generated/prisma/client.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
+import { TABLE_CODE_PATTERN, publicTablePath } from '@paserve/contracts';
 
 describe('tenant-scoped table creation', () => {
   let app: INestApplication<App>;
@@ -56,7 +57,9 @@ describe('tenant-scoped table creation', () => {
           }
         : null,
     );
-    update.mockResolvedValue({ tables: [table] });
+    update.mockImplementation(async ({ data }) => ({
+      tables: [{ ...table, ...data.tables.create }],
+    }));
     findFirst.mockResolvedValue({ tables: [table] });
   });
   const post = (body: unknown = { number: '12' }, target = shopId) =>
@@ -73,7 +76,7 @@ describe('tenant-scoped table creation', () => {
       expect(response.body.table).toMatchObject({
         shopId,
         number: '12',
-        code: 'T12',
+        code: expect.stringMatching(TABLE_CODE_PATTERN),
         isActive: true,
       });
       expect(update).toHaveBeenCalledWith(
@@ -89,7 +92,14 @@ describe('tenant-scoped table creation', () => {
               },
             },
           },
-          data: { tables: { create: { number: '12', code: 'T12' } } },
+          data: {
+            tables: {
+              create: {
+                number: '12',
+                code: expect.stringMatching(TABLE_CODE_PATTERN),
+              },
+            },
+          },
           select: expect.objectContaining({
             tables: expect.objectContaining({
               where: { shopId, number: '12' },
@@ -147,9 +157,12 @@ describe('tenant-scoped table creation', () => {
       expect(response.body.table.number).toBe(number);
       const saved = update.mock.calls[0][0].data.tables.create;
       expect(saved.number).toBe(number);
-      expect(saved.code).toMatch(/^[A-Za-z0-9-]+$/);
-      if (/^\d+$/.test(number)) expect(saved.code).toBe(`T${number}`);
-      else expect(saved.code).not.toContain(number);
+      expect(saved.code).toMatch(TABLE_CODE_PATTERN);
+      expect(saved.code).not.toBe(`T${number}`);
+      expect(saved.code).not.toBe(response.body.table.id);
+      expect(publicTablePath('cafe', saved.code)).toBe(
+        `/cafe/table/${saved.code}`,
+      );
     },
   );
   it('normalizes spaces while preserving the displayed label', async () => {
@@ -164,7 +177,7 @@ describe('tenant-scoped table creation', () => {
     await post({ number: 12 }).expect(201);
     expect(update.mock.calls[0][0].data.tables.create).toEqual({
       number: '12',
-      code: 'T12',
+      code: expect.stringMatching(TABLE_CODE_PATTERN),
     });
   });
   it('lists labels in natural order', async () => {
@@ -222,6 +235,89 @@ describe('tenant-scoped table creation', () => {
       }),
     );
     await post().expect(403);
+  });
+  it.each([['shopId', 'code'], 'restaurant_tables_shopId_code_key'])(
+    'retries a public code collision without treating the label as duplicate (%j)',
+    async (target) => {
+      update.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('collision', {
+          code: 'P2002',
+          clientVersion: 'test',
+          meta: { target },
+        }),
+      );
+      const response = await post().expect(201);
+      expect(update).toHaveBeenCalledTimes(2);
+      const codes = update.mock.calls.map(
+        (call) => call[0].data.tables.create.code,
+      );
+      expect(codes[0]).not.toBe(codes[1]);
+      expect(response.body.table.code).toBe(codes[1]);
+    },
+  );
+  it('bounds repeated code collision retries', async () => {
+    update.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('collision', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: { target: ['shopId', 'code'] },
+      }),
+    );
+    const response = await post().expect(409);
+    expect(update).toHaveBeenCalledTimes(5);
+    expect(response.body.code).toBe('TABLE_CODE_UNAVAILABLE');
+    expect(response.body.fieldErrors).toBeUndefined();
+  });
+  it('recovers from the PostgreSQL adapter code-collision format', async () => {
+    update.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('collision', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: {
+          driverAdapterError: {
+            cause: {
+              kind: 'UniqueConstraintViolation',
+              constraint: { index: 'restaurant_tables_shopId_code_key' },
+            },
+          },
+        },
+      }),
+    );
+    await post().expect(201);
+    expect(update).toHaveBeenCalledTimes(2);
+  });
+  it('does not retry duplicate labels', async () => {
+    update.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('duplicate label', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: { target: ['shopId', 'number'] },
+      }),
+    );
+    await post().expect(409);
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+  it('returns a saved code unchanged across repeated list requests', async () => {
+    const created = await post().expect(201);
+    findFirst.mockResolvedValue({
+      tables: [{ ...table, code: created.body.table.code }],
+    });
+    for (let read = 0; read < 2; read++) {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/shops/${shopId}/tables`)
+        .set('Authorization', 'Bearer valid')
+        .expect(200);
+      expect(response.body.tables[0].code).toBe(created.body.table.code);
+    }
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+  it('a public code does not authorize protected table management', async () => {
+    await request(app.getHttpServer())
+      .post(`/api/v1/shops/${shopId}/tables`)
+      .set('X-Table-Code', table.code)
+      .send({ number: 'A3' })
+      .expect(401);
+    expect(update).not.toHaveBeenCalled();
   });
   it('lists only the validated shop and denies access lost during the read', async () => {
     const response = await request(app.getHttpServer())

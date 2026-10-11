@@ -6,9 +6,15 @@ import { CategoriesRepository } from './categories.repository.js';
 import { CategoriesService } from './categories.service.js';
 import { PublicMenuController } from './public-menu.controller.js';
 import { PublicMenuRepository } from './public-menu.repository.js';
+import { PublicTablesRepository } from '../tables/public-tables.repository.js';
 @Module({
   imports: [DatabaseModule, TenancyModule],
   controllers: [CategoriesController, PublicMenuController],
-  providers: [CategoriesRepository, CategoriesService, PublicMenuRepository],
+  providers: [
+    CategoriesRepository,
+    CategoriesService,
+    PublicMenuRepository,
+    PublicTablesRepository,
+  ],
 })
 export class CategoriesModule {}
