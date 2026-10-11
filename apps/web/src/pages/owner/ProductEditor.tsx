@@ -39,12 +39,14 @@ export function ProductEditor({
   shopSlug,
   onClose,
   product,
+  onCreated,
 }: {
   userId: string;
   shopId: string;
   shopSlug?: string;
   onClose: () => void;
   product?: MenuProduct;
+  onCreated?: (product: MenuProduct) => void;
 }) {
   const client = useQueryClient();
   const [imageSaved, setImageSaved] = useState(product?.imageUrl ?? "");
@@ -351,6 +353,7 @@ export function ProductEditor({
       }
       await cacheProduct(result.product);
       if (!stillHere()) return;
+      if (!product) onCreated?.(result.product);
       if (!product && photo) {
         await savePhoto(result.product, photo);
         return;

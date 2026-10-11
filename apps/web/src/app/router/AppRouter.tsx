@@ -21,6 +21,8 @@ import { ActiveShopPage } from "../../pages/owner/ActiveShopPage";
 import { ShopSettingsPage } from "../../pages/owner/ShopSettingsPage";
 import { CategoriesPage } from "../../pages/owner/CategoriesPage";
 import { ProductsPage } from "../../pages/owner/ProductsPage";
+import { AddOnsPage } from "../../pages/owner/AddOnsPage";
+import { ProductCustomizationPage } from "../../pages/owner/ProductCustomizationPage";
 import { MenuPreviewPage } from "../../pages/owner/MenuPreviewPage";
 import { OwnerDashboardLayout } from "../../components/layout/OwnerDashboardLayout";
 
@@ -48,6 +50,8 @@ export function AppRouter() {
               <Route path="settings" element={<ShopSettingsPage />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="products" element={<ProductsPage />} />
+              <Route path="products/:productId/customize" element={<ProductCustomizationPage />} />
+              <Route path="add-ons" element={<AddOnsPage />} />
               <Route path="menu-preview" element={<MenuPreviewPage />} />
             </Route>
           </Route>

@@ -1,4 +1,5 @@
 import { SelectField } from "../../components/forms/SelectField";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -19,6 +20,7 @@ import {
   FiSearch,
   FiChevronLeft,
   FiChevronRight,
+  FiSliders,
 } from "react-icons/fi";
 import {
   hasShopPermission,
@@ -28,7 +30,7 @@ import {
   type ProductsResponse,
   type PublicMenuResponse,
 } from "@paserve/contracts";
-import { useActiveShop } from "../../features/shops/active-shop";
+import { useActiveShop, shopPath } from "../../features/shops/active-shop";
 import { withProductOrder } from "../../features/shops/product-menu-order";
 import {
   withFeaturedOrder,
@@ -54,6 +56,7 @@ import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { feedback } from "../../app/stores/feedback";
 import "./categories.css";
 import "./products.css";
+import "./customization.css";
 import { formatProductPrice } from "../../lib/money";
 import {
   categoriesKey,
@@ -69,6 +72,10 @@ export function ProductsPage() {
   );
 }
 function ProductWorkspace({ userId }: { userId: string }) {
+  const navigate = useNavigate();
+  const [createdProduct, setCreatedProduct] = useState<MenuProduct | null>(
+    null,
+  );
   const membership = useActiveShop();
   const client = useQueryClient();
   const [creating, setCreating] = useState(false);
@@ -79,7 +86,6 @@ function ProductWorkspace({ userId }: { userId: string }) {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
-  const browseControls = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<MenuProduct | null>(null);
   const [archiving, setArchiving] = useState<MenuProduct | null>(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
@@ -99,12 +105,15 @@ function ProductWorkspace({ userId }: { userId: string }) {
       return;
     const trigger =
       document.getElementById(returnFocus.current) ??
+      document.getElementById(
+        showArchived ? "product-view-archived" : "product-view-active",
+      ) ??
       document.getElementById("create-product-button");
     returnFocus.current = null;
     queueMicrotask(() => {
       if (trigger?.isConnected) trigger.focus();
     });
-  }, [archiving, archiveBusy, availableBusy]);
+  }, [archiving, archiveBusy, availableBusy, showArchived]);
   useEffect(() => {
     editorOpen.current = creating || Boolean(editing) || ordering;
   }, [creating, editing, ordering]);
@@ -340,6 +349,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
       if (!stillHere()) return;
       await client.cancelQueries({ queryKey: key });
       if (!stillHere()) return;
+      if (!isArchived) returnFocus.current = `archive-product-${product.id}`;
       client.setQueryData<ProductsResponse>(key, (current) =>
         current
           ? {
@@ -409,7 +419,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
     [401, 403, 404].includes(query.error.response?.status ?? 0);
   const visibleProducts =
     query.data?.products.filter(
-      (product) => showArchived || !product.isArchived,
+      (product) => product.isArchived === showArchived,
     ) ?? [];
   const knownCategories = categories.data?.categories ?? [];
   const groupDefinitions = [
@@ -502,6 +512,12 @@ function ProductWorkspace({ userId }: { userId: string }) {
     Boolean(archiving) ||
     archiveBusy ||
     Boolean(availableBusy);
+  function changePage(nextPage: number) {
+    setPage(nextPage);
+    const heading = document.getElementById("products-list-title");
+    heading?.scrollIntoView?.({ block: "start" });
+    heading?.focus({ preventScroll: true });
+  }
   function clearFilters() {
     setSearch("");
     setCategoryFilter("");
@@ -537,14 +553,57 @@ function ProductWorkspace({ userId }: { userId: string }) {
           <span>Create product</span>
         </button>
       </header>
+      {query.isSuccess && !denied && (
+        <div
+          className="product-view-switch"
+          role="group"
+          aria-label="Product view"
+        >
+          {[false, true].map((archived) => (
+            <button
+              key={String(archived)}
+              id={archived ? "product-view-archived" : "product-view-active"}
+              type="button"
+              className="product-view-button"
+              aria-pressed={showArchived === archived}
+              disabled={browsingLocked}
+              onClick={() => {
+                setShowArchived(archived);
+                clearFilters();
+              }}
+            >
+              {archived ? (
+                <FiArchive aria-hidden="true" />
+              ) : (
+                <FiCoffee aria-hidden="true" />
+              )}
+              {archived ? "Archived products" : "Active products"}
+              <span>
+                {
+                  query.data.products.filter(
+                    (item) => item.isArchived === archived,
+                  ).length
+                }
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
       <section className="products-panel" aria-labelledby="products-list-title">
         <div className="categories-toolbar">
           <div className="categories-panel-heading">
-            <h2 id="products-list-title">Your products</h2>
-            {query.isSuccess && <span>{query.data.products.length}</span>}
+            <h2 id="products-list-title" tabIndex={-1}>
+              {showArchived ? "Saved for later" : "Your menu"}
+            </h2>
+            {showArchived && (
+              <p className="product-archive-hint">
+                Off the menu. Details kept. Restore whenever you're ready.
+              </p>
+            )}
           </div>
           <button
             className="secondary-button product-refresh-button"
+            title="Refresh products"
             type="button"
             disabled={
               query.isFetching ||
@@ -559,47 +618,49 @@ function ProductWorkspace({ userId }: { userId: string }) {
             onClick={() => void query.refetch()}
           >
             <FiRefreshCw aria-hidden="true" />
-            {query.isFetching ? "Refreshing…" : "Refresh products"}
+            <span className="sr-only">
+              {query.isFetching ? "Refreshing products" : "Refresh products"}
+            </span>
           </button>
         </div>
-        {query.isSuccess && !denied && (
-          <div className="featured-order-toolbar">
-            <div>
-              <strong>
-                <FiStar aria-hidden="true" /> Featured items ·{" "}
-                {featuredProducts.length}
-              </strong>
-              <p>
-                Select Feature in a product’s More menu, then arrange your
-                highlights here. Menu visibility still applies.
-              </p>
+        {query.isSuccess &&
+          !denied &&
+          !showArchived &&
+          featuredProducts.length > 0 && (
+            <div className="featured-order-toolbar">
+              <div>
+                <strong>
+                  <FiStar aria-hidden="true" /> Featured items ·{" "}
+                  {featuredProducts.length}
+                </strong>
+                <p>Arrange your menu highlights. Hidden items stay hidden.</p>
+              </div>
+              <button
+                id="reorder-featured-items"
+                className="secondary-button"
+                type="button"
+                disabled={
+                  browsingLocked ||
+                  query.isFetching ||
+                  featuredProducts.length < 2 ||
+                  featuredProducts.length > PRODUCT_REORDER_MAX
+                }
+                title={
+                  featuredProducts.length > PRODUCT_REORDER_MAX
+                    ? `Reordering supports up to ${PRODUCT_REORDER_MAX} featured items.`
+                    : undefined
+                }
+                onClick={() => {
+                  setFeaturedOrdering(true);
+                  setOrdering(true);
+                }}
+              >
+                <FiMove aria-hidden="true" /> Reorder featured items
+              </button>
             </div>
-            <button
-              id="reorder-featured-items"
-              className="secondary-button"
-              type="button"
-              disabled={
-                browsingLocked ||
-                query.isFetching ||
-                featuredProducts.length < 2 ||
-                featuredProducts.length > PRODUCT_REORDER_MAX
-              }
-              title={
-                featuredProducts.length > PRODUCT_REORDER_MAX
-                  ? `Reordering supports up to ${PRODUCT_REORDER_MAX} featured items.`
-                  : undefined
-              }
-              onClick={() => {
-                setFeaturedOrdering(true);
-                setOrdering(true);
-              }}
-            >
-              <FiMove aria-hidden="true" /> Reorder featured items
-            </button>
-          </div>
-        )}
+          )}
         {query.isSuccess && query.data.products.length > 0 && (
-          <div className="product-browse-controls" ref={browseControls}>
+          <div className="product-browse-controls">
             <div className="product-filter-fields">
               <div className="field product-search-field">
                 <label htmlFor="product-search">Find a product</label>
@@ -674,63 +735,9 @@ function ProductWorkspace({ userId }: { userId: string }) {
                   Clear filters
                 </button>
               )}
-              {pageCount > 1 && (
-                <nav className="product-pagination" aria-label="Product pages">
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    aria-label="Previous product page"
-                    disabled={browsingLocked || currentPage === 1}
-                    onClick={() => {
-                      setPage(currentPage - 1);
-                      browseControls.current?.scrollIntoView?.({
-                        block: "start",
-                      });
-                    }}
-                  >
-                    <FiChevronLeft aria-hidden="true" /> Previous
-                  </button>
-                  <span>
-                    Page {currentPage} of {pageCount}
-                  </span>
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    aria-label="Next product page"
-                    disabled={browsingLocked || currentPage === pageCount}
-                    onClick={() => {
-                      setPage(currentPage + 1);
-                      browseControls.current?.scrollIntoView?.({
-                        block: "start",
-                      });
-                    }}
-                  >
-                    Next <FiChevronRight aria-hidden="true" />
-                  </button>
-                </nav>
-              )}
             </div>
           </div>
         )}
-        {query.isSuccess &&
-          query.data.products.some((product) => product.isArchived) && (
-            <label className="product-featured-field">
-              <input
-                type="checkbox"
-                checked={showArchived}
-                onChange={(event) => {
-                  setShowArchived(event.target.checked);
-                  setPage(1);
-                }}
-              />
-              Show archived products (
-              {
-                query.data.products.filter((product) => product.isArchived)
-                  .length
-              }
-              )
-            </label>
-          )}
         {archiveError && <InlineMessage>{archiveError}</InlineMessage>}
         {query.isPending ? (
           <InlineMessage tone="info">Loading products…</InlineMessage>
@@ -766,7 +773,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                       </span>
                     )}
                   </div>
-                  {group.activeCount >= 2 && (
+                  {!showArchived && group.activeCount >= 2 && (
                     <button
                       id={`reorder-products-${group.key}`}
                       type="button"
@@ -939,6 +946,28 @@ function ProductWorkspace({ userId }: { userId: string }) {
                               denied
                             }
                           >
+                            <button
+                              className="secondary-button"
+                              type="button"
+                              aria-label={`Customize ${product.name}`}
+                              disabled={
+                                creating ||
+                                Boolean(editing) ||
+                                ordering ||
+                                Boolean(archiving) ||
+                                archiveBusy ||
+                                Boolean(availableBusy) ||
+                                denied
+                              }
+                              onClick={() =>
+                                void navigate(
+                                  `${shopPath(membership.shopId)}/products/${encodeURIComponent(product.id)}/customize`,
+                                )
+                              }
+                            >
+                              <FiSliders aria-hidden="true" />
+                              Customize
+                            </button>
                             {!product.isArchived && (
                               <button
                                 id={`feature-product-${product.id}`}
@@ -1121,6 +1150,55 @@ function ProductWorkspace({ userId }: { userId: string }) {
           </div>
         )}
       </section>
+      {query.isSuccess && !denied && (
+        <footer className="product-page-footer">
+          {pageCount > 1 && (
+            <nav className="product-pagination" aria-label="Product pages">
+              <button
+                type="button"
+                className="secondary-button"
+                aria-label="Previous product page"
+                disabled={browsingLocked || currentPage === 1}
+                onClick={() => changePage(currentPage - 1)}
+              >
+                <FiChevronLeft aria-hidden="true" /> Previous
+              </button>
+              <div className="product-page-numbers">
+                {Array.from(
+                  { length: Math.min(5, pageCount) },
+                  (_, index) =>
+                    Math.max(1, Math.min(currentPage - 2, pageCount - 4)) +
+                    index,
+                ).map((number) => (
+                  <button
+                    key={number}
+                    type="button"
+                    className="secondary-button"
+                    aria-label={`Go to product page ${number}`}
+                    aria-current={number === currentPage ? "page" : undefined}
+                    disabled={browsingLocked}
+                    onClick={() => changePage(number)}
+                  >
+                    {number}
+                  </button>
+                ))}
+              </div>
+              <span>
+                Page {currentPage} of {pageCount}
+              </span>
+              <button
+                type="button"
+                className="secondary-button"
+                aria-label="Next product page"
+                disabled={browsingLocked || currentPage === pageCount}
+                onClick={() => changePage(currentPage + 1)}
+              >
+                Next <FiChevronRight aria-hidden="true" />
+              </button>
+            </nav>
+          )}
+        </footer>
+      )}
       {query.isSuccess && hasFilters && filteredProducts.length === 0 && (
         <div className="categories-empty product-no-results">
           <FiSearch aria-hidden="true" />
@@ -1129,17 +1207,78 @@ function ProductWorkspace({ userId }: { userId: string }) {
         </div>
       )}
       {query.isSuccess &&
-        query.data.products.length > 0 &&
-        !showArchived &&
-        query.data.products.every((product) => product.isArchived) && (
-          <InlineMessage tone="info">
-            All products are archived. Show archived products to restore one.
-          </InlineMessage>
+        !hasFilters &&
+        visibleProducts.length === 0 &&
+        query.data.products.length > 0 && (
+          <div className="categories-empty product-no-results">
+            {showArchived ? (
+              <FiArchive aria-hidden="true" />
+            ) : (
+              <FiCoffee aria-hidden="true" />
+            )}
+            <h3>
+              {showArchived
+                ? "Nothing archived."
+                : "Your active menu is empty."}
+            </h3>
+            <p>
+              {showArchived
+                ? "Archived products stay here until you restore them."
+                : "Create a product or restore one from Archived products."}
+            </p>
+            {
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={browsingLocked}
+                onClick={() => {
+                  setShowArchived(!showArchived);
+                  clearFilters();
+                }}
+              >
+                {showArchived
+                  ? "Back to active products"
+                  : "View archived products"}
+              </button>
+            }
+          </div>
+        )}
+      {createdProduct &&
+        !creating &&
+        !editing &&
+        !createdProduct.isArchived && (
+          <div className="customization-notice">
+            <p>
+              <strong>{createdProduct.name}</strong> is saved. Add options or
+              extras now, or do it later from More.
+            </p>
+            <div className="customization-actions">
+              <button
+                className="primary-button"
+                disabled={
+                  ordering || archiveBusy || Boolean(availableBusy) || denied
+                }
+                onClick={() =>
+                  void navigate(
+                    `${shopPath(membership.shopId)}/products/${encodeURIComponent(createdProduct.id)}/customize`,
+                  )
+                }
+              >
+                Customize product
+              </button>
+              <button
+                className="secondary-button"
+                onClick={() => setCreatedProduct(null)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
         )}
       <DecisionDialog
         open={Boolean(archiving)}
         title={`Archive ${archiving?.name ?? "product"}?`}
-        description="Removed from your public menu. Product details stay saved, and you can restore it later."
+        description="This product leaves your menu and moves to Archived products. Its details stay saved. Restore it there anytime."
         confirmLabel="Archive product"
         cancelLabel="Keep product"
         animateClose
@@ -1181,6 +1320,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
           shopId={membership.shopId}
           shopSlug={membership.shop.slug}
           product={editing ?? undefined}
+          onCreated={setCreatedProduct}
           onClose={() => {
             setCreating(false);
             setEditing(null);

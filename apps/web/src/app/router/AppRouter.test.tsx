@@ -43,6 +43,8 @@ it.each([
   "/app/shops",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/menu-preview",
+  "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/add-ons",
+  "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/products/example/customize",
 ])("redirects guests entering %s directly to login", async (path) => {
   const error = new AxiosError("Unauthorized");
   error.response = {

@@ -173,7 +173,7 @@ it("keeps secondary actions behind More and supports keyboard and outside dismis
   ).not.toBeInTheDocument();
   more.focus();
   await user.keyboard("{ArrowDown}");
-  expect(screen.getByRole("button", { name: "Feature Latte" })).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Customize Latte" })).toHaveFocus();
   await user.keyboard("{End}");
   expect(screen.getByRole("button", { name: "Archive Latte" })).toHaveFocus();
   await user.keyboard("{Escape}");
@@ -181,7 +181,7 @@ it("keeps secondary actions behind More and supports keyboard and outside dismis
   expect(more).toHaveFocus();
   await user.keyboard("{ArrowUp}");
   expect(screen.getByRole("button", { name: "Archive Latte" })).toHaveFocus();
-  await user.click(screen.getByRole("heading", { name: "Your products" }));
+  await user.click(screen.getByRole("heading", { name: "Your menu" }));
   expect(disclosure.open).toBe(false);
 });
 it("prevents opening another product's actions during a pending save", async () => {
@@ -252,7 +252,13 @@ it("paginates a large menu and resets pagination when searching", async () => {
     screen.queryByRole("heading", { name: "Drink 8" }),
   ).not.toBeInTheDocument();
   expect(screen.getByText("Showing 1–8 of 17 products")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Next product page" }));
+  await user.click(
+    screen.getByRole("button", { name: "Go to product page 2" }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Go to product page 2" }),
+  ).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("heading", { name: "Your menu" })).toHaveFocus();
   expect(screen.getByRole("heading", { name: "Drink 8" })).toBeInTheDocument();
   expect(
     screen.queryByRole("heading", { name: "Drink 0" }),
@@ -963,7 +969,7 @@ it("confirms archival, retains the product in the archive and offers Undo", asyn
   });
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Create product" }),
+      screen.getByRole("button", { name: /Active products/ }),
     ).toHaveFocus(),
   );
   const notice = useFeedbackStore.getState().notices[0];
@@ -988,7 +994,7 @@ it("lets the user view and restore archived products without changing menu statu
   setup();
   const user = userEvent.setup();
   await user.click(
-    await screen.findByRole("checkbox", { name: /Show archived products/ }),
+    await screen.findByRole("button", { name: /Archived products/ }),
   );
   expect(screen.getByText("Archived")).toBeInTheDocument();
   expect(
@@ -998,6 +1004,15 @@ it("lets the user view and restore archived products without changing menu statu
     products: [{ ...hidden, isArchived: false }],
   });
   await user.click(screen.getByRole("button", { name: "Restore Latte" }));
+  await screen.findByRole("heading", { name: "Nothing archived." });
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: /Archived products/ }),
+    ).toHaveFocus(),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Back to active products" }),
+  );
   expect(
     await screen.findByText("Hidden", { selector: ".category-visibility" }),
   ).toBeInTheDocument();
@@ -1591,3 +1606,83 @@ it.each([
     expect(modal.getByRole("button", { name: "Cancel" })).toBeEnabled();
   },
 );
+
+it("separates archived products and resets filters when switching views", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [
+      product,
+      {
+        ...product,
+        id: "old",
+        name: "Old drink",
+        slug: "old-drink",
+        isArchived: true,
+      },
+    ],
+  });
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: "Latte" });
+  expect(
+    screen.queryByRole("heading", { name: "Old drink" }),
+  ).not.toBeInTheDocument();
+  await user.type(screen.getByLabelText("Find a product"), "Latte");
+  await user.click(screen.getByRole("button", { name: /Archived products/ }));
+  expect(screen.getByLabelText("Find a product")).toHaveValue("");
+  expect(
+    screen.getByRole("button", { name: /Archived products/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+  expect(
+    screen.getByRole("heading", { name: "Old drink" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Latte" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Restore Old drink" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /Reorder.*products/ }),
+  ).not.toBeInTheDocument();
+  expect(setProductArchived).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: /Active products/ }));
+  expect(screen.getByRole("heading", { name: "Latte" })).toBeInTheDocument();
+});
+
+it("keeps numbered navigation valid as a large menu approaches its last page", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: Array.from({ length: 49 }, (_, index) => ({
+      ...product,
+      id: `large-${index}`,
+      name: `Item ${index}`,
+      slug: `item-${index}`,
+      sortOrder: index,
+    })),
+  });
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: "Item 0" });
+  expect(
+    screen.getByRole("button", { name: "Previous product page" }),
+  ).toBeDisabled();
+  await user.click(
+    screen.getByRole("button", { name: "Go to product page 5" }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Go to product page 7" }),
+  );
+  expect(screen.getByRole("heading", { name: "Item 48" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Next product page" }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Go to product page 7" }),
+  ).toHaveAttribute("aria-current", "page");
+  expect(
+    screen.queryByRole("button", { name: "Go to product page 8" }),
+  ).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole("button", { name: "Previous product page" }),
+  );
+  expect(screen.getByRole("heading", { name: "Item 40" })).toBeInTheDocument();
+});

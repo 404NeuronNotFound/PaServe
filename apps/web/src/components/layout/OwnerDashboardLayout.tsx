@@ -21,6 +21,7 @@ import {
   FiEye,
   FiPackage,
   FiShoppingBag,
+  FiSliders,
 } from "react-icons/fi";
 import type { CurrentUserResponse, UserMembership } from "@paserve/contracts";
 import { hasShopPermission } from "@paserve/contracts";
@@ -299,6 +300,11 @@ export function DashboardFrame({
                   Products
                 </NavLink>
               )}
+            {membership && hasShopPermission(membership.role, "shop.menu.manage") && (
+              <NavLink to={`${shopPath(membership.shopId)}/add-ons`} onClick={closeNavigation}>
+                <FiSliders aria-hidden="true" />Add-ons
+              </NavLink>
+            )}
             <NavLink end to="/app/shops" onClick={closeNavigation}>
               <FiShoppingBag aria-hidden="true" />
               Your shops
