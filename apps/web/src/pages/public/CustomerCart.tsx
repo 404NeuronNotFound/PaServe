@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FiShoppingBag } from "react-icons/fi";
 import type { PublicMenuResponse } from "@paserve/contracts";
 import { EMPTY_CART, sumPrices, useCart } from "../../features/cart/cart";
 import { formatCartPrice } from "../../lib/money";
@@ -13,10 +14,20 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
     <>
       <button
         type="button"
-        className="secondary-button customer-cart-button"
+        className="customer-cart-button"
+        aria-label={`View cart (${count})`}
         onClick={() => setOpen(true)}
       >
-        View cart ({count})
+        <FiShoppingBag aria-hidden="true" />
+        <span>View cart</span>
+        <span className="customer-cart-count" aria-hidden="true">
+          {count}
+        </span>
+        {!!count && (
+          <strong aria-hidden="true">
+            {formatCartPrice(sumPrices(items.map((item) => item.totalPrice)))}
+          </strong>
+        )}
       </button>
       {open && (
         <CustomerDialog
