@@ -892,3 +892,28 @@ it("removes only this shop's lines, updates the total and keeps focus in the car
   expect(useCart.getState().shops.other).toHaveLength(1);
   expect(api.post).not.toHaveBeenCalled();
 });
+
+it("updates only one duplicate line's quantity and immediately reflects its new count and total", async () => {
+  const quote = {
+    productId: product.id, productName: "Coffee", currency: "PHP" as const,
+    basePrice: "120.01", unitPrice: "120.01", totalPrice: "120.01",
+    quantity: 1, variants: [details.variants[0]], addOns: [], notes: "Hot",
+  };
+  useCart.getState().add("cafe", quote);
+  useCart.getState().add("cafe", quote);
+  const [first, second] = useCart.getState().shops.cafe;
+  vi.mocked(api.post).mockResolvedValueOnce({ data: { ...quote, quantity: 2, totalPrice: "240.02" } });
+  setup();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "View cart (2)" }));
+  const cart = screen.getByRole("dialog", { name: "Cafe cart" });
+  await user.click(within(within(cart).getAllByRole("listitem")[0]).getByRole("button", { name: "Increase quantity for Coffee" }));
+  await waitFor(() => expect(within(cart).getByRole("status")).toHaveTextContent("₱360.03"));
+  expect(screen.getByRole("button", { name: "View cart (3)" })).toBeInTheDocument();
+  expect(useCart.getState().shops.cafe[0]).toMatchObject({ lineId: first.lineId, quantity: 2 });
+  expect(useCart.getState().shops.cafe[1]).toBe(second);
+  vi.mocked(api.post).mockResolvedValueOnce({ data: quote });
+  await user.click(within(within(cart).getAllByRole("listitem")[0]).getByRole("button", { name: "Decrease quantity for Coffee" }));
+  await waitFor(() => expect(within(cart).getByRole("status")).toHaveTextContent("₱240.02"));
+  expect(screen.getByRole("button", { name: "View cart (2)" })).toBeInTheDocument();
+});

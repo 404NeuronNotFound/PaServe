@@ -5,6 +5,7 @@ import { cartItemsForShop, sumPrices, useCart } from "../../features/cart/cart";
 import { formatCartPrice } from "../../lib/money";
 import { CustomerNote } from "../../components/forms/CustomerNote";
 import { CustomerDialog } from "./CustomerDialog";
+import { CartQuantityControl } from "./CartQuantityControl";
 import "./customer-cart.css";
 
 export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
@@ -16,7 +17,7 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
   useEffect(() => {
     if (removedIndex.current === null) return;
-    const buttons = list.current?.querySelectorAll<HTMLButtonElement>("button");
+    const buttons = list.current?.querySelectorAll<HTMLButtonElement>("[data-cart-remove]");
     const target =
       buttons?.[Math.min(removedIndex.current, (buttons?.length ?? 0) - 1)] ??
       browse.current;
@@ -99,6 +100,7 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
                   )}
                   <button
                     type="button"
+                    data-cart-remove
                     className="secondary-button"
                     aria-label={`Remove ${item.productName}`}
                     onClick={() => {
@@ -108,6 +110,10 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
                   >
                     <FiTrash2 aria-hidden="true" /> Remove
                   </button>
+                  <CartQuantityControl
+                    item={item}
+                    shopSlug={shop.slug}
+                  />
                 </li>
               ))}
             </ul>

@@ -57,6 +57,12 @@ interface CartState {
     pricePreview?: CartPricePreview,
   ) => void;
   remove: (slug: string, lineId: string) => void;
+  updateQuantity: (
+    slug: string,
+    expected: CartItem,
+    quote: ProductSelectionQuoteResponse,
+    pricePreview: CartPricePreview,
+  ) => boolean;
 }
 // Session memory only. Quotes are snapshots; checkout must revalidate them later.
 export const useCart = create<CartState>((set) => ({
@@ -88,6 +94,33 @@ export const useCart = create<CartState>((set) => ({
         },
       };
     }),
+  updateQuantity: (slug, expected, quote, pricePreview) => {
+    let updated = false;
+    set((state) => {
+      const items = cartItemsForShop(state.shops, slug);
+      if (
+        !items.includes(expected) ||
+        quote.productId !== expected.productId ||
+        !Number.isInteger(quote.quantity) ||
+        quote.quantity < 1 || quote.quantity > 99 ||
+        quote.quantity !== pricePreview.quantity
+      ) return state;
+      updated = true;
+      return {
+        shops: {
+          ...state.shops,
+          [slug]: items.map((item) => item === expected ? {
+            ...quote,
+            lineId: expected.lineId,
+            variants: quote.variants.map((variant) => ({ ...variant })),
+            addOns: quote.addOns.map((addOn) => ({ ...addOn })),
+            pricePreview: { ...pricePreview },
+          } : item),
+        },
+      };
+    });
+    return updated;
+  },
 }));
 
 export function sumPrices(prices: string[], quantity = 1): string {

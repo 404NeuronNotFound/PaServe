@@ -148,6 +148,40 @@
   font-size: 13px;
   line-height: 1.6;
 }
+.customer-cart-quantity-form {
+  margin-top: 14px;
+}
+.customer-cart-quantity-form > label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.customer-cart-quantity-form fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+.customer-cart-quantity-form input {
+  width: 64px;
+  min-height: 44px;
+  padding: 8px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.customer-cart-quantity-form fieldset > button {
+  min-width: 44px;
+}
+.customer-cart-quantity-form .field-hint {
+  margin: 8px 0 0;
+}
 .customer-cart-dialog .customer-dialog-footer {
   position: static;
   flex-shrink: 0;
