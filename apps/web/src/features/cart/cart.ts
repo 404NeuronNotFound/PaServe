@@ -9,9 +9,32 @@ import type {
   ProductSelectionRequest,
 } from "@paserve/contracts";
 
-export interface CartItem extends ProductSelectionQuoteResponse {
+export interface CartSelection {
+  productId: string;
+  quantity: number;
+  notes?: string;
+}
+
+// Small display snapshots for selected options, never the full product/menu cache.
+export type CartVariant = Pick<
+  ProductSelectionQuoteResponse["variants"][number],
+  "id" | "optionGroupId" | "name" | "priceAdjustment" | "isDefault"
+>;
+export type CartAddOn = Pick<
+  ProductSelectionQuoteResponse["addOns"][number],
+  "id" | "name" | "priceAdjustment"
+>;
+
+export interface CartItem extends CartSelection {
   lineId: string;
   variantKey: string;
+  productName: string;
+  currency: ProductSelectionQuoteResponse["currency"];
+  basePrice: string;
+  unitPrice: string;
+  totalPrice: string;
+  variants: CartVariant[];
+  addOns: CartAddOn[];
   pricePreview: CartPricePreview | null;
 }
 
@@ -89,6 +112,56 @@ export function createCartPricePreview(
   };
 }
 export const EMPTY_CART: CartItem[] = [];
+
+export function cartItemCount(items: CartItem[]): number {
+  return items.reduce((count, item) => count + item.quantity, 0);
+}
+
+export function cartEstimatedSubtotal(items: CartItem[]): string {
+  return sumPrices(items.map((item) => item.totalPrice));
+}
+
+function cartLineSnapshot(
+  quote: ProductSelectionQuoteResponse,
+  lineId: string,
+  pricePreview?: CartPricePreview,
+): CartItem {
+  // Explicit projection prevents extra API fields from entering client state.
+  return {
+    lineId,
+    variantKey: cartVariantKey(quote),
+    productId: quote.productId,
+    productName: quote.productName,
+    currency: quote.currency,
+    quantity: quote.quantity,
+    ...(quote.notes ? { notes: quote.notes } : {}),
+    basePrice: quote.basePrice,
+    unitPrice: quote.unitPrice,
+    totalPrice: quote.totalPrice,
+    variants: quote.variants.map((variant) => ({
+      id: variant.id,
+      optionGroupId: variant.optionGroupId,
+      name: variant.name,
+      priceAdjustment: variant.priceAdjustment,
+      isDefault: variant.isDefault,
+    })),
+    addOns: quote.addOns.map((addOn) => ({
+      id: addOn.id,
+      name: addOn.name,
+      priceAdjustment: addOn.priceAdjustment,
+    })),
+    pricePreview: pricePreview ? {
+      source: "client",
+      currency: pricePreview.currency,
+      basePrice: pricePreview.basePrice,
+      variantAdjustment: pricePreview.variantAdjustment,
+      addOnAdjustment: pricePreview.addOnAdjustment,
+      unitPrice: pricePreview.unitPrice,
+      totalPrice: pricePreview.totalPrice,
+      quantity: pricePreview.quantity,
+    } : null,
+  };
+}
 export function cartItemsForShop(
   shops: Record<string, CartItem[]>,
   slug: string,
@@ -120,14 +193,7 @@ export const useCart = create<CartState>((set) => ({
         ...state.shops,
         [slug]: [
           ...cartItemsForShop(state.shops, slug),
-          {
-            ...quote,
-            variants: quote.variants.map((variant) => ({ ...variant })),
-            addOns: quote.addOns.map((addOn) => ({ ...addOn })),
-            lineId: crypto.randomUUID(),
-            variantKey: cartVariantKey(quote),
-            pricePreview: pricePreview ? { ...pricePreview } : null,
-          },
+          cartLineSnapshot(quote, crypto.randomUUID(), pricePreview),
         ],
       },
     })),
@@ -184,14 +250,9 @@ export const useCart = create<CartState>((set) => ({
       return {
         shops: {
           ...state.shops,
-          [slug]: items.map((item) => item === expected ? {
-            ...quote,
-            lineId: expected.lineId,
-            variantKey: expected.variantKey,
-            variants: quote.variants.map((variant) => ({ ...variant })),
-            addOns: quote.addOns.map((addOn) => ({ ...addOn })),
-            pricePreview: { ...pricePreview },
-          } : item),
+          [slug]: items.map((item) => item === expected
+            ? cartLineSnapshot(quote, expected.lineId, pricePreview)
+            : item),
         },
       };
     });

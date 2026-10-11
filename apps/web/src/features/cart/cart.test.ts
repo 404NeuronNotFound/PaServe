@@ -1,6 +1,8 @@
 import { beforeEach, expect, it } from "vitest";
 import {
   cartItemsForShop,
+  cartItemCount,
+  cartEstimatedSubtotal,
   cartVariantKey,
   cartCheckoutLines,
   cartSelectionRequest,
@@ -22,6 +24,62 @@ const quote: ProductSelectionQuoteResponse = {
   variants: [],
   addOns: [],
 };
+
+it("keeps only cart-owned snapshots when API responses contain extra server data", () => {
+  const response = {
+    ...quote,
+    menu: { products: ["unselected-product"] },
+    owner: { email: "owner@example.test" },
+    inventory: { remaining: 20 },
+    variants: [{
+      id: "large", optionGroupId: "size", name: "Large",
+      priceAdjustment: "0.10", isDefault: false,
+      product: { description: "Full catalog record" },
+    }],
+    addOns: [{
+      id: "milk", name: "Milk", priceAdjustment: "0.20",
+      assignments: ["other-product"],
+    }],
+  };
+  const preview = { ...createCartPricePreview(response), serverDebug: "not cart data" };
+  useCart.getState().add("cafe", response, preview);
+  const original = useCart.getState().shops.cafe[0];
+  expect(original).not.toHaveProperty("menu");
+  expect(original).not.toHaveProperty("owner");
+  expect(original).not.toHaveProperty("inventory");
+  expect(original.variants[0]).not.toHaveProperty("product");
+  expect(original.addOns[0]).not.toHaveProperty("assignments");
+  expect(original.pricePreview).not.toHaveProperty("serverDebug");
+  expect(original).toMatchObject({
+    productId: quote.productId,
+    variants: [{ id: "large", name: "Large", priceAdjustment: "0.10" }],
+    addOns: [{ id: "milk", name: "Milk", priceAdjustment: "0.20" }],
+  });
+  const update = { ...response, quantity: 2, totalPrice: "2.60" };
+  expect(useCart.getState().updateQuantity("cafe", original, update, createCartPricePreview(update))).toBe(true);
+  const updated = useCart.getState().shops.cafe[0];
+  expect(updated).not.toHaveProperty("menu");
+  expect(updated.variants[0]).not.toHaveProperty("product");
+  expect(updated.addOns[0]).not.toHaveProperty("assignments");
+  expect(updated.lineId).toBe(original.lineId);
+});
+
+it("derives counts and subtotals from shop lines rather than storing duplicate state", () => {
+  expect(cartItemCount(EMPTY_CART)).toBe(0);
+  expect(cartEstimatedSubtotal(EMPTY_CART)).toBe("0.00");
+  useCart.getState().add("cafe", { ...quote, quantity: 2, totalPrice: "2.00" });
+  useCart.getState().add("cafe", { ...quote, quantity: 3, totalPrice: "3.03" });
+  useCart.getState().add("other", { ...quote, quantity: 99, totalPrice: "99.00" });
+  const items = cartItemsForShop(useCart.getState().shops, "cafe");
+  expect(cartItemCount(items)).toBe(5);
+  expect(cartEstimatedSubtotal(items)).toBe("5.03");
+  useCart.getState().remove("cafe", items[0].lineId);
+  const remaining = cartItemsForShop(useCart.getState().shops, "cafe");
+  expect(cartItemCount(remaining)).toBe(3);
+  expect(cartEstimatedSubtotal(remaining)).toBe("3.03");
+  expect(useCart.getState()).not.toHaveProperty("subtotal");
+  expect(useCart.getState()).not.toHaveProperty("count");
+});
 
 it("calculates an exact estimate from base, all variant/add-on adjustments and quantity", () => {
   const selection = {

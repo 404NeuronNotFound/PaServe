@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { FiArrowRight, FiShoppingBag, FiTrash2 } from "react-icons/fi";
 import type { PublicMenuResponse } from "@paserve/contracts";
-import { cartItemsForShop, PRICE_PREVIEW_NOTICE, sumPrices, useCart } from "../../features/cart/cart";
+import {
+  cartItemsForShop,
+  cartItemCount,
+  cartEstimatedSubtotal,
+  PRICE_PREVIEW_NOTICE,
+  useCart,
+} from "../../features/cart/cart";
 import { formatCartPrice } from "../../lib/money";
 import { CustomerDialog } from "./CustomerDialog";
 import { CartQuantityControl } from "./CartQuantityControl";
@@ -14,7 +20,8 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
   const list = useRef<HTMLUListElement>(null);
   const browse = useRef<HTMLButtonElement>(null);
   const removedIndex = useRef<number | null>(null);
-  const count = items.reduce((sum, item) => sum + item.quantity, 0);
+  const count = cartItemCount(items);
+  const subtotal = cartEstimatedSubtotal(items);
   useEffect(() => {
     if (removedIndex.current === null) return;
     const buttons = list.current?.querySelectorAll<HTMLButtonElement>("[data-cart-remove]");
@@ -39,7 +46,7 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
         </span>
         {!!count && (
           <strong aria-hidden="true" title="Estimated subtotal">
-            {formatCartPrice(sumPrices(items.map((item) => item.totalPrice)))}
+            {formatCartPrice(subtotal)}
           </strong>
         )}
       </button>
@@ -119,9 +126,7 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
               <p role="status" className="customer-cart-total">
                 <span>Estimated subtotal</span>{" "}
                 <strong>
-                  {formatCartPrice(
-                    sumPrices(items.map((item) => item.totalPrice)),
-                  )}
+                  {formatCartPrice(subtotal)}
                 </strong>
               </p>
               <p className="field-hint">{PRICE_PREVIEW_NOTICE}</p>
