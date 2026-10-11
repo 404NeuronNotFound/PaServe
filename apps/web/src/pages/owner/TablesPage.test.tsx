@@ -21,6 +21,15 @@ import {
   tablesKey,
 } from "../../features/shops/api/tables";
 import { TablesPage } from "./TablesPage";
+import { TableQrDialog } from "./TableQrDialog";
+
+vi.mock("./TableQrDialog", () => ({
+  TableQrDialog: vi.fn(({ table, shop, onClose }) => (
+    <div role="dialog" aria-label={`QR ${shop.slug} ${table.code}`}>
+      <button onClick={onClose}>Close QR preview</button>
+    </div>
+  )),
+}));
 
 vi.mock("../../features/shops/api/tables", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../features/shops/api/tables")>()),
@@ -74,6 +83,34 @@ beforeEach(() => {
   });
 });
 afterEach(cleanup);
+
+it("opens the saved active table QR and closes it when switching shops", async () => {
+  vi.mocked(listTables).mockResolvedValue({ tables: [table] });
+  const view = setup();
+  await userEvent
+    .setup()
+    .click(
+      await screen.findByRole("button", { name: "Generate QR for Table 12" }),
+    );
+  expect(screen.getByRole("dialog")).toHaveAccessibleName("QR cafe-a T12");
+  expect(vi.mocked(TableQrDialog).mock.calls.at(-1)?.[0]).toMatchObject({
+    table,
+    shop: membership().shop,
+  });
+  view.rerender(view.page("b"));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("disables QR generation for an inactive table", async () => {
+  vi.mocked(listTables).mockResolvedValue({
+    tables: [{ ...table, isActive: false }],
+  });
+  setup();
+  expect(
+    await screen.findByRole("button", { name: "Generate QR for Table 12" }),
+  ).toBeDisabled();
+  expect(TableQrDialog).not.toHaveBeenCalled();
+});
 
 it.each(["OWNER", "ADMIN"] as const)(
   "lets %s create under the active shop and shows the saved table",
@@ -149,6 +186,21 @@ it("restores saved text labels after remount", async () => {
   view.unmount();
   setup();
   await screen.findByText("Table Patio 4");
+});
+it("keeps code allocation failures separate from duplicate label errors", async () => {
+  vi.mocked(createTable).mockRejectedValue({
+    isAxiosError: true,
+    response: { status: 409, data: { code: "TABLE_CODE_UNAVAILABLE" } },
+  });
+  setup();
+  await screen.findByText(/No tables yet/);
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText("Table number"), "12");
+  await user.click(screen.getByRole("button", { name: "Create table" }));
+  await screen.findByText(/allocate a table code/);
+  expect(screen.queryByText(/already exists/)).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Table number")).toHaveValue("12");
+  expect(screen.getByRole("button", { name: "Create table" })).toBeEnabled();
 });
 it("retains the draft on duplicate rejection", async () => {
   vi.mocked(createTable).mockRejectedValue({

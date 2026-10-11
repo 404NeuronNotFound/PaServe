@@ -7,7 +7,12 @@ import {
 import type {
   ProductSelectionQuoteResponse,
   ProductSelectionRequest,
+  CustomerCheckoutRequest,
 } from "@paserve/contracts";
+import {
+  useCustomerTables,
+  type CustomerTableState,
+} from "../shops/customer-table";
 import {
   browserCartStorage,
   parseCartLine,
@@ -80,6 +85,24 @@ export function cartCheckoutLines(
     productId: item.productId,
     ...cartSelectionRequest(item),
   }));
+}
+
+export function cartCheckoutRequest(
+  shops: Record<string, CartItem[]>,
+  slug: string,
+  tables: Pick<
+    CustomerTableState,
+    "codes" | "resolved"
+  > = useCustomerTables.getState(),
+): CustomerCheckoutRequest {
+  const code = tables.codes[slug];
+  const table = tables.resolved[slug];
+  if (code && (!table || table.shopSlug !== slug || table.code !== code))
+    throw new Error("Resolve the table link before preparing checkout.");
+  return {
+    ...(code ? { tableCode: code } : {}),
+    items: cartCheckoutLines(shops, slug),
+  };
 }
 
 // The estimate shown before submission; quoted prices remain authoritative.
@@ -157,16 +180,18 @@ function cartLineSnapshot(
       name: addOn.name,
       priceAdjustment: addOn.priceAdjustment,
     })),
-    pricePreview: pricePreview ? {
-      source: "client",
-      currency: pricePreview.currency,
-      basePrice: pricePreview.basePrice,
-      variantAdjustment: pricePreview.variantAdjustment,
-      addOnAdjustment: pricePreview.addOnAdjustment,
-      unitPrice: pricePreview.unitPrice,
-      totalPrice: pricePreview.totalPrice,
-      quantity: pricePreview.quantity,
-    } : null,
+    pricePreview: pricePreview
+      ? {
+          source: "client",
+          currency: pricePreview.currency,
+          basePrice: pricePreview.basePrice,
+          variantAdjustment: pricePreview.variantAdjustment,
+          addOnAdjustment: pricePreview.addOnAdjustment,
+          unitPrice: pricePreview.unitPrice,
+          totalPrice: pricePreview.totalPrice,
+          quantity: pricePreview.quantity,
+        }
+      : null,
   };
 }
 
@@ -206,89 +231,102 @@ interface CartState {
   ) => boolean;
 }
 // Only cart snapshots persist. Checkout must revalidate them before ordering.
-export function createCartStore(storage: CartStorage | null = browserCartStorage()) {
+export function createCartStore(
+  storage: CartStorage | null = browserCartStorage(),
+) {
   const store = create<CartState>((set) => ({
-  shops: readCartStorage(storage),
-  add: (slug, quote, pricePreview) => {
-    const item = validatedCartLine(quote, crypto.randomUUID(), pricePreview);
-    if (!item) return false;
-    set((state) => ({
-      shops: {
-        ...state.shops,
-        [slug]: [
-          ...cartItemsForShop(state.shops, slug),
-          item,
-        ],
-      },
-    }));
-    return true;
-  },
-  remove: (slug, lineId) =>
-    set((state) => {
-      const items = cartItemsForShop(state.shops, slug);
-      if (!items.some((item) => item.lineId === lineId)) return state;
-      return {
+    shops: readCartStorage(storage),
+    add: (slug, quote, pricePreview) => {
+      const item = validatedCartLine(quote, crypto.randomUUID(), pricePreview);
+      if (!item) return false;
+      set((state) => ({
         shops: {
           ...state.shops,
-          [slug]: items.filter((item) => item.lineId !== lineId),
+          [slug]: [...cartItemsForShop(state.shops, slug), item],
         },
-      };
-    }),
-  updateNotes: (slug, expected, draft) => {
-    if (draft.length > CUSTOMER_NOTE_MAX_LENGTH || !CUSTOMER_NOTE_PATTERN.test(draft)) {
-      return false;
-    }
-    const notes = normalizeCustomerNote(draft);
-    let updated = false;
-    set((state) => {
-      const items = cartItemsForShop(state.shops, slug);
-      if (!items.includes(expected)) return state;
-      updated = true;
-      if (expected.notes === notes) return state;
-      const replacement = { ...expected };
-      delete replacement.notes;
-      if (notes) replacement.notes = notes;
-      return {
-        shops: {
-          ...state.shops,
-          [slug]: items.map((item) => item === expected ? replacement : item),
-        },
-      };
-    });
-    return updated;
-  },
-  updateQuantity: (slug, expected, quote, pricePreview) => {
-    const replacement = validatedCartLine(quote, expected.lineId, pricePreview);
-    if (!replacement) return false;
-    let updated = false;
-    set((state) => {
-      const items = cartItemsForShop(state.shops, slug);
+      }));
+      return true;
+    },
+    remove: (slug, lineId) =>
+      set((state) => {
+        const items = cartItemsForShop(state.shops, slug);
+        if (!items.some((item) => item.lineId === lineId)) return state;
+        return {
+          shops: {
+            ...state.shops,
+            [slug]: items.filter((item) => item.lineId !== lineId),
+          },
+        };
+      }),
+    updateNotes: (slug, expected, draft) => {
       if (
-        !items.includes(expected) ||
-        replacement.productId !== expected.productId ||
-        replacement.variantKey !== expected.variantKey ||
-        replacement.notes !== expected.notes ||
-        JSON.stringify(replacement.addOns.map((addOn) => addOn.id).sort()) !==
-          JSON.stringify(expected.addOns.map((addOn) => addOn.id).sort()) ||
-        !Number.isInteger(quote.quantity) ||
-        quote.quantity < 1 || quote.quantity > 99 ||
-        quote.quantity !== pricePreview.quantity
-      ) return state;
-      updated = true;
-      return {
-        shops: {
-          ...state.shops,
-          [slug]: items.map((item) => item === expected
-            ? replacement
-            : item),
-        },
-      };
-    });
-    return updated;
-  },
+        draft.length > CUSTOMER_NOTE_MAX_LENGTH ||
+        !CUSTOMER_NOTE_PATTERN.test(draft)
+      ) {
+        return false;
+      }
+      const notes = normalizeCustomerNote(draft);
+      let updated = false;
+      set((state) => {
+        const items = cartItemsForShop(state.shops, slug);
+        if (!items.includes(expected)) return state;
+        updated = true;
+        if (expected.notes === notes) return state;
+        const replacement = { ...expected };
+        delete replacement.notes;
+        if (notes) replacement.notes = notes;
+        return {
+          shops: {
+            ...state.shops,
+            [slug]: items.map((item) =>
+              item === expected ? replacement : item,
+            ),
+          },
+        };
+      });
+      return updated;
+    },
+    updateQuantity: (slug, expected, quote, pricePreview) => {
+      const replacement = validatedCartLine(
+        quote,
+        expected.lineId,
+        pricePreview,
+      );
+      if (!replacement) return false;
+      let updated = false;
+      set((state) => {
+        const items = cartItemsForShop(state.shops, slug);
+        if (
+          !items.includes(expected) ||
+          replacement.productId !== expected.productId ||
+          replacement.variantKey !== expected.variantKey ||
+          replacement.notes !== expected.notes ||
+          JSON.stringify(replacement.addOns.map((addOn) => addOn.id).sort()) !==
+            JSON.stringify(expected.addOns.map((addOn) => addOn.id).sort()) ||
+          !Number.isInteger(quote.quantity) ||
+          quote.quantity < 1 ||
+          quote.quantity > 99 ||
+          quote.quantity !== pricePreview.quantity
+        )
+          return state;
+        updated = true;
+        return {
+          shops: {
+            ...state.shops,
+            [slug]: items.map((item) =>
+              item === expected ? replacement : item,
+            ),
+          },
+        };
+      });
+      return updated;
+    },
   }));
   store.subscribe((state, previous) => {
-    const slugs = new Set([...Object.keys(previous.shops), ...Object.keys(state.shops)]);
+    const slugs = new Set([
+      ...Object.keys(previous.shops),
+      ...Object.keys(state.shops),
+    ]);
     for (const slug of slugs) {
       const items = cartItemsForShop(state.shops, slug);
       if (items !== cartItemsForShop(previous.shops, slug)) {

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { FiArrowRight, FiShoppingBag, FiTrash2 } from "react-icons/fi";
-import type { PublicMenuResponse } from "@paserve/contracts";
+import type {
+  PublicMenuResponse,
+  PublicTableContext,
+} from "@paserve/contracts";
 import {
   cartItemsForShop,
   cartItemCount,
@@ -14,7 +17,13 @@ import { CartQuantityControl } from "./CartQuantityControl";
 import { CartNotesEditor } from "./CartNotesEditor";
 import "./customer-cart.css";
 
-export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
+export function CustomerCart({
+  shop,
+  table,
+}: {
+  shop: PublicMenuResponse["shop"];
+  table?: PublicTableContext;
+}) {
   const items = useCart((state) => cartItemsForShop(state.shops, shop.slug));
   const [open, setOpen] = useState(false);
   const list = useRef<HTMLUListElement>(null);
@@ -24,7 +33,8 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
   const subtotal = cartEstimatedSubtotal(items);
   useEffect(() => {
     if (removedIndex.current === null) return;
-    const buttons = list.current?.querySelectorAll<HTMLButtonElement>("[data-cart-remove]");
+    const buttons =
+      list.current?.querySelectorAll<HTMLButtonElement>("[data-cart-remove]");
     const target =
       buttons?.[Math.min(removedIndex.current, (buttons?.length ?? 0) - 1)] ??
       browse.current;
@@ -59,6 +69,11 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
           onClose={() => setOpen(false)}
         >
           <div className="customer-dialog-body">
+            {table && (
+              <p className="customer-cart-intro">
+                Ordering for Table {table.number}
+              </p>
+            )}
             {!items.length ? (
               <div className="customer-cart-empty">
                 <span className="customer-cart-empty-icon" aria-hidden="true">
@@ -125,9 +140,7 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
             <div className="customer-cart-summary">
               <p role="status" className="customer-cart-total">
                 <span>Estimated subtotal</span>{" "}
-                <strong>
-                  {formatCartPrice(subtotal)}
-                </strong>
+                <strong>{formatCartPrice(subtotal)}</strong>
               </p>
             </div>
             {!!items.length && (
@@ -139,7 +152,9 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
                 Continue shopping <FiArrowRight aria-hidden="true" />
               </button>
             )}
-            <p className="field-hint customer-cart-price-notice">{PRICE_PREVIEW_NOTICE}</p>
+            <p className="field-hint customer-cart-price-notice">
+              {PRICE_PREVIEW_NOTICE}
+            </p>
           </footer>
         </CustomerDialog>
       )}

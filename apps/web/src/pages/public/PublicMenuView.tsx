@@ -92,6 +92,9 @@ export function PublicMenuView({
           <div className="menu-shop-copy">
             <p className="section-label">THE MENU</p>
             <h1>{shop.name}</h1>
+            {!preview && menu.table && (
+              <p role="status">Ordering for Table {menu.table.number}</p>
+            )}
             {shop.description && (
               <p className="menu-shop-description">{shop.description}</p>
             )}
@@ -127,7 +130,13 @@ export function PublicMenuView({
                 )}
               </label>
             )}
-            {!preview && <CustomerCart key={shop.slug} shop={shop} />}
+            {!preview && (
+              <CustomerCart
+                key={`${shop.slug}:${menu.table?.code ?? "browse"}`}
+                shop={shop}
+                table={menu.table}
+              />
+            )}
           </div>
           {!!sections.length && (
             <nav className="menu-category-nav" aria-label="Menu categories">

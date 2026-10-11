@@ -22,6 +22,7 @@ import {
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { feedback } from "../../app/stores/feedback";
 import "./tables.css";
+import { TableQrDialog } from "./TableQrDialog";
 
 export function TablesPage() {
   const membership = useActiveShop();
@@ -46,6 +47,7 @@ function TableWorkspace({ userId }: { userId: string }) {
   const [error, setError] = useState("");
   const [lostAccess, setLostAccess] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  const [qrTableId, setQrTableId] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const busy = useRef(false);
   const mounted = useRef(false);
@@ -75,6 +77,9 @@ function TableWorkspace({ userId }: { userId: string }) {
   const denied =
     isAxiosError(query.error) &&
     [401, 403, 404].includes(query.error.response?.status ?? 0);
+  const qrTable = query.isSuccess
+    ? query.data.tables.find((table) => table.id === qrTableId)
+    : undefined;
 
   async function refresh() {
     const result = await query.refetch();
@@ -133,6 +138,8 @@ function TableWorkspace({ userId }: { userId: string }) {
           setError(
             "Your access changed. Refresh the shop workspace to continue.",
           );
+        } else if (failure.response?.data.code === "TABLE_CODE_UNAVAILABLE") {
+          setError("We couldn’t allocate a table code. Please try again.");
         } else if (status === 409) {
           setFieldError(
             "This table number or label already exists. Choose a different label.",
@@ -217,6 +224,15 @@ function TableWorkspace({ userId }: { userId: string }) {
                     <span className="table-status">
                       {table.isActive ? "Active" : "Inactive"}
                     </span>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={!table.isActive || disabled}
+                      onClick={() => setQrTableId(table.id)}
+                      aria-label={`Generate QR for Table ${table.number}`}
+                    >
+                      Generate QR
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -274,6 +290,14 @@ function TableWorkspace({ userId }: { userId: string }) {
           </form>
         </section>
       </div>
+      {qrTable && !lostAccess && !denied && authorized && (
+        <TableQrDialog
+          key={`${qrTable.id}:${qrTable.code}`}
+          table={qrTable}
+          shop={membership.shop}
+          onClose={() => setQrTableId(null)}
+        />
+      )}
     </section>
   );
 }

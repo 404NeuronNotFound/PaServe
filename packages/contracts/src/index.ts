@@ -566,6 +566,8 @@ export interface SetCategoryVisibilityRequest {
   expectedVisibility: boolean;
 }
 export interface PublicMenuResponse {
+  /** Resolved by the server for a public table link; never an authorization token. */
+  table?: PublicTableContext;
   featuredProducts: PublicMenuResponse["products"];
   shop: {
     name: string;
@@ -621,6 +623,15 @@ export interface ProductSelectionQuoteResponse {
   addOns: PublicAddOn[];
 }
 export const TABLE_LIMITS = { numberMaxLength: 40 } as const;
+export const TABLE_CODE_PATTERN = /^t_[0-9a-f]{32}$(?![\s\S])/;
+// Previously issued codes remain valid; never regenerate a saved public locator.
+export const PUBLIC_TABLE_CODE_PATTERN = /^(?:t_[0-9a-f]{32}|T[0-9]{1,40}|T-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$(?![\s\S])/;
+export function publicTablePath(shopSlug: string, code: string): string {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$(?![\s\S])/.test(shopSlug) || shopSlug.length > 100 || !PUBLIC_TABLE_CODE_PATTERN.test(code)) {
+    throw new Error("A valid shop slug and public table code are required.");
+  }
+  return `/${encodeURIComponent(shopSlug)}/table/${encodeURIComponent(code)}`;
+}
 export const TABLE_NUMBER_PATTERN = /^[^\p{Cc}\p{Cf}\p{Cs}]*$/u;
 export function normalizeTableNumber(value: string): string {
   // Do not let trimming or collapsing spaces erase invalid control characters.
@@ -634,6 +645,16 @@ export function compareTableNumbers(a: { number: string; id: string }, b: { numb
 }
 export interface CreateTableRequest {
   number: string;
+}
+export interface PublicTableContext {
+  shopSlug: string;
+  code: string;
+  number: string;
+}
+/** Prepared selection data; the future order endpoint must resolve/revalidate it. */
+export interface CustomerCheckoutRequest {
+  tableCode?: string;
+  items: (ProductSelectionRequest & { productId: string })[];
 }
 export interface RestaurantTable {
   id: string;

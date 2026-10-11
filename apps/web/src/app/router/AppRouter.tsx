@@ -31,6 +31,7 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/:shopSlug/table/:tableCode" element={<PublicMenuPage />} />
         <Route path="/menu/:shopSlug" element={<PublicMenuPage />} />
         <Route path="/" element={<Navigate to="/register" replace />} />
         <Route path="/register" element={<RegisterPage />} />
