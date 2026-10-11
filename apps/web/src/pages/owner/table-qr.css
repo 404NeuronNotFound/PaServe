@@ -1,0 +1,154 @@
+.table-qr-dialog {
+  width: min(600px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: 0 24px 90px #0003;
+  animation: table-qr-enter 240ms ease both;
+}
+.table-qr-dialog::backdrop {
+  background: #17120bb0;
+  backdrop-filter: blur(6px);
+}
+.table-qr-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.table-qr-heading h2 {
+  margin: 0;
+  font:
+    400 28px/1.2 Georgia,
+    serif;
+  overflow-wrap: anywhere;
+}
+.table-qr-card {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  padding: 24px;
+  background: white;
+  color: black;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  text-align: center;
+}
+.table-qr-card h3 {
+  font:
+    400 32px/1.2 Georgia,
+    serif;
+  margin: 0;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.table-qr-card p {
+  margin: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.table-qr-shop {
+  font-size: 18px;
+  font-weight: 600;
+}
+.table-qr-card img {
+  width: min(256px, 100%);
+  height: auto;
+  background: white;
+}
+.table-qr-url {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.table-qr-instruction {
+  font-weight: 600;
+}
+.table-qr-hint {
+  color: var(--color-muted);
+  line-height: 1.6;
+  font-size: 13px;
+}
+.table-qr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+.table-qr-actions a {
+  text-decoration: none;
+}
+@keyframes table-qr-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .table-qr-dialog {
+    animation: none;
+  }
+}
+@media (max-width: 480px) {
+  .table-qr-dialog {
+    padding: 18px;
+  }
+  .table-qr-card {
+    padding: 16px;
+  }
+}
+@media print {
+  @page {
+    margin: 15mm;
+  }
+  body:has(.table-qr-dialog[open]) > :not(.table-qr-dialog) {
+    display: none !important;
+  }
+  .table-qr-dialog::backdrop {
+    display: none;
+  }
+  .table-qr-dialog {
+    display: block !important;
+    position: static;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    animation: none;
+    background: white;
+    color: black;
+  }
+  .table-qr-dialog > :not(.table-qr-card) {
+    display: none !important;
+  }
+  .table-qr-card {
+    width: 85mm;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 0 auto;
+    padding: 8mm;
+    border: 1px solid #999;
+    border-radius: 0;
+    break-inside: avoid;
+    print-color-adjust: exact;
+  }
+  .table-qr-card img {
+    width: 55mm;
+    height: 55mm;
+  }
+}
