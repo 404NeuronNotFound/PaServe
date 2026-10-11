@@ -6,6 +6,7 @@ import {
   render,
   screen,
   within,
+  waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -209,7 +210,7 @@ it("adds a server-quoted customized item and allows cart review/removal", async 
     await screen.findByRole("button", { name: "View cart (2)" }),
   );
   const cart = screen.getByRole("dialog", { name: "Cafe cart" });
-  expect(within(cart).getByText("₱350.64")).toBeInTheDocument();
+  expect(within(cart).getByRole("status")).toHaveTextContent("₱350.64");
   expect(within(cart).getByText("<b>No sugar</b>")).toBeInTheDocument();
   expect(cart.querySelector("b")).toBeNull();
   expect(within(cart).getByText("Large, Oat milk")).toBeInTheDocument();
@@ -495,7 +496,7 @@ it("retains selected paid/free add-ons in the cart with the expected preview tot
     within(cart).getByText("Large, Oat milk, No sugar"),
   ).toBeInTheDocument();
   expect(within(cart).queryByText(/Extra shot/)).not.toBeInTheDocument();
-  expect(within(cart).getByText("₱525.93")).toBeInTheDocument();
+  expect(within(cart).getByRole("status")).toHaveTextContent("₱525.93");
 });
 it("caps add-on selections while keeping selected choices removable", async () => {
   vi.mocked(api.get).mockResolvedValue({
@@ -758,4 +759,60 @@ it("isolates cart lines by shop and preserves exact totals", () => {
   expect(useCart.getState().shops.cafe[0].totalPrice).toBe("240.02");
   expect(useCart.getState().shops.other[0].totalPrice).toBe("99.99");
   expect(sumPrices(["120.01", "30.10", "25.20"], 3)).toBe("525.93");
+});
+it("returns from the empty cart to the menu and restores its trigger focus", async () => {
+  setup();
+  const user = userEvent.setup();
+  const trigger = screen.getByRole("button", { name: "View cart (0)" });
+  await user.click(trigger);
+  const cart = screen.getByRole("dialog", { name: "Cafe cart" });
+  expect(
+    within(cart).getByRole("heading", { name: "Your cart is empty." }),
+  ).toBeInTheDocument();
+  expect(within(cart).getByRole("status")).toHaveTextContent("₱0.00");
+  await user.click(within(cart).getByRole("button", { name: "Browse menu" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await waitFor(() => expect(trigger).toHaveFocus());
+  expect(api.post).not.toHaveBeenCalled();
+});
+it("removes only this shop's lines, updates the total and keeps focus in the cart", async () => {
+  const quote = {
+    productId: product.id,
+    productName: "Coffee",
+    currency: "PHP" as const,
+    basePrice: "120.01",
+    unitPrice: "120.01",
+    totalPrice: "240.02",
+    quantity: 2,
+    variants: [],
+    addOns: [],
+  };
+  useCart.getState().add("cafe", quote);
+  useCart
+    .getState()
+    .add("cafe", {
+      ...quote,
+      productName: "Tea",
+      quantity: 1,
+      totalPrice: "120.01",
+    });
+  useCart.getState().add("other", { ...quote, productName: "Other shop item" });
+  setup();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "View cart (3)" }));
+  const cart = screen.getByRole("dialog", { name: "Cafe cart" });
+  expect(within(cart).getByRole("status")).toHaveTextContent("₱360.03");
+  expect(within(cart).queryByText("Other shop item")).not.toBeInTheDocument();
+  await user.click(within(cart).getByRole("button", { name: "Remove Coffee" }));
+  expect(within(cart).getByRole("status")).toHaveTextContent("₱120.01");
+  expect(
+    within(cart).getByRole("button", { name: "Remove Tea" }),
+  ).toHaveFocus();
+  await user.click(within(cart).getByRole("button", { name: "Remove Tea" }));
+  expect(
+    within(cart).getByRole("button", { name: "Browse menu" }),
+  ).toHaveFocus();
+  expect(within(cart).getByRole("status")).toHaveTextContent("₱0.00");
+  expect(useCart.getState().shops.other).toHaveLength(1);
+  expect(api.post).not.toHaveBeenCalled();
 });
