@@ -50,7 +50,7 @@ function preview(value: unknown, count: number): CartPricePreview | null {
   };
 }
 
-function line(value: unknown): CartItem | null {
+export function parseCartLine(value: unknown): CartItem | null {
   if (!record(value) || !text(value.lineId) || !text(value.productId) || !text(value.productName) ||
     value.currency !== "PHP" || !quantity(value.quantity) ||
     !money(value.basePrice) || !money(value.unitPrice) || !money(value.totalPrice) ||
@@ -88,7 +88,7 @@ function line(value: unknown): CartItem | null {
 function cleanLines(values: unknown[]): CartItem[] {
   const seen = new Set<string>();
   return values.flatMap((value) => {
-    const item = line(value);
+    const item = parseCartLine(value);
     if (!item || seen.has(item.lineId)) return [];
     seen.add(item.lineId);
     return [item];

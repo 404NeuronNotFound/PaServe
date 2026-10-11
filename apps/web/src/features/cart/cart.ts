@@ -10,6 +10,7 @@ import type {
 } from "@paserve/contracts";
 import {
   browserCartStorage,
+  parseCartLine,
   readCartStorage,
   writeCartStorage,
   type CartStorage,
@@ -168,6 +169,20 @@ function cartLineSnapshot(
     } : null,
   };
 }
+
+// Use the same validation for API snapshots and reloads: accepted lines must
+// remain safe to render, submit and restore even when a response is malformed.
+function validatedCartLine(
+  quote: ProductSelectionQuoteResponse,
+  lineId: string,
+  pricePreview?: CartPricePreview,
+): CartItem | null {
+  try {
+    return parseCartLine(cartLineSnapshot(quote, lineId, pricePreview));
+  } catch {
+    return null;
+  }
+}
 export function cartItemsForShop(
   shops: Record<string, CartItem[]>,
   slug: string,
@@ -180,7 +195,7 @@ interface CartState {
     slug: string,
     quote: ProductSelectionQuoteResponse,
     pricePreview?: CartPricePreview,
-  ) => void;
+  ) => boolean;
   remove: (slug: string, lineId: string) => void;
   updateNotes: (slug: string, expected: CartItem, notes: string) => boolean;
   updateQuantity: (
@@ -194,16 +209,20 @@ interface CartState {
 export function createCartStore(storage: CartStorage | null = browserCartStorage()) {
   const store = create<CartState>((set) => ({
   shops: readCartStorage(storage),
-  add: (slug, quote, pricePreview) =>
+  add: (slug, quote, pricePreview) => {
+    const item = validatedCartLine(quote, crypto.randomUUID(), pricePreview);
+    if (!item) return false;
     set((state) => ({
       shops: {
         ...state.shops,
         [slug]: [
           ...cartItemsForShop(state.shops, slug),
-          cartLineSnapshot(quote, crypto.randomUUID(), pricePreview),
+          item,
         ],
       },
-    })),
+    }));
+    return true;
+  },
   remove: (slug, lineId) =>
     set((state) => {
       const items = cartItemsForShop(state.shops, slug);
@@ -239,15 +258,17 @@ export function createCartStore(storage: CartStorage | null = browserCartStorage
     return updated;
   },
   updateQuantity: (slug, expected, quote, pricePreview) => {
+    const replacement = validatedCartLine(quote, expected.lineId, pricePreview);
+    if (!replacement) return false;
     let updated = false;
     set((state) => {
       const items = cartItemsForShop(state.shops, slug);
       if (
         !items.includes(expected) ||
-        quote.productId !== expected.productId ||
-        cartVariantKey(quote) !== expected.variantKey ||
-        normalizeCustomerNote(quote.notes ?? "") !== expected.notes ||
-        JSON.stringify(quote.addOns.map((addOn) => addOn.id).sort()) !==
+        replacement.productId !== expected.productId ||
+        replacement.variantKey !== expected.variantKey ||
+        replacement.notes !== expected.notes ||
+        JSON.stringify(replacement.addOns.map((addOn) => addOn.id).sort()) !==
           JSON.stringify(expected.addOns.map((addOn) => addOn.id).sort()) ||
         !Number.isInteger(quote.quantity) ||
         quote.quantity < 1 || quote.quantity > 99 ||
@@ -258,7 +279,7 @@ export function createCartStore(storage: CartStorage | null = browserCartStorage
         shops: {
           ...state.shops,
           [slug]: items.map((item) => item === expected
-            ? cartLineSnapshot(quote, expected.lineId, pricePreview)
+            ? replacement
             : item),
         },
       };

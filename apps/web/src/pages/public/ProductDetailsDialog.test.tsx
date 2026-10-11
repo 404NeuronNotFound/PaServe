@@ -176,6 +176,32 @@ it("renders updated backend details instead of the menu card snapshot", async ()
     within(dialog).queryByRole("checkbox", { name: /Oat milk/ }),
   ).not.toBeInTheDocument();
 });
+it.each(["product", "quantity", "variant", "addon", "notes", "price"])(
+  "keeps the selection open and the cart unchanged when the quote changes %s", async (changed) => {
+    const quote = {
+      productId: product.id, productName: product.name, currency: "PHP",
+      basePrice: "120.01", unitPrice: "120.01", totalPrice: "120.01", quantity: 1,
+      variants: [details.variants[0]], addOns: [] as typeof details.addOns,
+      notes: undefined as string | undefined,
+    };
+    if (changed === "product") quote.productId = "other-product";
+    if (changed === "quantity") { quote.quantity = 2; quote.totalPrice = "240.02"; }
+    if (changed === "variant") quote.variants = [details.variants[1]];
+    if (changed === "addon") quote.addOns = details.addOns;
+    if (changed === "notes") quote.notes = "Unrequested note";
+    if (changed === "price") quote.totalPrice = "0.00";
+    vi.mocked(api.post).mockResolvedValue({ data: quote });
+    setup();
+    const { user, dialog } = await openDetails();
+    const before = useCart.getState();
+    await user.click(within(dialog).getByRole("button", { name: "Add to cart" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("could not add this item");
+    expect(useCart.getState()).toBe(before);
+    expect(within(dialog).getByRole("button", { name: "Add to cart" })).toBeEnabled();
+    expect(within(dialog).getByRole("radio", { name: /Regular/ })).toBeChecked();
+  },
+);
+
 it("adds a server-quoted customized item and allows cart review/removal", async () => {
   vi.mocked(api.post).mockResolvedValue({
     data: {
@@ -838,9 +864,9 @@ it("isolates cart lines by shop and preserves exact totals", () => {
     addOns: [],
   };
   useCart.getState().add("cafe", quote);
-  useCart.getState().add("other", { ...quote, totalPrice: "99.99" });
+  useCart.getState().add("other", { ...quote, unitPrice: "99.99", totalPrice: "199.98" });
   expect(useCart.getState().shops.cafe[0].totalPrice).toBe("240.02");
-  expect(useCart.getState().shops.other[0].totalPrice).toBe("99.99");
+  expect(useCart.getState().shops.other[0].totalPrice).toBe("199.98");
   expect(sumPrices(["120.01", "30.10", "25.20"], 3)).toBe("525.93");
 });
 it("returns from the empty cart to the menu and restores its trigger focus", async () => {

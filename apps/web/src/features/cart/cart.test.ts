@@ -55,7 +55,7 @@ it("keeps only cart-owned snapshots when API responses contain extra server data
     variants: [{ id: "large", name: "Large", priceAdjustment: "0.10" }],
     addOns: [{ id: "milk", name: "Milk", priceAdjustment: "0.20" }],
   });
-  const update = { ...response, quantity: 2, totalPrice: "2.60" };
+  const update = { ...response, quantity: 2, unitPrice: "1.30", totalPrice: "2.60" };
   expect(useCart.getState().updateQuantity("cafe", original, update, createCartPricePreview(update))).toBe(true);
   const updated = useCart.getState().shops.cafe[0];
   expect(updated).not.toHaveProperty("menu");
@@ -68,7 +68,7 @@ it("derives counts and subtotals from shop lines rather than storing duplicate s
   expect(cartItemCount(EMPTY_CART)).toBe(0);
   expect(cartEstimatedSubtotal(EMPTY_CART)).toBe("0.00");
   useCart.getState().add("cafe", { ...quote, quantity: 2, totalPrice: "2.00" });
-  useCart.getState().add("cafe", { ...quote, quantity: 3, totalPrice: "3.03" });
+  useCart.getState().add("cafe", { ...quote, quantity: 3, unitPrice: "1.01", totalPrice: "3.03" });
   useCart.getState().add("other", { ...quote, quantity: 99, totalPrice: "99.00" });
   const items = cartItemsForShop(useCart.getState().shops, "cafe");
   expect(cartItemCount(items)).toBe(5);
@@ -225,6 +225,8 @@ it("retains paid/free add-ons per line and serializes this shop's selections wit
     ...quote,
     notes: "Less ice",
     quantity: 2,
+    unitPrice: "1.20",
+    totalPrice: "2.40",
     addOns: [
       { id: "milk", name: "Milk", priceAdjustment: "0.20" },
       { id: "free", name: "Free extra", priceAdjustment: "0.00" },
@@ -327,7 +329,7 @@ it.each(["constructor", "__proto__", "toString"])(
     expect(cartItemsForShop(useCart.getState().shops, slug)).toBe(EMPTY_CART);
     useCart.getState().remove(slug, "missing");
     useCart.getState().add(slug, quote);
-    useCart.getState().add("other", { ...quote, totalPrice: "2.00" });
+    useCart.getState().add("other", { ...quote, unitPrice: "2.00", totalPrice: "2.00" });
     const items = cartItemsForShop(useCart.getState().shops, slug);
     expect(items).toHaveLength(1);
     expect(items[0].totalPrice).toBe("1.00");

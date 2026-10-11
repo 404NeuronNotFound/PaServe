@@ -190,7 +190,18 @@ function ProductDetailsForm({
         },
       );
       if (!mounted.current) return;
-      useCart.getState().add(shopSlug, response.data, pricePreview);
+      const quote = response.data;
+      const sameIds = (actual: string[], expected: string[]) =>
+        JSON.stringify([...actual].sort()) === JSON.stringify([...expected].sort());
+      if (
+        quote.productId !== product.id || quote.quantity !== count ||
+        normalizeCustomerNote(quote.notes ?? "") !== normalizeCustomerNote(notes) ||
+        !sameIds(quote.variants.map((variant) => variant.id), selectedVariants.map((variant) => variant.id)) ||
+        !sameIds(quote.addOns.map((option) => option.id), selectedAddOns) ||
+        !useCart.getState().add(shopSlug, quote, pricePreview)
+      ) {
+        throw new Error("The quote did not match this selection.");
+      }
       feedback.toast("Added to cart.");
       onClose();
     } catch {
