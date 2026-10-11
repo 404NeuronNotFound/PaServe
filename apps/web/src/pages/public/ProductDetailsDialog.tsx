@@ -228,11 +228,23 @@ function ProductDetailsForm({
               (variant) => (variant.optionGroupId ?? "ungrouped") === group.id,
             );
             return (
-              <fieldset className="product-option-group" key={group.id}>
+              <fieldset
+                className="product-option-group"
+                key={group.id}
+                aria-describedby={`${prefix}-${group.id}-hint`}
+              >
                 <legend>
                   {group.name} {group.isRequired ? "(required)" : "(optional)"}
                 </legend>
-                {!options.length && <p>No choices are currently available.</p>}
+                <p id={`${prefix}-${group.id}-hint`} className="field-hint">
+                  {!options.length
+                    ? group.isRequired
+                      ? "No choices are currently available. This item cannot be added until a choice is available."
+                      : "No choices are currently available. You can skip this group."
+                    : group.isRequired
+                      ? "Choose one option."
+                      : "Choose one option or leave this group unselected."}
+                </p>
                 {!group.isRequired && (
                   <label className="product-option">
                     <input

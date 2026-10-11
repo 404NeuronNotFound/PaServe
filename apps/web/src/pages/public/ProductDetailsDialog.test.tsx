@@ -238,6 +238,105 @@ it("blocks invalid quantities and required choices", async () => {
   expect(within(dialog).getByRole("alert")).toHaveTextContent("1 to 99");
   expect(api.post).not.toHaveBeenCalled();
 });
+it("replaces variant surcharges and multiplies the preview by quantity", async () => {
+  setup();
+  const { user, dialog } = await openDetails();
+  const regular = within(dialog).getByRole("radio", { name: /Regular/ });
+  const large = within(dialog).getByRole("radio", { name: /Large/ });
+  const total = within(dialog).getByRole("status");
+  await user.click(large);
+  expect(regular).not.toBeChecked();
+  expect(total).toHaveTextContent("₱150.11");
+  await user.clear(within(dialog).getByLabelText(/Quantity/));
+  await user.type(within(dialog).getByLabelText(/Quantity/), "3");
+  expect(total).toHaveTextContent("₱450.33");
+  await user.click(regular);
+  expect(large).not.toBeChecked();
+  expect(total).toHaveTextContent("₱360.03");
+});
+it("combines independent groups and allows clearing an optional choice", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      ...details,
+      optionGroups: [
+        ...details.optionGroups,
+        { id: "temperature", name: "Temperature", isRequired: false },
+      ],
+      variants: [
+        ...details.variants,
+        {
+          id: "iced",
+          optionGroupId: "temperature",
+          name: "Iced",
+          priceAdjustment: "5.02",
+          isDefault: false,
+        },
+      ],
+    },
+  });
+  setup();
+  const { user, dialog } = await openDetails();
+  const optional = within(dialog).getByRole("group", {
+    name: "Temperature (optional)",
+  });
+  expect(optional).toHaveAccessibleDescription(
+    "Choose one option or leave this group unselected.",
+  );
+  const none = within(optional).getByRole("radio", { name: "No selection" });
+  expect(none).toBeChecked();
+  await user.click(within(dialog).getByRole("radio", { name: /Large/ }));
+  await user.click(within(optional).getByRole("radio", { name: /Iced/ }));
+  expect(within(dialog).getByRole("status")).toHaveTextContent("₱155.13");
+  await user.click(none);
+  expect(
+    within(optional).getByRole("radio", { name: /Iced/ }),
+  ).not.toBeChecked();
+  expect(within(dialog).getByRole("status")).toHaveTextContent("₱150.11");
+  expect(
+    within(dialog).getByRole("button", { name: "Add to cart" }),
+  ).toBeEnabled();
+});
+it("supports optional ungrouped variants with a free default", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      ...details,
+      optionGroups: [],
+      variants: details.variants.map((variant) => ({
+        ...variant,
+        optionGroupId: null,
+      })),
+    },
+  });
+  setup();
+  const { user, dialog } = await openDetails();
+  const options = within(dialog).getByRole("group", {
+    name: "Options (optional)",
+  });
+  expect(within(options).getByRole("radio", { name: /Regular/ })).toBeChecked();
+  await user.click(within(options).getByRole("radio", { name: /Large/ }));
+  expect(within(dialog).getByRole("status")).toHaveTextContent("₱150.11");
+  await user.click(
+    within(options).getByRole("radio", { name: "No selection" }),
+  );
+  expect(within(dialog).getByRole("status")).toHaveTextContent("₱120.01");
+  expect(
+    within(dialog).getByRole("button", { name: "Add to cart" }),
+  ).toBeEnabled();
+});
+it("explains and blocks required groups without available variants", async () => {
+  vi.mocked(api.get).mockResolvedValue({ data: { ...details, variants: [] } });
+  setup();
+  const { dialog } = await openDetails();
+  const group = within(dialog).getByRole("group", { name: "Size (required)" });
+  expect(group).toHaveAccessibleDescription(
+    "No choices are currently available. This item cannot be added until a choice is available.",
+  );
+  expect(within(group).queryByRole("radio")).not.toBeInTheDocument();
+  expect(
+    within(dialog).getByRole("button", { name: "Add to cart" }),
+  ).toBeDisabled();
+  expect(api.post).not.toHaveBeenCalled();
+});
 it("keeps sold-out details inspectable without allowing cart additions", async () => {
   vi.mocked(api.get).mockResolvedValue({
     data: {
