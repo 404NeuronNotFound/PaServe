@@ -436,6 +436,8 @@ export interface AddOn {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  /** Included in the authorized shop catalog only; absent from public responses. */
+  assignedProducts?: Array<{ id: string; name: string; isArchived: boolean }>;
 }
 export interface AddOnResponse {
   addOn: AddOn;
