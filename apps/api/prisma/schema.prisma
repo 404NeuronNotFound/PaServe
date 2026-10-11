@@ -82,7 +82,7 @@ model Shop {
 model RestaurantTable {
   id        String   @id @default(uuid())
   shopId    String
-  number    Int
+  number    String   @db.VarChar(40)
   code      String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())

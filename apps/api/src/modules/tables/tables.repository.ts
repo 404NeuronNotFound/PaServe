@@ -16,7 +16,7 @@ const tableSelect = {
 export class TablesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(userId: string, shopId: string, number: number, code: string) {
+  create(userId: string, shopId: string, number: string, code: string) {
     // Conditional parent write repeats live access atomically with child creation.
     return this.prisma.shop.update({
       where: shopAccessWhere(userId, shopId, roles),

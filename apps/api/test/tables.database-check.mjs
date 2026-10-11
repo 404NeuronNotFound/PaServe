@@ -28,15 +28,15 @@ try {
     const b = await tx.shop.create({ data: { name: 'Table fixture B', slug: `tables-${randomUUID()}`, members: { create: { userId: user.id, role: 'ADMIN' } } } });
     const repository = new TablesRepository(tx);
     const service = new TablesService(repository, new ShopMembersService(new ShopMembersRepository(tx)));
-    const one = (await service.create(user.id, a.id, { number: 12 })).table;
-    const two = (await service.create(user.id, b.id, { number: 12 })).table;
+    const one = (await service.create(user.id, a.id, { number: '12' })).table;
+    const two = (await service.create(user.id, b.id, { number: '12' })).table;
     assert.notEqual(one.id, two.id);
     assert.equal(one.shopId, a.id); assert.equal(two.shopId, b.id);
     assert.equal(one.code, 'T12'); assert.equal(one.isActive, true);
-    assert.equal((await tx.restaurantTable.findUniqueOrThrow({ where: { id: one.id } })).number, 12);
-    await service.create(user.id, a.id, { number: 1 });
-    await service.create(user.id, a.id, { number: 9999 });
-    assert.deepEqual((await service.list(user.id, a.id)).tables.map(t => t.number), [1, 12, 9999]);
+    assert.equal((await tx.restaurantTable.findUniqueOrThrow({ where: { id: one.id } })).number, '12');
+    await service.create(user.id, a.id, { number: '1' });
+    await service.create(user.id, a.id, { number: '9999' });
+    assert.deepEqual((await service.list(user.id, a.id)).tables.map(t => t.number), ['1', '12', '9999']);
     assert.deepEqual((await service.list(user.id, b.id)).tables.map(t => t.id), [two.id]);
     const resources = new TenantResourcesRepository(tx);
     assert.equal(await resources.findResource(user.id, a.id, 'table', two.id), null);
@@ -48,21 +48,32 @@ try {
       await tx.$executeRaw`ROLLBACK TO SAVEPOINT table_denial`;
       await tx.$executeRaw`RELEASE SAVEPOINT table_denial`;
     }
-    await deny(() => service.create(user.id, a.id, { number: 12 }), { status: 409 });
-    await deny(() => tx.restaurantTable.create({ data: { shopId: a.id, number: 13, code: 'T12' } }), { code: 'P2002' });
-    await deny(() => tx.restaurantTable.create({ data: { shopId: a.id, number: 0, code: 'T0' } }), error => /constraint/i.test(error.message));
+    await deny(() => service.create(user.id, a.id, { number: '12' }), { status: 409 });
+    await deny(() => tx.restaurantTable.create({ data: { shopId: a.id, number: '13', code: 'T12' } }), { code: 'P2002' });
+    await deny(() => tx.restaurantTable.create({ data: { shopId: a.id, number: '', code: 'T-empty' } }), error => /constraint/i.test(error.message));
+    for (const number of ['A3', 'Patio 4', '012', '露台 4', 'x'.repeat(40)]) {
+      const saved = (await service.create(user.id, a.id, { number })).table;
+      assert.equal(saved.number, number);
+      assert.match(saved.code, /^[A-Za-z0-9-]+$/);
+      assert.equal((await tx.restaurantTable.findUniqueOrThrow({ where: { id: saved.id } })).number, number);
+    }
+    await deny(() => service.create(user.id, a.id, { number: 'a3' }), { status: 409 });
+    await deny(() => service.create(user.id, a.id, { number: ' Patio   4 ' }), { status: 409 });
+    const sameLabel = (await service.create(user.id, b.id, { number: 'Patio 4' })).table;
+    assert.equal(sameLabel.shopId, b.id);
+    assert.ok((await service.list(user.id, a.id)).tables.some(t => t.number === 'Patio 4'));
     for (const role of ['MANAGER', 'CASHIER', 'KITCHEN']) {
       await tx.shopMember.update({ where: { userId_shopId: { userId: user.id, shopId: a.id } }, data: { role } });
-      await assert.rejects(service.create(user.id, a.id, { number: 20 }), { status: 403 });
-      await deny(() => repository.create(user.id, a.id, 20, 'T20'), { code: 'P2025' });
+      await assert.rejects(service.create(user.id, a.id, { number: '20' }), { status: 403 });
+      await deny(() => repository.create(user.id, a.id, '20', 'T20'), { code: 'P2025' });
       assert.equal(await repository.list(user.id, a.id), null);
     }
     await tx.shop.update({ where: { id: b.id }, data: { isActive: false } });
-    await assert.rejects(service.create(user.id, b.id, { number: 20 }), { status: 404 });
-    await deny(() => repository.create(user.id, b.id, 20, 'T20'), { code: 'P2025' });
-    assert.equal(await tx.restaurantTable.count({ where: { shopId: a.id, number: 20 } }), 0);
+    await assert.rejects(service.create(user.id, b.id, { number: '20' }), { status: 404 });
+    await deny(() => repository.create(user.id, b.id, '20', 'T20'), { code: 'P2025' });
+    assert.equal(await tx.restaurantTable.count({ where: { shopId: a.id, number: '20' } }), 0);
     throw rollback;
   }, { timeout: 60000 }), error => error === rollback);
   assert.equal(await prisma.user.count({ where: { email } }), 0);
-  console.log('Live table checks passed: OWNER/ADMIN creation, persistence, per-shop uniqueness, number bounds, isolated lists/resources, role revocation, inactive shop denial and RLS. All fixtures rolled back.');
+  console.log('Live table checks passed: text labels, leading zeros, persistence, case-insensitive per-shop uniqueness, normalization, label bounds, isolated resources, OWNER/ADMIN access, role revocation, inactive-shop denial and RLS. All fixtures rolled back.');
 } finally { await prisma.$disconnect(); }
