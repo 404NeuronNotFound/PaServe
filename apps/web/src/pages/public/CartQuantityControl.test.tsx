@@ -65,6 +65,20 @@ it.each([1, 99])("disables the stepper at quantity boundary %s", (quantity) => {
   expect(screen.getByRole("button", { name: `${quantity === 1 ? "Decrease" : "Increase"} quantity for Coffee` })).toBeDisabled();
   expect(screen.getByRole("button", { name: "Update quantity for Coffee" })).toBeDisabled();
 });
+
+it("previews a typed quantity locally without changing saved totals or submitting prices", async () => {
+  setup();
+  const before = useCart.getState();
+  const user = userEvent.setup();
+  await user.clear(screen.getByRole("spinbutton"));
+  await user.type(screen.getByRole("spinbutton"), "3");
+  expect(screen.getByText(/Estimated total for 3:/)).toHaveTextContent("₱3.90");
+  expect(useCart.getState()).toBe(before);
+  expect(api.post).not.toHaveBeenCalled();
+  await user.clear(screen.getByRole("spinbutton"));
+  await user.type(screen.getByRole("spinbutton"), "0");
+  expect(screen.queryByText(/Estimated total for/)).not.toBeInTheDocument();
+});
 it("preserves the saved item and typed quantity after failure and allows retry", async () => {
   setup();
   const before = useCart.getState();

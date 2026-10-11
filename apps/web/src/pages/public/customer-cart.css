@@ -226,6 +226,22 @@
   min-width: 0;
   flex: 1;
 }
+.customer-cart-summary {
+  flex: 1;
+  min-width: 0;
+}
+.customer-cart-summary .field-hint {
+  margin: 8px 0 0;
+  max-width: 38ch;
+  overflow-wrap: anywhere;
+}
+.customer-cart-draft-preview {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+.customer-cart-draft-preview > span {
+  display: block;
+}
 .customer-cart-total > span {
   font-size: 12px;
   color: var(--color-muted);

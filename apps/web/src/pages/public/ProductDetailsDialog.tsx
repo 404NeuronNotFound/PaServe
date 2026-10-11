@@ -11,7 +11,7 @@ import {
 } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import { formatCartPrice, formatProductPrice } from "../../lib/money";
-import { createCartPricePreview, useCart } from "../../features/cart/cart";
+import { createCartPricePreview, PRICE_PREVIEW_NOTICE, useCart } from "../../features/cart/cart";
 import { feedback } from "../../app/stores/feedback";
 import { CustomerDialog } from "./CustomerDialog";
 import {
@@ -452,6 +452,7 @@ function ProductDetailsForm({
             <span>Estimated total</span>{" "}
             <strong>{total ? formatCartPrice(total) : "—"}</strong>
           </p>
+          <p className="field-hint">{PRICE_PREVIEW_NOTICE}</p>
           {!complete && isOrderable && (
             <p className="field-hint">
               Choose the required options to continue.

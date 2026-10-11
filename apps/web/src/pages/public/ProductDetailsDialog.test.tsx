@@ -199,6 +199,7 @@ it("adds a server-quoted customized item and allows cart review/removal", async 
   await user.type(within(dialog).getByLabelText(/Quantity/), "2");
   await user.type(within(dialog).getByLabelText(/Notes/), "<b>No sugar</b>");
   expect(within(dialog).getByRole("status")).toHaveTextContent("₱350.62");
+  expect(within(dialog).getByText("Prices are estimates. Final prices will be recalculated when you submit your order.")).toBeInTheDocument();
   await user.click(within(dialog).getByRole("button", { name: "Add to cart" }));
   expect(api.post).toHaveBeenCalledWith("/menu/cafe/products/product/quote", {
     variantIds: ["large"],
@@ -231,6 +232,8 @@ it("adds a server-quoted customized item and allows cart review/removal", async 
   );
   const cart = screen.getByRole("dialog", { name: "Cafe cart" });
   expect(within(cart).getByRole("status")).toHaveTextContent("₱350.64");
+  expect(within(cart).getByRole("status")).toHaveTextContent("Estimated subtotal");
+  expect(within(cart).getByText("Prices are estimates. Final prices will be recalculated when you submit your order.")).toBeInTheDocument();
   expect(within(cart).getByText("<b>No sugar</b>")).toBeInTheDocument();
   expect(cart.querySelector("b")).toBeNull();
   expect(within(cart).getByText("Large, Oat milk")).toBeInTheDocument();

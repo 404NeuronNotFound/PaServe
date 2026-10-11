@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FiArrowRight, FiShoppingBag, FiTrash2 } from "react-icons/fi";
 import type { PublicMenuResponse } from "@paserve/contracts";
-import { cartItemsForShop, sumPrices, useCart } from "../../features/cart/cart";
+import { cartItemsForShop, PRICE_PREVIEW_NOTICE, sumPrices, useCart } from "../../features/cart/cart";
 import { formatCartPrice } from "../../lib/money";
 import { CustomerDialog } from "./CustomerDialog";
 import { CartQuantityControl } from "./CartQuantityControl";
@@ -38,7 +38,7 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
           {count}
         </span>
         {!!count && (
-          <strong aria-hidden="true">
+          <strong aria-hidden="true" title="Estimated subtotal">
             {formatCartPrice(sumPrices(items.map((item) => item.totalPrice)))}
           </strong>
         )}
@@ -79,6 +79,7 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
                   <div className="customer-cart-line-heading">
                     <h3>{item.productName}</h3>
                     <strong className="customer-cart-line-total">
+                      <span className="sr-only">Estimated line total </span>
                       {formatCartPrice(item.totalPrice)}
                     </strong>
                   </div>
@@ -114,14 +115,17 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
             </ul>
           </div>
           <footer className="customer-dialog-footer">
-            <p role="status" className="customer-cart-total">
-              <span>Total</span>{" "}
-              <strong>
-                {formatCartPrice(
-                  sumPrices(items.map((item) => item.totalPrice)),
-                )}
-              </strong>
-            </p>
+            <div className="customer-cart-summary">
+              <p role="status" className="customer-cart-total">
+                <span>Estimated subtotal</span>{" "}
+                <strong>
+                  {formatCartPrice(
+                    sumPrices(items.map((item) => item.totalPrice)),
+                  )}
+                </strong>
+              </p>
+              <p className="field-hint">{PRICE_PREVIEW_NOTICE}</p>
+            </div>
             {!!items.length && (
               <button
                 type="button"

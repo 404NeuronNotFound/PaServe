@@ -15,6 +15,9 @@ export interface CartItem extends ProductSelectionQuoteResponse {
   pricePreview: CartPricePreview | null;
 }
 
+export const PRICE_PREVIEW_NOTICE =
+  "Prices are estimates. Final prices will be recalculated when you submit your order.";
+
 // Independent of option order, display names, current prices, and quantity.
 export function cartVariantKey(
   selection: Pick<ProductSelectionQuoteResponse, "productId" | "variants">,

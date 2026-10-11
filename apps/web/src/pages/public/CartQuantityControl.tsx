@@ -9,6 +9,7 @@ import {
 } from "../../features/cart/cart";
 import { api } from "../../lib/api/client";
 import { feedback } from "../../app/stores/feedback";
+import { formatCartPrice } from "../../lib/money";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 
 export function CartQuantityControl({
@@ -34,6 +35,9 @@ export function CartQuantityControl({
   const count = Number(draft);
   const valid =
     /^\d+$/.test(draft) && Number.isInteger(count) && count >= 1 && count <= 99;
+  const draftPreview = valid && count !== item.quantity
+    ? createCartPricePreview({ ...item, quantity: count })
+    : undefined;
 
   async function update(quantity: number) {
     if (
@@ -135,6 +139,12 @@ export function CartQuantityControl({
         </button>
       </fieldset>
       <p id={`${id}-hint`} className="field-hint">1–99 per line. Use Remove to delete this item.</p>
+      {draftPreview && (
+        <p className="customer-cart-draft-preview" aria-live="polite">
+          Estimated total for {count}: <strong>{formatCartPrice(draftPreview.totalPrice)}</strong>
+          <span className="field-hint">Updates after price and availability are checked.</span>
+        </p>
+      )}
       {!valid && (
         <InlineMessage id={`${id}-invalid`} tone="error">
           Choose a whole number from 1 to 99.

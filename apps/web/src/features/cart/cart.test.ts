@@ -23,6 +23,29 @@ const quote: ProductSelectionQuoteResponse = {
   addOns: [],
 };
 
+it("calculates an exact estimate from base, all variant/add-on adjustments and quantity", () => {
+  const selection = {
+    ...quote,
+    basePrice: "120.01",
+    quantity: 3,
+    variants: [
+      { id: "large", name: "Large", optionGroupId: "size", isDefault: false, priceAdjustment: "30.10" },
+      { id: "iced", name: "Iced", optionGroupId: "temperature", isDefault: false, priceAdjustment: "0.00" },
+    ],
+    addOns: [
+      { id: "milk", name: "Milk", priceAdjustment: "25.20" },
+      { id: "free", name: "Free", priceAdjustment: "0.00" },
+    ],
+  };
+  expect(createCartPricePreview(selection)).toEqual({
+    source: "client", currency: "PHP", basePrice: "120.01",
+    variantAdjustment: "30.10", addOnAdjustment: "25.20",
+    unitPrice: "175.31", totalPrice: "525.93", quantity: 3,
+  });
+  expect(createCartPricePreview({ ...quote, basePrice: "0.01", quantity: 99 }).totalPrice).toBe("0.99");
+  expect(createCartPricePreview({ ...quote, basePrice: "0.00", quantity: 99 }).totalPrice).toBe("0.00");
+});
+
 it("identifies variant selections by product and IDs, independent of price, names and order", () => {
   const variants: ProductSelectionQuoteResponse["variants"] = [
     { id: "large", name: "Large", optionGroupId: "size", isDefault: false, priceAdjustment: "0.10" },
