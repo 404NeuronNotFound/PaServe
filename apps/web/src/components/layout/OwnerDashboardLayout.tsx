@@ -35,6 +35,7 @@ import { AppearanceToggle } from "./AppearanceToggle";
 import { InlineMessage } from "../feedback/InlineMessage";
 import { feedback } from "../../app/stores/feedback";
 import "./dashboard-sidebar.css";
+import "./dashboard-header.css";
 
 export function OwnerDashboardLayout() {
   const membership = useActiveShop();
@@ -127,7 +128,7 @@ export function DashboardFrame({
       <a className="skip-link" href="#dashboard-content">
         Skip to page content
       </a>
-      <header className="workspace-header dashboard-header">
+      <header className="workspace-header dashboard-header dashboard-header-compact">
         <Link className="wordmark" to="/app">
           <span className="brand-symbol">
             <FiCoffee aria-hidden="true" />
@@ -184,12 +185,18 @@ export function DashboardFrame({
               </div>
             </details>
           ) : (
-            <>
-              <span className="section-label">
-                {membership ? "ACTIVE SHOP" : "SHOP WORKSPACE"}
+            <div className="dashboard-shop-static">
+              {membership && (
+                <ShopLogo
+                  url={membership.shop.logoUrl}
+                  name={membership.shop.name}
+                />
+              )}
+              <span className="dashboard-switcher-label">
+                <span>{membership ? "Active shop" : "Shop workspace"}</span>
+                <strong>{membership?.shop.name ?? "Choose a shop"}</strong>
               </span>
-              <strong>{membership?.shop.name ?? "Choose a shop"}</strong>
-            </>
+            </div>
           )}
         </div>
         <div className="header-actions">
