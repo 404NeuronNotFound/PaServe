@@ -10,6 +10,12 @@ const peso = new Intl.NumberFormat("en-PH", {
 /** Format exact decimal strings without converting monetary values to floats. */
 export function formatProductPrice(value: string): string {
   if (!PRODUCT_PRICE_PATTERN.test(value)) return "—";
+  return formatCartPrice(value);
+}
+
+/** Combined totals may exceed the storage limit for a single product price. */
+export function formatCartPrice(value: string): string {
+  if (!/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(value)) return "—";
   const [whole, fraction = ""] = value.split(".");
   return peso
     .formatToParts(BigInt(whole))

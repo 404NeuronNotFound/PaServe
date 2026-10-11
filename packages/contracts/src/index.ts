@@ -593,3 +593,28 @@ export interface PublicMenuResponse {
     featuredSortOrder?: number;
   }>;
 }
+
+export interface PublicProductDetailsResponse {
+  product: PublicMenuResponse["products"][number];
+  optionGroups: Array<Pick<ProductOptionGroup, "id" | "name" | "isRequired">>;
+  variants: Array<Pick<ProductVariant, "id" | "optionGroupId" | "name" | "priceAdjustment" | "isDefault">>;
+  addOns: PublicAddOn[];
+}
+export interface ProductSelectionRequest {
+  variantIds: string[];
+  addOnIds: string[];
+  quantity: number;
+  notes?: string;
+}
+export interface ProductSelectionQuoteResponse {
+  productId: string;
+  productName: string;
+  currency: typeof PRODUCT_CURRENCY;
+  basePrice: string;
+  unitPrice: string;
+  totalPrice: string;
+  quantity: number;
+  notes?: string;
+  variants: PublicProductDetailsResponse["variants"];
+  addOns: PublicAddOn[];
+}

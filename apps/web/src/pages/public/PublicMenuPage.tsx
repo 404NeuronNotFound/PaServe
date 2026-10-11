@@ -46,5 +46,5 @@ export function PublicMenuPage() {
         </button>
       </main>
     );
-  return <PublicMenuView menu={menu.data} />;
+  return <PublicMenuView key={shopSlug} menu={menu.data} />;
 }

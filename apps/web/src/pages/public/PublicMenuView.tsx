@@ -1,4 +1,7 @@
 import type { PublicMenuResponse } from "@paserve/contracts";
+import { useState } from "react";
+import { ProductDetailsDialog } from "./ProductDetailsDialog";
+import { CustomerCart } from "./CustomerCart";
 import { isMenuLayout, DEFAULT_MENU_LAYOUT } from "@paserve/contracts";
 import { formatProductPrice } from "../../lib/money";
 import { menuTheme } from "../../lib/menu-theme";
@@ -16,6 +19,8 @@ export function PublicMenuView({
 }) {
   const Root = preview ? "div" : "main";
   const { shop, categories, products, featuredProducts } = menu;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = products.find((product) => product.id === selectedId);
   return (
     <Root
       className="public-menu"
@@ -35,9 +40,14 @@ export function PublicMenuView({
         </div>
         {!preview && <AppearanceToggle />}
       </header>
+      {!preview && <CustomerCart key={shop.slug} shop={shop} />}
       {!products.length && <p>No items are available on this menu yet.</p>}
       {!!featuredProducts.length && (
-        <MenuSection title="Featured" products={featuredProducts} />
+        <MenuSection
+          title="Featured"
+          products={featuredProducts}
+          onSelect={setSelectedId}
+        />
       )}
       {categories.map((category) => {
         const items = products.filter(
@@ -49,6 +59,7 @@ export function PublicMenuView({
             title={category.name}
             description={category.description}
             products={items}
+            onSelect={setSelectedId}
           />
         ) : null;
       })}
@@ -56,6 +67,16 @@ export function PublicMenuView({
         <MenuSection
           title="Uncategorized"
           products={products.filter((product) => product.categoryId === null)}
+          onSelect={setSelectedId}
+        />
+      )}
+      {selected && (
+        <ProductDetailsDialog
+          key={`${shop.slug}-${selected.id}`}
+          shop={shop}
+          product={selected}
+          preview={preview}
+          onClose={() => setSelectedId(null)}
         />
       )}
     </Root>
@@ -66,10 +87,12 @@ function MenuSection({
   title,
   description,
   products,
+  onSelect,
 }: {
   title: string;
   description?: string | null;
   products: PublicMenuResponse["products"];
+  onSelect: (id: string) => void;
 }) {
   return (
     <section className="public-menu-section" aria-label={title}>
@@ -83,6 +106,14 @@ function MenuSection({
             )}
             <div>
               <h3>{product.name}</h3>
+              <button
+                type="button"
+                className="menu-product-details-button"
+                aria-label={`View details for ${product.name}`}
+                onClick={() => onSelect(product.id)}
+              >
+                View details
+              </button>
               {product.description && <p>{product.description}</p>}
               {product.isFeatured && (
                 <span className="menu-accent-badge">Featured</span>

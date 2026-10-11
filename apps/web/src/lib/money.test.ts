@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { formatProductPrice } from "./money";
+import { formatCartPrice, formatProductPrice } from "./money";
 
 it.each([
   ["0", "₱0.00"],
@@ -17,3 +17,8 @@ it.each(["-1", "NaN", "Infinity", "1e2", "1.001", "100000000", "", "01"])(
     expect(formatProductPrice(value)).toBe("—");
   },
 );
+it("formats combined totals above the per-product storage limit exactly", () => {
+  expect(formatCartPrice("9899999999.01")).toBe("₱9,899,999,999.01");
+  expect(formatProductPrice("9899999999.01")).toBe("—");
+  expect(formatCartPrice("1e9")).toBe("—");
+});
