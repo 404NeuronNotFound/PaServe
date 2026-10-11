@@ -254,6 +254,63 @@ it("replaces variant surcharges and multiplies the preview by quantity", async (
   expect(large).not.toBeChecked();
   expect(total).toHaveTextContent("₱360.03");
 });
+it("steps quantity within its limits and keeps exact totals", async () => {
+  setup();
+  const { user, dialog } = await openDetails();
+  const quantity = within(dialog).getByLabelText("Quantity");
+  const decrease = within(dialog).getByRole("button", {
+    name: "Decrease quantity",
+  });
+  const increase = within(dialog).getByRole("button", {
+    name: "Increase quantity",
+  });
+  expect(decrease).toBeDisabled();
+  await user.click(increase);
+  expect(quantity).toHaveValue(2);
+  expect(within(dialog).getByRole("status")).toHaveTextContent("₱240.02");
+  await user.click(decrease);
+  expect(quantity).toHaveValue(1);
+  await user.clear(quantity);
+  await user.type(quantity, "99");
+  expect(increase).toBeDisabled();
+  await user.clear(quantity);
+  expect(increase).toBeDisabled();
+  expect(decrease).toBeDisabled();
+  expect(
+    within(dialog).getByRole("button", { name: "Add to cart" }),
+  ).toBeDisabled();
+  expect(api.post).not.toHaveBeenCalled();
+});
+it("explains included choices, free extras and a missing required selection", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      ...details,
+      variants: details.variants.map((variant) => ({
+        ...variant,
+        isDefault: false,
+      })),
+      addOns: [{ id: "no-sugar", name: "No sugar", priceAdjustment: "0.00" }],
+    },
+  });
+  setup();
+  const { user, dialog } = await openDetails();
+  expect(
+    within(dialog).getByRole("radio", { name: /Regular/ }),
+  ).toHaveAccessibleName("Regular Included");
+  expect(
+    within(dialog).getByRole("checkbox", { name: /No sugar/ }),
+  ).toHaveAccessibleName("No sugar Free");
+  expect(
+    within(dialog).getByText("Choose the required options to continue."),
+  ).toBeInTheDocument();
+  await user.click(within(dialog).getByRole("radio", { name: /Regular/ }));
+  expect(
+    within(dialog).queryByText("Choose the required options to continue."),
+  ).not.toBeInTheDocument();
+  expect(
+    within(dialog).getByRole("button", { name: "Add to cart" }),
+  ).toBeEnabled();
+});
 it("combines independent groups and allows clearing an optional choice", async () => {
   vi.mocked(api.get).mockResolvedValue({
     data: {
@@ -361,7 +418,7 @@ it("renders allowed paid and free add-ons and removes deselected price deltas", 
   const shot = within(group).getByRole("checkbox", { name: /Extra shot/ });
   const free = within(group).getByRole("checkbox", { name: /No sugar/ });
   expect(milk).toHaveAccessibleName("Oat milk +₱25.20");
-  expect(free).toHaveAccessibleName("No sugar +₱0.00");
+  expect(free).toHaveAccessibleName("No sugar Free");
   expect(within(group).getAllByRole("checkbox")).toHaveLength(3);
   expect(milk).not.toBeChecked();
   await user.click(milk);

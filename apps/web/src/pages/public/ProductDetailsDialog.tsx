@@ -14,6 +14,14 @@ import { formatCartPrice, formatProductPrice } from "../../lib/money";
 import { sumPrices, useCart } from "../../features/cart/cart";
 import { feedback } from "../../app/stores/feedback";
 import { CustomerDialog } from "./CustomerDialog";
+import {
+  FiCoffee,
+  FiMinus,
+  FiPlus,
+  FiShoppingBag,
+  FiSlash,
+} from "react-icons/fi";
+import "./product-details.css";
 
 export function ProductDetailsDialog({
   shop,
@@ -45,6 +53,8 @@ export function ProductDetailsDialog({
     <CustomerDialog
       title={details.data?.product.name ?? product.name}
       shop={shop}
+      className="product-details-dialog"
+      eyebrow="Menu item"
       onClose={onClose}
       pending={
         pendingVersion === details.dataUpdatedAt &&
@@ -206,24 +216,42 @@ function ProductDetailsForm({
       }}
     >
       <div className="customer-dialog-body">
-        {product.imageUrl && !failedImage && (
-          <img
-            className="product-details-image"
-            src={product.imageUrl}
-            alt={product.name}
-            onError={() => setFailedImage(true)}
-          />
-        )}
-        {product.description && (
-          <p className="product-details-description">{product.description}</p>
-        )}
-        <p className="product-details-price">
-          Base price <strong>{formatProductPrice(product.price)}</strong>
-        </p>
+        <div className="product-details-summary">
+          {product.imageUrl && !failedImage ? (
+            <img
+              className="product-details-image"
+              src={product.imageUrl}
+              alt={product.name}
+              onError={() => setFailedImage(true)}
+            />
+          ) : (
+            <div className="product-details-placeholder" aria-hidden="true">
+              <FiCoffee />
+            </div>
+          )}
+          <div className="product-details-intro">
+            <p className="product-details-price">
+              <span>Starting price</span>{" "}
+              <strong>{formatProductPrice(product.price)}</strong>
+            </p>
+            {product.description && (
+              <p className="product-details-description">
+                {product.description}
+              </p>
+            )}
+            <p className="field-hint">
+              {groups.length || addOns.length
+                ? "Your choices, made your way."
+                : "Ready just as it is."}
+            </p>
+          </div>
+        </div>
         {!isOrderable && (
-          <p role="status">
-            Sold out — you can view this item, but it cannot be added to your
-            cart.
+          <p role="status" className="product-stock-message">
+            <FiSlash aria-hidden="true" />
+            {product.status === "SOLD_OUT" ? "Sold out" : "Unavailable"} — you
+            can explore this item, but it cannot be added to your cart right
+            now.
           </p>
         )}
         <fieldset
@@ -242,7 +270,10 @@ function ProductDetailsForm({
                 aria-describedby={`${prefix}-${group.id}-hint`}
               >
                 <legend>
-                  {group.name} {group.isRequired ? "(required)" : "(optional)"}
+                  {group.name}{" "}
+                  <span className="product-choice-badge">
+                    {group.isRequired ? "(required)" : "(optional)"}
+                  </span>
                 </legend>
                 <p id={`${prefix}-${group.id}-hint`} className="field-hint">
                   {!options.length
@@ -277,9 +308,11 @@ function ProductDetailsForm({
                       }
                       required={group.isRequired}
                     />
-                    <span>{option.name}</span>
+                    <span>{option.name}</span>{" "}
                     <strong>
-                      +{formatProductPrice(option.priceAdjustment)}
+                      {Number(option.priceAdjustment) === 0
+                        ? "Included"
+                        : `+${formatProductPrice(option.priceAdjustment)}`}
                     </strong>
                   </label>
                 ))}
@@ -291,7 +324,9 @@ function ProductDetailsForm({
               className="product-option-group"
               aria-describedby={`${prefix}-addons-hint`}
             >
-              <legend>Add-ons (optional)</legend>
+              <legend>
+                Add-ons <span className="product-choice-badge">(optional)</span>
+              </legend>
               <p id={`${prefix}-addons-hint`} className="field-hint">
                 {addOns.length > ADD_ON_LIMITS.selectionMax
                   ? `Choose up to ${ADD_ON_LIMITS.selectionMax} extras. ${selectedAddOns.length} selected. Each applies once per item.`
@@ -317,7 +352,11 @@ function ProductDetailsForm({
                     }
                   />
                   <span>{option.name}</span>{" "}
-                  <strong>+{formatProductPrice(option.priceAdjustment)}</strong>
+                  <strong>
+                    {Number(option.priceAdjustment) === 0
+                      ? "Free"
+                      : `+${formatProductPrice(option.priceAdjustment)}`}
+                  </strong>
                 </label>
               ))}
             </fieldset>
@@ -325,48 +364,71 @@ function ProductDetailsForm({
           {!groups.length && !addOns.length && (
             <p>No additional options for this item.</p>
           )}
-          <label className="field" htmlFor={`${prefix}-quantity`}>
-            Quantity
-            <input
-              id={`${prefix}-quantity`}
-              type="number"
-              inputMode="numeric"
-              min="1"
-              max="99"
-              step="1"
-              value={quantity}
-              onChange={(event) => setQuantity(event.target.value)}
-              aria-invalid={!validQuantity}
-              aria-describedby={
-                !validQuantity ? `${prefix}-quantity-error` : undefined
-              }
-            />
-          </label>
+          <div className="field product-quantity-field">
+            <label htmlFor={`${prefix}-quantity`}>Quantity</label>
+            <div className="product-quantity-stepper">
+              <button
+                type="button"
+                aria-label="Decrease quantity"
+                disabled={!validQuantity || count <= 1}
+                onClick={() => setQuantity(String(count - 1))}
+              >
+                <FiMinus aria-hidden="true" />
+              </button>
+              <input
+                id={`${prefix}-quantity`}
+                type="number"
+                inputMode="numeric"
+                min="1"
+                max="99"
+                step="1"
+                value={quantity}
+                onChange={(event) => setQuantity(event.target.value)}
+                aria-invalid={!validQuantity}
+                aria-describedby={
+                  !validQuantity ? `${prefix}-quantity-error` : undefined
+                }
+              />
+              <button
+                type="button"
+                aria-label="Increase quantity"
+                disabled={!validQuantity || count >= 99}
+                onClick={() => setQuantity(String(count + 1))}
+              >
+                <FiPlus aria-hidden="true" />
+              </button>
+            </div>
+          </div>
           {!validQuantity && (
             <p id={`${prefix}-quantity-error`} role="alert">
               Choose a quantity from 1 to 99.
             </p>
           )}
-          <label className="field" htmlFor={`${prefix}-notes`}>
-            Notes (optional)
+          <div className="field product-notes-field">
+            <label htmlFor={`${prefix}-notes`}>Notes (optional)</label>
             <textarea
               id={`${prefix}-notes`}
-              rows={3}
+              rows={2}
+              placeholder="e.g. Less ice, no onions…"
               maxLength={CUSTOMER_NOTE_MAX_LENGTH}
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               aria-invalid={!validNotes}
-              aria-describedby={`${prefix}-notes-hint`}
+              aria-describedby={`${prefix}-notes-hint${!validNotes ? ` ${prefix}-notes-error` : ""}`}
             />
-          </label>
-          <p id={`${prefix}-notes-hint`} className="field-hint">
-            Preparation requests · {notes.length}/{CUSTOMER_NOTE_MAX_LENGTH}
-          </p>
-          {!validNotes && (
-            <p role="alert">
-              Use plain text without unsupported control characters.
+            <p id={`${prefix}-notes-hint`} className="field-hint">
+              Preparation requests · {notes.length}/{CUSTOMER_NOTE_MAX_LENGTH}
             </p>
-          )}
+            {!validNotes && (
+              <p
+                id={`${prefix}-notes-error`}
+                className="field-error"
+                role="alert"
+              >
+                Use plain text without unsupported control characters.
+              </p>
+            )}
+          </div>
         </fieldset>
         {error && (
           <div>
@@ -387,10 +449,17 @@ function ProductDetailsForm({
         )}
       </div>
       <footer className="customer-dialog-footer">
-        <p role="status">
-          Estimated total{" "}
-          <strong>{total ? formatCartPrice(total) : "—"}</strong>
-        </p>
+        <div className="product-details-total">
+          <p role="status">
+            <span>Estimated total</span>{" "}
+            <strong>{total ? formatCartPrice(total) : "—"}</strong>
+          </p>
+          {!complete && isOrderable && (
+            <p className="field-hint">
+              Choose the required options to continue.
+            </p>
+          )}
+        </div>
         <button
           className="primary-button"
           type="submit"
@@ -403,6 +472,7 @@ function ProductDetailsForm({
             !validNotes
           }
         >
+          <FiShoppingBag aria-hidden="true" />
           {pending ? "Adding…" : "Add to cart"}
         </button>
       </footer>
