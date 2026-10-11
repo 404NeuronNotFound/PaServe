@@ -295,6 +295,22 @@ describe('public product details and selection quotes', () => {
       .send({ variantIds: [regularId], addOnIds: [], quantity: 1 })
       .expect(404);
   });
+  it('rejects a product that sells out after details were loaded', async () => {
+    const initial = await request(app.getHttpServer()).get(path).expect(200);
+    expect(initial.body.product.isOrderable).toBe(true);
+    product.mockResolvedValue({ ...fixture(), status: 'SOLD_OUT' });
+    const rejected = await request(app.getHttpServer())
+      .post(`${path}/quote`)
+      .send({ variantIds: [regularId], addOnIds: [addOnId], quantity: 1 })
+      .expect(404);
+    expect(rejected.body.code).toBe('PRODUCT_NOT_AVAILABLE');
+    expect(product).toHaveBeenCalledTimes(2);
+    const refreshed = await request(app.getHttpServer()).get(path).expect(200);
+    expect(refreshed.body.product).toMatchObject({
+      status: 'SOLD_OUT',
+      isOrderable: false,
+    });
+  });
   it('does not expose missing, hidden, archived, or foreign products', async () => {
     product.mockResolvedValue(null);
     const response = await request(app.getHttpServer()).get(path).expect(404);

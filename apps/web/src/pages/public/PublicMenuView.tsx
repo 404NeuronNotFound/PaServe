@@ -1,5 +1,5 @@
 import type { PublicMenuResponse } from "@paserve/contracts";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { ProductDetailsDialog } from "./ProductDetailsDialog";
 import { CustomerCart } from "./CustomerCart";
 import { isMenuLayout, DEFAULT_MENU_LAYOUT } from "@paserve/contracts";
@@ -94,6 +94,7 @@ function MenuSection({
   products: PublicMenuResponse["products"];
   onSelect: (id: string) => void;
 }) {
+  const statusPrefix = useId();
   return (
     <section className="public-menu-section" aria-label={title}>
       <h2>{title}</h2>
@@ -110,6 +111,11 @@ function MenuSection({
                 type="button"
                 className="menu-product-details-button"
                 aria-label={`View details for ${product.name}`}
+                aria-describedby={
+                  product.status === "SOLD_OUT"
+                    ? `${statusPrefix}-${product.id}-sold-out`
+                    : undefined
+                }
                 onClick={() => onSelect(product.id)}
               >
                 View details
@@ -119,7 +125,12 @@ function MenuSection({
                 <span className="menu-accent-badge">Featured</span>
               )}
               {product.status === "SOLD_OUT" && (
-                <span className="menu-accent-badge">Sold out</span>
+                <span
+                  className="menu-accent-badge"
+                  id={`${statusPrefix}-${product.id}-sold-out`}
+                >
+                  Sold out
+                </span>
               )}
             </div>
             <strong>{formatProductPrice(product.price)}</strong>

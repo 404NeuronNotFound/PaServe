@@ -501,6 +501,103 @@ it("keeps sold-out details inspectable without allowing cart additions", async (
     "Sold out",
   );
 });
+it.each(["grid", "list", "compact"] as const)(
+  "keeps sold-out products visible and described in featured and ordinary %s sections",
+  async (layout) => {
+    const soldOut = {
+      ...product,
+      status: "SOLD_OUT" as const,
+      isOrderable: false,
+      isFeatured: true,
+    };
+    vi.mocked(api.get).mockResolvedValue({
+      data: { ...details, product: soldOut },
+    });
+    setup({
+      ...menu,
+      shop: { ...menu.shop, menuLayout: layout },
+      products: [soldOut],
+      featuredProducts: [soldOut],
+    });
+    for (const name of ["Featured", "Uncategorized"]) {
+      const section = screen.getByRole("region", { name });
+      expect(within(section).getByText("Sold out")).toBeInTheDocument();
+      expect(
+        within(section).getByRole("heading", { name: "Coffee" }),
+      ).toBeInTheDocument();
+      expect(
+        within(section).getByRole("button", {
+          name: "View details for Coffee",
+        }),
+      ).toHaveAccessibleDescription("Sold out");
+    }
+    await userEvent
+      .setup()
+      .click(
+        within(screen.getByRole("region", { name: "Featured" })).getByRole(
+          "button",
+          { name: "View details for Coffee" },
+        ),
+      );
+    const dialog = screen.getByRole("dialog", { name: "Coffee" });
+    await within(dialog).findByLabelText(/Quantity/);
+    expect(
+      within(dialog).getByRole("button", { name: "Add to cart" }),
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole("checkbox", { name: /Oat milk/ }),
+    ).toBeDisabled();
+    fireEvent.submit(dialog.querySelector("form")!);
+    expect(api.post).not.toHaveBeenCalled();
+    expect(useCart.getState().shops).toEqual({});
+  },
+);
+it("blocks sold-out status even if an inconsistent orderable flag is returned", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      ...details,
+      product: { ...product, status: "SOLD_OUT", isOrderable: true },
+    },
+  });
+  setup();
+  const { dialog } = await openDetails();
+  expect(
+    within(dialog).getByRole("button", { name: "Add to cart" }),
+  ).toBeDisabled();
+  fireEvent.submit(dialog.querySelector("form")!);
+  expect(api.post).not.toHaveBeenCalled();
+});
+it("keeps the cart unchanged when an item sells out and refreshes to blocked details", async () => {
+  vi.mocked(api.get)
+    .mockResolvedValueOnce({ data: details })
+    .mockResolvedValueOnce({
+      data: {
+        ...details,
+        product: { ...product, status: "SOLD_OUT", isOrderable: false },
+      },
+    });
+  vi.mocked(api.post).mockRejectedValue(
+    new Error("This product is unavailable."),
+  );
+  setup();
+  const { user, dialog } = await openDetails();
+  await user.click(within(dialog).getByRole("button", { name: "Add to cart" }));
+  await within(dialog).findByRole("alert");
+  expect(useCart.getState().shops).toEqual({});
+  await user.click(
+    within(dialog).getByRole("button", { name: "Refresh details" }),
+  );
+  await within(dialog).findByLabelText(/Quantity/);
+  expect(
+    within(dialog).getByRole("button", { name: "Add to cart" }),
+  ).toBeDisabled();
+  expect(within(dialog).getByLabelText(/Quantity/)).toBeDisabled();
+  expect(within(dialog).getAllByRole("status")[0]).toHaveTextContent(
+    "Sold out",
+  );
+  expect(api.post).toHaveBeenCalledTimes(1);
+  expect(useCart.getState().shops).toEqual({});
+});
 it("handles failed image loading and quote errors without losing the draft", async () => {
   vi.mocked(api.post).mockRejectedValue(new Error("Unavailable"));
   setup();

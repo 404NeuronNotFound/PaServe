@@ -93,6 +93,7 @@ function ProductDetailsForm({
   onRefresh: () => void;
 }) {
   const { product, optionGroups, variants, addOns } = data;
+  const isOrderable = product.status === "AVAILABLE" && product.isOrderable;
   const [choices, setChoices] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       variants
@@ -154,7 +155,7 @@ function ProductDetailsForm({
       !validQuantity ||
       !validNotes ||
       !complete ||
-      !product.isOrderable ||
+      !isOrderable ||
       preview
     )
       return;
@@ -213,7 +214,7 @@ function ProductDetailsForm({
         <p className="product-details-price">
           Base price <strong>{formatProductPrice(product.price)}</strong>
         </p>
-        {!product.isOrderable && (
+        {!isOrderable && (
           <p role="status">
             Sold out — you can view this item, but it cannot be added to your
             cart.
@@ -221,7 +222,7 @@ function ProductDetailsForm({
         )}
         <fieldset
           className="product-details-controls"
-          disabled={pending || !product.isOrderable}
+          disabled={pending || !isOrderable}
         >
           <legend className="sr-only">Customize your item</legend>
           {groups.map((group) => {
@@ -390,7 +391,7 @@ function ProductDetailsForm({
           disabled={
             pending ||
             preview ||
-            !product.isOrderable ||
+            !isOrderable ||
             !complete ||
             !validQuantity ||
             !validNotes
