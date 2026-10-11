@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  ADD_ON_LIMITS,
   CUSTOMER_NOTE_MAX_LENGTH,
   CUSTOMER_NOTE_PATTERN,
   normalizeCustomerNote,
@@ -279,22 +280,36 @@ function ProductDetailsForm({
             );
           })}
           {!!addOns.length && (
-            <fieldset className="product-option-group">
+            <fieldset
+              className="product-option-group"
+              aria-describedby={`${prefix}-addons-hint`}
+            >
               <legend>Add-ons (optional)</legend>
+              <p id={`${prefix}-addons-hint`} className="field-hint">
+                {addOns.length > ADD_ON_LIMITS.selectionMax
+                  ? `Choose up to ${ADD_ON_LIMITS.selectionMax} extras. ${selectedAddOns.length} selected. Each applies once per item.`
+                  : "Choose any extras. Each applies once per item."}
+              </p>
               {addOns.map((option) => (
                 <label className="product-option" key={option.id}>
                   <input
                     type="checkbox"
                     checked={selectedAddOns.includes(option.id)}
+                    disabled={
+                      !selectedAddOns.includes(option.id) &&
+                      selectedAddOns.length >= ADD_ON_LIMITS.selectionMax
+                    }
                     onChange={(event) =>
                       setAddOns(
                         event.target.checked
-                          ? [...selectedAddOns, option.id]
+                          ? selectedAddOns.length < ADD_ON_LIMITS.selectionMax
+                            ? [...selectedAddOns, option.id]
+                            : selectedAddOns
                           : selectedAddOns.filter((id) => id !== option.id),
                       )
                     }
                   />
-                  <span>{option.name}</span>
+                  <span>{option.name}</span>{" "}
                   <strong>+{formatProductPrice(option.priceAdjustment)}</strong>
                 </label>
               ))}

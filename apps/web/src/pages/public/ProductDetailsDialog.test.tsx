@@ -337,6 +337,153 @@ it("explains and blocks required groups without available variants", async () =>
   ).toBeDisabled();
   expect(api.post).not.toHaveBeenCalled();
 });
+it("renders allowed paid and free add-ons and removes deselected price deltas", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      ...details,
+      addOns: [
+        ...details.addOns,
+        { id: "shot", name: "Extra shot", priceAdjustment: "1.05" },
+        { id: "no-sugar", name: "No sugar", priceAdjustment: "0.00" },
+      ],
+    },
+  });
+  vi.mocked(api.post).mockRejectedValue(new Error("Unavailable"));
+  setup();
+  const { user, dialog } = await openDetails();
+  const group = within(dialog).getByRole("group", {
+    name: "Add-ons (optional)",
+  });
+  expect(group).toHaveAccessibleDescription(
+    "Choose any extras. Each applies once per item.",
+  );
+  const milk = within(group).getByRole("checkbox", { name: /Oat milk/ });
+  const shot = within(group).getByRole("checkbox", { name: /Extra shot/ });
+  const free = within(group).getByRole("checkbox", { name: /No sugar/ });
+  expect(milk).toHaveAccessibleName("Oat milk +₱25.20");
+  expect(free).toHaveAccessibleName("No sugar +₱0.00");
+  expect(within(group).getAllByRole("checkbox")).toHaveLength(3);
+  expect(milk).not.toBeChecked();
+  await user.click(milk);
+  await user.click(shot);
+  await user.click(free);
+  expect(within(dialog).getByRole("status")).toHaveTextContent("₱146.26");
+  await user.clear(within(dialog).getByLabelText(/Quantity/));
+  await user.type(within(dialog).getByLabelText(/Quantity/), "3");
+  expect(within(dialog).getByRole("status")).toHaveTextContent("₱438.78");
+  await user.click(milk);
+  expect(within(dialog).getByRole("status")).toHaveTextContent("₱363.18");
+  await user.click(within(dialog).getByRole("button", { name: "Add to cart" }));
+  await within(dialog).findByRole("alert");
+  expect(api.post).toHaveBeenCalledWith("/menu/cafe/products/product/quote", {
+    variantIds: ["regular"],
+    addOnIds: ["shot", "no-sugar"],
+    quantity: 3,
+  });
+});
+it("retains selected paid/free add-ons in the cart with the expected preview total", async () => {
+  const free = { id: "no-sugar", name: "No sugar", priceAdjustment: "0.00" };
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      ...details,
+      addOns: [
+        ...details.addOns,
+        { id: "shot", name: "Extra shot", priceAdjustment: "1.05" },
+        free,
+      ],
+    },
+  });
+  vi.mocked(api.post).mockResolvedValue({
+    data: {
+      productId: product.id,
+      productName: "Coffee",
+      currency: "PHP",
+      basePrice: "120.01",
+      unitPrice: "175.31",
+      totalPrice: "525.93",
+      quantity: 3,
+      variants: [details.variants[1]],
+      addOns: [details.addOns[0], free],
+    },
+  });
+  setup();
+  const { user, dialog } = await openDetails();
+  await user.click(within(dialog).getByRole("radio", { name: /Large/ }));
+  await user.click(within(dialog).getByRole("checkbox", { name: /Oat milk/ }));
+  await user.click(within(dialog).getByRole("checkbox", { name: /No sugar/ }));
+  const shot = within(dialog).getByRole("checkbox", { name: /Extra shot/ });
+  await user.click(shot);
+  await user.clear(within(dialog).getByLabelText(/Quantity/));
+  await user.type(within(dialog).getByLabelText(/Quantity/), "3");
+  expect(within(dialog).getByRole("status")).toHaveTextContent("₱529.08");
+  await user.click(shot);
+  expect(within(dialog).getByRole("status")).toHaveTextContent("₱525.93");
+  await user.click(within(dialog).getByRole("button", { name: "Add to cart" }));
+  await user.click(
+    await screen.findByRole("button", { name: "View cart (3)" }),
+  );
+  expect(api.post).toHaveBeenCalledWith("/menu/cafe/products/product/quote", {
+    variantIds: ["large"],
+    addOnIds: ["milk", "no-sugar"],
+    quantity: 3,
+  });
+  expect(useCart.getState().shops.cafe[0]).toMatchObject({
+    quantity: 3,
+    unitPrice: "175.31",
+    totalPrice: "525.93",
+    addOns: [details.addOns[0], free],
+  });
+  const cart = screen.getByRole("dialog", { name: "Cafe cart" });
+  expect(
+    within(cart).getByText("Large, Oat milk, No sugar"),
+  ).toBeInTheDocument();
+  expect(within(cart).queryByText(/Extra shot/)).not.toBeInTheDocument();
+  expect(within(cart).getByText("₱525.93")).toBeInTheDocument();
+});
+it("caps add-on selections while keeping selected choices removable", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      ...details,
+      addOns: Array.from({ length: 51 }, (_, index) => ({
+        id: `extra-${index}`,
+        name: `Extra ${index}`,
+        priceAdjustment: "0.01",
+      })),
+    },
+  });
+  setup();
+  const { user, dialog } = await openDetails();
+  const group = within(dialog).getByRole("group", {
+    name: "Add-ons (optional)",
+  });
+  const checkboxes = within(group).getAllByRole("checkbox");
+  for (const checkbox of checkboxes.slice(0, 50)) fireEvent.click(checkbox);
+  expect(group).toHaveAccessibleDescription(
+    "Choose up to 50 extras. 50 selected. Each applies once per item.",
+  );
+  expect(checkboxes[50]).toBeDisabled();
+  expect(checkboxes[0]).toBeEnabled();
+  expect(within(dialog).getByRole("status")).toHaveTextContent("₱120.51");
+  await user.click(checkboxes[0]);
+  expect(checkboxes[50]).toBeEnabled();
+  await user.click(checkboxes[50]);
+  expect(
+    within(group).getAllByRole("checkbox", { checked: true }),
+  ).toHaveLength(50);
+  expect(checkboxes[0]).toBeDisabled();
+});
+it("allows products without add-ons and renders no modifier controls", async () => {
+  vi.mocked(api.get).mockResolvedValue({ data: { ...details, addOns: [] } });
+  setup();
+  const { dialog } = await openDetails();
+  expect(
+    within(dialog).queryByRole("group", { name: "Add-ons (optional)" }),
+  ).not.toBeInTheDocument();
+  expect(within(dialog).queryByRole("checkbox")).not.toBeInTheDocument();
+  expect(
+    within(dialog).getByRole("button", { name: "Add to cart" }),
+  ).toBeEnabled();
+});
 it("keeps sold-out details inspectable without allowing cart additions", async () => {
   vi.mocked(api.get).mockResolvedValue({
     data: {
