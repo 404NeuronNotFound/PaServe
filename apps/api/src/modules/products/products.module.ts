@@ -10,10 +10,17 @@ import { ProductImageStorage } from './product-image.storage.js';
 import { ProductVariantsController } from './product-variants.controller.js';
 import { ProductVariantsRepository } from './product-variants.repository.js';
 import { ProductVariantsService } from './product-variants.service.js';
+import { PublicProductController } from './public-product.controller.js';
+import { PublicProductRepository } from './public-product.repository.js';
+import { PublicProductService } from './public-product.service.js';
 
 @Module({
   imports: [DatabaseModule, TenancyModule],
-  controllers: [ProductsController, ProductVariantsController],
+  controllers: [
+    ProductsController,
+    ProductVariantsController,
+    PublicProductController,
+  ],
   providers: [
     ProductsService,
     ProductsRepository,
@@ -22,6 +29,8 @@ import { ProductVariantsService } from './product-variants.service.js';
     ProductImageStorage,
     ProductVariantsRepository,
     ProductVariantsService,
+    PublicProductRepository,
+    PublicProductService,
   ],
 })
 export class ProductsModule {}
