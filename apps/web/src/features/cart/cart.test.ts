@@ -1,6 +1,7 @@
 import { beforeEach, expect, it } from "vitest";
 import {
   cartItemsForShop,
+  cartVariantKey,
   createCartPricePreview,
   EMPTY_CART,
   useCart,
@@ -19,6 +20,67 @@ const quote: ProductSelectionQuoteResponse = {
   variants: [],
   addOns: [],
 };
+
+it("identifies variant selections by product and IDs, independent of price, names and order", () => {
+  const variants: ProductSelectionQuoteResponse["variants"] = [
+    { id: "large", name: "Large", optionGroupId: "size", isDefault: false, priceAdjustment: "0.10" },
+    { id: "iced", name: "Iced", optionGroupId: "temperature", isDefault: false, priceAdjustment: "0.00" },
+  ];
+  const configured = { ...quote, variants };
+  const key = cartVariantKey(configured);
+  expect(cartVariantKey({
+    ...configured,
+    variants: [...variants].reverse().map((variant) => ({ ...variant, name: "Renamed", priceAdjustment: "9.99" })),
+  })).toBe(key);
+  expect(cartVariantKey({ ...configured, productId: "tea" })).not.toBe(key);
+  expect(cartVariantKey({ ...configured, variants: [variants[0]] })).not.toBe(key);
+  expect(cartVariantKey({ ...configured, variants: [] })).not.toBe(key);
+});
+
+it("stores distinct variant identities while keeping identical additions independently removable", () => {
+  const regular = {
+    ...quote,
+    variants: [{ id: "regular", name: "Regular", optionGroupId: "size", isDefault: true, priceAdjustment: "0.00" }],
+  };
+  const large = {
+    ...quote,
+    variants: [{ ...regular.variants[0], id: "large", name: "Large", isDefault: false, priceAdjustment: "0.10" }],
+  };
+  useCart.getState().add("cafe", regular);
+  useCart.getState().add("cafe", large);
+  useCart.getState().add("cafe", regular);
+  const [first, second, duplicate] = useCart.getState().shops.cafe;
+  expect(first.variantKey).not.toBe(second.variantKey);
+  expect(first.variantKey).toBe(duplicate.variantKey);
+  expect(first.lineId).not.toBe(duplicate.lineId);
+  useCart.getState().remove("cafe", first.lineId);
+  expect(useCart.getState().shops.cafe).toEqual([second, duplicate]);
+});
+
+it("preserves variant identity during repricing and rejects substituted variants", () => {
+  const configured = {
+    ...quote,
+    variants: [{ id: "large", name: "Large", optionGroupId: "size", isDefault: false, priceAdjustment: "0.10" }],
+  };
+  useCart.getState().add("cafe", configured);
+  const original = useCart.getState().shops.cafe[0];
+  const updated = {
+    ...configured, quantity: 2, unitPrice: "1.20", totalPrice: "2.40",
+    variants: [{ ...configured.variants[0], name: "Large cup", priceAdjustment: "0.20" }],
+  };
+  expect(useCart.getState().updateQuantity("cafe", original, updated, createCartPricePreview(updated))).toBe(true);
+  const current = useCart.getState().shops.cafe[0];
+  expect(current).toMatchObject({
+    lineId: original.lineId, variantKey: original.variantKey, quantity: 2,
+    variants: updated.variants, totalPrice: "2.40",
+  });
+  const before = useCart.getState();
+  for (const variants of [[], [{ ...updated.variants[0], id: "regular" }]]) {
+    const substituted = { ...updated, variants, quantity: 3 };
+    expect(useCart.getState().updateQuantity("cafe", current, substituted, createCartPricePreview(substituted))).toBe(false);
+    expect(useCart.getState()).toBe(before);
+  }
+});
 it("keeps separate configured additions and independent quote/preview snapshots", () => {
   const configured = {
     ...quote,

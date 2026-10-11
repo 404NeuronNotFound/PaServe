@@ -3,7 +3,18 @@ import type { ProductSelectionQuoteResponse } from "@paserve/contracts";
 
 export interface CartItem extends ProductSelectionQuoteResponse {
   lineId: string;
+  variantKey: string;
   pricePreview: CartPricePreview | null;
+}
+
+// Independent of option order, display names, current prices, and quantity.
+export function cartVariantKey(
+  selection: Pick<ProductSelectionQuoteResponse, "productId" | "variants">,
+): string {
+  return JSON.stringify([
+    selection.productId,
+    selection.variants.map((variant) => variant.id).sort(),
+  ]);
 }
 
 // The estimate shown before submission; quoted prices remain authoritative.
@@ -78,6 +89,7 @@ export const useCart = create<CartState>((set) => ({
             variants: quote.variants.map((variant) => ({ ...variant })),
             addOns: quote.addOns.map((addOn) => ({ ...addOn })),
             lineId: crypto.randomUUID(),
+            variantKey: cartVariantKey(quote),
             pricePreview: pricePreview ? { ...pricePreview } : null,
           },
         ],
@@ -101,6 +113,7 @@ export const useCart = create<CartState>((set) => ({
       if (
         !items.includes(expected) ||
         quote.productId !== expected.productId ||
+        cartVariantKey(quote) !== expected.variantKey ||
         !Number.isInteger(quote.quantity) ||
         quote.quantity < 1 || quote.quantity > 99 ||
         quote.quantity !== pricePreview.quantity
@@ -112,6 +125,7 @@ export const useCart = create<CartState>((set) => ({
           [slug]: items.map((item) => item === expected ? {
             ...quote,
             lineId: expected.lineId,
+            variantKey: expected.variantKey,
             variants: quote.variants.map((variant) => ({ ...variant })),
             addOns: quote.addOns.map((addOn) => ({ ...addOn })),
             pricePreview: { ...pricePreview },

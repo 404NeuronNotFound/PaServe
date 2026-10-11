@@ -41,6 +41,7 @@ it("requotes the saved configuration, retains line identity, and uses server pri
   });
   expect(useCart.getState().shops.cafe[0]).toMatchObject({
     lineId: before.shops.cafe[0].lineId, notes: "Less ice",
+    variantKey: before.shops.cafe[0].variantKey,
     variants: quote.variants, addOns: quote.addOns,
     unitPrice: "1.40", totalPrice: "4.20",
     pricePreview: { quantity: 3, unitPrice: "1.30", totalPrice: "3.90" },

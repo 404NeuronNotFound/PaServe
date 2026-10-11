@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PublicMenuView } from "./PublicMenuView";
 import { api } from "../../lib/api/client";
-import { useCart, sumPrices } from "../../features/cart/cart";
+import { cartVariantKey, useCart, sumPrices } from "../../features/cart/cart";
 import { useFeedbackStore } from "../../app/stores/feedback";
 import type {
   PublicMenuResponse,
@@ -208,6 +208,7 @@ it("adds a server-quoted customized item and allows cart review/removal", async 
   });
   expect(useCart.getState().shops.cafe[0]).toMatchObject({
     productId: product.id,
+    variantKey: cartVariantKey({ productId: product.id, variants: [details.variants[1]] }),
     variants: [details.variants[1]],
     addOns: details.addOns,
     quantity: 2,
