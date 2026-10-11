@@ -341,6 +341,25 @@ export function DashboardFrame({
                   </div>
                 </div>
               )}
+            {membership &&
+              hasShopPermission(membership.role, "shop.operations.manage") && (
+                <div
+                  className="dashboard-nav-group"
+                  role="group"
+                  aria-label="Restaurant management"
+                >
+                  <p className="dashboard-nav-label">Restaurant</p>
+                  <div className="dashboard-nav-links">
+                    <NavLink
+                      to={`${shopPath(membership.shopId)}/tables`}
+                      onClick={closeNavigation}
+                    >
+                      <FiGrid aria-hidden="true" />
+                      <span>Tables</span>
+                    </NavLink>
+                  </div>
+                </div>
+              )}
             <div
               className="dashboard-nav-group dashboard-nav-account"
               role="group"

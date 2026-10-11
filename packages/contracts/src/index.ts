@@ -620,3 +620,21 @@ export interface ProductSelectionQuoteResponse {
   variants: PublicProductDetailsResponse["variants"];
   addOns: PublicAddOn[];
 }
+export const TABLE_LIMITS = { numberMin: 1, numberMax: 9999 } as const;
+export interface CreateTableRequest {
+  number: number;
+}
+export interface RestaurantTable {
+  id: string;
+  shopId: string;
+  number: number;
+  code: string;
+  isActive: boolean;
+  createdAt: string;
+}
+export interface CreateTableResponse {
+  table: RestaurantTable;
+}
+export interface TablesResponse {
+  tables: RestaurantTable[];
+}

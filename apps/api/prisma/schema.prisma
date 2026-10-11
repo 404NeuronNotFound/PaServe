@@ -74,8 +74,25 @@ model Shop {
   categories Category[]
   products   Product[]
   addOns     AddOn[]
+  tables     RestaurantTable[]
 
   @@map("shops")
+}
+
+model RestaurantTable {
+  id        String   @id @default(uuid())
+  shopId    String
+  number    Int
+  code      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, number])
+  @@unique([shopId, code])
+  @@map("restaurant_tables")
 }
 
 model ShopMember {

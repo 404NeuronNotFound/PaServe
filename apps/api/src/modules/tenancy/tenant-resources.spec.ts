@@ -20,7 +20,7 @@ describe('tenant resource isolation', () => {
     memberships.requireMembership.mockResolvedValue({ shopId, role: 'OWNER' });
   });
 
-  it.each(['product', 'category'] as const)(
+  it.each(['product', 'category', 'table'] as const)(
     'resolves a %s only using user, shop and resource IDs',
     async (kind) => {
       resources.findResource.mockResolvedValue({ id: resourceId, shopId });
@@ -74,18 +74,21 @@ describe('tenant resource isolation', () => {
     expect(resources.findResource).not.toHaveBeenCalled();
   });
 
-  it.each(['product', 'category'] as const)(
+  it.each(['product', 'category', 'table'] as const)(
     'scopes the actual %s query and rechecks live access',
     async (kind) => {
       const prisma = {
         product: { findFirst: vi.fn() },
         category: { findFirst: vi.fn() },
+        restaurantTable: { findFirst: vi.fn() },
       };
       const repo = new TenantResourcesRepository(
         prisma as unknown as PrismaService,
       );
       await repo.findResource(userId, shopId, kind, resourceId);
-      expect(prisma[kind].findFirst).toHaveBeenCalledWith({
+      expect(
+        prisma[kind === 'table' ? 'restaurantTable' : kind].findFirst,
+      ).toHaveBeenCalledWith({
         where: {
           id: resourceId,
           shopId,
@@ -137,6 +140,7 @@ describe('tenant resource isolation', () => {
     const prisma = {
       product: { findFirst: vi.fn() },
       category: { findFirst: vi.fn() },
+      restaurantTable: { findFirst: vi.fn() },
     };
     const repo = new TenantResourcesRepository(
       prisma as unknown as PrismaService,

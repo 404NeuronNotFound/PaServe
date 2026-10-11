@@ -12,6 +12,7 @@ import { TenancyModule } from './modules/tenancy/tenancy.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
 import { AddOnsModule } from './modules/add-ons/add-ons.module.js';
+import { TablesModule } from './modules/tables/tables.module.js';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AddOnsModule } from './modules/add-ons/add-ons.module.js';
     CategoriesModule,
     ProductsModule,
     AddOnsModule,
+    TablesModule,
   ],
   controllers: [AppController],
   providers: [

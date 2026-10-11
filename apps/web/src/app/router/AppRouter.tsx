@@ -20,6 +20,7 @@ import {
 import { ActiveShopPage } from "../../pages/owner/ActiveShopPage";
 import { ShopSettingsPage } from "../../pages/owner/ShopSettingsPage";
 import { CategoriesPage } from "../../pages/owner/CategoriesPage";
+import { TablesPage } from "../../pages/owner/TablesPage";
 import { ProductsPage } from "../../pages/owner/ProductsPage";
 import { AddOnsPage } from "../../pages/owner/AddOnsPage";
 import { ProductCustomizationPage } from "../../pages/owner/ProductCustomizationPage";
@@ -49,6 +50,7 @@ export function AppRouter() {
               <Route index element={<ActiveShopPage />} />
               <Route path="settings" element={<ShopSettingsPage />} />
               <Route path="categories" element={<CategoriesPage />} />
+              <Route path="tables" element={<TablesPage />} />
               <Route path="products" element={<ProductsPage />} />
               <Route path="products/:productId/customize" element={<ProductCustomizationPage />} />
               <Route path="add-ons" element={<AddOnsPage />} />

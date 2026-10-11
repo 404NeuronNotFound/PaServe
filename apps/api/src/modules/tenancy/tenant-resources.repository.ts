@@ -3,7 +3,12 @@ import { isUUID } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from './shop-scope.js';
 
-export const TENANT_RESOURCE_KINDS = ['product', 'category', 'addOn'] as const;
+export const TENANT_RESOURCE_KINDS = [
+  'product',
+  'category',
+  'addOn',
+  'table',
+] as const;
 export type TenantResourceKind = (typeof TENANT_RESOURCE_KINDS)[number];
 
 @Injectable()
@@ -30,6 +35,8 @@ export class TenantResourcesRepository {
     if (kind === 'product')
       return this.prisma.product.findFirst({ where, select });
     if (kind === 'addOn') return this.prisma.addOn.findFirst({ where, select });
+    if (kind === 'table')
+      return this.prisma.restaurantTable.findFirst({ where, select });
     return this.prisma.category.findFirst({ where, select });
   }
 }
