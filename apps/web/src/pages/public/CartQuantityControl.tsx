@@ -91,54 +91,58 @@ export function CartQuantityControl({
         if (valid) void update(count);
       }}
     >
-      <label htmlFor={id}>Quantity</label>
+      <label className="sr-only" htmlFor={id}>Quantity</label>
       <fieldset disabled={pending}>
         <legend className="sr-only">Quantity for {item.productName}</legend>
-        <button
-          type="button"
-          className="secondary-button"
-          aria-label={`Decrease quantity for ${item.productName}`}
-          disabled={!valid || count <= 1}
-          onClick={() => void update(count - 1)}
-        >
-          <FiMinus aria-hidden="true" />
-        </button>
-        <input
-          ref={input}
-          id={id}
-          aria-label={`Quantity for ${item.productName}`}
-          type="number"
-          inputMode="numeric"
-          min="1"
-          max="99"
-          step="1"
-          value={draft}
-          aria-invalid={!valid}
-          aria-describedby={`${id}-hint${!valid ? ` ${id}-invalid` : ""}${error ? ` ${id}-error` : ""}`}
-          onChange={(event) => {
-            setDraft(event.target.value);
-            setError("");
-          }}
-        />
-        <button
-          type="button"
-          className="secondary-button"
-          aria-label={`Increase quantity for ${item.productName}`}
-          disabled={!valid || count >= 99}
-          onClick={() => void update(count + 1)}
-        >
-          <FiPlus aria-hidden="true" />
-        </button>
-        <button
-          type="submit"
-          className="secondary-button"
-          aria-label={`Update quantity for ${item.productName}`}
-          disabled={!valid || count === item.quantity}
-        >
-          {pending ? "Updating…" : "Update"}
-        </button>
+        <div className="customer-cart-stepper">
+          <button
+            type="button"
+            className="secondary-button"
+            aria-label={`Decrease quantity for ${item.productName}`}
+            disabled={!valid || count <= 1}
+            onClick={() => void update(count - 1)}
+          >
+            <FiMinus aria-hidden="true" />
+          </button>
+          <input
+            ref={input}
+            id={id}
+            aria-label={`Quantity for ${item.productName}`}
+            type="number"
+            inputMode="numeric"
+            min="1"
+            max="99"
+            step="1"
+            value={draft}
+            aria-invalid={!valid}
+            aria-describedby={`${id}-hint${!valid ? ` ${id}-invalid` : ""}${error ? ` ${id}-error` : ""}`}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              setError("");
+            }}
+          />
+          <button
+            type="button"
+            className="secondary-button"
+            aria-label={`Increase quantity for ${item.productName}`}
+            disabled={!valid || count >= 99}
+            onClick={() => void update(count + 1)}
+          >
+            <FiPlus aria-hidden="true" />
+          </button>
+        </div>
+        {(pending || draft !== String(item.quantity)) && (
+          <button
+            type="submit"
+            className="primary-button customer-cart-quantity-save"
+            aria-label={`Update quantity for ${item.productName}`}
+            disabled={!valid || count === item.quantity}
+          >
+            {pending ? "Updating…" : "Update"}
+          </button>
+        )}
       </fieldset>
-      <p id={`${id}-hint`} className="field-hint">1–99 per line. Use Remove to delete this item.</p>
+      <p id={`${id}-hint`} className="sr-only">1–99 per line. Use Remove to delete this item.</p>
       {draftPreview && (
         <p className="customer-cart-draft-preview" aria-live="polite">
           Estimated total for {count}: <strong>{formatCartPrice(draftPreview.totalPrice)}</strong>

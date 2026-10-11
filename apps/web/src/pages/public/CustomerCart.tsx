@@ -100,23 +100,23 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
                         .join(", ")}
                     </p>
                   )}
-                  <CartNotesEditor item={item} shopSlug={shop.slug} />
-                  <button
-                    type="button"
-                    data-cart-remove
-                    className="secondary-button"
-                    aria-label={`Remove ${item.productName}`}
-                    onClick={() => {
-                      removedIndex.current = index;
-                      useCart.getState().remove(shop.slug, item.lineId);
-                    }}
-                  >
-                    <FiTrash2 aria-hidden="true" /> Remove
-                  </button>
-                  <CartQuantityControl
-                    item={item}
-                    shopSlug={shop.slug}
-                  />
+                  <div className="customer-cart-line-actions">
+                    <CartQuantityControl item={item} shopSlug={shop.slug} />
+                    <CartNotesEditor item={item} shopSlug={shop.slug} />
+                    <button
+                      type="button"
+                      data-cart-remove
+                      className="secondary-button customer-cart-remove"
+                      aria-label={`Remove ${item.productName}`}
+                      title={`Remove ${item.productName}`}
+                      onClick={() => {
+                        removedIndex.current = index;
+                        useCart.getState().remove(shop.slug, item.lineId);
+                      }}
+                    >
+                      <FiTrash2 aria-hidden="true" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -129,17 +129,17 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
                   {formatCartPrice(subtotal)}
                 </strong>
               </p>
-              <p className="field-hint">{PRICE_PREVIEW_NOTICE}</p>
             </div>
             {!!items.length && (
               <button
                 type="button"
-                className="secondary-button"
+                className="primary-button customer-cart-continue"
                 onClick={() => setOpen(false)}
               >
                 Continue shopping <FiArrowRight aria-hidden="true" />
               </button>
             )}
+            <p className="field-hint customer-cart-price-notice">{PRICE_PREVIEW_NOTICE}</p>
           </footer>
         </CustomerDialog>
       )}

@@ -48,6 +48,7 @@ it("requotes the saved configuration, retains line identity, and uses server pri
   });
   expect(useCart.getState().shops.other).toBe(before.shops.other);
   await waitFor(() => expect(screen.getByRole("spinbutton")).toHaveFocus());
+  expect(screen.queryByRole("button", { name: "Update quantity for Coffee" })).not.toBeInTheDocument();
 });
 it.each(["0", "100", "1.5", "-1", ""])("rejects invalid quantity %s without removing or changing the line", async (value) => {
   setup();
@@ -63,7 +64,7 @@ it.each(["0", "100", "1.5", "-1", ""])("rejects invalid quantity %s without remo
 it.each([1, 99])("disables the stepper at quantity boundary %s", (quantity) => {
   setup(quantity);
   expect(screen.getByRole("button", { name: `${quantity === 1 ? "Decrease" : "Increase"} quantity for Coffee` })).toBeDisabled();
-  expect(screen.getByRole("button", { name: "Update quantity for Coffee" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "Update quantity for Coffee" })).not.toBeInTheDocument();
 });
 
 it("previews a typed quantity locally without changing saved totals or submitting prices", async () => {
@@ -72,12 +73,19 @@ it("previews a typed quantity locally without changing saved totals or submittin
   const user = userEvent.setup();
   await user.clear(screen.getByRole("spinbutton"));
   await user.type(screen.getByRole("spinbutton"), "3");
+  expect(screen.getByRole("button", { name: "Update quantity for Coffee" })).toBeEnabled();
   expect(screen.getByText(/Estimated total for 3:/)).toHaveTextContent("₱3.90");
   expect(useCart.getState()).toBe(before);
   expect(api.post).not.toHaveBeenCalled();
   await user.clear(screen.getByRole("spinbutton"));
   await user.type(screen.getByRole("spinbutton"), "0");
   expect(screen.queryByText(/Estimated total for/)).not.toBeInTheDocument();
+  await user.clear(screen.getByRole("spinbutton"));
+  await user.type(screen.getByRole("spinbutton"), "2");
+  expect(screen.queryByRole("button", { name: "Update quantity for Coffee" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/Estimated total for/)).not.toBeInTheDocument();
+  expect(useCart.getState()).toBe(before);
+  expect(api.post).not.toHaveBeenCalled();
 });
 it("preserves the saved item and typed quantity after failure and allows retry", async () => {
   setup();
