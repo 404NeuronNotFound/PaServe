@@ -206,6 +206,25 @@ it("adds a server-quoted customized item and allows cart review/removal", async 
     quantity: 2,
     notes: "<b>No sugar</b>",
   });
+  expect(useCart.getState().shops.cafe[0]).toMatchObject({
+    productId: product.id,
+    variants: [details.variants[1]],
+    addOns: details.addOns,
+    quantity: 2,
+    notes: "<b>No sugar</b>",
+    unitPrice: "175.32",
+    totalPrice: "350.64",
+    pricePreview: {
+      source: "client",
+      currency: "PHP",
+      basePrice: "120.01",
+      variantAdjustment: "30.10",
+      addOnAdjustment: "25.20",
+      unitPrice: "175.31",
+      totalPrice: "350.62",
+      quantity: 2,
+    },
+  });
   await user.click(
     await screen.findByRole("button", { name: "View cart (2)" }),
   );
@@ -217,6 +236,63 @@ it("adds a server-quoted customized item and allows cart review/removal", async 
   await user.click(within(cart).getByRole("button", { name: "Remove Coffee" }));
   expect(within(cart).getByText("Your cart is empty.")).toBeInTheDocument();
 });
+it.each([false, true])(
+  "shows separate cart lines for repeated products (different configuration: %s)",
+  async (differentConfiguration) => {
+    setup();
+    for (let index = 0; index < 2; index++) {
+      const regular = differentConfiguration && index === 1;
+      vi.mocked(api.post).mockResolvedValueOnce({
+        data: {
+          productId: product.id,
+          productName: product.name,
+          currency: "PHP",
+          basePrice: "120.01",
+          unitPrice: regular ? "120.01" : "175.31",
+          totalPrice: regular ? "120.01" : "350.62",
+          quantity: regular ? 1 : 2,
+          notes: regular ? "Hot" : "Less ice",
+          variants: [details.variants[regular ? 0 : 1]],
+          addOns: regular ? [] : details.addOns,
+        },
+      });
+      const { user, dialog } = await openDetails();
+      if (!regular) {
+        await user.click(within(dialog).getByRole("radio", { name: /Large/ }));
+        await user.click(within(dialog).getByRole("checkbox", { name: /Oat milk/ }));
+        await user.click(within(dialog).getByRole("button", { name: "Increase quantity" }));
+      }
+      await user.type(within(dialog).getByLabelText(/Notes/), regular ? "Hot" : "Less ice");
+      await user.click(within(dialog).getByRole("button", { name: "Add to cart" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    }
+    const items = useCart.getState().shops.cafe;
+    expect(items).toHaveLength(2);
+    expect(items[0].lineId).not.toBe(items[1].lineId);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", {
+      name: `View cart (${differentConfiguration ? 3 : 4})`,
+    }));
+    const cart = screen.getByRole("dialog", { name: "Cafe cart" });
+    const lines = within(cart).getAllByRole("listitem");
+    expect(lines).toHaveLength(2);
+    expect(within(lines[0]).getByText("Large, Oat milk")).toBeInTheDocument();
+    expect(within(lines[0]).getByText("Less ice")).toBeInTheDocument();
+    expect(within(lines[1]).getByText(differentConfiguration ? "Regular" : "Large, Oat milk")).toBeInTheDocument();
+    expect(within(lines[1]).getByText(differentConfiguration ? "Hot" : "Less ice")).toBeInTheDocument();
+    expect(within(cart).getByRole("status")).toHaveTextContent(
+      differentConfiguration ? "₱470.63" : "₱701.24",
+    );
+    await user.click(within(lines[0]).getByRole("button", { name: "Remove Coffee" }));
+    expect(useCart.getState().shops.cafe).toEqual([items[1]]);
+    expect(within(cart).getAllByRole("listitem")).toHaveLength(1);
+    expect(within(cart).getByRole("status")).toHaveTextContent(
+      differentConfiguration ? "₱120.01" : "₱350.62",
+    );
+    expect(api.post).toHaveBeenCalledTimes(2);
+  },
+);
+
 it("blocks invalid quantities and required choices", async () => {
   vi.mocked(api.get).mockResolvedValue({
     data: {

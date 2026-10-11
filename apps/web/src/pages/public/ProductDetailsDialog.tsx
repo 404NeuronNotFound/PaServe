@@ -11,7 +11,7 @@ import {
 } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import { formatCartPrice, formatProductPrice } from "../../lib/money";
-import { sumPrices, useCart } from "../../features/cart/cart";
+import { createCartPricePreview, useCart } from "../../features/cart/cart";
 import { feedback } from "../../app/stores/feedback";
 import { CustomerDialog } from "./CustomerDialog";
 import {
@@ -147,18 +147,16 @@ function ProductDetailsForm({
   const complete = optionGroups.every(
     (group) => !group.isRequired || Boolean(choices[group.id]),
   );
-  const total = validQuantity
-    ? sumPrices(
-        [
-          product.price,
-          ...selectedVariants.map((variant) => variant.priceAdjustment),
-          ...addOns
-            .filter((option) => selectedAddOns.includes(option.id))
-            .map((option) => option.priceAdjustment),
-        ],
-        count,
-      )
+  const pricePreview = validQuantity
+    ? createCartPricePreview({
+        currency: "PHP",
+        basePrice: product.price,
+        variants: selectedVariants,
+        addOns: addOns.filter((option) => selectedAddOns.includes(option.id)),
+        quantity: count,
+      })
     : undefined;
+  const total = pricePreview?.totalPrice;
   const groups = [
     ...optionGroups,
     ...(variants.some((variant) => variant.optionGroupId === null)
@@ -192,7 +190,7 @@ function ProductDetailsForm({
         },
       );
       if (!mounted.current) return;
-      useCart.getState().add(shopSlug, response.data);
+      useCart.getState().add(shopSlug, response.data, pricePreview);
       feedback.toast("Added to cart.");
       onClose();
     } catch {

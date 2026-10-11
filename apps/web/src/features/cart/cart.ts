@@ -3,6 +3,44 @@ import type { ProductSelectionQuoteResponse } from "@paserve/contracts";
 
 export interface CartItem extends ProductSelectionQuoteResponse {
   lineId: string;
+  pricePreview: CartPricePreview | null;
+}
+
+// The estimate shown before submission; quoted prices remain authoritative.
+export interface CartPricePreview {
+  source: "client";
+  currency: ProductSelectionQuoteResponse["currency"];
+  basePrice: string;
+  variantAdjustment: string;
+  addOnAdjustment: string;
+  unitPrice: string;
+  totalPrice: string;
+  quantity: number;
+}
+
+export function createCartPricePreview(
+  selection: Pick<
+    ProductSelectionQuoteResponse,
+    "currency" | "basePrice" | "variants" | "addOns" | "quantity"
+  >,
+): CartPricePreview {
+  const variantAdjustment = sumPrices(
+    selection.variants.map((variant) => variant.priceAdjustment),
+  );
+  const addOnAdjustment = sumPrices(
+    selection.addOns.map((addOn) => addOn.priceAdjustment),
+  );
+  const prices = [selection.basePrice, variantAdjustment, addOnAdjustment];
+  return {
+    source: "client",
+    currency: selection.currency,
+    basePrice: selection.basePrice,
+    variantAdjustment,
+    addOnAdjustment,
+    unitPrice: sumPrices(prices),
+    totalPrice: sumPrices(prices, selection.quantity),
+    quantity: selection.quantity,
+  };
 }
 export const EMPTY_CART: CartItem[] = [];
 export function cartItemsForShop(
@@ -13,19 +51,29 @@ export function cartItemsForShop(
 }
 interface CartState {
   shops: Record<string, CartItem[]>;
-  add: (slug: string, quote: ProductSelectionQuoteResponse) => void;
+  add: (
+    slug: string,
+    quote: ProductSelectionQuoteResponse,
+    pricePreview?: CartPricePreview,
+  ) => void;
   remove: (slug: string, lineId: string) => void;
 }
 // Session memory only. Quotes are snapshots; checkout must revalidate them later.
 export const useCart = create<CartState>((set) => ({
   shops: {},
-  add: (slug, quote) =>
+  add: (slug, quote, pricePreview) =>
     set((state) => ({
       shops: {
         ...state.shops,
         [slug]: [
           ...cartItemsForShop(state.shops, slug),
-          { ...quote, lineId: crypto.randomUUID() },
+          {
+            ...quote,
+            variants: quote.variants.map((variant) => ({ ...variant })),
+            addOns: quote.addOns.map((addOn) => ({ ...addOn })),
+            lineId: crypto.randomUUID(),
+            pricePreview: pricePreview ? { ...pricePreview } : null,
+          },
         ],
       },
     })),
