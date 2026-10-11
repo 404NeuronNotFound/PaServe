@@ -1,0 +1,119 @@
+.phase-two .dashboard-header.dashboard-header-compact {
+  display: grid;
+  grid-template-columns: auto minmax(140px, 280px) auto;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  box-sizing: border-box;
+  min-height: 64px;
+  padding: 10px 24px;
+  border-bottom: 1px solid #ffffff12;
+}
+.dashboard-header-compact .wordmark {
+  font-size: 24px;
+  gap: 10px;
+}
+.dashboard-header-compact .brand-symbol {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+.dashboard-header-compact .dashboard-shop-control {
+  width: 100%;
+  gap: 0;
+}
+.dashboard-header-compact .dashboard-shop-menu summary,
+.dashboard-header-compact .dashboard-shop-static {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  gap: 10px;
+  min-height: 44px;
+  padding: 5px 10px;
+  border-radius: 11px;
+}
+.dashboard-header-compact .dashboard-shop-menu summary {
+  border-color: #718268;
+}
+.dashboard-header-compact .dashboard-shop-control .shop-logo {
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+.dashboard-header-compact .dashboard-shop-panel .shop-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+}
+.dashboard-header-compact .dashboard-switcher-label {
+  gap: 1px;
+  line-height: 1.2;
+}
+.dashboard-header-compact .dashboard-switcher-label > span {
+  font-size: 10px;
+}
+.dashboard-header-compact .dashboard-switcher-label strong {
+  font-size: 13px;
+  line-height: 1.3;
+}
+.dashboard-header-compact .header-actions {
+  justify-self: end;
+  gap: 10px;
+}
+.dashboard-header-compact .dashboard-account-menu summary {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  font-size: 14px;
+}
+.dashboard-header-compact .appearance-toggle {
+  box-sizing: border-box;
+  height: 44px;
+}
+.dashboard-header-compact .dashboard-shop-menu[open] > summary,
+.dashboard-header-compact .dashboard-account-menu[open] > summary {
+  background: #3b4e3b;
+  border-color: #a8bc91;
+}
+@media (max-width: 760px) {
+  .phase-two .dashboard-header.dashboard-header-compact {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 0;
+    padding: 8px 16px;
+    gap: 8px 12px;
+  }
+  .dashboard-header-compact .wordmark {
+    font-size: 22px;
+  }
+  .dashboard-header-compact .brand-symbol {
+    width: 32px;
+    height: 32px;
+  }
+  .dashboard-header-compact .dashboard-shop-control {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .dashboard-header-compact .header-actions {
+    gap: 8px;
+  }
+  .dashboard-header-compact .dashboard-account-menu summary {
+    justify-content: center;
+    min-width: 44px;
+    padding: 10px;
+  }
+  .dashboard-header-compact .dashboard-account-menu summary > svg:last-child {
+    display: none;
+  }
+}
+@media (max-width: 360px) {
+  .dashboard-header-compact .wordmark {
+    font-size: 20px;
+    gap: 6px;
+  }
+  .phase-two .dashboard-header.dashboard-header-compact {
+    padding-inline: 12px;
+    gap: 8px;
+  }
+}
