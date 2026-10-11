@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { focusManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AxiosError, AxiosHeaders } from "axios";
 import type { UserMembership } from "@paserve/contracts";
@@ -91,9 +95,15 @@ it("preserves a settings draft when returning to the browser window", async () =
     focusManager.setFocused(false);
     focusManager.setFocused(true);
   });
-  await waitFor(() => expect(vi.mocked(getCurrentUser).mock.calls.length).toBeGreaterThan(sessionCalls));
+  await waitFor(() =>
+    expect(vi.mocked(getCurrentUser).mock.calls.length).toBeGreaterThan(
+      sessionCalls,
+    ),
+  );
   expect(getShopMembership).toHaveBeenCalledTimes(membershipCalls);
-  expect(screen.getByLabelText("Business name (required)")).toHaveValue("Unsaved cafe name");
+  expect(screen.getByLabelText("Business name (required)")).toHaveValue(
+    "Unsaved cafe name",
+  );
   expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
 });
 function setup(path = "/app/shops/a") {
@@ -114,6 +124,10 @@ function setup(path = "/app/shops/a") {
               <Route index element={<ActiveShopPage />} />
               <Route path="settings" element={<ShopSettingsPage />} />
               <Route path="menu-preview" element={<MenuPreviewPage />} />
+              <Route
+                path="products/:productId/customize"
+                element={<h1>Product customization</h1>}
+              />
             </Route>
           </Route>
           <Route path="/app/account" element={<h1>Your account page</h1>} />
@@ -126,25 +140,51 @@ function setup(path = "/app/shops/a") {
   return client;
 }
 it("lets the owner inspect the menu within the authenticated workspace", async () => {
-  const getMenu = vi.spyOn(api, "get").mockResolvedValue({ data: {
-    shop: { name: "Cafe A", slug: "cafe-a", description: null, menuLayout: "grid" },
-    categories: [], products: [], featuredProducts: [],
-  } });
+  const getMenu = vi.spyOn(api, "get").mockResolvedValue({
+    data: {
+      shop: {
+        name: "Cafe A",
+        slug: "cafe-a",
+        description: null,
+        menuLayout: "grid",
+      },
+      categories: [],
+      products: [],
+      featuredProducts: [],
+    },
+  });
   try {
     setup();
     const user = userEvent.setup();
     await screen.findByRole("heading", { name: "Cafe A" });
     await user.click(screen.getByRole("link", { name: "Menu preview" }));
-    expect(await screen.findByRole("heading", { name: "Menu preview" })).toBeInTheDocument();
-    const preview = screen.getByRole("region", { name: "Customer menu preview" });
-    expect(await within(preview).findByRole("heading", { name: "Cafe A" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Menu preview" }),
+    ).toBeInTheDocument();
+    const preview = screen.getByRole("region", {
+      name: "Customer menu preview",
+    });
+    expect(
+      await within(preview).findByRole("heading", { name: "Cafe A" }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("Account menu")).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "Shop navigation" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Menu preview" })).toHaveAttribute("aria-current", "page");
-    expect(getMenu).toHaveBeenCalledWith("/menu/cafe-a", { signal: expect.any(AbortSignal) });
+    expect(
+      screen.getByRole("navigation", { name: "Shop navigation" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Menu preview" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(getMenu).toHaveBeenCalledWith("/menu/cafe-a", {
+      signal: expect.any(AbortSignal),
+    });
     expect(logoutAccount).not.toHaveBeenCalled();
-    expect(screen.queryByRole("heading", { name: "Sign in" })).not.toBeInTheDocument();
-  } finally { getMenu.mockRestore(); }
+    expect(
+      screen.queryByRole("heading", { name: "Sign in" }),
+    ).not.toBeInTheDocument();
+  } finally {
+    getMenu.mockRestore();
+  }
 });
 function denied(status: number) {
   const error = new AxiosError("Denied");
@@ -192,7 +232,9 @@ it("switches to an admin's shop and updates navigation and the page context", as
   await screen.findByRole("heading", { name: "Cafe A" });
   const switcher = await screen.findByLabelText("Active shop");
   await user.click(switcher);
-  await user.click(within(switcher.parentElement!).getByRole("button", { name: /Cafe B/ }));
+  await user.click(
+    within(switcher.parentElement!).getByRole("button", { name: /Cafe B/ }),
+  );
   expect(
     await screen.findByRole("heading", { name: "Cafe B" }),
   ).toBeInTheDocument();
@@ -220,9 +262,65 @@ it("marks only the exact sidebar destination as current", async () => {
   setup();
   await screen.findByRole("heading", { name: "Cafe A" });
   const nav = screen.getByRole("navigation", { name: "Shop navigation" });
-  expect(within(nav).getByRole("link", { name: "Your shops" })).not.toHaveAttribute("aria-current");
+  expect(
+    within(nav).getByRole("link", { name: "Your shops" }),
+  ).not.toHaveAttribute("aria-current");
   expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
 });
+it("groups shop work and personal navigation and keeps Products current on customization", async () => {
+  setup("/app/shops/a/products/latte/customize");
+  await screen.findByRole("heading", { name: "Product customization" });
+  const nav = screen.getByRole("navigation", { name: "Shop navigation" });
+  const workspace = within(nav).getByRole("group", { name: "Workspace" });
+  const menu = within(nav).getByRole("group", { name: "Menu management" });
+  const account = within(nav).getByRole("group", { name: "Account" });
+  expect(
+    within(workspace).getByRole("link", { name: "Shop settings" }),
+  ).toBeInTheDocument();
+  expect(
+    within(menu)
+      .getAllByRole("link")
+      .map((link) => link.textContent),
+  ).toEqual(["Products", "Categories", "Add-ons"]);
+  expect(
+    within(account).getByRole("link", { name: "Your shops" }),
+  ).toHaveAttribute("href", "/app/shops");
+  expect(within(menu).getByRole("link", { name: "Products" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+});
+it.each(["ADMIN", "MANAGER", "CASHIER", "KITCHEN"] as const)(
+  "preserves sidebar permissions for %s",
+  async (role) => {
+    vi.mocked(getShopMembership).mockResolvedValue(member("a", role));
+    setup();
+    await screen.findByRole("heading", { name: "Cafe A" });
+    const nav = screen.getByRole("navigation", { name: "Shop navigation" });
+    expect(
+      within(nav).queryByRole("link", { name: "Shop settings" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(nav).queryByRole("link", { name: "Menu preview" }),
+    ).not.toBeInTheDocument();
+    if (role === "ADMIN" || role === "MANAGER") {
+      expect(
+        within(nav).getByRole("group", { name: "Menu management" }),
+      ).toBeInTheDocument();
+    } else {
+      expect(
+        within(nav).queryByRole("group", { name: "Menu management" }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(nav).queryByRole("link", { name: "Products" }),
+      ).not.toBeInTheDocument();
+    }
+    expect(
+      within(nav).getByRole("link", { name: "Your account" }),
+    ).toBeInTheDocument();
+  },
+);
 it("supports keyboard shop choices, Escape and outside dismissal", async () => {
   setup();
   const user = userEvent.setup();
@@ -230,11 +328,15 @@ it("supports keyboard shop choices, Escape and outside dismissal", async () => {
   const trigger = screen.getByLabelText("Active shop");
   trigger.focus();
   await user.keyboard("{ArrowDown}");
-  const first = within(trigger.parentElement!).getByRole("button", { name: /Cafe A/ });
+  const first = within(trigger.parentElement!).getByRole("button", {
+    name: /Cafe A/,
+  });
   expect(first).toHaveFocus();
   expect(first).toHaveAttribute("aria-current", "true");
   await user.keyboard("{End}");
-  expect(within(trigger.parentElement!).getByRole("button", { name: /Cafe B/ })).toHaveFocus();
+  expect(
+    within(trigger.parentElement!).getByRole("button", { name: /Cafe B/ }),
+  ).toHaveFocus();
   await user.keyboard("{Escape}");
   expect(trigger.parentElement).not.toHaveAttribute("open");
   expect(trigger).toHaveFocus();

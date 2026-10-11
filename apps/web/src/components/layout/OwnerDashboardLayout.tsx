@@ -34,6 +34,7 @@ import {
 import { AppearanceToggle } from "./AppearanceToggle";
 import { InlineMessage } from "../feedback/InlineMessage";
 import { feedback } from "../../app/stores/feedback";
+import "./dashboard-sidebar.css";
 
 export function OwnerDashboardLayout() {
   const membership = useActiveShop();
@@ -141,7 +142,10 @@ export function DashboardFrame({
               onKeyDown={dropdownKeys}
             >
               <summary aria-label="Active shop">
-                <ShopLogo url={membership?.shop.logoUrl} name={membership?.shop.name ?? "Shop"} />
+                <ShopLogo
+                  url={membership?.shop.logoUrl}
+                  name={membership?.shop.name ?? "Shop"}
+                />
                 <span className="dashboard-switcher-label">
                   <span>Active shop</span>
                   <strong>{membership?.shop.name ?? "Choose a shop"}</strong>
@@ -236,17 +240,21 @@ export function DashboardFrame({
           Navigation
         </button>
         <aside
-          className="dashboard-sidebar"
+          className="dashboard-sidebar dashboard-sidebar-premium"
           id="dashboard-navigation"
           data-open={navigationOpen}
           onKeyDown={(event) => {
             if (event.key === "Escape") closeNavigation();
           }}
         >
-          <p className="section-label">YOUR WORKSPACE</p>
+          <p className="section-label dashboard-sidebar-label">YOUR SHOP</p>
           {membership && (
             <div className="dashboard-sidebar-identity">
-              <ShopLogo url={membership.shop.logoUrl} name={membership.shop.name} className="dashboard-sidebar-emblem" />
+              <ShopLogo
+                url={membership.shop.logoUrl}
+                name={membership.shop.name}
+                className="dashboard-sidebar-emblem"
+              />
               <div>
                 <strong>{membership.shop.name}</strong>
                 <p className="dashboard-shop-role">
@@ -257,62 +265,92 @@ export function DashboardFrame({
           )}
           <nav aria-label="Shop navigation">
             {membership && (
-              <NavLink
-                end
-                to={shopPath(membership.shopId)}
-                onClick={closeNavigation}
+              <div
+                className="dashboard-nav-group"
+                role="group"
+                aria-label="Workspace"
               >
-                <FiGrid aria-hidden="true" />
-                Overview
-              </NavLink>
-            )}
-            {membership?.role === "OWNER" && (
-              <NavLink to={`${shopPath(membership.shopId)}/menu-preview`} onClick={closeNavigation}>
-                <FiEye aria-hidden="true" /> Menu preview
-              </NavLink>
-            )}
-            {membership?.role === "OWNER" && (
-              <NavLink
-                to={`${shopPath(membership.shopId)}/settings`}
-                onClick={closeNavigation}
-              >
-                <FiSettings aria-hidden="true" />
-                Shop settings
-              </NavLink>
+                <p className="dashboard-nav-label">Workspace</p>
+                <div className="dashboard-nav-links">
+                  <NavLink
+                    end
+                    to={shopPath(membership.shopId)}
+                    onClick={closeNavigation}
+                  >
+                    <FiGrid aria-hidden="true" />
+                    <span>Overview</span>
+                  </NavLink>
+                  {membership.role === "OWNER" && (
+                    <>
+                      <NavLink
+                        to={`${shopPath(membership.shopId)}/menu-preview`}
+                        onClick={closeNavigation}
+                      >
+                        <FiEye aria-hidden="true" />
+                        <span>Menu preview</span>
+                      </NavLink>
+                      <NavLink
+                        to={`${shopPath(membership.shopId)}/settings`}
+                        onClick={closeNavigation}
+                      >
+                        <FiSettings aria-hidden="true" />
+                        <span>Shop settings</span>
+                      </NavLink>
+                    </>
+                  )}
+                </div>
+              </div>
             )}
             {membership &&
               hasShopPermission(membership.role, "shop.menu.manage") && (
-                <NavLink
-                  to={`${shopPath(membership.shopId)}/categories`}
-                  onClick={closeNavigation}
+                <div
+                  className="dashboard-nav-group"
+                  role="group"
+                  aria-label="Menu management"
                 >
-                  <FiLayers aria-hidden="true" />
-                  Categories
-                </NavLink>
+                  <p className="dashboard-nav-label">Menu</p>
+                  <div className="dashboard-nav-links">
+                    <NavLink
+                      to={`${shopPath(membership.shopId)}/products`}
+                      onClick={closeNavigation}
+                    >
+                      <FiPackage aria-hidden="true" />
+                      <span>Products</span>
+                    </NavLink>
+                    <NavLink
+                      to={`${shopPath(membership.shopId)}/categories`}
+                      onClick={closeNavigation}
+                    >
+                      <FiLayers aria-hidden="true" />
+                      <span>Categories</span>
+                    </NavLink>
+                    <NavLink
+                      to={`${shopPath(membership.shopId)}/add-ons`}
+                      onClick={closeNavigation}
+                    >
+                      <FiSliders aria-hidden="true" />
+                      <span>Add-ons</span>
+                    </NavLink>
+                  </div>
+                </div>
               )}
-            {membership &&
-              hasShopPermission(membership.role, "shop.menu.manage") && (
-                <NavLink
-                  to={`${shopPath(membership.shopId)}/products`}
-                  onClick={closeNavigation}
-                >
-                  <FiPackage aria-hidden="true" />
-                  Products
+            <div
+              className="dashboard-nav-group dashboard-nav-account"
+              role="group"
+              aria-label="Account"
+            >
+              <p className="dashboard-nav-label">Account</p>
+              <div className="dashboard-nav-links">
+                <NavLink end to="/app/shops" onClick={closeNavigation}>
+                  <FiShoppingBag aria-hidden="true" />
+                  <span>Your shops</span>
                 </NavLink>
-              )}
-            {membership && hasShopPermission(membership.role, "shop.menu.manage") && (
-              <NavLink to={`${shopPath(membership.shopId)}/add-ons`} onClick={closeNavigation}>
-                <FiSliders aria-hidden="true" />Add-ons
-              </NavLink>
-            )}
-            <NavLink end to="/app/shops" onClick={closeNavigation}>
-              <FiShoppingBag aria-hidden="true" />
-              Your shops
-            </NavLink>
-            <NavLink to="/app/account" onClick={closeNavigation}>
-              <FiUser aria-hidden="true" />
-              Your account
-            </NavLink>
+                <NavLink to="/app/account" onClick={closeNavigation}>
+                  <FiUser aria-hidden="true" />
+                  <span>Your account</span>
+                </NavLink>
+              </div>
+            </div>
           </nav>
         </aside>
         <main
