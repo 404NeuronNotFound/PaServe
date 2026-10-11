@@ -1,6 +1,8 @@
 import {
   Body,
   Controller,
+  Delete,
+  HttpCode,
   Get,
   Param,
   ParseUUIDPipe,
@@ -30,6 +32,21 @@ import {
 @ShopResource('product', 'productId')
 export class ProductVariantsController {
   constructor(private readonly variants: ProductVariantsService) {}
+  @Delete('variants/:variantId')
+  @HttpCode(204)
+  deleteVariant(
+    @Param('variantId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Req() req: ShopResourceRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.variants.deleteVariant(
+      req.user.id,
+      req.shopResource.shopId,
+      req.shopResource.id,
+      id,
+    );
+  }
   @Post('variants/large')
   createLarge(
     @Body() dto: CreateLargeVariantDto,

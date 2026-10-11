@@ -35,7 +35,21 @@ export class AddOnsRepository {
   list(userId: string, shopId: string) {
     return this.prisma.shop.findFirst({
       where: shopAccessWhere(userId, shopId, roles),
-      select: { addOns: { where: { shopId }, orderBy: [...orderBy] } },
+      select: {
+        addOns: {
+          where: { shopId },
+          orderBy: [...orderBy],
+          include: {
+            products: {
+              where: { shopId, product: { shopId } },
+              select: {
+                product: { select: { id: true, name: true, isArchived: true } },
+              },
+              orderBy: { product: { name: 'asc' } },
+            },
+          },
+        },
+      },
     });
   }
   create(userId: string, shopId: string, dto: CreateAddOnRequest) {
@@ -76,6 +90,13 @@ export class AddOnsRepository {
           orderBy: { addOn: { sortOrder: 'asc' } },
         },
       },
+    });
+  }
+  delete(userId: string, shopId: string, id: string) {
+    this.requireId(id);
+    // The composite foreign key removes product assignments in this same write.
+    return this.prisma.addOn.delete({
+      where: { id, shopId, shop: shopAccessWhere(userId, shopId, roles) },
     });
   }
   assign(userId: string, shopId: string, productId: string, addOnId: string) {

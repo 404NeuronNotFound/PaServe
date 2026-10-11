@@ -21,7 +21,9 @@ describe('product variants management', () => {
     findVariant = vi.fn(),
     writeProduct = vi.fn(),
     writeVariant = vi.fn(),
-    writeGroup = vi.fn();
+    writeGroup = vi.fn(),
+    deleteVariant = vi.fn(),
+    transaction = vi.fn();
   let role: string;
   const dates = {
     createdAt: new Date('2026-10-10T00:00:00Z'),
@@ -62,8 +64,13 @@ describe('product variants management', () => {
       .useValue({
         shopMember: { findUnique: membership },
         product: { findFirst: findProduct, update: writeProduct },
-        productVariant: { update: writeVariant, findFirst: findVariant },
+        productVariant: {
+          update: writeVariant,
+          findFirst: findVariant,
+          delete: deleteVariant,
+        },
         productOptionGroup: { update: writeGroup },
+        $transaction: transaction,
       })
       .compile();
     app = module.createNestApplication();
@@ -76,6 +83,12 @@ describe('product variants management', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     role = 'OWNER';
+    transaction.mockImplementation(async (operation) =>
+      operation({
+        productVariant: { findFirst: findVariant, delete: deleteVariant },
+      }),
+    );
+    deleteVariant.mockResolvedValue(variant);
     currentUser.mockResolvedValue({ id: userId });
     membership.mockImplementation(async ({ where }) => ({
       id: 'member',
@@ -163,6 +176,106 @@ describe('product variants management', () => {
       .patch(path(suffix))
       .set('Authorization', 'Bearer valid')
       .send(body);
+  const remove = (id = variantId, product = productId) =>
+    request(app.getHttpServer())
+      .delete(path(`variants/${id}`, product))
+      .set('Authorization', 'Bearer valid');
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'allows %s to delete an option with live scoped predicates',
+    async (authorizedRole) => {
+      role = authorizedRole;
+      await remove().expect(204);
+      expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+        isolationLevel: 'Serializable',
+      });
+      expect(deleteVariant).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          id: variantId,
+          shopId,
+          productId,
+          isDefault: false,
+          product: expect.objectContaining({
+            id: productId,
+            shopId,
+            isArchived: false,
+            shop: expect.any(Object),
+          }),
+        }),
+      });
+    },
+  );
+  it.each(['CASHIER', 'KITCHEN'])(
+    'denies %s deletion',
+    async (restrictedRole) => {
+      role = restrictedRole;
+      await remove().expect(403);
+      expect(transaction).not.toHaveBeenCalled();
+    },
+  );
+  it('denies guest deletion', async () => {
+    await request(app.getHttpServer())
+      .delete(path(`variants/${variantId}`))
+      .expect(401);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it('does not reveal foreign or missing options/products', async () => {
+    await remove(foreignId).expect(404);
+    await remove(variantId, foreignId).expect(404);
+    expect(deleteVariant).not.toHaveBeenCalled();
+  });
+  it('validates the option identifier before deletion', async () => {
+    await remove('not-a-uuid').expect(400);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it('blocks deletion of a default option', async () => {
+    findVariant.mockResolvedValue({ ...variant, isDefault: true });
+    const result = await remove().expect(409);
+    expect(result.body.code).toBe('DEFAULT_VARIANT_DELETE_CONFLICT');
+    expect(deleteVariant).not.toHaveBeenCalled();
+  });
+  it('blocks the last available choice in a required group', async () => {
+    findVariant.mockResolvedValue({
+      ...variant,
+      optionGroupId: groupId,
+      optionGroup: { isRequired: true, variants: [] },
+    });
+    const result = await remove().expect(409);
+    expect(result.body.code).toBe('REQUIRED_GROUP_DELETE_CONFLICT');
+    expect(deleteVariant).not.toHaveBeenCalled();
+  });
+  it.each([
+    [true, true, [{ id: foreignId }]],
+    [false, true, []],
+    [true, false, []],
+  ])(
+    'permits deletion when required=%s, available=%s and alternatives=%j',
+    async (isRequired, isAvailable, variants) => {
+      findVariant.mockResolvedValue({
+        ...variant,
+        isAvailable,
+        optionGroupId: groupId,
+        optionGroup: { isRequired, variants },
+      });
+      await remove().expect(204);
+      expect(deleteVariant).toHaveBeenCalledOnce();
+    },
+  );
+  it('rechecks access inside the deletion transaction', async () => {
+    findVariant.mockResolvedValue(null);
+    await remove().expect(404);
+    expect(deleteVariant).not.toHaveBeenCalled();
+  });
+  it('reports serialization conflicts without retrying destructive writes', async () => {
+    transaction.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Concurrent change', {
+        code: 'P2034',
+        clientVersion: 'test',
+      }),
+    );
+    const result = await remove().expect(409);
+    expect(result.body.code).toBe('VARIANT_DELETE_CONFLICT');
+    expect(transaction).toHaveBeenCalledOnce();
+  });
   it.each(['\ud800', '\udfff'])(
     'rejects malformed Unicode variant/group name %j before storage',
     async (name) => {

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -31,6 +32,20 @@ import {
 @Roles('OWNER', 'ADMIN', 'MANAGER')
 export class AddOnsController {
   constructor(private readonly addOns: AddOnsService) {}
+  @Delete(':addOnId')
+  @HttpCode(204)
+  @ShopResource('addOn', 'addOnId')
+  delete(
+    @Req() req: ShopResourceRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.addOns.delete(
+      req.user.id,
+      req.shopResource.shopId,
+      req.shopResource.id,
+    );
+  }
   @Post('oat-milk')
   createOatMilk(
     @Body() dto: CreateOatMilkDto,

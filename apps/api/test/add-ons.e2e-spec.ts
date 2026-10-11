@@ -26,6 +26,7 @@ describe('add-on management and product selection', () => {
     writeProduct = vi.fn(),
     findAddOn = vi.fn(),
     writeAddOn = vi.fn(),
+    deleteAddOn = vi.fn(),
     remove = vi.fn();
   let role: string,
     status: 'AVAILABLE' | 'SOLD_OUT' | 'HIDDEN',
@@ -62,7 +63,11 @@ describe('add-on management and product selection', () => {
         shopMember: { findUnique: membership },
         shop: { findFirst: findShop, update: writeShop },
         product: { findFirst: findProduct, update: writeProduct },
-        addOn: { findFirst: findAddOn, update: writeAddOn },
+        addOn: {
+          findFirst: findAddOn,
+          update: writeAddOn,
+          delete: deleteAddOn,
+        },
         productAddOn: { deleteMany: remove },
       })
       .compile();
@@ -81,6 +86,14 @@ describe('add-on management and product selection', () => {
     categoryVisible = true;
     shopActive = true;
     assigned = new Set([shotId, oatId]);
+    deleteAddOn.mockImplementation(async ({ where }) => {
+      const index = rows.findIndex(
+        (row) => row.id === where.id && row.shopId === where.shopId,
+      );
+      if (index < 0) throw missing();
+      assigned.delete(where.id);
+      return rows.splice(index, 1)[0];
+    });
     currentUser.mockResolvedValue({ id: userId });
     membership.mockImplementation(async ({ where }) => ({
       id: 'member',
@@ -108,7 +121,11 @@ describe('add-on management and product selection', () => {
       if (!shopActive) return null;
       if (select.id) return where.slug === 'cafe' ? { id: shopId } : null;
       return where.id === shopId
-        ? { addOns: rows.filter((row) => row.shopId === shopId) }
+        ? {
+            addOns: rows
+              .filter((row) => row.shopId === shopId)
+              .map((row) => ({ ...row, products: [] })),
+          }
         : null;
     });
     writeShop.mockImplementation(async ({ data }) => ({
@@ -207,6 +224,61 @@ describe('add-on management and product selection', () => {
       .send({ addOnId: id });
   const quote = (body: unknown = { addOnIds: [shotId, oatId] }) =>
     request(app.getHttpServer()).post(`${publicPath}/quote`).send(body);
+  const destroy = (id = shotId) =>
+    request(app.getHttpServer())
+      .delete(`${root}/${id}`)
+      .set('Authorization', 'Bearer valid');
+  it.each(['OWNER', 'ADMIN', 'MANAGER'])(
+    'allows %s to delete a shared add-on with live shop scope',
+    async (authorizedRole) => {
+      role = authorizedRole;
+      const result = await destroy().expect(204);
+      expect(result.headers['cache-control']).toBe('no-store');
+      expect(deleteAddOn).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          id: shotId,
+          shopId,
+          shop: expect.objectContaining({ id: shopId, isActive: true }),
+        }),
+      });
+      expect(assigned.has(shotId)).toBe(false);
+      await quote({ addOnIds: [shotId] }).expect(400);
+      const allowed = await request(app.getHttpServer())
+        .get(publicPath)
+        .expect(200);
+      expect(
+        allowed.body.addOns.map((item: { id: string }) => item.id),
+      ).not.toContain(shotId);
+    },
+  );
+  it.each(['CASHIER', 'KITCHEN'])(
+    'denies %s shared add-on deletion',
+    async (restrictedRole) => {
+      role = restrictedRole;
+      await destroy().expect(403);
+      expect(deleteAddOn).not.toHaveBeenCalled();
+    },
+  );
+  it('denies unauthenticated shared deletion', async () => {
+    await request(app.getHttpServer()).delete(`${root}/${shotId}`).expect(401);
+    expect(deleteAddOn).not.toHaveBeenCalled();
+  });
+  it('rejects foreign, missing and malformed add-on identifiers', async () => {
+    await destroy(foreignId).expect(404);
+    await destroy(randomUUID()).expect(404);
+    await destroy('invalid').expect(400);
+    expect(deleteAddOn).not.toHaveBeenCalled();
+  });
+  it('reports lost access or missing resources at the conditional deletion write', async () => {
+    deleteAddOn.mockRejectedValue(missing());
+    await destroy().expect(404);
+    expect(assigned.has(shotId)).toBe(true);
+  });
+  it('allows deleting a disabled or unassigned add-on', async () => {
+    rows.find((item) => item.id === cheeseId)!.isAvailable = false;
+    await destroy(cheeseId).expect(204);
+    expect(deleteAddOn).toHaveBeenCalledOnce();
+  });
   it.each([
     ['No Onions', '0', '0.00'],
     ['No Whipped Cream', '0.00', '0.00'],
@@ -632,6 +704,22 @@ describe('add-on management and product selection', () => {
       shopId,
       shop: { id: shopId, isActive: true },
     });
+  });
+  it('scopes catalog product usage to the shop and keeps it out of public options', async () => {
+    const response = await request(app.getHttpServer())
+      .get(root)
+      .set('Authorization', 'Bearer valid')
+      .expect(200);
+    expect(response.body.addOns[0].assignedProducts).toEqual([]);
+    expect(
+      findShop.mock.calls.at(-1)?.[0].select.addOns.include.products.where,
+    ).toEqual({ shopId, product: { shopId } });
+    const publicResponse = await request(app.getHttpServer())
+      .get(publicPath)
+      .expect(200);
+    expect(publicResponse.body.addOns[0]).not.toHaveProperty(
+      'assignedProducts',
+    );
   });
   it('calculates exact current server prices for allowed selections', async () => {
     const response = await quote().expect(201);

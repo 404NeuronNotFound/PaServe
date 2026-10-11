@@ -82,7 +82,12 @@ export class AddOnsService {
         code: 'SHOP_PERMISSION_REQUIRED',
         message: 'Your menu management access is no longer available.',
       });
-    return { addOns: result.addOns.map(serialize) };
+    return {
+      addOns: result.addOns.map(({ products, ...addOn }) => ({
+        ...serialize(addOn),
+        assignedProducts: products.map((link) => link.product),
+      })),
+    };
   }
   async create(
     userId: string,
@@ -164,6 +169,13 @@ export class AddOnsService {
     const result = await this.repository.productList(userId, shopId, productId);
     if (!result) throw unavailable();
     return { addOns: result.addOns.map((link) => serialize(link.addOn)) };
+  }
+  async delete(userId: string, shopId: string, id: string): Promise<void> {
+    await this.authorize(userId, shopId);
+    await this.resources.requireResource(userId, shopId, 'addOn', id);
+    await this.write(async () => {
+      await this.repository.delete(userId, shopId, id);
+    });
   }
   async assign(
     userId: string,

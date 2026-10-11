@@ -226,4 +226,15 @@ export class ProductVariantsService {
       ),
     }));
   }
+  async deleteVariant(
+    userId: string,
+    shopId: string,
+    productId: string,
+    id: string,
+  ): Promise<void> {
+    await this.authorize(userId, shopId, productId);
+    await this.write(() =>
+      this.repository.deleteVariant(userId, shopId, productId, id),
+    );
+  }
 }

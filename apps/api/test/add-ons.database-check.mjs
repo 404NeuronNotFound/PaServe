@@ -159,6 +159,16 @@ try {
           addOnIds: [shot.id, oat.id],
         });
         assert.equal(quote.addOnTotal, '55.30');
+        const catalogWithUsage = await service.list(user.id, shop.id);
+        assert.deepEqual(
+          catalogWithUsage.addOns.find((item) => item.id === oat.id)
+            .assignedProducts,
+          [{ id: product.id, name: product.name, isArchived: false }],
+        );
+        assert.equal(
+          catalogWithUsage.addOns.some((item) => item.id === foreign.id),
+          false,
+        );
         assert.equal(quote.baseWithAddOnsPrice, '175.30');
         assert.equal(
           (await service.quote(shop.slug, product.id, { addOnIds: [oat.id] }))
@@ -401,11 +411,63 @@ try {
           where: { id: shop.id },
           data: { isActive: true },
         });
+        const deleteFixture = (
+          await service.create(user.id, shop.id, {
+            name: 'Delete fixture',
+            priceAdjustment: '7.25',
+          })
+        ).addOn;
+        await service.assign(user.id, shop.id, product.id, deleteFixture.id);
+        await service.assign(user.id, shop.id, food.id, deleteFixture.id);
+        assert.equal(
+          await tx.productAddOn.count({
+            where: { shopId: shop.id, addOnId: deleteFixture.id },
+          }),
+          2,
+        );
+        await assert.rejects(
+          () => service.delete(user.id, shop.id, foreign.id),
+          (error) => error.getStatus() === 404,
+        );
+        await tx.product.update({
+          where: { id: food.id, shopId: shop.id },
+          data: { isArchived: true },
+        });
+        await service.delete(user.id, shop.id, deleteFixture.id);
+        assert.equal(
+          await tx.productAddOn.count({
+            where: { shopId: shop.id, addOnId: deleteFixture.id },
+          }),
+          0,
+        );
+        assert.equal(
+          await tx.addOn.count({
+            where: { id: deleteFixture.id, shopId: shop.id },
+          }),
+          0,
+        );
+        assert.equal(
+          await tx.product.count({
+            where: { shopId: shop.id, id: { in: [product.id, food.id] } },
+          }),
+          2,
+        );
+        await assert.rejects(
+          () =>
+            service.quote(shop.slug, product.id, {
+              addOnIds: [deleteFixture.id],
+            }),
+          (error) => error.getStatus() === 400,
+        );
         await tx.shopMember.update({
           where: { userId_shopId: { userId: user.id, shopId: shop.id } },
           data: { role: 'CASHIER' },
         });
         assert.equal(await repo.list(user.id, shop.id), null);
+        await rejectedWrite(
+          () => repo.delete(user.id, shop.id, shot.id),
+          (error) => error.code === 'P2025',
+        );
         await rejectedWrite(
           () => repo.update(user.id, shop.id, shot.id, { name: 'Changed' }),
           (error) => error.code === 'P2025',

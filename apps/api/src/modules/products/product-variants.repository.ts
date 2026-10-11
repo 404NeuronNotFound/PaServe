@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client.js';
 import { isUUID } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
@@ -158,5 +164,82 @@ export class ProductVariantsRepository {
         product: this.productWhere(userId, shopId, productId),
       },
     });
+  }
+  async deleteVariant(
+    userId: string,
+    shopId: string,
+    productId: string,
+    id: string,
+  ): Promise<void> {
+    this.requireId(id);
+    const where = {
+      id,
+      shopId,
+      productId,
+      product: this.productWhere(userId, shopId, productId),
+    };
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          const variant = await tx.productVariant.findFirst({
+            where,
+            include: {
+              optionGroup: {
+                select: {
+                  isRequired: true,
+                  variants: {
+                    where: {
+                      shopId,
+                      productId,
+                      id: { not: id },
+                      isAvailable: true,
+                    },
+                    select: { id: true },
+                    take: 1,
+                  },
+                },
+              },
+            },
+          });
+          if (!variant)
+            throw new NotFoundException({
+              code: 'RESOURCE_NOT_ACCESSIBLE',
+              message:
+                'This option is unavailable in this shop, or your access changed.',
+            });
+          if (variant.isDefault)
+            throw new ConflictException({
+              code: 'DEFAULT_VARIANT_DELETE_CONFLICT',
+              message:
+                'Uncheck Use as the default option and save before deleting this option. Choose a new default if needed.',
+            });
+          if (
+            variant.isAvailable &&
+            variant.optionGroup?.isRequired &&
+            !variant.optionGroup.variants.length
+          )
+            throw new ConflictException({
+              code: 'REQUIRED_GROUP_DELETE_CONFLICT',
+              message:
+                'This is the last available option in a required group. Add another available option or make the group optional before deleting it.',
+            });
+          await tx.productVariant.delete({
+            where: { ...where, isDefault: false },
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      )
+        throw new ConflictException({
+          code: 'VARIANT_DELETE_CONFLICT',
+          message:
+            'The options changed while you were deleting. Close the editor and refresh before trying again.',
+        });
+      throw error;
+    }
   }
 }
