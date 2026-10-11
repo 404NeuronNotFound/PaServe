@@ -620,14 +620,25 @@ export interface ProductSelectionQuoteResponse {
   variants: PublicProductDetailsResponse["variants"];
   addOns: PublicAddOn[];
 }
-export const TABLE_LIMITS = { numberMin: 1, numberMax: 9999 } as const;
+export const TABLE_LIMITS = { numberMaxLength: 40 } as const;
+export const TABLE_NUMBER_PATTERN = /^[^\p{Cc}\p{Cf}\p{Cs}]*$/u;
+export function normalizeTableNumber(value: string): string {
+  // Do not let trimming or collapsing spaces erase invalid control characters.
+  return TABLE_NUMBER_PATTERN.test(value)
+    ? value.normalize("NFC").trim().replace(/\p{Zs}+/gu, " ")
+    : value;
+}
+const tableNumberCollator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+export function compareTableNumbers(a: { number: string; id: string }, b: { number: string; id: string }): number {
+  return tableNumberCollator.compare(a.number, b.number) || a.id.localeCompare(b.id);
+}
 export interface CreateTableRequest {
-  number: number;
+  number: string;
 }
 export interface RestaurantTable {
   id: string;
   shopId: string;
-  number: number;
+  number: string;
   code: string;
   isActive: boolean;
   createdAt: string;

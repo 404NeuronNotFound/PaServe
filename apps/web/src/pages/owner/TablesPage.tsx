@@ -4,6 +4,9 @@ import { isAxiosError } from "axios";
 import { FiGrid, FiPlus } from "react-icons/fi";
 import {
   TABLE_LIMITS,
+  TABLE_NUMBER_PATTERN,
+  normalizeTableNumber,
+  compareTableNumbers,
   hasShopPermission,
   type ApiErrorResponse,
   type CurrentUserResponse,
@@ -65,7 +68,7 @@ function TableWorkspace({ userId }: { userId: string }) {
     refetchOnWindowFocus: false,
   });
   const mutation = useMutation({
-    mutationFn: (value: number) => createTable(shopId, { number: value }),
+    mutationFn: (value: string) => createTable(shopId, { number: value }),
     retry: false,
     networkMode: "always",
   });
@@ -92,15 +95,14 @@ function TableWorkspace({ userId }: { userId: string }) {
       query.isFetching
     )
       return;
-    const value = Number(number);
+    const value = normalizeTableNumber(number);
     if (
-      !/^\d+$/.test(number) ||
-      !Number.isInteger(value) ||
-      value < TABLE_LIMITS.numberMin ||
-      value > TABLE_LIMITS.numberMax
+      !value ||
+      !TABLE_NUMBER_PATTERN.test(value) ||
+      value.length > TABLE_LIMITS.numberMaxLength
     ) {
       setFieldError(
-        `Enter a whole table number from ${TABLE_LIMITS.numberMin} to ${TABLE_LIMITS.numberMax}.`,
+        `Enter a table number or label of 1–${TABLE_LIMITS.numberMaxLength} characters without control characters.`,
       );
       input.current?.focus();
       return;
@@ -117,7 +119,7 @@ function TableWorkspace({ userId }: { userId: string }) {
             (table) => table.id !== result.table.id,
           ),
           result.table,
-        ].sort((a, b) => a.number - b.number),
+        ].sort(compareTableNumbers),
       }));
       void client.invalidateQueries({ queryKey: key });
       setNumber("");
@@ -133,7 +135,7 @@ function TableWorkspace({ userId }: { userId: string }) {
           );
         } else if (status === 409) {
           setFieldError(
-            "This table number or code already exists. Choose a different number.",
+            "This table number or label already exists. Choose a different label.",
           );
           void client.invalidateQueries({ queryKey: key });
         } else if (failure.response?.data.fieldErrors?.number) {
@@ -229,7 +231,7 @@ function TableWorkspace({ userId }: { userId: string }) {
           aria-labelledby="create-table-title"
         >
           <h2 id="create-table-title">Create table</h2>
-          <p>Enter the number displayed on the table.</p>
+          <p>Enter the number or label displayed on the table.</p>
           <form onSubmit={(event) => void submit(event)} noValidate>
             <div className="field">
               <label htmlFor="table-number">Table number</label>
@@ -237,9 +239,9 @@ function TableWorkspace({ userId }: { userId: string }) {
                 id="table-number"
                 ref={input}
                 type="text"
-                inputMode="numeric"
                 autoComplete="off"
-                maxLength={4}
+                maxLength={TABLE_LIMITS.numberMaxLength}
+                placeholder="12, A3, Patio 4"
                 value={number}
                 disabled={disabled}
                 aria-invalid={!!fieldError}
@@ -251,8 +253,8 @@ function TableWorkspace({ userId }: { userId: string }) {
                 }}
               />
               <p className="field-hint" id="table-number-hint">
-                Use a whole number from 1 to 9999. Each number is unique in this
-                shop.
+                Use up to 40 characters, such as 12, A3 or Patio 4. Labels are
+                unique in this shop, ignoring case.
               </p>
               {fieldError && (
                 <InlineMessage id="table-number-error">

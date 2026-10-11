@@ -30,7 +30,7 @@ vi.mock("../../features/shops/api/tables", async (importOriginal) => ({
 const table = {
   id: "table-a",
   shopId: "a",
-  number: 12,
+  number: "12",
   code: "T12",
   isActive: true,
   createdAt: "2026-10-11T00:00:00Z",
@@ -83,7 +83,7 @@ it.each(["OWNER", "ADMIN"] as const)(
     await screen.findByText(/No tables yet/);
     await user.type(screen.getByLabelText("Table number"), "12");
     await user.click(screen.getByRole("button", { name: "Create table" }));
-    expect(createTable).toHaveBeenCalledWith("a", { number: 12 });
+    expect(createTable).toHaveBeenCalledWith("a", { number: "12" });
     await screen.findByText("Table 12");
     expect(screen.getByText("Code: T12")).toBeInTheDocument();
     expect(screen.getByLabelText("Table number")).toHaveValue("");
@@ -100,7 +100,7 @@ it.each(["MANAGER", "CASHIER", "KITCHEN"] as const)(
     ).not.toBeInTheDocument();
   },
 );
-it.each(["", "0", "-1", "1.5", "10000", "abc"])(
+it.each(["", "   ", "x".repeat(41), "A\u00003", "A\u202e3", "A\t3"])(
   "rejects invalid input %j and focuses the field",
   async (value) => {
     setup();
@@ -108,11 +108,48 @@ it.each(["", "0", "-1", "1.5", "10000", "abc"])(
     const input = screen.getByLabelText("Table number");
     fireEvent.change(input, { target: { value } });
     fireEvent.click(screen.getByRole("button", { name: "Create table" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(/whole table number/);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /table number or label/,
+    );
     expect(input).toHaveFocus();
     expect(createTable).not.toHaveBeenCalled();
   },
 );
+it.each(["A3", "Patio 4", "012", "露台 4", "x".repeat(40)])(
+  "creates and displays label %s without numeric coercion",
+  async (number) => {
+    vi.mocked(createTable).mockImplementation(async (_shopId, input) => {
+      const saved = { ...table, number: input.number, code: "T-generated" };
+      vi.mocked(listTables).mockResolvedValue({ tables: [saved] });
+      return { table: saved };
+    });
+    setup();
+    await screen.findByText(/No tables yet/);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Table number"), number);
+    await user.click(screen.getByRole("button", { name: "Create table" }));
+    expect(createTable).toHaveBeenCalledWith("a", { number });
+    await screen.findByText(`Table ${number}`);
+  },
+);
+it("normalizes extra spaces before creation", async () => {
+  setup();
+  await screen.findByText(/No tables yet/);
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText("Table number"), "  Patio   4  ");
+  await user.click(screen.getByRole("button", { name: "Create table" }));
+  expect(createTable).toHaveBeenCalledWith("a", { number: "Patio 4" });
+});
+it("restores saved text labels after remount", async () => {
+  vi.mocked(listTables).mockResolvedValue({
+    tables: [{ ...table, number: "Patio 4" }],
+  });
+  const view = setup();
+  await screen.findByText("Table Patio 4");
+  view.unmount();
+  setup();
+  await screen.findByText("Table Patio 4");
+});
 it("retains the draft on duplicate rejection", async () => {
   vi.mocked(createTable).mockRejectedValue({
     isAxiosError: true,

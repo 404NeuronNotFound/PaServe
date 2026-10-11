@@ -74,6 +74,8 @@
 .tables-list li > div {
   display: grid;
   gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .tables-list li > div > span {
   color: var(--color-muted);
