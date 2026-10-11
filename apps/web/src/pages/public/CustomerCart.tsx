@@ -3,9 +3,9 @@ import { FiArrowRight, FiShoppingBag, FiTrash2 } from "react-icons/fi";
 import type { PublicMenuResponse } from "@paserve/contracts";
 import { cartItemsForShop, sumPrices, useCart } from "../../features/cart/cart";
 import { formatCartPrice } from "../../lib/money";
-import { CustomerNote } from "../../components/forms/CustomerNote";
 import { CustomerDialog } from "./CustomerDialog";
 import { CartQuantityControl } from "./CartQuantityControl";
+import { CartNotesEditor } from "./CartNotesEditor";
 import "./customer-cart.css";
 
 export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
@@ -92,12 +92,7 @@ export function CustomerCart({ shop }: { shop: PublicMenuResponse["shop"] }) {
                         .join(", ")}
                     </p>
                   )}
-                  {item.notes && (
-                    <div className="customer-cart-line-note">
-                      <span>Notes</span>
-                      <CustomerNote notes={item.notes} />
-                    </div>
-                  )}
+                  <CartNotesEditor item={item} shopSlug={shop.slug} />
                   <button
                     type="button"
                     data-cart-remove

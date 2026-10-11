@@ -1,4 +1,9 @@
 import { create } from "zustand";
+import {
+  CUSTOMER_NOTE_MAX_LENGTH,
+  CUSTOMER_NOTE_PATTERN,
+  normalizeCustomerNote,
+} from "@paserve/contracts";
 import type {
   ProductSelectionQuoteResponse,
   ProductSelectionRequest,
@@ -95,6 +100,7 @@ interface CartState {
     pricePreview?: CartPricePreview,
   ) => void;
   remove: (slug: string, lineId: string) => void;
+  updateNotes: (slug: string, expected: CartItem, notes: string) => boolean;
   updateQuantity: (
     slug: string,
     expected: CartItem,
@@ -133,6 +139,29 @@ export const useCart = create<CartState>((set) => ({
         },
       };
     }),
+  updateNotes: (slug, expected, draft) => {
+    if (draft.length > CUSTOMER_NOTE_MAX_LENGTH || !CUSTOMER_NOTE_PATTERN.test(draft)) {
+      return false;
+    }
+    const notes = normalizeCustomerNote(draft);
+    let updated = false;
+    set((state) => {
+      const items = cartItemsForShop(state.shops, slug);
+      if (!items.includes(expected)) return state;
+      updated = true;
+      if (expected.notes === notes) return state;
+      const replacement = { ...expected };
+      delete replacement.notes;
+      if (notes) replacement.notes = notes;
+      return {
+        shops: {
+          ...state.shops,
+          [slug]: items.map((item) => item === expected ? replacement : item),
+        },
+      };
+    });
+    return updated;
+  },
   updateQuantity: (slug, expected, quote, pricePreview) => {
     let updated = false;
     set((state) => {
@@ -141,6 +170,7 @@ export const useCart = create<CartState>((set) => ({
         !items.includes(expected) ||
         quote.productId !== expected.productId ||
         cartVariantKey(quote) !== expected.variantKey ||
+        normalizeCustomerNote(quote.notes ?? "") !== expected.notes ||
         JSON.stringify(quote.addOns.map((addOn) => addOn.id).sort()) !==
           JSON.stringify(expected.addOns.map((addOn) => addOn.id).sort()) ||
         !Number.isInteger(quote.quantity) ||

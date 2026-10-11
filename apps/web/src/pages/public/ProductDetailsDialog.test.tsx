@@ -921,3 +921,37 @@ it("updates only one duplicate line's quantity and immediately reflects its new 
   await waitFor(() => expect(within(cart).getByRole("status")).toHaveTextContent("₱240.02"));
   expect(screen.getByRole("button", { name: "View cart (2)" })).toBeInTheDocument();
 });
+
+it("saves notes on one cart line, retains them after reopening, and submits them on quantity updates", async () => {
+  const quote = {
+    productId: product.id, productName: "Coffee", currency: "PHP" as const,
+    basePrice: "120.01", unitPrice: "120.01", totalPrice: "120.01",
+    quantity: 1, variants: [details.variants[0]], addOns: [], notes: "Hot",
+  };
+  useCart.getState().add("cafe", quote);
+  useCart.getState().add("cafe", quote);
+  const second = useCart.getState().shops.cafe[1];
+  setup();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "View cart (2)" }));
+  let cart = screen.getByRole("dialog", { name: "Cafe cart" });
+  const firstRow = within(cart).getAllByRole("listitem")[0];
+  await user.click(within(firstRow).getByRole("button", { name: "Edit notes for Coffee" }));
+  await user.clear(within(firstRow).getByRole("textbox"));
+  await user.type(within(firstRow).getByRole("textbox"), "No sugar");
+  await user.click(within(firstRow).getByRole("button", { name: "Save notes" }));
+  expect(within(firstRow).getByText("No sugar")).toBeInTheDocument();
+  expect(within(cart).getByRole("status")).toHaveTextContent("₱240.02");
+  expect(useCart.getState().shops.cafe[1]).toBe(second);
+  expect(api.post).not.toHaveBeenCalled();
+  await user.click(within(cart).getByRole("button", { name: "Close" }));
+  await user.click(screen.getByRole("button", { name: "View cart (2)" }));
+  cart = screen.getByRole("dialog", { name: "Cafe cart" });
+  expect(within(within(cart).getAllByRole("listitem")[0]).getByText("No sugar")).toBeInTheDocument();
+  vi.mocked(api.post).mockResolvedValueOnce({ data: { ...quote, notes: "No sugar", quantity: 2, totalPrice: "240.02" } });
+  await user.click(within(within(cart).getAllByRole("listitem")[0]).getByRole("button", { name: "Increase quantity for Coffee" }));
+  await waitFor(() => expect(useCart.getState().shops.cafe[0].quantity).toBe(2));
+  expect(api.post).toHaveBeenCalledWith("/menu/cafe/products/product/quote", {
+    variantIds: ["regular"], addOnIds: [], quantity: 2, notes: "No sugar",
+  });
+});
