@@ -25,10 +25,18 @@ export class PublicMenuController {
       });
     const { categories, products, ...shop } = result;
     const menuProducts = products.map((product) => ({
-      ...product,
+      id: product.id,
+      categoryId: product.categoryId,
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
       price: product.price.toFixed(2),
+      imageUrl: product.imageUrl,
       isOrderable: product.status === 'AVAILABLE',
       status: product.status as 'AVAILABLE' | 'SOLD_OUT',
+      isFeatured: product.isFeatured,
+      featuredSortOrder: product.featuredSortOrder,
+      sortOrder: product.sortOrder,
     }));
     return {
       shop,

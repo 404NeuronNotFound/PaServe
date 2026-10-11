@@ -74,8 +74,18 @@ describe('public menu visibility', () => {
     expect(findShop.mock.calls[1][0]).toMatchObject({
       where: { id: 'shop-a', slug: 'cafe', isActive: true },
       select: {
-        categories: { where: { shopId: 'shop-a', isVisible: true } },
+        categories: {
+          where: { shopId: 'shop-a', isVisible: true },
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+          select: { id: true, name: true, slug: true, description: true, sortOrder: true },
+        },
         products: {
+          select: {
+            id: true, categoryId: true, name: true, slug: true,
+            description: true, price: true, imageUrl: true, status: true,
+            isFeatured: true, featuredSortOrder: true, sortOrder: true,
+          },
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
           where: {
             shopId: 'shop-a',
             status: { in: ['AVAILABLE', 'SOLD_OUT'] },
@@ -101,6 +111,75 @@ describe('public menu visibility', () => {
       'slug',
     ]);
   });
+  it('serializes only public product fields in both the menu and Featured section', async () => {
+    const product = {
+      id: 'coffee', categoryId: 'drinks', name: 'Coffee', slug: 'coffee',
+      description: 'Fresh coffee', price: new Prisma.Decimal('1234.50'),
+      imageUrl: 'https://example.com/coffee.webp', status: 'AVAILABLE',
+      isFeatured: true, featuredSortOrder: 2, sortOrder: 3,
+      // Even an expanded repository projection must not leak internal fields.
+      shopId: 'shop-a', isArchived: false, createdAt: new Date(),
+      updatedAt: new Date(), internalNotes: 'private management data',
+    };
+    findShop.mockResolvedValueOnce({ id: 'shop-a' }).mockResolvedValueOnce({
+      name: 'Cafe', slug: 'cafe', description: null,
+      categories: [{ id: 'drinks', name: 'Drinks', slug: 'drinks', description: null, sortOrder: 0 }],
+      products: [product],
+    });
+    const response = await request(app.getHttpServer()).get('/api/v1/menu/cafe').expect(200);
+    const expected = {
+      id: 'coffee', categoryId: 'drinks', name: 'Coffee', slug: 'coffee',
+      description: 'Fresh coffee', price: '1234.50',
+      imageUrl: 'https://example.com/coffee.webp', status: 'AVAILABLE',
+      isOrderable: true, isFeatured: true, featuredSortOrder: 2, sortOrder: 3,
+    };
+    expect(response.body.products).toEqual([expected]);
+    expect(response.body.featuredProducts).toEqual([expected]);
+  });
+  it.each(['cafe-a', 'cafe-b'])(
+    'returns ordered public categories only for the shop resolved by %s',
+    async (slug) => {
+      const shopId = slug === 'cafe-a' ? 'shop-a' : 'shop-b';
+      const foreignShopId = shopId === 'shop-a' ? 'shop-b' : 'shop-a';
+      const categories = [
+        { id: `${shopId}-desserts`, name: 'Desserts', slug: 'desserts', description: 'Fresh pastries', sortOrder: 1 },
+        { id: `${shopId}-drinks`, name: 'Drinks', slug: 'drinks', description: null, sortOrder: 9 },
+      ];
+      const price = slug === 'cafe-a' ? '120.01' : '250.99';
+      const product = {
+        id: `${shopId}-coffee`, categoryId: `${shopId}-drinks`, name: 'Coffee',
+        slug: 'coffee', description: null, price: new Prisma.Decimal(price),
+        imageUrl: null, status: 'AVAILABLE', isFeatured: true,
+        featuredSortOrder: 0, sortOrder: 0,
+      };
+      findShop.mockResolvedValueOnce({ id: shopId }).mockResolvedValueOnce({
+        name: slug, slug, description: null, categories, products: [product],
+      });
+      // Client shop hints must not override the tenant resolved from the slug.
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/menu/${slug}?shopId=${foreignShopId}`)
+        .set('X-Shop-Id', foreignShopId)
+        .expect(200);
+      expect(response.body.categories).toEqual(categories);
+      expect(response.body.products).toEqual([{ ...product, price, isOrderable: true }]);
+      expect(response.body.featuredProducts).toEqual(response.body.products);
+      expect(findShop.mock.calls[0][0].where).toEqual({ slug, isActive: true });
+      expect(findShop.mock.calls[1][0]).toMatchObject({
+        where: { id: shopId, slug, isActive: true },
+        select: {
+          categories: {
+            where: { shopId, isVisible: true },
+            orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+          },
+          products: { where: {
+            shopId,
+            OR: [{ categoryId: null }, { category: { shopId, isVisible: true } }],
+          } },
+        },
+      });
+      expect(response.body.categories.some((category) => category.id.startsWith(foreignShopId))).toBe(false);
+    },
+  );
   it.each(['missing', 'inactive'])('does not reveal the %s shop', async (slug) => {
     const inactiveShop = { id: 'inactive-shop', slug: 'inactive', isActive: false };
     findShop.mockImplementation(async ({ where }) =>
