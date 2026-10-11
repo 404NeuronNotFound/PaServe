@@ -8,6 +8,12 @@ import type {
   ProductSelectionQuoteResponse,
   ProductSelectionRequest,
 } from "@paserve/contracts";
+import {
+  browserCartStorage,
+  readCartStorage,
+  writeCartStorage,
+  type CartStorage,
+} from "./cart-storage";
 
 export interface CartSelection {
   productId: string;
@@ -184,9 +190,10 @@ interface CartState {
     pricePreview: CartPricePreview,
   ) => boolean;
 }
-// Session memory only. Quotes are snapshots; checkout must revalidate them later.
-export const useCart = create<CartState>((set) => ({
-  shops: {},
+// Only cart snapshots persist. Checkout must revalidate them before ordering.
+export function createCartStore(storage: CartStorage | null = browserCartStorage()) {
+  const store = create<CartState>((set) => ({
+  shops: readCartStorage(storage),
   add: (slug, quote, pricePreview) =>
     set((state) => ({
       shops: {
@@ -258,7 +265,20 @@ export const useCart = create<CartState>((set) => ({
     });
     return updated;
   },
-}));
+  }));
+  store.subscribe((state, previous) => {
+    const slugs = new Set([...Object.keys(previous.shops), ...Object.keys(state.shops)]);
+    for (const slug of slugs) {
+      const items = cartItemsForShop(state.shops, slug);
+      if (items !== cartItemsForShop(previous.shops, slug)) {
+        writeCartStorage(storage, slug, items);
+      }
+    }
+  });
+  return store;
+}
+
+export const useCart = createCartStore();
 
 export function sumPrices(prices: string[], quantity = 1): string {
   const cents =

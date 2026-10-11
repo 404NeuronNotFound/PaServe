@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PublicMenuView } from "./PublicMenuView";
 import { api } from "../../lib/api/client";
-import { cartCheckoutLines, cartVariantKey, useCart, sumPrices } from "../../features/cart/cart";
+import { cartCheckoutLines, cartVariantKey, createCartStore, useCart, sumPrices } from "../../features/cart/cart";
 import { useFeedbackStore } from "../../app/stores/feedback";
 import type {
   PublicMenuResponse,
@@ -957,4 +957,50 @@ it("saves notes on one cart line, retains them after reopening, and submits them
   expect(api.post).toHaveBeenCalledWith("/menu/cafe/products/product/quote", {
     variantIds: ["regular"], addOnIds: [], quantity: 2, notes: "No sugar",
   });
+});
+
+it("restores saved carts and displays only the active shop when switching away and back", async () => {
+  const quote = {
+    productId: product.id, productName: "Coffee", currency: "PHP" as const,
+    basePrice: "120.01", unitPrice: "120.01", totalPrice: "240.02",
+    quantity: 2, variants: [details.variants[0]], addOns: [], notes: "Less ice",
+  };
+  useCart.getState().add("cafe", quote);
+  useCart.getState().add("other", {
+    ...quote, productId: "tea", productName: "Tea", quantity: 1,
+    basePrice: "99.99", unitPrice: "99.99", totalPrice: "99.99", notes: "Hot",
+  });
+  const saved = structuredClone(useCart.getState().shops);
+  const restored = createCartStore(window.localStorage);
+  expect(restored.getState().shops).toEqual(saved);
+  useCart.setState({ shops: restored.getState().shops });
+  const view = setup();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "View cart (2)" }));
+  const cafeCart = screen.getByRole("dialog", { name: "Cafe cart" });
+  expect(within(cafeCart).getByText("Less ice")).toBeInTheDocument();
+  expect(within(cafeCart).queryByText("Tea")).not.toBeInTheDocument();
+  expect(within(cafeCart).getByRole("status")).toHaveTextContent("₱240.02");
+
+  view.rerender(
+    <QueryClientProvider client={view.client}>
+      <PublicMenuView menu={{ ...menu, shop: { name: "Other", slug: "other", description: null } }} />
+    </QueryClientProvider>,
+  );
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "View cart (1)" }));
+  const otherCart = screen.getByRole("dialog", { name: "Other cart" });
+  expect(within(otherCart).getByText("Tea")).toBeInTheDocument();
+  expect(within(otherCart).queryByText("Coffee")).not.toBeInTheDocument();
+  expect(within(otherCart).getByRole("status")).toHaveTextContent("₱99.99");
+
+  view.rerender(
+    <QueryClientProvider client={view.client}>
+      <PublicMenuView menu={menu} />
+    </QueryClientProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "View cart (2)" }));
+  expect(within(screen.getByRole("dialog", { name: "Cafe cart" })).getByText("Less ice")).toBeInTheDocument();
+  expect(useCart.getState().shops).toEqual(saved);
+  expect(api.post).not.toHaveBeenCalled();
 });
