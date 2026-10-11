@@ -78,14 +78,16 @@ export const useCart = create<CartState>((set) => ({
       },
     })),
   remove: (slug, lineId) =>
-    set((state) => ({
-      shops: {
-        ...state.shops,
-        [slug]: cartItemsForShop(state.shops, slug).filter(
-          (item) => item.lineId !== lineId,
-        ),
-      },
-    })),
+    set((state) => {
+      const items = cartItemsForShop(state.shops, slug);
+      if (!items.some((item) => item.lineId === lineId)) return state;
+      return {
+        shops: {
+          ...state.shops,
+          [slug]: items.filter((item) => item.lineId !== lineId),
+        },
+      };
+    }),
 }));
 
 export function sumPrices(prices: string[], quantity = 1): string {

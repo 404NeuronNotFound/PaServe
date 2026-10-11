@@ -75,6 +75,52 @@ it("does not invent client preview metadata for a quote-only addition", () => {
   expect(useCart.getState().shops.cafe[0].pricePreview).toBeNull();
 });
 
+it("removes only the selected configured duplicate, preserving other lines and shops", () => {
+  const configured: ProductSelectionQuoteResponse = {
+    ...quote,
+    quantity: 3,
+    unitPrice: "1.30",
+    totalPrice: "3.90",
+    notes: "Less ice",
+    variants: [{
+      id: "large", name: "Large", optionGroupId: "size",
+      isDefault: false, priceAdjustment: "0.10",
+    }],
+    addOns: [{ id: "milk", name: "Milk", priceAdjustment: "0.20" }],
+  };
+  const preview = createCartPricePreview(configured);
+  useCart.getState().add("cafe", configured, preview);
+  useCart.getState().add("cafe", configured, preview);
+  useCart.getState().add("cafe", { ...quote, notes: "Hot" });
+  useCart.getState().add("other", configured, preview);
+  const before = useCart.getState();
+  const [first, removed, last] = before.shops.cafe;
+  const saved = structuredClone(before.shops);
+
+  useCart.getState().remove("cafe", removed.lineId);
+  const after = useCart.getState();
+  expect(after.shops.cafe).toEqual([saved.cafe[0], saved.cafe[2]]);
+  expect(after.shops.cafe[0]).toBe(first);
+  expect(after.shops.cafe[1]).toBe(last);
+  expect(after.shops.other).toBe(before.shops.other);
+  expect(after.shops.other).toEqual(saved.other);
+  expect(before.shops).toEqual(saved);
+
+  useCart.getState().remove("cafe", removed.lineId);
+  expect(useCart.getState()).toBe(after);
+});
+
+it("ignores missing lines, unknown shops and another shop's line ID", () => {
+  useCart.getState().add("cafe", quote);
+  useCart.getState().add("other", quote);
+  const before = useCart.getState();
+  useCart.getState().remove("cafe", "missing");
+  useCart.getState().remove("missing-shop", before.shops.cafe[0].lineId);
+  useCart.getState().remove("cafe", before.shops.other[0].lineId);
+  expect(useCart.getState()).toBe(before);
+  expect(Object.hasOwn(useCart.getState().shops, "missing-shop")).toBe(false);
+});
+
 it.each(["constructor", "__proto__", "toString"])(
   "isolates cart operations for the object-property slug %s",
   (slug) => {
