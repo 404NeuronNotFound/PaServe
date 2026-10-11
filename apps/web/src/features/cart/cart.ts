@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import type { ProductSelectionQuoteResponse } from "@paserve/contracts";
+import type {
+  ProductSelectionQuoteResponse,
+  ProductSelectionRequest,
+} from "@paserve/contracts";
 
 export interface CartItem extends ProductSelectionQuoteResponse {
   lineId: string;
@@ -15,6 +18,30 @@ export function cartVariantKey(
     selection.productId,
     selection.variants.map((variant) => variant.id).sort(),
   ]);
+}
+
+// Submit IDs and customer input only; saved names/prices are display snapshots.
+export function cartSelectionRequest(
+  item: CartItem,
+  quantity = item.quantity,
+): ProductSelectionRequest {
+  return {
+    variantIds: item.variants.map((variant) => variant.id),
+    addOnIds: item.addOns.map((addOn) => addOn.id),
+    quantity,
+    ...(item.notes ? { notes: item.notes } : {}),
+  };
+}
+
+// Selection payload for a future checkout; the server must revalidate each line.
+export function cartCheckoutLines(
+  shops: Record<string, CartItem[]>,
+  slug: string,
+): (ProductSelectionRequest & { productId: string })[] {
+  return cartItemsForShop(shops, slug).map((item) => ({
+    productId: item.productId,
+    ...cartSelectionRequest(item),
+  }));
 }
 
 // The estimate shown before submission; quoted prices remain authoritative.
@@ -114,6 +141,8 @@ export const useCart = create<CartState>((set) => ({
         !items.includes(expected) ||
         quote.productId !== expected.productId ||
         cartVariantKey(quote) !== expected.variantKey ||
+        JSON.stringify(quote.addOns.map((addOn) => addOn.id).sort()) !==
+          JSON.stringify(expected.addOns.map((addOn) => addOn.id).sort()) ||
         !Number.isInteger(quote.quantity) ||
         quote.quantity < 1 || quote.quantity > 99 ||
         quote.quantity !== pricePreview.quantity

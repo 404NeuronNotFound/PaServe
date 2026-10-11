@@ -2,6 +2,8 @@ import { beforeEach, expect, it } from "vitest";
 import {
   cartItemsForShop,
   cartVariantKey,
+  cartCheckoutLines,
+  cartSelectionRequest,
   createCartPricePreview,
   EMPTY_CART,
   useCart,
@@ -135,6 +137,61 @@ it("keeps separate configured additions and independent quote/preview snapshots"
 it("does not invent client preview metadata for a quote-only addition", () => {
   useCart.getState().add("cafe", quote);
   expect(useCart.getState().shops.cafe[0].pricePreview).toBeNull();
+});
+
+it("retains paid/free add-ons per line and serializes this shop's selections without prices", () => {
+  const configured = {
+    ...quote,
+    notes: "Less ice",
+    quantity: 2,
+    addOns: [
+      { id: "milk", name: "Milk", priceAdjustment: "0.20" },
+      { id: "free", name: "Free extra", priceAdjustment: "0.00" },
+    ],
+  };
+  useCart.getState().add("cafe", configured, createCartPricePreview(configured));
+  useCart.getState().add("cafe", quote);
+  useCart.getState().add("other", { ...quote, productId: "tea" });
+  const before = useCart.getState();
+  const payload = cartCheckoutLines(before.shops, "cafe");
+  expect(payload).toEqual([
+    { productId: "coffee", variantIds: [], addOnIds: ["milk", "free"], quantity: 2, notes: "Less ice" },
+    { productId: "coffee", variantIds: [], addOnIds: [], quantity: 1 },
+  ]);
+  expect(cartSelectionRequest(before.shops.cafe[0], 3)).toEqual({
+    variantIds: [], addOnIds: ["milk", "free"], quantity: 3, notes: "Less ice",
+  });
+  payload[0].addOnIds.pop();
+  expect(before.shops.cafe[0].addOns).toEqual(configured.addOns);
+  expect(cartCheckoutLines(before.shops, "missing")).toEqual([]);
+});
+
+it("retains selected add-on IDs during repricing regardless of option order or renamed prices", () => {
+  const configured = {
+    ...quote,
+    addOns: [
+      { id: "milk", name: "Milk", priceAdjustment: "0.20" },
+      { id: "free", name: "Free extra", priceAdjustment: "0.00" },
+    ],
+  };
+  useCart.getState().add("cafe", configured);
+  const original = useCart.getState().shops.cafe[0];
+  const repriced = {
+    ...configured, quantity: 3, unitPrice: "1.30", totalPrice: "3.90",
+    addOns: [...configured.addOns].reverse().map((addOn) => ({
+      ...addOn, name: `Updated ${addOn.name}`, priceAdjustment: addOn.id === "milk" ? "0.30" : "0.00",
+    })),
+  };
+  expect(useCart.getState().updateQuantity("cafe", original, repriced, createCartPricePreview(repriced))).toBe(true);
+  const current = useCart.getState().shops.cafe[0];
+  expect(current.addOns).toEqual(repriced.addOns);
+  expect(cartSelectionRequest(current).addOnIds).toEqual(["free", "milk"]);
+  const before = useCart.getState();
+  for (const addOns of [[], [repriced.addOns[0]], [{ ...repriced.addOns[0], id: "foreign" }, repriced.addOns[1]], [...repriced.addOns, { id: "extra", name: "Unselected", priceAdjustment: "1.00" }]]) {
+    const changed = { ...repriced, addOns };
+    expect(useCart.getState().updateQuantity("cafe", current, changed, createCartPricePreview(changed))).toBe(false);
+    expect(useCart.getState()).toBe(before);
+  }
 });
 
 it("removes only the selected configured duplicate, preserving other lines and shops", () => {

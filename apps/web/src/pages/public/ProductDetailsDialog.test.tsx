@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PublicMenuView } from "./PublicMenuView";
 import { api } from "../../lib/api/client";
-import { cartVariantKey, useCart, sumPrices } from "../../features/cart/cart";
+import { cartCheckoutLines, cartVariantKey, useCart, sumPrices } from "../../features/cart/cart";
 import { useFeedbackStore } from "../../app/stores/feedback";
 import type {
   PublicMenuResponse,
@@ -572,6 +572,9 @@ it("retains selected paid/free add-ons in the cart with the expected preview tot
   expect(
     within(cart).getByText("Large, Oat milk, No sugar"),
   ).toBeInTheDocument();
+  expect(cartCheckoutLines(useCart.getState().shops, "cafe")).toEqual([
+    { productId: product.id, variantIds: ["large"], addOnIds: ["milk", "no-sugar"], quantity: 3 },
+  ]);
   expect(within(cart).queryByText(/Extra shot/)).not.toBeInTheDocument();
   expect(within(cart).getByRole("status")).toHaveTextContent("₱525.93");
 });

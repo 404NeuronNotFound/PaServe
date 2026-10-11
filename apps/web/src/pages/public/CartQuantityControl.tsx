@@ -3,6 +3,7 @@ import { FiMinus, FiPlus } from "react-icons/fi";
 import type { ProductSelectionQuoteResponse } from "@paserve/contracts";
 import {
   createCartPricePreview,
+  cartSelectionRequest,
   useCart,
   type CartItem,
 } from "../../features/cart/cart";
@@ -52,12 +53,7 @@ export function CartQuantityControl({
     try {
       const response = await api.post<ProductSelectionQuoteResponse>(
         `/menu/${encodeURIComponent(shopSlug)}/products/${encodeURIComponent(item.productId)}/quote`,
-        {
-          variantIds: item.variants.map((variant) => variant.id),
-          addOnIds: item.addOns.map((addOn) => addOn.id),
-          quantity,
-          ...(item.notes ? { notes: item.notes } : {}),
-        },
+        cartSelectionRequest(item, quantity),
       );
       if (!mounted.current) return;
       if (
