@@ -230,6 +230,33 @@ describe('public product details and selection quotes', () => {
     expect(response.body.totalPrice).toBe('9899999999.01');
     expect(response.body.addOns[0].priceAdjustment).toBe('0.00');
   });
+  it.each([50, 51])(
+    'enforces the add-on selection boundary for %i choices',
+    async (count) => {
+      const current = fixture();
+      current.addOns = Array.from({ length: count }, (_, index) => ({
+        addOn: {
+          id: `20000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+          name: `Extra ${index}`,
+          priceAdjustment: new Prisma.Decimal('0.01'),
+        },
+      }));
+      product.mockResolvedValue(current);
+      const response = await request(app.getHttpServer())
+        .post(`${path}/quote`)
+        .send({
+          variantIds: [regularId],
+          addOnIds: current.addOns.map(({ addOn }) => addOn.id),
+          quantity: 2,
+        })
+        .expect(count === 50 ? 201 : 400);
+      if (count === 50) {
+        expect(response.body.addOns).toHaveLength(50);
+        expect(response.body.unitPrice).toBe('120.51');
+        expect(response.body.totalPrice).toBe('241.02');
+      } else expect(product).not.toHaveBeenCalled();
+    },
+  );
   it.each([
     { variantIds: [], addOnIds: [], quantity: 1 },
     { variantIds: [regularId, largeId], addOnIds: [], quantity: 1 },

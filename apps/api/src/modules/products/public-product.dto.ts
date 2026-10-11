@@ -13,6 +13,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import {
+  ADD_ON_LIMITS,
   CUSTOMER_NOTE_MAX_LENGTH,
   CUSTOMER_NOTE_PATTERN,
   normalizeCustomerNote,
@@ -27,7 +28,7 @@ export class ProductSelectionDto implements ProductSelectionRequest {
   variantIds!: string[];
 
   @IsArray()
-  @ArrayMaxSize(50)
+  @ArrayMaxSize(ADD_ON_LIMITS.selectionMax)
   @ArrayUnique()
   @IsUUID('4', { each: true })
   addOnIds!: string[];
