@@ -700,6 +700,24 @@ export interface TakeoutOrderResponse {
   order: Omit<DineInOrderResponse["order"], "mode" | "table"> & { mode: "TAKEOUT"; table: null };
 }
 export type CustomerOrderResponse = DineInOrderResponse | TakeoutOrderResponse;
+/** Authenticated cashier verification; this action does not change order state. */
+export interface VerifyOrderQrRequest {
+  qrToken: string;
+}
+export interface VerifyOrderQrResponse {
+  verified: true;
+  order: {
+    id: string;
+    shopId: string;
+    orderNumber: string;
+    mode: "DINE_IN" | "TAKEOUT";
+    status: string;
+    paymentStatus: string;
+    currency: string;
+    totalPrice: string;
+    tableNumber: string | null;
+  };
+}
 export interface RestaurantTable {
   id: string;
   shopId: string;

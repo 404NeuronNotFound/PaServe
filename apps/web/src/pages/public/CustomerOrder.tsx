@@ -373,7 +373,7 @@ export function CustomerOrder({
             ? "Pickup order placed."
             : `Order placed for Table ${receipt.table.number}.`}{" "}
           Total {formatCartPrice(receipt.totalPrice)}. Order reference:{" "}
-          {receipt.id} Awaiting shop confirmation.
+          {receipt.orderNumber ?? receipt.id} Awaiting shop confirmation.
         </p>
       )}
       {error && <InlineMessage tone="error">{error}</InlineMessage>}

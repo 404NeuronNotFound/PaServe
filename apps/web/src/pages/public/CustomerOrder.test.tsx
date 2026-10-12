@@ -76,6 +76,40 @@ it("defaults a tableless cart to pickup and submits without table fields", async
   );
   expect(useCart.getState().shops.cafe).toEqual([]);
 });
+it.each(["TAKEOUT", "DINE_IN"] as const)(
+  "displays the friendly order number for %s without exposing secure identifiers",
+  async (mode) => {
+    const token = `cGF5bG9hZA.${"a".repeat(43)}`;
+    vi.mocked(api.post).mockResolvedValue({
+      data: {
+        order: {
+          ...response.data.order,
+          mode,
+          table: mode === "DINE_IN" ? table : null,
+          orderNumber: "ORD-000042",
+          paymentStatus: "UNPAID",
+          updatedAt: "2026-10-12T00:00:00Z",
+          qrToken: token,
+          qrTokenExpiresAt: "2026-10-19T00:00:00Z",
+        },
+      },
+    });
+    if (mode === "DINE_IN") useCustomerTables.getState().setResolved(table);
+    render(
+      <CustomerOrder
+        shopSlug="cafe"
+        {...(mode === "DINE_IN" ? { table } : {})}
+      />,
+    );
+    await placeOrder(
+      mode === "DINE_IN" ? "Place dine-in order" : "Place pickup order",
+    );
+    const receipt = await screen.findByRole("status");
+    expect(receipt).toHaveTextContent("Order reference: ORD-000042");
+    expect(receipt).not.toHaveTextContent("pickup-a");
+    expect(receipt).not.toHaveTextContent(token);
+  },
+);
 it("lets a table customer choose pickup without submitting the remembered table", async () => {
   useCustomerTables.getState().setResolved(table);
   vi.mocked(api.post).mockResolvedValue(response);
