@@ -141,10 +141,12 @@ export class OrdersService {
     try {
       return await this.prisma.$transaction(
         async (tx) => {
-          // Lock shop/table state until commit; pauses or deactivation cannot slip between resolution and insert.
+          // The counter will require a write lock. Acquire it now to avoid
+          // shared-lock upgrade deadlocks between concurrent submissions.
+          // Shop/table state stays locked until commit.
           const shops = await tx.$queryRaw<
             { id: string; isActive: boolean; acceptingOrders: boolean }[]
-          >`SELECT "id", "isActive", "acceptingOrders" FROM "shops" WHERE "slug" = ${slug} FOR SHARE`;
+          >`SELECT "id", "isActive", "acceptingOrders" FROM "shops" WHERE "slug" = ${slug} FOR UPDATE`;
           const shop = shops[0];
           if (!shop) throw unavailable();
           const saved = await tx.order.findUnique({
@@ -277,9 +279,22 @@ export class OrdersService {
         },
       );
     } catch (error) {
+      // Prisma's pg adapter can report the PostgreSQL SQLSTATE in the cause
+      // instead of meta.code for raw row-lock serialization failures.
+      const adapterCause =
+        error instanceof Prisma.PrismaClientKnownRequestError
+          ? (
+              error.meta?.driverAdapterError as
+                { cause?: { originalCode?: string } } | undefined
+            )?.cause
+          : undefined;
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        ['P2002', 'P2034'].includes(error.code)
+        (['P2002', 'P2034'].includes(error.code) ||
+          (error.code === 'P2010' &&
+            [error.meta?.code, adapterCause?.originalCode].some((state) =>
+              ['40001', '40P01'].includes(String(state)),
+            )))
       ) {
         throw new ConflictException({
           code: 'ORDER_RETRY_REQUIRED',

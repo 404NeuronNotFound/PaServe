@@ -349,6 +349,10 @@ describe('dine-in order submission', () => {
     { ...payload(), shopId: id },
     { ...payload(), requestId: 'bad' },
     { ...payload(), items: [] },
+    { ...payload(), items: [[]] },
+    { ...payload(), items: [[payload().items[0]]] },
+    { ...payload(), items: [null] },
+    { ...payload(), items: [1] },
     { ...payload(), items: [{ ...payload().items[0], quantity: 0 }] },
     { ...payload(), items: [{ ...payload().items[0], unitPrice: '0.01' }] },
     { ...payload(), items: [{ ...payload().items[0], productId: 'bad' }] },
@@ -455,7 +459,7 @@ describe('dine-in order submission', () => {
       .expect(201);
     expect(raw.mock.calls[0][1]).toBe('cafe');
     expect(raw.mock.calls[0][0].join('?')).toContain(
-      '"acceptingOrders" FROM "shops" WHERE "slug" = ? FOR SHARE',
+      '"acceptingOrders" FROM "shops" WHERE "slug" = ? FOR UPDATE',
     );
     expect(saved).toHaveBeenCalledWith({
       where: { shopId_requestId: { shopId: 'shop-a', requestId: id } },
@@ -717,6 +721,51 @@ describe('dine-in order submission', () => {
   it('rejects editing a valid table code while keeping the scanned-table signature', async () => {
     await post({ ...payload(), tableCode: 'T13' }).expect(403);
     expect(transaction).not.toHaveBeenCalled();
+  });
+  it.each([
+    { code: 'P2002', meta: undefined },
+    { code: 'P2034', meta: undefined },
+    { code: 'P2010', meta: { code: '40001' } },
+    { code: 'P2010', meta: { code: '40P01' } },
+    {
+      code: 'P2010',
+      meta: {
+        code: 'N/A',
+        driverAdapterError: { cause: { originalCode: '40001' } },
+      },
+    },
+    {
+      code: 'P2010',
+      meta: {
+        code: 'N/A',
+        driverAdapterError: { cause: { originalCode: '40P01' } },
+      },
+    },
+  ])(
+    'returns a safe same-request retry for transaction conflict %j',
+    async ({ code, meta }) => {
+      transaction.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError(
+          'Fixture transaction conflict',
+          { code, meta, clientVersion: 'test' },
+        ),
+      );
+      const result = await post().expect(409);
+      expect(result.body.code).toBe('ORDER_RETRY_REQUIRED');
+      expect(create).not.toHaveBeenCalled();
+      expect(createItems).not.toHaveBeenCalled();
+    },
+  );
+  it('does not classify unrelated raw SQL failures as retryable conflicts', async () => {
+    transaction.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('Fixture SQL error', {
+        code: 'P2010',
+        meta: { code: '42601' },
+        clientVersion: 'test',
+      }),
+    );
+    const result = await post().expect(500);
+    expect(result.body.code).toBe('INTERNAL_SERVER_ERROR');
   });
   it('rejects using another shop route with the scanned context', async () => {
     await request(app.getHttpServer())

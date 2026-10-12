@@ -4,6 +4,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsIn,
+  IsObject,
   IsString,
   IsUUID,
   MaxLength,
@@ -46,6 +47,7 @@ export class CreateOrderDto {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(100)
+  @IsObject({ each: true })
   @ValidateNested({ each: true })
   @Type(() => OrderLineDto)
   items!: OrderLineDto[];

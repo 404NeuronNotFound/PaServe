@@ -10,6 +10,7 @@ import { PublicProductService } from '../dist/modules/products/public-product.se
 import { OrdersService } from '../dist/modules/orders/orders.service.js';
 import { TableContextService } from '../dist/modules/tables/table-context.service.js';
 import { OrderTokenService } from '../dist/modules/orders/order-token.service.js';
+import { OrderQrService } from '../dist/modules/orders/order-qr.service.js';
 
 // Real Prisma repository + real pricing/order services; all DDL/data rolls back.
 const schema = `phase10_pricing_${randomUUID().replaceAll('-', '')}`;
@@ -28,6 +29,8 @@ try {
         await tx.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
         for (const name of [
           'shops',
+          'users',
+          'shop_members',
           'categories',
           'products',
           'product_option_groups',
@@ -54,6 +57,12 @@ try {
         );
         await tx.$executeRawUnsafe(
           `CREATE TYPE ${q('ProductStatus')} AS ENUM ('AVAILABLE', 'SOLD_OUT', 'HIDDEN')`,
+        );
+        await tx.$executeRawUnsafe(
+          `CREATE TYPE ${q('ShopRole')} AS ENUM ('OWNER', 'ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN')`,
+        );
+        await tx.$executeRawUnsafe(
+          `ALTER TABLE ${q('shop_members')} ALTER COLUMN "role" TYPE ${q('ShopRole')} USING "role"::text::${q('ShopRole')}`,
         );
         await tx.$executeRawUnsafe(
           `ALTER TABLE ${q('products')} ALTER COLUMN "status" DROP DEFAULT`,
@@ -210,6 +219,98 @@ try {
         assert.ok(saved.qrTokenExpiresAt.getTime() > saved.createdAt.getTime());
         const tokenService = new OrderTokenService(new ConfigService());
         tokenService.verify(pickup.order.qrToken, saved);
+        // Exercise the actual persisted QR lookup, including live authorization.
+        const cashier = await tx.user.create({
+          data: {
+            email: 'phase11-cashier@example.invalid',
+            passwordHash: 'fixture-only',
+          },
+        });
+        const member = await tx.shopMember.create({
+          data: { userId: cashier.id, shopId: shop.id, role: 'CASHIER' },
+        });
+        await tx.shopMember.create({
+          data: { userId: cashier.id, shopId: foreignShop.id, role: 'CASHIER' },
+        });
+        const qr = new OrderQrService(tx, tokenService);
+        const verifyQr = () =>
+          qr.verify(cashier.id, shop.id, saved.id, pickup.order.qrToken);
+        for (const role of ['OWNER', 'ADMIN', 'MANAGER', 'CASHIER']) {
+          await tx.shopMember.update({
+            where: { id: member.id },
+            data: { role },
+          });
+          const result = await verifyQr();
+          assert.equal(result.verified, true);
+          assert.equal(result.order.orderNumber, saved.orderNumber);
+          assert.equal(result.order.totalPrice, '422.50');
+          assert.equal('qrToken' in result.order, false);
+          assert.equal('qrTokenNonce' in result.order, false);
+        }
+        await tx.shopMember.update({
+          where: { id: member.id },
+          data: { role: 'KITCHEN' },
+        });
+        await assert.rejects(verifyQr(), (error) => error.getStatus() === 404);
+        await tx.shopMember.update({
+          where: { id: member.id },
+          data: { role: 'CASHIER' },
+        });
+        await assert.rejects(
+          qr.verify(cashier.id, foreignShop.id, saved.id, pickup.order.qrToken),
+          (error) => error.getStatus() === 404,
+        );
+        await tx.user.update({
+          where: { id: cashier.id },
+          data: { isActive: false },
+        });
+        await assert.rejects(verifyQr(), (error) => error.getStatus() === 404);
+        await tx.user.update({
+          where: { id: cashier.id },
+          data: { isActive: true },
+        });
+        await tx.shop.update({
+          where: { id: shop.id },
+          data: { isActive: false },
+        });
+        await assert.rejects(verifyQr(), (error) => error.getStatus() === 404);
+        await tx.shop.update({
+          where: { id: shop.id },
+          data: { isActive: true },
+        });
+        for (const token of [
+          'ORD-000001',
+          saved.id,
+          `${pickup.order.qrToken}x`,
+        ]) {
+          await assert.rejects(
+            qr.verify(cashier.id, shop.id, saved.id, token),
+            (error) => error.getStatus() === 403,
+          );
+        }
+        await tx.order.update({
+          where: { id: saved.id },
+          data: { qrTokenRevokedAt: new Date() },
+        });
+        await assert.rejects(verifyQr(), (error) => error.getStatus() === 403);
+        await tx.order.update({
+          where: { id: saved.id },
+          data: { qrTokenRevokedAt: null },
+        });
+        await tx.order.update({
+          where: { id: saved.id },
+          data: { qrTokenExpiresAt: new Date(Date.now() - 1) },
+        });
+        await assert.rejects(verifyQr(), (error) => error.getStatus() === 403);
+        await tx.order.update({
+          where: { id: saved.id },
+          data: {
+            qrTokenExpiresAt: saved.qrTokenExpiresAt,
+            updatedAt: saved.updatedAt,
+          },
+        });
+        await tx.shopMember.delete({ where: { id: member.id } });
+        await assert.rejects(verifyQr(), (error) => error.getStatus() === 404);
         assert.equal(
           (await orders.create(shop.slug, pickupRequest)).order.qrToken,
           pickup.order.qrToken,
