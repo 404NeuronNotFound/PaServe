@@ -108,7 +108,7 @@ try {
     assert.match(recovered.code, TABLE_CODE_PATTERN);
     assert.notEqual(recovered.code, one.code);
     await deny(() => tx.restaurantTable.create({ data: { shopId: a.id, number: '', code: 'T-empty' } }), error => /constraint/i.test(error.message));
-    for (const number of ['A3', 'Patio 4', '012', '露台 4', 'x'.repeat(40)]) {
+    for (const number of ['A3', 'Patio 4', '012', '露台 4', 'x'.repeat(40), '🍽'.repeat(40)]) {
       const saved = (await service.create(user.id, a.id, { number })).table;
       assert.equal(saved.number, number);
       assert.match(saved.code, TABLE_CODE_PATTERN);
@@ -135,5 +135,5 @@ try {
     throw rollback;
   }, { timeout: 60000 }), error => error === rollback);
   assert.equal(await prisma.user.count({ where: { email } }), 0);
-  console.log('Live table checks passed: text labels, leading zeros, persistence, case-insensitive per-shop uniqueness, normalization, label bounds, isolated resources, OWNER/ADMIN access, role revocation, inactive-shop denial and RLS. All fixtures rolled back.');
+  console.log('Live table checks passed: Unicode labels, leading zeros, persistence, case-insensitive per-shop uniqueness, normalization, label bounds, isolated resources, OWNER/ADMIN access, role revocation, public shop/table code resolution, inactive shop/table denial and RLS. All fixtures rolled back.');
 } finally { await prisma.$disconnect(); }

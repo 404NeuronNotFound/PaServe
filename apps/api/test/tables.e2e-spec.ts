@@ -147,7 +147,7 @@ describe('tenant-scoped table creation', () => {
     expect(response.body.code).toBe('VALIDATION_ERROR');
     expect(update).not.toHaveBeenCalled();
   });
-  it.each(['12', 'A3', 'Patio 4', '012', '露台 4', 'x'.repeat(40)])(
+  it.each(['12', 'A3', 'Patio 4', '012', '露台 4', 'x'.repeat(40), '🍽'.repeat(40)])(
     'stores and returns the human-facing label %s',
     async (number) => {
       update.mockImplementation(async ({ data }) => ({
