@@ -15,9 +15,11 @@ import { InlineMessage } from "../../components/feedback/InlineMessage";
 export function CartQuantityControl({
   item,
   shopSlug,
+  onEditingChange,
 }: {
   item: CartItem;
   shopSlug: string;
+  onEditingChange?: (id: string, editing: boolean) => void;
 }) {
   const [draft, setDraft] = useState(String(item.quantity));
   const [pending, setPending] = useState(false);
@@ -27,6 +29,11 @@ export function CartQuantityControl({
   const input = useRef<HTMLInputElement>(null);
   const id = useId();
   useEffect(() => {
+    const key = `${item.lineId}:quantity`;
+    onEditingChange?.(key, pending || draft !== String(item.quantity));
+    return () => onEditingChange?.(key, false);
+  }, [onEditingChange, item.lineId, item.quantity, pending, draft]);
+  useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
@@ -35,15 +42,19 @@ export function CartQuantityControl({
   const count = Number(draft);
   const valid =
     /^\d+$/.test(draft) && Number.isInteger(count) && count >= 1 && count <= 99;
-  const draftPreview = valid && count !== item.quantity
-    ? createCartPricePreview({ ...item, quantity: count })
-    : undefined;
+  const draftPreview =
+    valid && count !== item.quantity
+      ? createCartPricePreview({ ...item, quantity: count })
+      : undefined;
 
   async function update(quantity: number) {
     if (
-      submitting.current || !Number.isInteger(quantity) ||
-      quantity < 1 || quantity > 99
-    ) return;
+      submitting.current ||
+      !Number.isInteger(quantity) ||
+      quantity < 1 ||
+      quantity > 99
+    )
+      return;
     if (quantity === item.quantity) {
       setDraft(String(quantity));
       setError("");
@@ -62,15 +73,21 @@ export function CartQuantityControl({
       if (!mounted.current) return;
       if (
         response.data.quantity !== quantity ||
-        !useCart.getState().updateQuantity(shopSlug, item, response.data, pricePreview)
+        !useCart
+          .getState()
+          .updateQuantity(shopSlug, item, response.data, pricePreview)
       ) {
-        setError("This cart item changed. Close and reopen the cart before trying again.");
+        setError(
+          "This cart item changed. Close and reopen the cart before trying again.",
+        );
         return;
       }
       feedback.toast("Quantity updated.");
     } catch {
       if (mounted.current) {
-        setError("We could not update this quantity. Your saved item is unchanged. Try again, or remove and add the item again if its options or availability changed.");
+        setError(
+          "We could not update this quantity. Your saved item is unchanged. Try again, or remove and add the item again if its options or availability changed.",
+        );
       }
     } finally {
       submitting.current = false;
@@ -91,7 +108,9 @@ export function CartQuantityControl({
         if (valid) void update(count);
       }}
     >
-      <label className="sr-only" htmlFor={id}>Quantity</label>
+      <label className="sr-only" htmlFor={id}>
+        Quantity
+      </label>
       <fieldset disabled={pending}>
         <legend className="sr-only">Quantity for {item.productName}</legend>
         <div className="customer-cart-stepper">
@@ -142,11 +161,16 @@ export function CartQuantityControl({
           </button>
         )}
       </fieldset>
-      <p id={`${id}-hint`} className="sr-only">1–99 per line. Use Remove to delete this item.</p>
+      <p id={`${id}-hint`} className="sr-only">
+        1–99 per line. Use Remove to delete this item.
+      </p>
       {draftPreview && (
         <p className="customer-cart-draft-preview" aria-live="polite">
-          Estimated total for {count}: <strong>{formatCartPrice(draftPreview.totalPrice)}</strong>
-          <span className="field-hint">Updates after price and availability are checked.</span>
+          Estimated total for {count}:{" "}
+          <strong>{formatCartPrice(draftPreview.totalPrice)}</strong>
+          <span className="field-hint">
+            Updates after price and availability are checked.
+          </span>
         </p>
       )}
       {!valid && (
@@ -155,7 +179,9 @@ export function CartQuantityControl({
         </InlineMessage>
       )}
       {error && (
-        <InlineMessage id={`${id}-error`} tone="error">{error}</InlineMessage>
+        <InlineMessage id={`${id}-error`} tone="error">
+          {error}
+        </InlineMessage>
       )}
       {pending && (
         <p className="field-hint" aria-live="polite">

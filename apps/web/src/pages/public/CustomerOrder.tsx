@@ -11,24 +11,59 @@ import {
   cartItemsForShop,
   cartSelectionRequest,
   useCart,
+  type CartItem,
 } from "../../features/cart/cart";
+import { parseCartLine } from "../../features/cart/cart-storage";
+import { CartReview, type CartReviewSnapshot } from "./CartReview";
 import { api } from "../../lib/api/client";
 import { formatCartPrice } from "../../lib/money";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { isPublicTableContext } from "../../features/shops/customer-table";
 
-type Attempt = { request: CreateCustomerOrderRequest; lines: string[] };
-function readAttempt(key: string): Attempt | null {
+type Attempt = {
+  request: CreateCustomerOrderRequest;
+  lines: string[];
+  review?: CartReviewSnapshot;
+};
+function readAttempt(key: string, shopSlug: string): Attempt | null {
   try {
     const saved = JSON.parse(
       sessionStorage.getItem(key) ?? "null",
     ) as Attempt | null;
-    return saved &&
+    if (!(
+      saved &&
       typeof saved.request?.requestId === "string" &&
       Array.isArray(saved.request.items) &&
       Array.isArray(saved.lines)
-      ? saved
-      : null;
+    ))
+      return null;
+    // Display snapshots never establish the request's identity or pricing.
+    if (saved.review) {
+      const items = Array.isArray(saved.review.items)
+        ? saved.review.items.map(parseCartLine)
+        : [];
+      if (
+        !items.length ||
+        items.some((item) => !item) ||
+        items.length > 100 ||
+        items.length !== saved.lines.length ||
+        items.some((item, index) => item?.lineId !== saved.lines[index]) ||
+        JSON.stringify(
+          cartCheckoutLines(
+            { [shopSlug]: items.filter((item): item is CartItem => !!item) },
+            shopSlug,
+          ),
+        ) !== JSON.stringify(saved.request.items) ||
+        saved.review.mode !== (saved.request.mode ?? "DINE_IN") ||
+        (saved.review.mode === "DINE_IN" &&
+          (!isPublicTableContext(saved.review.table) ||
+            saved.review.table.code !== saved.request.tableCode ||
+            saved.review.table.shopSlug !== shopSlug))
+      ) {
+        delete saved.review;
+      } else saved.review = { ...saved.review, items: items as CartItem[] };
+    }
+    return saved;
   } catch {
     return null;
   }
@@ -38,19 +73,36 @@ export function CustomerOrder({
   table,
   onModeChange,
   initialMode,
+  onReviewChange,
+  editing = false,
 }: {
   shopSlug: string;
   table?: PublicTableContext;
   onModeChange?: (mode: "DINE_IN" | "TAKEOUT") => void;
   initialMode?: "DINE_IN" | "TAKEOUT";
+  onReviewChange?: (review: CartReviewSnapshot | null) => void;
+  editing?: boolean;
 }) {
   const key = `paserve-pending-order:v1:${shopSlug}`;
   const [attempt, setAttempt] = useState<Attempt | null>(() =>
-    readAttempt(key),
+    readAttempt(key, shopSlug),
   );
   const [choice, setChoice] = useState<"DINE_IN" | "TAKEOUT">(
     initialMode ?? (table ? "DINE_IN" : "TAKEOUT"),
   );
+  const [review, setReview] = useState<CartReviewSnapshot | null>(null);
+  const items = useCart((state) => cartItemsForShop(state.shops, shopSlug));
+  const staleReview =
+    !attempt &&
+    !!review &&
+    (review.fingerprint !== JSON.stringify(items) ||
+      (review.mode === "DINE_IN" &&
+        (review.table?.code !== table?.code ||
+          review.table?.number !== table?.number)));
+  const visibleReview = attempt?.review ?? (staleReview ? null : review);
+  useEffect(() => {
+    onReviewChange?.(visibleReview);
+  }, [visibleReview, onReviewChange]);
   const mode = attempt ? (attempt.request.mode ?? "DINE_IN") : choice;
   const wrongTable =
     !!attempt &&
@@ -65,9 +117,54 @@ export function CustomerOrder({
   const [receipt, setReceipt] = useState<CustomerOrderResponse["order"] | null>(
     null,
   );
-  const count = useCart(
-    (state) => cartItemsForShop(state.shops, shopSlug).length,
-  );
+  const count = items.length;
+  const action = useRef<HTMLButtonElement>(null);
+  function reviewOrder() {
+    if (editing || busy.current) return;
+    setError("");
+    try {
+      const items = cartItemsForShop(useCart.getState().shops, shopSlug);
+      if (!items.length || items.length > 100)
+        throw new Error(
+          "Review between 1 and 100 configured items before placing your order.",
+        );
+      if (mode === "DINE_IN") {
+        try {
+          const selection = cartCheckoutRequest(
+            useCart.getState().shops,
+            shopSlug,
+          );
+          if (
+            !table?.checkoutToken ||
+            selection.tableCode !== table.code ||
+            selection.tableToken !== table.checkoutToken
+          )
+            throw new Error(
+              "Scan your table QR again before placing an order.",
+            );
+        } catch {
+          throw new Error("Scan your table QR again before placing an order.");
+        }
+      }
+      const copied = items.map(parseCartLine);
+      if (copied.some((item) => !item))
+        throw new Error(
+          "Your cart could not be reviewed. Remove and add any unavailable items again.",
+        );
+      setReview({
+        items: copied as CartItem[],
+        mode,
+        ...(mode === "DINE_IN" && table ? { table: { ...table } } : {}),
+        fingerprint: JSON.stringify(items),
+      });
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Your cart could not be reviewed.",
+      );
+    }
+  }
   async function submit() {
     if (busy.current) return;
     busy.current = true;
@@ -83,12 +180,30 @@ export function CustomerOrder({
       }
       if (!sent) {
         const state = useCart.getState();
+        if (
+          !review ||
+          review.mode !== mode ||
+          JSON.stringify(cartItemsForShop(state.shops, shopSlug)) !==
+            review.fingerprint ||
+          (mode === "DINE_IN" &&
+            (review.table?.code !== table?.code ||
+              review.table?.number !== table?.number))
+        ) {
+          setReview(null);
+          setError(
+            "Your cart or table changed. Review the updated order before submitting.",
+          );
+          return;
+        }
         const request: CreateCustomerOrderRequest =
           mode === "TAKEOUT"
             ? {
                 requestId: crypto.randomUUID(),
                 mode: "TAKEOUT",
-                items: cartCheckoutLines(state.shops, shopSlug),
+                items: cartCheckoutLines(
+                  { [shopSlug]: review.items },
+                  shopSlug,
+                ),
               }
             : (() => {
                 const selection = cartCheckoutRequest(state.shops, shopSlug);
@@ -102,6 +217,10 @@ export function CustomerOrder({
                   );
                 return {
                   ...selection,
+                  items: cartCheckoutLines(
+                    { [shopSlug]: review.items },
+                    shopSlug,
+                  ),
                   mode: "DINE_IN",
                   requestId: crypto.randomUUID(),
                   tableCode: table.code,
@@ -113,9 +232,8 @@ export function CustomerOrder({
         }
         sent = {
           request,
-          lines: cartItemsForShop(state.shops, shopSlug).map(
-            (item) => item.lineId,
-          ),
+          lines: review.items.map((item) => item.lineId),
+          review,
         };
         setAttempt(sent);
         try {
@@ -177,12 +295,14 @@ export function CustomerOrder({
         }
       });
       setAttempt(null);
+      setReview(null);
       try {
         sessionStorage.removeItem(key);
       } catch {
         /* Storage may be unavailable. */
       }
     } catch (cause) {
+      if (!sent) setReview(null);
       const status = isAxiosError(cause) ? cause.response?.status : undefined;
       const invalidContext =
         isAxiosError(cause) &&
@@ -200,6 +320,7 @@ export function CustomerOrder({
         status !== 429
       ) {
         setAttempt(null);
+        setReview(null);
         try {
           sessionStorage.removeItem(key);
         } catch {
@@ -226,41 +347,49 @@ export function CustomerOrder({
   }
   return (
     <div className="customer-order">
-      <fieldset className="customer-order-mode" disabled={pending || !!attempt}>
-        <legend>Order type</legend>
-        {table && (
+      {!visibleReview && (
+        <fieldset
+          className="customer-order-mode"
+          disabled={pending || !!attempt}
+        >
+          <legend>Order type</legend>
+          {table && (
+            <label>
+              <input
+                type="radio"
+                name={`order-mode-${shopSlug}`}
+                value="DINE_IN"
+                checked={mode === "DINE_IN"}
+                onChange={() => {
+                  setError("");
+                  setChoice("DINE_IN");
+                }}
+              />
+              Dine-in · Table {table.number}
+            </label>
+          )}
           <label>
             <input
               type="radio"
               name={`order-mode-${shopSlug}`}
-              value="DINE_IN"
-              checked={mode === "DINE_IN"}
+              value="TAKEOUT"
+              checked={mode === "TAKEOUT"}
               onChange={() => {
                 setError("");
-                setChoice("DINE_IN");
+                setChoice("TAKEOUT");
               }}
             />
-            Dine-in · Table {table.number}
+            Takeout / pickup
           </label>
-        )}
-        <label>
-          <input
-            type="radio"
-            name={`order-mode-${shopSlug}`}
-            value="TAKEOUT"
-            checked={mode === "TAKEOUT"}
-            onChange={() => {
-              setError("");
-              setChoice("TAKEOUT");
-            }}
-          />
-          Takeout / pickup
-        </label>
-      </fieldset>
+        </fieldset>
+      )}
+      {visibleReview && !onReviewChange && (
+        <CartReview review={visibleReview} />
+      )}
       <p className="field-hint">
         {mode === "TAKEOUT"
           ? "Collect your order at the shop. This order will not be linked to a table."
-          : `Dine-in · Table ${table?.number ?? "from your original QR"}.`}{" "}
+          : `Dine-in · Table ${visibleReview?.table?.number ?? table?.number ?? "from your original QR"}.`}{" "}
         Final prices are calculated when you place your order.
       </p>
       {receipt && (
@@ -273,6 +402,12 @@ export function CustomerOrder({
         </p>
       )}
       {error && <InlineMessage tone="error">{error}</InlineMessage>}
+      {staleReview && (
+        <InlineMessage tone="warning">
+          Your cart or table changed. Review the updated order before
+          submitting.
+        </InlineMessage>
+      )}
       {attempt && !pending && (
         <p className="field-hint">
           {wrongTable
@@ -282,20 +417,58 @@ export function CustomerOrder({
               : "An earlier table order needs confirmation."}
         </p>
       )}
-      <button
-        type="button"
-        className="primary-button"
-        disabled={pending || (!count && !attempt) || wrongTable}
-        onClick={() => void submit()}
-      >
-        {pending
-          ? "Placing order…"
-          : attempt
-            ? "Confirm previous order"
-            : mode === "TAKEOUT"
-              ? "Place pickup order"
-              : "Place dine-in order"}
-      </button>
+      {attempt && !attempt.review && (
+        <p className="field-hint">
+          The original review is unavailable on this device. Confirm the
+          previous order to check its status.
+        </p>
+      )}
+      {editing && !visibleReview && !attempt && (
+        <p className="field-hint">
+          Save or cancel your item changes before reviewing the order.
+        </p>
+      )}
+      <div className="customer-order-actions">
+        {visibleReview && !attempt && (
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={pending}
+            onClick={() => {
+              setReview(null);
+              setError("");
+              requestAnimationFrame(() => action.current?.focus());
+            }}
+          >
+            Edit cart
+          </button>
+        )}
+        <button
+          ref={action}
+          type="button"
+          className="primary-button"
+          disabled={
+            pending ||
+            (!count && !attempt) ||
+            wrongTable ||
+            (!attempt && editing)
+          }
+          onClick={() => {
+            if (attempt || (review && !staleReview)) void submit();
+            else reviewOrder();
+          }}
+        >
+          {pending
+            ? "Placing order…"
+            : attempt
+              ? "Confirm previous order"
+              : !review || staleReview
+                ? "Review order"
+                : mode === "TAKEOUT"
+                  ? "Place pickup order"
+                  : "Place dine-in order"}
+        </button>
+      </div>
     </div>
   );
 }

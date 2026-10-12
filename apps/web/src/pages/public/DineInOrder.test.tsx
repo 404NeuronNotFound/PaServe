@@ -45,12 +45,15 @@ beforeEach(() => {
   useCustomerTables.getState().setResolved(table);
   useCart.getState().add("cafe", quote);
 });
+async function placeOrder(name: string) {
+  await userEvent.click(screen.getByRole("button", { name: "Review order" }));
+  const submit = screen.queryByRole("button", { name });
+  if (submit) await userEvent.click(submit);
+}
 it("inherits dine-in and submits only selections, then shows the saved total and clears submitted lines", async () => {
   vi.mocked(api.post).mockResolvedValue(response);
   render(<DineInOrder shopSlug="cafe" table={table} />);
-  await userEvent.click(
-    screen.getByRole("button", { name: "Place dine-in order" }),
-  );
+  await placeOrder("Place dine-in order");
   expect(api.post).toHaveBeenCalledWith(
     "/menu/cafe/orders",
     expect.objectContaining({
@@ -73,9 +76,7 @@ it("keeps the same request after a lost response and across remount, preserving 
     .mockRejectedValueOnce(new Error("Network lost"))
     .mockResolvedValueOnce(response);
   const first = render(<DineInOrder shopSlug="cafe" table={table} />);
-  await userEvent.click(
-    screen.getByRole("button", { name: "Place dine-in order" }),
-  );
+  await placeOrder("Place dine-in order");
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "not been confirmed",
   );
@@ -92,9 +93,7 @@ it("keeps the same request after a lost response and across remount, preserving 
 it("blocks unresolved table context without submitting", async () => {
   useCustomerTables.getState().beginResolution("cafe", "T12");
   render(<DineInOrder shopSlug="cafe" table={table} />);
-  await userEvent.click(
-    screen.getByRole("button", { name: "Place dine-in order" }),
-  );
+  await placeOrder("Place dine-in order");
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Scan your table QR",
   );
@@ -103,9 +102,7 @@ it("blocks unresolved table context without submitting", async () => {
 it("blocks changed store context instead of ordering for a different table from the display", async () => {
   useCustomerTables.getState().setResolved({ ...table, code: "T13" });
   render(<DineInOrder shopSlug="cafe" table={table} />);
-  await userEvent.click(
-    screen.getByRole("button", { name: "Place dine-in order" }),
-  );
+  await placeOrder("Place dine-in order");
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Scan your table QR",
   );
@@ -119,9 +116,7 @@ it("requires signed context before attempting checkout", async () => {
   };
   useCustomerTables.getState().setResolved(unsigned);
   render(<DineInOrder shopSlug="cafe" table={unsigned} />);
-  await userEvent.click(
-    screen.getByRole("button", { name: "Place dine-in order" }),
-  );
+  await placeOrder("Place dine-in order");
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Scan your table QR",
   );
@@ -130,9 +125,7 @@ it("requires signed context before attempting checkout", async () => {
 it("blocks confirmation from another table and preserves the original request", async () => {
   vi.mocked(api.post).mockRejectedValueOnce(new Error("Network lost"));
   const first = render(<DineInOrder shopSlug="cafe" table={table} />);
-  await userEvent.click(
-    screen.getByRole("button", { name: "Place dine-in order" }),
-  );
+  await placeOrder("Place dine-in order");
   await screen.findByRole("alert");
   const original = sessionStorage.getItem("paserve-pending-order:v1:cafe");
   first.unmount();
@@ -156,9 +149,7 @@ it("retains expired context and refreshes only the token after rescanning the sa
     })
     .mockResolvedValueOnce(response);
   const first = render(<DineInOrder shopSlug="cafe" table={table} />);
-  await userEvent.click(
-    screen.getByRole("button", { name: "Place dine-in order" }),
-  );
+  await placeOrder("Place dine-in order");
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Scan the original table QR",
   );
@@ -190,9 +181,7 @@ it("retains cart and retry request when the response has an invalid total or wro
     },
   });
   render(<DineInOrder shopSlug="cafe" table={table} />);
-  await userEvent.click(
-    screen.getByRole("button", { name: "Place dine-in order" }),
-  );
+  await placeOrder("Place dine-in order");
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "not been confirmed",
   );
@@ -207,15 +196,11 @@ it("preserves cart and permits a fresh attempt after a definitive validation rej
     response: { status: 400 },
   });
   render(<DineInOrder shopSlug="cafe" table={table} />);
-  await userEvent.click(
-    screen.getByRole("button", { name: "Place dine-in order" }),
-  );
+  await placeOrder("Place dine-in order");
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "could not be placed",
   );
   expect(useCart.getState().shops.cafe).toHaveLength(1);
   expect(sessionStorage.getItem("paserve-pending-order:v1:cafe")).toBeNull();
-  expect(
-    screen.getByRole("button", { name: "Place dine-in order" }),
-  ).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Review order" })).toBeEnabled();
 });

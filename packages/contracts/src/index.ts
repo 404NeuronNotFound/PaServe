@@ -655,16 +655,25 @@ export interface PublicTableContext {
 }
 /** Selection data; order submission resolves/revalidates the table and items. */
 export interface CustomerCheckoutRequest {
-  mode?: "DINE_IN";
+  mode?: "DINE_IN" | "TAKEOUT";
   tableCode?: string;
   tableToken?: string;
   items: (ProductSelectionRequest & { productId: string })[];
 }
 export interface CreateDineInOrderRequest extends CustomerCheckoutRequest {
+  mode?: "DINE_IN";
   requestId: string;
   tableCode: string;
   tableToken: string;
 }
+export interface CreateTakeoutOrderRequest {
+  requestId: string;
+  mode: "TAKEOUT";
+  tableCode?: never;
+  tableToken?: never;
+  items: CustomerCheckoutRequest["items"];
+}
+export type CreateCustomerOrderRequest = CreateDineInOrderRequest | CreateTakeoutOrderRequest;
 export interface DineInOrderResponse {
   order: {
     id: string;
@@ -677,6 +686,10 @@ export interface DineInOrderResponse {
     createdAt: string;
   };
 }
+export interface TakeoutOrderResponse {
+  order: Omit<DineInOrderResponse["order"], "mode" | "table"> & { mode: "TAKEOUT"; table: null };
+}
+export type CustomerOrderResponse = DineInOrderResponse | TakeoutOrderResponse;
 export interface RestaurantTable {
   id: string;
   shopId: string;

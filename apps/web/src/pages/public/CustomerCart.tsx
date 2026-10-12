@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FiArrowRight, FiShoppingBag, FiTrash2 } from "react-icons/fi";
 import type {
   PublicMenuResponse,
@@ -18,6 +18,7 @@ import { CartNotesEditor } from "./CartNotesEditor";
 import "./customer-cart.css";
 import { CustomerOrder } from "./CustomerOrder";
 import { CurrentTable } from "./CurrentTable";
+import { CartReview, type CartReviewSnapshot } from "./CartReview";
 
 export function CustomerCart({
   shop,
@@ -28,6 +29,13 @@ export function CustomerCart({
 }) {
   const items = useCart((state) => cartItemsForShop(state.shops, shop.slug));
   const [open, setOpen] = useState(false);
+  const [review, setReview] = useState<CartReviewSnapshot | null>(null);
+  const [edits, setEdits] = useState<Record<string, boolean>>({});
+  const onEditingChange = useCallback((id: string, editing: boolean) => {
+    setEdits((previous) =>
+      previous[id] === editing ? previous : { ...previous, [id]: editing },
+    );
+  }, []);
   const [mode, setMode] = useState<"DINE_IN" | "TAKEOUT">(
     table ? "DINE_IN" : "TAKEOUT",
   );
@@ -70,81 +78,101 @@ export function CustomerCart({
       </button>
       {open && (
         <CustomerDialog
-          title={`${shop.name} cart`}
+          title={`${shop.name} ${review ? "order review" : "cart"}`}
           shop={shop}
           className="customer-cart-dialog"
           eyebrow="Your picks"
-          onClose={() => setOpen(false)}
+          onClose={() => {
+            setReview(null);
+            setOpen(false);
+          }}
         >
           <div className="customer-dialog-body">
-            {table && (
-              <CurrentTable
-                table={table}
-                shopName={shop.name}
-                ordering={mode === "DINE_IN"}
-              />
-            )}
-            {!items.length ? (
-              <div className="customer-cart-empty">
-                <span className="customer-cart-empty-icon" aria-hidden="true">
-                  <FiShoppingBag />
-                </span>
-                <h3>Your cart is empty.</h3>
-                <p>Find a favorite on the menu and make it yours.</p>
-                <button
-                  ref={browse}
-                  className="primary-button"
-                  type="button"
-                  onClick={() => setOpen(false)}
-                >
-                  Browse menu <FiArrowRight aria-hidden="true" />
-                </button>
-              </div>
+            {review ? (
+              <CartReview review={review} />
             ) : (
-              <p className="customer-cart-intro">
-                {count} {count === 1 ? "item" : "items"} from {shop.name}
-              </p>
-            )}
-            <ul ref={list} className="customer-cart-items">
-              {items.map((item, index) => (
-                <li key={item.lineId}>
-                  <div className="customer-cart-line-heading">
-                    <h3>{item.productName}</h3>
-                    <strong className="customer-cart-line-total">
-                      <span className="sr-only">Estimated line total </span>
-                      {formatCartPrice(item.totalPrice)}
-                    </strong>
-                  </div>
-                  <p className="customer-cart-line-quantity">
-                    {item.quantity} × {formatCartPrice(item.unitPrice)}
-                  </p>
-                  {!!(item.variants.length + item.addOns.length) && (
-                    <p className="customer-cart-line-choices">
-                      {[...item.variants, ...item.addOns]
-                        .map((option) => option.name)
-                        .join(", ")}
-                    </p>
-                  )}
-                  <div className="customer-cart-line-actions">
-                    <CartQuantityControl item={item} shopSlug={shop.slug} />
-                    <CartNotesEditor item={item} shopSlug={shop.slug} />
-                    <button
-                      type="button"
-                      data-cart-remove
-                      className="secondary-button customer-cart-remove"
-                      aria-label={`Remove ${item.productName}`}
-                      title={`Remove ${item.productName}`}
-                      onClick={() => {
-                        removedIndex.current = index;
-                        useCart.getState().remove(shop.slug, item.lineId);
-                      }}
+              <>
+                {table && (
+                  <CurrentTable
+                    table={table}
+                    shopName={shop.name}
+                    ordering={mode === "DINE_IN"}
+                  />
+                )}
+                {!items.length ? (
+                  <div className="customer-cart-empty">
+                    <span
+                      className="customer-cart-empty-icon"
+                      aria-hidden="true"
                     >
-                      <FiTrash2 aria-hidden="true" />
+                      <FiShoppingBag />
+                    </span>
+                    <h3>Your cart is empty.</h3>
+                    <p>Find a favorite on the menu and make it yours.</p>
+                    <button
+                      ref={browse}
+                      className="primary-button"
+                      type="button"
+                      onClick={() => setOpen(false)}
+                    >
+                      Browse menu <FiArrowRight aria-hidden="true" />
                     </button>
                   </div>
-                </li>
-              ))}
-            </ul>
+                ) : (
+                  <p className="customer-cart-intro">
+                    {count} {count === 1 ? "item" : "items"} from {shop.name}
+                  </p>
+                )}
+                <ul ref={list} className="customer-cart-items">
+                  {items.map((item, index) => (
+                    <li key={item.lineId}>
+                      <div className="customer-cart-line-heading">
+                        <h3>{item.productName}</h3>
+                        <strong className="customer-cart-line-total">
+                          <span className="sr-only">Estimated line total </span>
+                          {formatCartPrice(item.totalPrice)}
+                        </strong>
+                      </div>
+                      <p className="customer-cart-line-quantity">
+                        {item.quantity} × {formatCartPrice(item.unitPrice)}
+                      </p>
+                      {!!(item.variants.length + item.addOns.length) && (
+                        <p className="customer-cart-line-choices">
+                          {[...item.variants, ...item.addOns]
+                            .map((option) => option.name)
+                            .join(", ")}
+                        </p>
+                      )}
+                      <div className="customer-cart-line-actions">
+                        <CartQuantityControl
+                          item={item}
+                          shopSlug={shop.slug}
+                          onEditingChange={onEditingChange}
+                        />
+                        <CartNotesEditor
+                          item={item}
+                          shopSlug={shop.slug}
+                          onEditingChange={onEditingChange}
+                        />
+                        <button
+                          type="button"
+                          data-cart-remove
+                          className="secondary-button customer-cart-remove"
+                          aria-label={`Remove ${item.productName}`}
+                          title={`Remove ${item.productName}`}
+                          onClick={() => {
+                            removedIndex.current = index;
+                            useCart.getState().remove(shop.slug, item.lineId);
+                          }}
+                        >
+                          <FiTrash2 aria-hidden="true" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
           <footer className="customer-dialog-footer">
             <CustomerOrder
@@ -153,25 +181,31 @@ export function CustomerCart({
               table={table}
               initialMode={mode}
               onModeChange={setMode}
+              onReviewChange={setReview}
+              editing={Object.values(edits).some(Boolean)}
             />
-            <div className="customer-cart-summary">
-              <p role="status" className="customer-cart-total">
-                <span>Estimated subtotal</span>{" "}
-                <strong>{formatCartPrice(subtotal)}</strong>
-              </p>
-            </div>
-            {!!items.length && (
-              <button
-                type="button"
-                className="primary-button customer-cart-continue"
-                onClick={() => setOpen(false)}
-              >
-                Continue shopping <FiArrowRight aria-hidden="true" />
-              </button>
+            {!review && (
+              <>
+                <div className="customer-cart-summary">
+                  <p role="status" className="customer-cart-total">
+                    <span>Estimated subtotal</span>{" "}
+                    <strong>{formatCartPrice(subtotal)}</strong>
+                  </p>
+                </div>
+                {!!items.length && (
+                  <button
+                    type="button"
+                    className="primary-button customer-cart-continue"
+                    onClick={() => setOpen(false)}
+                  >
+                    Continue shopping <FiArrowRight aria-hidden="true" />
+                  </button>
+                )}
+                <p className="field-hint customer-cart-price-notice">
+                  {PRICE_PREVIEW_NOTICE}
+                </p>
+              </>
             )}
-            <p className="field-hint customer-cart-price-notice">
-              {PRICE_PREVIEW_NOTICE}
-            </p>
           </footer>
         </CustomerDialog>
       )}

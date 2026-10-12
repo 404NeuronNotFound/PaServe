@@ -125,7 +125,7 @@ it("shows the scanned table as context, rather than the pickup destination, afte
     within(cart).queryByText("Ordering for Table Patio 4"),
   ).not.toBeInTheDocument();
   expect(
-    within(cart).getByRole("button", { name: "Place pickup order" }),
+    within(cart).getByRole("button", { name: "Review order" }),
   ).toBeDisabled();
   fireEvent.click(within(cart).getByRole("button", { name: "Close" }));
   fireEvent.click(screen.getByRole("button", { name: "View cart (0)" }));

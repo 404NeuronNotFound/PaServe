@@ -1,0 +1,77 @@
+.cart-review {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cart-review > h2 {
+  font:
+    400 28px/1.2 Georgia,
+    serif;
+  margin: 0 0 16px;
+}
+.cart-review > h2:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 4px;
+}
+.cart-review-type {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 16px;
+  padding: 16px;
+  background: var(--color-secondary);
+  border-radius: 14px;
+}
+.cart-review-type dt {
+  font-weight: 600;
+}
+.cart-review-type dd {
+  margin: 0;
+}
+.cart-review-items {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+  display: grid;
+  gap: 12px;
+}
+.cart-review-items li {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+.cart-review-line-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.cart-review-line-heading h3 {
+  margin: 0;
+}
+.cart-review-items p {
+  margin: 8px 0 0;
+}
+.cart-review-notes {
+  white-space: pre-wrap;
+}
+.cart-review-subtotal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px 16px;
+  font-weight: 600;
+}
+.cart-review-subtotal strong {
+  font-size: 1.5rem;
+}
+.customer-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.customer-order .primary-button,
+.customer-order .secondary-button {
+  min-height: 44px;
+}
