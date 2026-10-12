@@ -682,6 +682,12 @@ export interface DineInOrderResponse {
     mode: "DINE_IN";
     status: "PENDING";
     table: PublicTableContext;
+    /** Parent metadata emitted by current API; optional for older confirmations. */
+    orderNumber?: string;
+    paymentStatus?: "UNPAID";
+    updatedAt?: string;
+    qrToken?: string;
+    qrTokenExpiresAt?: string;
     currency: typeof PRODUCT_CURRENCY;
     /** Always emitted by current API; optional for confirmations from older deployments. */
     subtotalPrice?: string;

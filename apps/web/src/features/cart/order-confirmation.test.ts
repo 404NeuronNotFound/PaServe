@@ -103,6 +103,37 @@ it.each([
     expect(isCreatedOrderResponse(value, request, "cafe")).toBe(false);
   },
 );
+const parentMetadata = {
+  orderNumber: "ORD-000001",
+  paymentStatus: "UNPAID",
+  updatedAt: order.createdAt,
+  qrToken: `cGF5bG9hZA.${"a".repeat(43)}`,
+  qrTokenExpiresAt: "2026-10-19T00:00:00.000Z",
+};
+it("accepts complete parent metadata for saved-order confirmation", () => {
+  expect(
+    isCreatedOrderResponse(
+      { order: { ...order, ...parentMetadata } },
+      request,
+      "cafe",
+    ),
+  ).toBe(true);
+});
+it.each([
+  { orderNumber: "ORD-000000" },
+  { paymentStatus: "PAID" },
+  { updatedAt: "invalid" },
+  { qrToken: "forged" },
+  { qrTokenExpiresAt: null },
+])("rejects invalid parent metadata: %j", (fields) => {
+  expect(
+    isCreatedOrderResponse(
+      { order: { ...order, ...parentMetadata, ...fields } },
+      request,
+      "cafe",
+    ),
+  ).toBe(false);
+});
 it("checks the shop and code for dine-in confirmations", () => {
   const dineIn = {
     ...request,

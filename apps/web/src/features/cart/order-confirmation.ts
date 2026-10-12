@@ -36,6 +36,31 @@ export function isCreatedOrderResponse(
     order.items.length > 100
   )
     return false;
+  const hasParentMetadata = [
+    "orderNumber",
+    "paymentStatus",
+    "updatedAt",
+    "qrToken",
+    "qrTokenExpiresAt",
+  ].some((field) => order[field] !== undefined);
+  if (
+    hasParentMetadata &&
+    (typeof order.orderNumber !== "string" ||
+      !/^ORD-\d{6,19}$/.test(order.orderNumber) ||
+      BigInt(order.orderNumber.slice(4)) <= 0n ||
+      order.paymentStatus !== "UNPAID" ||
+      typeof order.updatedAt !== "string" ||
+      !Number.isFinite(Date.parse(order.updatedAt)) ||
+      Date.parse(order.updatedAt) < Date.parse(order.createdAt as string) ||
+      typeof order.qrToken !== "string" ||
+      order.qrToken.length > 1024 ||
+      !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/.test(order.qrToken) ||
+      typeof order.qrTokenExpiresAt !== "string" ||
+      !Number.isFinite(Date.parse(order.qrTokenExpiresAt)) ||
+      Date.parse(order.qrTokenExpiresAt) <=
+        Date.parse(order.createdAt as string))
+  )
+    return false;
   if (
     order.mode === "TAKEOUT"
       ? order.table !== null
