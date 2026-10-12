@@ -24,6 +24,9 @@ describe('order receipt tokens', () => {
     expect(service.issue(first)).toBe(token);
     expect(() => service.verify(token, first)).not.toThrow();
     expect(order().qrTokenNonce).not.toBe(first.qrTokenNonce);
+    expect(first.qrTokenNonce).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
     expect(first.qrTokenExpiresAt.getTime() - Date.now()).toBeLessThanOrEqual(
       ORDER_TOKEN_SECONDS * 1000,
     );
@@ -67,7 +70,7 @@ describe('order receipt tokens', () => {
   });
   it('rejects oversized or malformed credentials', () => {
     const first = order();
-    for (const token of ['', 'invalid', 'x'.repeat(1025)])
+    for (const token of ['', 'invalid', 'ORD-000001', 'x'.repeat(1025)])
       expect(() => service.verify(token, first)).toThrow();
   });
   it('requires a configured signing secret', () => {

@@ -15,6 +15,7 @@ import { PublicProductService } from '../products/public-product.service.js';
 import { CreateOrderDto } from './create-order.dto.js';
 import { TableContextService } from '../tables/table-context.service.js';
 import { OrderTokenService } from './order-token.service.js';
+import { formatOrderNumber } from './order-number.js';
 import {
   copyPriceSnapshot,
   readPriceSnapshot,
@@ -233,7 +234,7 @@ export class OrdersService {
               mode,
               status: 'PENDING',
               paymentStatus: 'UNPAID',
-              orderNumber: `ORD-${numbering.lastOrderNumber.toString().padStart(6, '0')}`,
+              orderNumber: formatOrderNumber(numbering.lastOrderNumber),
               ...this.tokens.metadata(),
               qrTokenRevokedAt: null,
               createdAt,

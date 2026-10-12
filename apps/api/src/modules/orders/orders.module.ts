@@ -7,6 +7,9 @@ import { OrdersService } from './orders.service.js';
 import { CreateOrderDto } from './create-order.dto.js';
 import { TableContextService } from '../tables/table-context.service.js';
 import { OrderTokenService } from './order-token.service.js';
+import { ShopMembersModule } from '../shop-members/shop-members.module.js';
+import { OrderQrController } from './order-qr.controller.js';
+import { OrderQrService } from './order-qr.service.js';
 
 @Controller('menu/:shopSlug/orders')
 export class OrdersController {
@@ -22,13 +25,15 @@ export class OrdersController {
   }
 }
 @Module({
-  controllers: [OrdersController],
+  imports: [ShopMembersModule],
+  controllers: [OrdersController, OrderQrController],
   providers: [
     OrdersService,
     PublicProductService,
     PublicProductRepository,
     TableContextService,
     OrderTokenService,
+    OrderQrService,
   ],
 })
 export class OrdersModule {}
