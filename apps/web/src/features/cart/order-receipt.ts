@@ -1,10 +1,15 @@
-import type { CustomerOrderResponse } from "@paserve/contracts";
+import type {
+  CustomerOrderResponse,
+  PublicMenuResponse,
+} from "@paserve/contracts";
 import { createPendingOrderStorage } from "./pending-orders";
 
 /** Display snapshot only; never an authorization source or a live status lookup. */
 export interface OrderReceipt {
   shopSlug: string;
   shopName: string;
+  primaryColor?: string | null;
+  accentColor?: string | null;
   id: string;
   orderNumber: string | null;
   mode: "DINE_IN" | "TAKEOUT";
@@ -26,10 +31,16 @@ export function saveOrderReceipt(
   shopSlug: string,
   shopName: string,
   order: CustomerOrderResponse["order"],
+  branding: Pick<
+    PublicMenuResponse["shop"],
+    "primaryColor" | "accentColor"
+  > = {},
 ) {
   const receipt: OrderReceipt = {
     shopSlug,
     shopName,
+    primaryColor: branding.primaryColor,
+    accentColor: branding.accentColor,
     id: order.id,
     orderNumber: order.orderNumber ?? null,
     mode: order.mode,
@@ -55,6 +66,11 @@ export function readOrderReceipt(
     // Upgrade older display-only receipts; server confirmations require the new status.
     if (value && typeof value === "object" && value.status === "PENDING")
       value.status = "PENDING_CONFIRMATION";
+    // Invalid display colors fall back to the shared menu palette, not a lost receipt.
+    if (value && typeof value === "object") {
+      if (typeof value.primaryColor !== "string") value.primaryColor = null;
+      if (typeof value.accentColor !== "string") value.accentColor = null;
+    }
     if (
       !value ||
       typeof value !== "object" ||

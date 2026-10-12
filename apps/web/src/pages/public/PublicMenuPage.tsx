@@ -132,7 +132,7 @@ function PublicMenuSession({
       key={shopSlug}
       menu={menu.data}
       onOrderPlaced={(order) => {
-        saveOrderReceipt(shopSlug, menu.data.shop.name, order);
+        saveOrderReceipt(shopSlug, menu.data.shop.name, order, menu.data.shop);
         navigate(
           `/menu/${encodeURIComponent(shopSlug)}/orders/${encodeURIComponent(order.id)}`,
         );

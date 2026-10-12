@@ -121,7 +121,13 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
       mode === "DINE_IN" ? { ...order, mode, table } : order;
     vi.mocked(api.get).mockResolvedValue({
       data: {
-        shop: { slug: "cafe", name: "Cafe", description: null },
+        shop: {
+          slug: "cafe",
+          name: "Cafe",
+          description: null,
+          primaryColor: "#6A426C",
+          accentColor: "#FAFF00",
+        },
         categories: [],
         products: [],
         featuredProducts: [],
@@ -152,7 +158,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
       "Your order is not yet in the kitchen queue.",
     );
     expect(screen.getByRole("status")).toHaveTextContent(
-      "wait for staff confirmation",
+      "The cashier must confirm your order and payment before the kitchen starts preparing it.",
     );
     expect(
       screen.getByRole("heading", {
@@ -172,6 +178,9 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
     expect(snapshot).not.toContain(saved.qrToken);
     expect(snapshot).not.toContain(table.checkoutToken);
     expect(JSON.parse(snapshot).totalPrice).toBe(saved.totalPrice);
+    expect(screen.getByRole("main")).toHaveStyle(
+      "--menu-primary: #6A426C; --menu-accent: #FAFF00",
+    );
     // New purchases after submission must not replace the saved order total.
     useCart.getState().add("cafe", {
       ...quote,
@@ -182,6 +191,9 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
     view.unmount();
     orderReceipts.clearMemory();
     setup();
+    expect(screen.getByRole("main")).toHaveStyle(
+      "--menu-primary: #6A426C; --menu-accent: #FAFF00",
+    );
     expect(screen.getByText("ORD-000042")).toBeInTheDocument();
     expect(screen.getByText("₱12.00")).toBeInTheDocument();
     expect(screen.queryByText("₱99.00")).not.toBeInTheDocument();

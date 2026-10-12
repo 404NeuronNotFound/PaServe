@@ -22,6 +22,7 @@ import { api } from "../../lib/api/client";
 import { formatCartPrice } from "../../lib/money";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { isPublicTableContext } from "../../features/shops/customer-table";
+import { FiArrowRight } from "react-icons/fi";
 
 type Attempt = {
   request: CreateCustomerOrderRequest;
@@ -364,12 +365,14 @@ export function CustomerOrder({
       {visibleReview && !onReviewChange && (
         <CartReview review={visibleReview} />
       )}
-      <p className="field-hint">
-        {mode === "TAKEOUT"
-          ? "Collect your order at the shop. This order will not be linked to a table."
-          : `Dine-in · Table ${visibleReview?.table?.number ?? table?.number ?? "from your original QR"}.`}{" "}
-        Final prices are calculated when you place your order.
-      </p>
+      {!visibleReview && (
+        <p className="field-hint">
+          {mode === "TAKEOUT"
+            ? "Collect your order at the shop. This order will not be linked to a table."
+            : `Dine-in · Table ${table?.number ?? "from your original QR"}.`}{" "}
+          Final prices are calculated when you place your order.
+        </p>
+      )}
       {receipt && (
         <p role="status">
           {receipt.mode === "TAKEOUT"
@@ -377,8 +380,8 @@ export function CustomerOrder({
             : `Order placed for Table ${receipt.table.number}.`}{" "}
           Total {formatCartPrice(receipt.totalPrice)}. Order reference:{" "}
           {receipt.orderNumber ?? receipt.id} Pending. Your order is not yet in
-          the kitchen queue. Show your QR or order number at the counter and
-          wait for staff confirmation.
+          the kitchen queue. The cashier must confirm your order and payment
+          before the kitchen starts preparing it.
         </p>
       )}
       {error && <InlineMessage tone="error">{error}</InlineMessage>}
@@ -454,6 +457,7 @@ export function CustomerOrder({
                 : mode === "TAKEOUT"
                   ? "Place pickup order"
                   : "Place dine-in order"}
+          {!pending && <FiArrowRight aria-hidden="true" />}
         </button>
       </div>
     </div>

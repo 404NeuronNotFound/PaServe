@@ -126,7 +126,7 @@ it("shows separate configured lines, quantities, notes, subtotal and pickup type
   expect(review).toHaveTextContent("Variants: Large");
   expect(review).toHaveTextContent("Add-ons: Oat milk");
   expect(review).toHaveTextContent("Notes: Less ice No sugar");
-  expect(review).toHaveTextContent("Notes: None");
+  expect(review).not.toHaveTextContent("Notes: None");
   expect(review).toHaveTextContent("Estimated subtotal₱44.00");
   expect(review).not.toHaveTextContent("Other shop tea");
   expect(within(review).queryByRole("spinbutton")).not.toBeInTheDocument();

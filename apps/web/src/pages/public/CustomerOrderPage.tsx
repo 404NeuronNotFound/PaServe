@@ -15,6 +15,7 @@ import { readOrderReceipt } from "../../features/cart/order-receipt";
 import { formatCartPrice } from "../../lib/money";
 import "./customer-order-page.css";
 import { OrderNumber } from "./OrderNumber";
+import { menuTheme } from "../../lib/menu-theme";
 
 export function CustomerOrderPage() {
   const { shopSlug = "", orderId = "" } = useParams();
@@ -33,7 +34,10 @@ export function CustomerOrderPage() {
   }, [shopSlug, orderId, pageTitle]);
 
   return (
-    <main className="customer-order-page">
+    <main
+      className="customer-order-page"
+      style={menuTheme(receipt?.primaryColor, receipt?.accentColor)}
+    >
       <header className="order-receipt-topline">
         <span>
           <FiCoffee aria-hidden="true" /> PaServe
@@ -127,8 +131,8 @@ export function CustomerOrderPage() {
                 <li aria-current="step">
                   <span aria-hidden="true">02</span>
                   <div>
-                    <strong>Counter confirmation</strong>
-                    <p>Wait for staff confirmation.</p>
+                    <strong>Cashier confirmation &amp; payment</strong>
+                    <p>Confirm and pay at the counter.</p>
                   </div>
                 </li>
                 <li>
@@ -141,8 +145,9 @@ export function CustomerOrderPage() {
               </ol>
               <div className="order-receipt-status" role="status">
                 <span className="sr-only">Pending. </span>
-                Your order is not yet in the kitchen queue. Show your QR or
-                order number at the counter and wait for staff confirmation.
+                Your order is not yet in the kitchen queue. The cashier must
+                confirm your order and payment before the kitchen starts
+                preparing it.
               </div>
             </section>
           </div>

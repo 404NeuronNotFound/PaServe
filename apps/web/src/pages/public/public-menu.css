@@ -901,3 +901,16 @@
     animation: none;
   }
 }
+
+/* A consistent shop-branded frame for browse, cart and receipt. */
+.public-menu .menu-shop-hero { box-shadow: 0 12px 40px rgb(20 35 24 / 4%); }
+.public-menu .public-menu-header { background: linear-gradient(110deg, color-mix(in srgb, var(--menu-accent) 5%, var(--color-surface)), var(--color-surface) 70%); }
+.public-menu .menu-shop-hero .shop-banner { aspect-ratio: 5 / 1; }
+.public-menu .menu-browse-bar { border-top: 3px solid color-mix(in srgb, var(--menu-primary) 55%, var(--color-border)); box-shadow: 0 12px 32px rgb(20 35 24 / 7%); }
+.public-menu .menu-search:focus-within { border-color: var(--color-text); box-shadow: 0 0 0 3px color-mix(in srgb, var(--menu-accent) 25%, transparent); }
+.public-menu .menu-category-nav a { min-height: 44px; font-weight: 600; }
+.public-menu .menu-product-card { border-radius: 22px; box-shadow: 0 4px 16px rgb(20 35 24 / 3%); }
+.public-menu .customer-cart-button { min-height: 48px; border-radius: 14px; font-weight: 650; }
+@media (max-width: 640px) {
+  .public-menu .menu-shop-hero .shop-banner { aspect-ratio: 3 / 1; }
+}

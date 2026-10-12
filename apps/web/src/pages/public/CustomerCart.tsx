@@ -84,7 +84,7 @@ export function CustomerCart({
           title={`${shop.name} ${review ? "order review" : "cart"}`}
           shop={shop}
           className="customer-cart-dialog"
-          eyebrow="Your picks"
+          eyebrow={review ? "Review & place" : "Your picks"}
           onClose={() => {
             setReview(null);
             setOpen(false);
@@ -178,6 +178,17 @@ export function CustomerCart({
             )}
           </div>
           <footer className="customer-dialog-footer">
+            {!review && (
+              <div className="customer-cart-summary">
+                <p role="status" className="customer-cart-total">
+                  <span>Estimated subtotal</span>
+                  <strong>{formatCartPrice(subtotal)}</strong>
+                </p>
+                <p className="field-hint customer-cart-price-notice">
+                  {PRICE_PREVIEW_NOTICE}
+                </p>
+              </div>
+            )}
             <CustomerOrder
               key={shop.slug}
               shopSlug={shop.slug}
@@ -190,24 +201,15 @@ export function CustomerCart({
             />
             {!review && (
               <>
-                <div className="customer-cart-summary">
-                  <p role="status" className="customer-cart-total">
-                    <span>Estimated subtotal</span>{" "}
-                    <strong>{formatCartPrice(subtotal)}</strong>
-                  </p>
-                </div>
                 {!!items.length && (
                   <button
                     type="button"
-                    className="primary-button customer-cart-continue"
+                    className="secondary-button customer-cart-continue"
                     onClick={() => setOpen(false)}
                   >
                     Continue shopping <FiArrowRight aria-hidden="true" />
                   </button>
                 )}
-                <p className="field-hint customer-cart-price-notice">
-                  {PRICE_PREVIEW_NOTICE}
-                </p>
               </>
             )}
           </footer>
