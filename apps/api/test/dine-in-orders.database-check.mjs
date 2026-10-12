@@ -63,12 +63,36 @@ try {
   assert.equal(result.rows[0].mode, 'DINE_IN');
   assert.equal(result.rows[0].tableId, 'table-a');
   assert.equal(result.rows[0].totalPrice, '20.02');
+  assert.equal(result.rows[0].status, 'PLACED');
+  const pendingMigration = await readFile(
+    new URL(
+      '../prisma/migrations/20261012160000_pending_order_status/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await client.query(pendingMigration.replace(/"orders"/g, q('orders')));
+  assert.equal(
+    (
+      await client.query(
+        `SELECT "status" FROM ${q('orders')} WHERE "id" = 'order-a'`,
+      )
+    ).rows[0].status,
+    'PENDING',
+  );
   async function rejects(action, code) {
     await client.query('SAVEPOINT invalid_order');
     await assert.rejects(action, (error) => error.code === code);
     await client.query('ROLLBACK TO SAVEPOINT invalid_order');
   }
   await rejects(() => insert('foreign', 'a', 'table-b', 'foreign'), '23503');
+  await rejects(
+    () =>
+      client.query(
+        `UPDATE ${q('orders')} SET "status" = 'PLACED' WHERE "id" = 'order-a'`,
+      ),
+    '23514',
+  );
   await rejects(
     () => insert('duplicate', 'a', 'table-a', 'request-a'),
     '23505',
@@ -138,6 +162,7 @@ try {
           'requestId',
           'requestHash',
           'mode',
+          'status',
           'tableCode',
           'tableNumber',
           'currency',
@@ -197,6 +222,7 @@ try {
     });
   const accepted = await submit('cafe-a', 'T12');
   assert.equal(accepted.order.table.number, 'Patio 4');
+  assert.equal(accepted.order.status, 'PENDING');
   const {
     rows: [binding],
   } = await client.query(
@@ -215,6 +241,7 @@ try {
   };
   const pickup = await service.create('cafe-a', pickupRequest);
   assert.equal(pickup.order.mode, 'TAKEOUT');
+  assert.equal(pickup.order.status, 'PENDING');
   assert.equal(pickup.order.table, null);
   const {
     rows: [pickupBinding],

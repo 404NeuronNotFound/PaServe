@@ -1,5 +1,7 @@
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { configureRequestBody } from '../src/common/http/request-body.js';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
@@ -49,7 +51,9 @@ describe('dine-in order submission', () => {
         product: tx.product,
       })
       .compile();
-    app = module.createNestApplication();
+    const expressApp = module.createNestApplication<NestExpressApplication>();
+    configureRequestBody(expressApp);
+    app = expressApp;
     app.setGlobalPrefix('api/v1');
     app.useGlobalPipes(requestValidationPipe());
     await app.init();
@@ -61,10 +65,10 @@ describe('dine-in order submission', () => {
     vi.clearAllMocks();
     raw
       .mockReset()
-      .mockResolvedValueOnce([{ id: 'shop-a' }])
+      .mockResolvedValueOnce([{ id: 'shop-a', isActive: true }])
       .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
     saved.mockReset().mockResolvedValue(null);
-    tx.shop.findFirst.mockResolvedValue({ id: 'shop-a' });
+    tx.shop.findFirst.mockResolvedValue({ id: 'shop-a', isActive: true });
     product.mockReset().mockResolvedValue({
       id,
       name: 'Coffee',
@@ -77,18 +81,65 @@ describe('dine-in order submission', () => {
     create.mockReset().mockImplementation(({ data }) => ({
       ...data,
       id: 'order-a',
-      status: 'PLACED',
+      status: 'PENDING',
       createdAt: new Date('2026-10-12T00:00:00Z'),
     }));
   });
   const post = (body: unknown = payload()) =>
     request(app.getHttpServer()).post('/api/v1/menu/cafe/orders').send(body);
+  it('accepts a valid configured 100-line order larger than the default JSON limit', async () => {
+    const optionId = (n: number) =>
+      `20000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
+    const variants = Array.from({ length: 50 }, (_, n) => ({
+      id: optionId(n + 1),
+      optionGroupId: optionId(n + 101),
+      name: `Choice ${n}`,
+      isDefault: false,
+      priceAdjustment: new Prisma.Decimal(0),
+    }));
+    const addOns = Array.from({ length: 50 }, (_, n) => ({
+      addOn: {
+        id: optionId(n + 201),
+        name: `Extra ${n}`,
+        priceAdjustment: new Prisma.Decimal(0),
+      },
+    }));
+    product.mockResolvedValue({
+      ...(await product()),
+      variants,
+      addOns,
+      optionGroups: variants.map((variant) => ({
+        id: variant.optionGroupId,
+        name: 'Choice',
+        isRequired: true,
+      })),
+    });
+    const body = {
+      ...payload(),
+      items: Array.from({ length: 100 }, () => ({
+        productId: id,
+        quantity: 1,
+        variantIds: variants.map((variant) => variant.id),
+        addOnIds: addOns.map(({ addOn }) => addOn.id),
+        notes: 'x'.repeat(300),
+      })),
+    };
+    expect(Buffer.byteLength(JSON.stringify(body))).toBeGreaterThan(100 * 1024);
+    const result = await post(body).expect(201);
+    expect(result.body.order.items).toHaveLength(100);
+    expect(result.body.order.totalPrice).toBe('1001.00');
+  });
+  it('rejects JSON beyond the transport limit without creating an order', async () => {
+    await post({ ...payload(), padding: 'x'.repeat(1024 * 1024) }).expect(413);
+    expect(transaction).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
   it('inherits DINE_IN and binds a server-resolved shop/table with authoritative prices', async () => {
     const result = await post().expect(201);
     expect(result.headers['cache-control']).toBe('no-store');
     expect(result.body.order).toMatchObject({
       mode: 'DINE_IN',
-      status: 'PLACED',
+      status: 'PENDING',
       totalPrice: '20.02',
       table: { shopSlug: 'cafe', code: 'T12', number: 'Patio 4' },
     });
@@ -132,7 +183,7 @@ describe('dine-in order submission', () => {
   it('rejects inactive or foreign tables before pricing or insertion', async () => {
     raw
       .mockReset()
-      .mockResolvedValueOnce([{ id: 'shop-a' }])
+      .mockResolvedValueOnce([{ id: 'shop-a', isActive: true }])
       .mockResolvedValueOnce([]);
     await post().expect(404);
     expect(product).not.toHaveBeenCalled();
@@ -183,11 +234,11 @@ describe('dine-in order submission', () => {
     const original = {
       ...create.mock.calls[0][0].data,
       id: 'order-a',
-      status: 'PLACED',
+      status: 'PENDING',
       createdAt: new Date(),
     };
     saved.mockResolvedValue(original);
-    raw.mockReset().mockResolvedValue([{ id: 'shop-a' }]);
+    raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: true }]);
     const replay = await post().expect(201);
     expect(replay.body.order.id).toBe('order-a');
     expect(create).toHaveBeenCalledTimes(1);
@@ -232,7 +283,7 @@ describe('dine-in order submission', () => {
     expect(result.body.order).toMatchObject({
       mode: 'TAKEOUT',
       table: null,
-      status: 'PLACED',
+      status: 'PENDING',
       totalPrice: '20.02',
     });
     expect(raw).toHaveBeenCalledTimes(1);
@@ -279,11 +330,67 @@ describe('dine-in order submission', () => {
       id: 'order-a',
       createdAt: new Date(),
     });
-    raw.mockReset().mockResolvedValue([{ id: 'shop-a' }]);
+    raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: true }]);
     const replay = await post(takeout()).expect(201);
     expect(replay.body.order.mode).toBe('TAKEOUT');
     await post().expect(409);
     expect(create).toHaveBeenCalledTimes(1);
+  });
+  it('confirms an existing pending order after the shop becomes inactive, while blocking new orders', async () => {
+    await post(takeout()).expect(201);
+    const original = {
+      ...create.mock.calls[0][0].data,
+      id: 'order-a',
+      createdAt: new Date(),
+    };
+    saved.mockResolvedValue(original);
+    raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: false }]);
+    const replay = await post(takeout()).expect(201);
+    expect(replay.body.order.status).toBe('PENDING');
+    expect(create).toHaveBeenCalledTimes(1);
+    saved.mockResolvedValue(null);
+    await post({
+      ...takeout(),
+      requestId: '10000000-0000-4000-8000-000000000009',
+    }).expect(404);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+  it('does not misrepresent an unexpected saved status as PENDING', async () => {
+    await post(takeout()).expect(201);
+    saved.mockResolvedValue({
+      ...create.mock.calls[0][0].data,
+      id: 'order-a',
+      status: 'PLACED',
+      createdAt: new Date(),
+    });
+    raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: true }]);
+    await post(takeout()).expect(500);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+  it('confirms an existing dine-in order with an expired authentic context but rejects new creation with that token', async () => {
+    const original = payload();
+    await post(original).expect(201);
+    saved.mockResolvedValue({
+      ...create.mock.calls[0][0].data,
+      id: 'order-a',
+      createdAt: new Date(),
+    });
+    raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: false }]);
+    const clock = vi
+      .spyOn(Date, 'now')
+      .mockReturnValue(Date.now() + 5 * 60 * 60 * 1000);
+    try {
+      await post(original).expect(201);
+      saved.mockResolvedValue(null);
+      raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: true }]);
+      await post({
+        ...original,
+        requestId: '10000000-0000-4000-8000-000000000009',
+      }).expect(403);
+      expect(create).toHaveBeenCalledTimes(1);
+    } finally {
+      clock.mockRestore();
+    }
   });
   const variantId = '10000000-0000-4000-8000-000000000002';
   const groupId = '10000000-0000-4000-8000-000000000003';

@@ -32,33 +32,36 @@ describe('ShopResourceGuard', () => {
     } as unknown as ExecutionContext;
   });
 
-  it('attaches validated route context and ignores existing injected context', async () => {
-    Reflect.defineMetadata(
-      'paserve:shop-resource',
-      { kind: 'product', parameter: 'resourceId' },
-      handler,
-    );
-    request.shopResource = { id: 'injected', shopId: 'injected' };
-    const result = {
-      membership: { shopId: 'route-shop' },
-      resource: { id: 'route-resource', shopId: 'route-shop', kind: 'product' },
-    };
-    resources.requireResource.mockResolvedValue(result);
-    await expect(guard.canActivate(context)).resolves.toBe(true);
-    expect(resources.requireResource).toHaveBeenCalledWith(
-      'actor',
-      'route-shop',
-      'product',
-      'route-resource',
-    );
-    expect(request.shopResource).toEqual(result.resource);
-    expect(request.shopMembership).toEqual(result.membership);
-  });
+  it.each(['product', 'order'] as const)(
+    'attaches validated %s route context and ignores existing injected context',
+    async (kind) => {
+      Reflect.defineMetadata(
+        'paserve:shop-resource',
+        { kind, parameter: 'resourceId' },
+        handler,
+      );
+      request.shopResource = { id: 'injected', shopId: 'injected' };
+      const result = {
+        membership: { shopId: 'route-shop' },
+        resource: { id: 'route-resource', shopId: 'route-shop', kind },
+      };
+      resources.requireResource.mockResolvedValue(result);
+      await expect(guard.canActivate(context)).resolves.toBe(true);
+      expect(resources.requireResource).toHaveBeenCalledWith(
+        'actor',
+        'route-shop',
+        kind,
+        'route-resource',
+      );
+      expect(request.shopResource).toEqual(result.resource);
+      expect(request.shopMembership).toEqual(result.membership);
+    },
+  );
 
   it.each([
     undefined,
     null,
-    { kind: 'order', parameter: 'resourceId' },
+    { kind: 'unregistered', parameter: 'resourceId' },
     { kind: 'product', parameter: '' },
     { kind: 'product', parameter: 'shopId' },
   ])('fails closed for invalid resource metadata (%j)', async (policy) => {

@@ -37,6 +37,18 @@ export class ApiExceptionFilter implements ExceptionFilter {
       if (fields.fieldErrors && typeof fields.fieldErrors === 'object') {
         body.fieldErrors = fields.fieldErrors as Record<string, string[]>;
       }
+    } else if (
+      exception instanceof Error &&
+      'type' in exception &&
+      exception.type === 'entity.too.large' &&
+      'status' in exception &&
+      exception.status === HttpStatus.PAYLOAD_TOO_LARGE
+    ) {
+      body = {
+        statusCode: HttpStatus.PAYLOAD_TOO_LARGE,
+        code: 'REQUEST_TOO_LARGE',
+        message: 'The request is too large.',
+      };
     } else {
       // Do not log request bodies, Prisma query parameters, or password data.
       this.logger.error(

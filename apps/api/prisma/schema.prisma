@@ -110,7 +110,7 @@ model Order {
   requestId   String
   requestHash String
   mode        OrderMode @default(DINE_IN)
-  status      String    @default("PLACED")
+  status      String    @default("PENDING")
   tableCode   String?
   tableNumber String?   @db.VarChar(40)
   currency    String    @default("PHP")

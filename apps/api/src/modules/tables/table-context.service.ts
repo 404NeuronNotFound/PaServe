@@ -27,7 +27,12 @@ export class TableContextService {
     ).toString('base64url');
     return `${payload}.${this.signature(payload).toString('base64url')}`;
   }
-  verify(token: string, shopSlug: string, code: string): void {
+  verify(
+    token: string,
+    shopSlug: string,
+    code: string,
+    allowExpiredReplay = false,
+  ): void {
     const invalid = () =>
       new ForbiddenException({
         code: 'TABLE_CONTEXT_INVALID',
@@ -58,7 +63,7 @@ export class TableContextService {
         claims.code !== code ||
         typeof claims.exp !== 'number' ||
         !Number.isInteger(claims.exp) ||
-        claims.exp <= Math.floor(Date.now() / 1000)
+        (!allowExpiredReplay && claims.exp <= Math.floor(Date.now() / 1000))
       )
         throw invalid();
     } catch {

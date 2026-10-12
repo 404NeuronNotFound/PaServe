@@ -50,7 +50,8 @@ export class OrdersService {
           code: 'TABLE_REQUIRED',
           message: 'Dine-in orders require a valid table context.',
         });
-      this.contexts.verify(dto.tableToken, slug, dto.tableCode);
+      // An expired but authentic context may confirm a previously created order.
+      this.contexts.verify(dto.tableToken, slug, dto.tableCode, true);
     }
     const hash = createHash('sha256')
       .update(
@@ -73,9 +74,11 @@ export class OrdersService {
           code: 'ORDER_REQUEST_CONFLICT',
           message: 'This request ID was already used for another order.',
         });
+      if (order.status !== 'PENDING')
+        throw new Error('Invalid persisted order status.');
       const common = {
         id: order.id,
-        status: 'PLACED' as const,
+        status: 'PENDING' as const,
         currency: PRODUCT_CURRENCY,
         totalPrice: order.totalPrice.toFixed(2),
         items:
@@ -103,8 +106,8 @@ export class OrdersService {
         async (tx) => {
           // Lock shop/table state until commit; deactivation cannot slip between resolution and insert.
           const shops = await tx.$queryRaw<
-            { id: string }[]
-          >`SELECT "id" FROM "shops" WHERE "slug" = ${slug} AND "isActive" = true FOR SHARE`;
+            { id: string; isActive: boolean }[]
+          >`SELECT "id", "isActive" FROM "shops" WHERE "slug" = ${slug} FOR SHARE`;
           const shop = shops[0];
           if (!shop) throw unavailable();
           const saved = await tx.order.findUnique({
@@ -113,8 +116,10 @@ export class OrdersService {
             },
           });
           if (saved) return response(saved);
+          if (!shop.isActive) throw unavailable();
           let table: { id: string; number: string } | undefined;
           if (mode === 'DINE_IN') {
+            this.contexts.verify(dto.tableToken!, slug, dto.tableCode!);
             const tables = await tx.$queryRaw<
               { id: string; number: string }[]
             >`SELECT "id", "number" FROM "restaurant_tables" WHERE "shopId" = ${shop.id} AND "code" = ${dto.tableCode} AND "isActive" = true FOR SHARE`;
@@ -153,6 +158,7 @@ export class OrdersService {
               requestId: dto.requestId,
               requestHash: hash,
               mode,
+              status: 'PENDING',
               tableCode: mode === 'DINE_IN' ? dto.tableCode : null,
               tableNumber: table?.number ?? null,
               currency: PRODUCT_CURRENCY,
