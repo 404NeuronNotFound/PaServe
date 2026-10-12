@@ -18,7 +18,12 @@ import { useCart, cartCheckoutRequest } from "../../features/cart/cart";
 vi.mock("../../lib/api/client", () => ({
   api: { get: vi.fn(), post: vi.fn() },
 }));
-const table = { shopSlug: "cafe", code: "T12", number: "Patio 4" };
+const table = {
+  shopSlug: "cafe",
+  code: "T12",
+  number: "Patio 4",
+  checkoutToken: `context.${"a".repeat(43)}`,
+};
 const menu = {
   shop: { slug: "cafe", name: "Cafe", description: null },
   products: [],
@@ -157,6 +162,7 @@ it("keeps table context while browsing product details, adding to cart, and prep
   expect(cartCheckoutRequest(useCart.getState().shops, "cafe")).toEqual({
     mode: "DINE_IN",
     tableCode: "T12",
+    tableToken: table.checkoutToken,
     items: [{ productId: "coffee", quantity: 1, variantIds: [], addOnIds: [] }],
   });
 });
@@ -256,6 +262,7 @@ it("invalidates resolved context during refetch and keeps it blocked on network 
 it.each([
   { ...table, code: "../bad" },
   { ...table, number: "\u0000" },
+  { ...table, checkoutToken: "malformed" },
 ])(
   "shows malformed table responses as unavailable without crashing (%j)",
   async (table) => {

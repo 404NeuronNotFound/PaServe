@@ -650,16 +650,20 @@ export interface PublicTableContext {
   shopSlug: string;
   code: string;
   number: string;
+  /** Server-signed shop/table binding, kept in memory; obtain a fresh token on refresh. */
+  checkoutToken?: string;
 }
 /** Selection data; order submission resolves/revalidates the table and items. */
 export interface CustomerCheckoutRequest {
   mode?: "DINE_IN";
   tableCode?: string;
+  tableToken?: string;
   items: (ProductSelectionRequest & { productId: string })[];
 }
 export interface CreateDineInOrderRequest extends CustomerCheckoutRequest {
   requestId: string;
   tableCode: string;
+  tableToken: string;
 }
 export interface DineInOrderResponse {
   order: {

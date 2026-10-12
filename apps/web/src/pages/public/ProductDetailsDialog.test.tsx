@@ -126,6 +126,12 @@ async function openDetails() {
   await within(dialog).findByLabelText(/Quantity/);
   return { user, dialog, trigger };
 }
+it("keeps the current table and shop visible while choosing product options", async () => {
+  setup({ ...menu, table: { shopSlug: "cafe", code: "T12", number: "Patio 4" } });
+  const { dialog } = await openDetails();
+  expect(within(dialog).getByRole("status", { name: "Current table" })).toHaveTextContent("Ordering for Table Patio 4");
+  expect(within(dialog).getByRole("status", { name: "Current table" })).toHaveTextContent("Dine-in at Cafe");
+});
 it("shows fresh product information and restores keyboard focus when closed", async () => {
   setup();
   const { user, dialog, trigger } = await openDetails();

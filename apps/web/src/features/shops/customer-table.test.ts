@@ -11,7 +11,12 @@ import {
 } from "../cart/cart";
 import type { ProductSelectionQuoteResponse } from "@paserve/contracts";
 
-const table = { shopSlug: "cafe", code: "T12", number: "Patio 4" };
+const table = {
+  shopSlug: "cafe",
+  code: "T12",
+  number: "Patio 4",
+  checkoutToken: `context.${"a".repeat(43)}`,
+};
 function memoryStorage() {
   const values = new Map<string, string>();
   return {
@@ -40,6 +45,7 @@ it("remembers only shop-scoped public codes and requires server resolution after
   expect(cartCheckoutRequest({}, "cafe", refreshed.getState())).toEqual({
     mode: "DINE_IN",
     tableCode: "T12",
+    tableToken: table.checkoutToken,
     items: [],
   });
 });
@@ -65,6 +71,7 @@ it("includes the table automatically with selections, quantities and notes, with
   ).toEqual({
     mode: "DINE_IN",
     tableCode: "T12",
+    tableToken: table.checkoutToken,
     items: [
       {
         productId: "coffee",
@@ -161,8 +168,20 @@ it("copies resolved context so later mutation of a response cannot alter checkou
   const response = { ...table };
   store.getState().setResolved(response);
   response.code = "T99";
+  response.checkoutToken = `changed.${"b".repeat(43)}`;
   expect(cartCheckoutRequest({}, "cafe", store.getState()).tableCode).toBe(
     "T12",
+  );
+});
+it("preserves the server signature without persisting it as navigation context", () => {
+  const storage = memoryStorage();
+  const store = createCustomerTableStore(storage);
+  store.getState().setResolved(table);
+  expect(cartCheckoutRequest({}, "cafe", store.getState()).tableToken).toBe(
+    table.checkoutToken,
+  );
+  expect(storage.getItem(CUSTOMER_TABLE_STORAGE_KEY)).not.toContain(
+    table.checkoutToken,
   );
 });
 it.each(["", "A\u00003", " 12 ", "x".repeat(41)])(

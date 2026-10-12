@@ -16,6 +16,7 @@ import { ShopLogo } from "../../components/shops/ShopLogo";
 import { ShopBanner } from "../../components/shops/ShopBanner";
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import "./public-menu.css";
+import { CurrentTable } from "./CurrentTable";
 
 export function PublicMenuView({
   menu,
@@ -93,7 +94,7 @@ export function PublicMenuView({
             <p className="section-label">THE MENU</p>
             <h1>{shop.name}</h1>
             {!preview && menu.table && (
-              <p role="status">Ordering for Table {menu.table.number}</p>
+              <CurrentTable table={menu.table} shopName={shop.name} />
             )}
             {shop.description && (
               <p className="menu-shop-description">{shop.description}</p>
@@ -200,6 +201,7 @@ export function PublicMenuView({
           shop={shop}
           product={selected}
           preview={preview}
+          table={preview ? undefined : menu.table}
           onClose={() => setSelectedId(null)}
         />
       )}

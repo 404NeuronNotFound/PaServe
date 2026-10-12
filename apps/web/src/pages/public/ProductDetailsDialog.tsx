@@ -6,6 +6,7 @@ import {
   CUSTOMER_NOTE_PATTERN,
   normalizeCustomerNote,
   type PublicMenuResponse,
+  type PublicTableContext,
   type PublicProductDetailsResponse,
   type ProductSelectionQuoteResponse,
 } from "@paserve/contracts";
@@ -22,17 +23,20 @@ import {
   FiSlash,
 } from "react-icons/fi";
 import "./product-details.css";
+import { CurrentTable } from "./CurrentTable";
 
 export function ProductDetailsDialog({
   shop,
   product,
   preview,
   onClose,
+  table,
 }: {
   shop: PublicMenuResponse["shop"];
   product: PublicMenuResponse["products"][number];
   preview: boolean;
   onClose: () => void;
+  table?: PublicTableContext;
 }) {
   const details = useQuery({
     queryKey: ["public-product", shop.slug, product.id],
@@ -62,6 +66,7 @@ export function ProductDetailsDialog({
         !details.isError
       }
     >
+      {!preview && table && <CurrentTable table={table} shopName={shop.name} />}
       {details.isPending || details.isFetching ? (
         <p role="status">Loading product details…</p>
       ) : details.isError ? (

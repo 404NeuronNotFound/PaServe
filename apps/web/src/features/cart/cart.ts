@@ -109,7 +109,13 @@ export function cartCheckoutRequest(
   )
     throw new Error("Resolve the table link before preparing checkout.");
   return {
-    ...(code !== undefined ? { mode: "DINE_IN" as const, tableCode: code } : {}),
+    ...(code !== undefined
+      ? {
+          mode: "DINE_IN" as const,
+          tableCode: code,
+          ...(table?.checkoutToken ? { tableToken: table.checkoutToken } : {}),
+        }
+      : {}),
     items: cartCheckoutLines(shops, slug),
   };
 }

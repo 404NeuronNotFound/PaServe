@@ -59,12 +59,20 @@ export function DineInOrder({
     setError("");
     let sent = attempt;
     try {
+      if (sent && sent.request.tableCode !== table.code) {
+        setError(
+          "Scan the original table QR to confirm your earlier order. It will keep its original table.",
+        );
+        return;
+      }
       if (!sent) {
         const state = useCart.getState();
         const request = cartCheckoutRequest(state.shops, shopSlug);
         if (
           request.mode !== "DINE_IN" ||
           request.tableCode !== table.code ||
+          !table.checkoutToken ||
+          request.tableToken !== table.checkoutToken ||
           !request.items.length
         ) {
           throw new Error("Scan your table QR again before placing an order.");
@@ -73,6 +81,7 @@ export function DineInOrder({
           request: {
             ...request,
             tableCode: table.code,
+            tableToken: table.checkoutToken,
             requestId: crypto.randomUUID(),
           },
           lines: cartItemsForShop(state.shops, shopSlug).map(
@@ -84,6 +93,19 @@ export function DineInOrder({
           sessionStorage.setItem(key, JSON.stringify(sent));
         } catch {
           /* Memory retry remains available. */
+        }
+      }
+      // Refresh only the signature for the original table; never redirect a retry.
+      if (sent.request.tableCode === table.code && table.checkoutToken) {
+        sent = {
+          ...sent,
+          request: { ...sent.request, tableToken: table.checkoutToken },
+        };
+        setAttempt(sent);
+        try {
+          sessionStorage.setItem(key, JSON.stringify(sent));
+        } catch {
+          /* Keep memory retry. */
         }
       }
       const { data } = await api.post<DineInOrderResponse>(
@@ -127,7 +149,14 @@ export function DineInOrder({
       }
     } catch (cause) {
       const status = isAxiosError(cause) ? cause.response?.status : undefined;
-      if (
+      const invalidContext =
+        isAxiosError(cause) &&
+        cause.response?.data?.code === "TABLE_CONTEXT_INVALID";
+      if (invalidContext) {
+        setError(
+          "Scan the original table QR again, then confirm this same order. Your cart is saved.",
+        );
+      } else if (
         status &&
         status >= 400 &&
         status < 500 &&
@@ -157,7 +186,7 @@ export function DineInOrder({
     }
   }
   return (
-    <div>
+    <div className="dine-in-order">
       <p className="field-hint">
         Dine-in · Table {table.number}. Final prices are calculated when you
         place your order.
@@ -170,12 +199,20 @@ export function DineInOrder({
       )}
       {error && <InlineMessage tone="error">{error}</InlineMessage>}
       {attempt && !pending && (
-        <p className="field-hint">An earlier table order needs confirmation.</p>
+        <p className="field-hint">
+          {attempt.request.tableCode !== table.code
+            ? "An order from another table needs confirmation. Scan that table’s QR to continue."
+            : "An earlier table order needs confirmation."}
+        </p>
       )}
       <button
         type="button"
         className="primary-button"
-        disabled={pending || (!count && !attempt)}
+        disabled={
+          pending ||
+          (!count && !attempt) ||
+          (!!attempt && attempt.request.tableCode !== table.code)
+        }
         onClick={() => void submit()}
       >
         {pending

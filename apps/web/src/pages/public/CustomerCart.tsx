@@ -17,6 +17,7 @@ import { CartQuantityControl } from "./CartQuantityControl";
 import { CartNotesEditor } from "./CartNotesEditor";
 import "./customer-cart.css";
 import { DineInOrder } from "./DineInOrder";
+import { CurrentTable } from "./CurrentTable";
 
 export function CustomerCart({
   shop,
@@ -52,6 +53,7 @@ export function CustomerCart({
       >
         <FiShoppingBag aria-hidden="true" />
         <span>View cart</span>
+        {table && <span className="customer-cart-table">Table {table.number}</span>}
         <span className="customer-cart-count" aria-hidden="true">
           {count}
         </span>
@@ -71,9 +73,7 @@ export function CustomerCart({
         >
           <div className="customer-dialog-body">
             {table && (
-              <p className="customer-cart-intro">
-                Ordering for Table {table.number}
-              </p>
+              <CurrentTable table={table} shopName={shop.name} />
             )}
             {!items.length ? (
               <div className="customer-cart-empty">

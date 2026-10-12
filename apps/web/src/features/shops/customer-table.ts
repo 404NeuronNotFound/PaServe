@@ -34,7 +34,11 @@ export function isPublicTableContext(
     !table.number.length ||
     [...table.number].length > TABLE_LIMITS.numberMaxLength ||
     !TABLE_NUMBER_PATTERN.test(table.number) ||
-    normalizeTableNumber(table.number) !== table.number
+    normalizeTableNumber(table.number) !== table.number ||
+    (table.checkoutToken !== undefined &&
+      (typeof table.checkoutToken !== "string" ||
+        table.checkoutToken.length > 1024 ||
+        !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/.test(table.checkoutToken)))
   )
     return false;
   try {
@@ -96,6 +100,9 @@ export function createCustomerTableStore(
             shopSlug: table.shopSlug,
             code: table.code,
             number: table.number,
+            ...(table.checkoutToken
+              ? { checkoutToken: table.checkoutToken }
+              : {}),
           },
         },
       }));
