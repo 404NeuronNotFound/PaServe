@@ -36,13 +36,40 @@
 .product-details-dialog > .current-table {
   margin-inline: 24px;
 }
-.dine-in-order {
+.customer-order {
   grid-column: 1 / -1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.dine-in-order > .primary-button {
+.customer-order > .primary-button {
   min-height: 44px;
+}
+.customer-order-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px;
+  margin: 0 0 12px;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.customer-order-mode legend {
+  font-weight: 600;
+  padding-inline: 4px;
+}
+.customer-order-mode label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  cursor: pointer;
+}
+.customer-order-mode input {
+  flex-shrink: 0;
+  accent-color: var(--color-text);
 }
 @media (max-width: 520px) {
   .product-details-dialog > .current-table {

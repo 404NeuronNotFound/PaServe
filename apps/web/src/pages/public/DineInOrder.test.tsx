@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DineInOrder } from "./DineInOrder";
+import { CustomerOrder as DineInOrder } from "./CustomerOrder";
 import { useCart } from "../../features/cart/cart";
 import { useCustomerTables } from "../../features/shops/customer-table";
 import { api } from "../../lib/api/client";

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import type { PublicMenuResponse } from "@paserve/contracts";
@@ -29,7 +29,8 @@ function PublicMenuSession({
   shopSlug: string;
   tableCode?: string;
 }) {
-  const [code] = useState(
+  const navigate = useNavigate();
+  const [code, setCode] = useState(
     () =>
       tableCode ??
       customerTableCode(useCustomerTables.getState().codes, shopSlug),
@@ -110,6 +111,19 @@ function PublicMenuSession({
         <button className="primary-button" onClick={() => void menu.refetch()}>
           Try again
         </button>
+        {code && (
+          <button
+            className="secondary-button"
+            onClick={() => {
+              useCustomerTables.getState().clear(shopSlug);
+              setCode(undefined);
+              if (tableCode)
+                navigate(`/${encodeURIComponent(shopSlug)}`, { replace: true });
+            }}
+          >
+            Browse for pickup
+          </button>
+        )}
       </main>
     );
   return <PublicMenuView key={shopSlug} menu={menu.data} />;

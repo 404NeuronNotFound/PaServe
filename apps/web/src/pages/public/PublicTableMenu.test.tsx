@@ -110,6 +110,60 @@ it("restores a remembered code on a plain menu visit and revalidates it", async 
   );
   expect(cartCheckoutRequest({}, "cafe").tableCode).toBe("T12");
 });
+it("shows the scanned table as context, rather than the pickup destination, after selecting takeout", async () => {
+  setup();
+  await screen.findByText("Ordering for Table Patio 4");
+  fireEvent.click(screen.getByRole("button", { name: "View cart (0)" }));
+  const cart = screen.getByRole("dialog");
+  fireEvent.click(
+    within(cart).getByRole("radio", { name: "Takeout / pickup" }),
+  );
+  expect(
+    within(cart).getByRole("status", { name: "Current table" }),
+  ).toHaveTextContent("Scanned Table Patio 4");
+  expect(
+    within(cart).queryByText("Ordering for Table Patio 4"),
+  ).not.toBeInTheDocument();
+  expect(
+    within(cart).getByRole("button", { name: "Place pickup order" }),
+  ).toBeDisabled();
+  fireEvent.click(within(cart).getByRole("button", { name: "Close" }));
+  fireEvent.click(screen.getByRole("button", { name: "View cart (0)" }));
+  expect(
+    within(screen.getByRole("dialog")).getByRole("radio", {
+      name: "Takeout / pickup",
+    }),
+  ).toBeChecked();
+});
+it.each(["/cafe/table/T12", "/cafe"])(
+  "lets customers explicitly browse for pickup after an unavailable remembered/scanned table: %s",
+  async (path) => {
+    useCustomerTables.setState({ codes: { cafe: "T12" }, resolved: {} });
+    vi.mocked(api.get).mockImplementation(async (url) => {
+      if (String(url).includes("/table/"))
+        throw new AxiosError("unavailable", "404", undefined, undefined, {
+          status: 404,
+          statusText: "Not Found",
+          data: {},
+          headers: {},
+          config: { headers: new AxiosHeaders() },
+        });
+      return { data: { ...menu, table: undefined } };
+    });
+    setup(path);
+    await screen.findByRole("heading", { name: "Table menu unavailable" });
+    fireEvent.click(screen.getByRole("button", { name: "Browse for pickup" }));
+    await screen.findByRole("heading", { name: "Cafe", level: 1 });
+    fireEvent.click(screen.getByRole("button", { name: "View cart (0)" }));
+    expect(
+      within(screen.getByRole("dialog")).getByRole("radio", {
+        name: "Takeout / pickup",
+      }),
+    ).toBeChecked();
+    expect(useCustomerTables.getState().codes.cafe).toBeUndefined();
+    expect(api.get).toHaveBeenLastCalledWith("/menu/cafe", expect.anything());
+  },
+);
 it("keeps table context while browsing product details, adding to cart, and preparing selections", async () => {
   const product = {
     id: "coffee",

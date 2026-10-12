@@ -16,7 +16,7 @@ import { CustomerDialog } from "./CustomerDialog";
 import { CartQuantityControl } from "./CartQuantityControl";
 import { CartNotesEditor } from "./CartNotesEditor";
 import "./customer-cart.css";
-import { DineInOrder } from "./DineInOrder";
+import { CustomerOrder } from "./CustomerOrder";
 import { CurrentTable } from "./CurrentTable";
 
 export function CustomerCart({
@@ -28,6 +28,9 @@ export function CustomerCart({
 }) {
   const items = useCart((state) => cartItemsForShop(state.shops, shop.slug));
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"DINE_IN" | "TAKEOUT">(
+    table ? "DINE_IN" : "TAKEOUT",
+  );
   const list = useRef<HTMLUListElement>(null);
   const browse = useRef<HTMLButtonElement>(null);
   const removedIndex = useRef<number | null>(null);
@@ -53,7 +56,9 @@ export function CustomerCart({
       >
         <FiShoppingBag aria-hidden="true" />
         <span>View cart</span>
-        {table && <span className="customer-cart-table">Table {table.number}</span>}
+        {table && (
+          <span className="customer-cart-table">Table {table.number}</span>
+        )}
         <span className="customer-cart-count" aria-hidden="true">
           {count}
         </span>
@@ -73,7 +78,11 @@ export function CustomerCart({
         >
           <div className="customer-dialog-body">
             {table && (
-              <CurrentTable table={table} shopName={shop.name} />
+              <CurrentTable
+                table={table}
+                shopName={shop.name}
+                ordering={mode === "DINE_IN"}
+              />
             )}
             {!items.length ? (
               <div className="customer-cart-empty">
@@ -138,7 +147,13 @@ export function CustomerCart({
             </ul>
           </div>
           <footer className="customer-dialog-footer">
-            {table && <DineInOrder key={shop.slug} shopSlug={shop.slug} table={table} />}
+            <CustomerOrder
+              key={shop.slug}
+              shopSlug={shop.slug}
+              table={table}
+              initialMode={mode}
+              onModeChange={setMode}
+            />
             <div className="customer-cart-summary">
               <p role="status" className="customer-cart-total">
                 <span>Estimated subtotal</span>{" "}
