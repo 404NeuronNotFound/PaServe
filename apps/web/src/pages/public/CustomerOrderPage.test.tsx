@@ -147,9 +147,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
     await waitFor(() => expect(title).toHaveFocus());
     expect(screen.getByText("ORD-000042")).toBeInTheDocument();
     expect(screen.getByText("₱12.00")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Pending confirmation",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("Pending");
     expect(screen.getByRole("status")).toHaveTextContent(
       "Your order is not yet in the kitchen queue.",
     );
@@ -187,9 +185,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
     expect(screen.getByText("ORD-000042")).toBeInTheDocument();
     expect(screen.getByText("₱12.00")).toBeInTheDocument();
     expect(screen.queryByText("₱99.00")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Pending confirmation",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("Pending");
     expect(screen.getByRole("status")).toHaveTextContent(
       "Your order is not yet in the kitchen queue.",
     );
@@ -287,7 +283,7 @@ it("retains an older saved receipt after the persisted status rename", () => {
   orderReceipts.clearMemory();
   setup();
   expect(screen.getByText("ORD-000042")).toBeInTheDocument();
-  expect(screen.getByRole("status")).toHaveTextContent("Pending confirmation");
+  expect(screen.getByRole("status")).toHaveTextContent("Pending");
 });
 
 it.each(["invalid", "-1.00", "12.345"])(

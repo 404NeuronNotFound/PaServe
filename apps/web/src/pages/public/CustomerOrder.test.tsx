@@ -191,9 +191,7 @@ it("preserves an uncertain request after a later 404 rather than allowing a dupl
   expect(vi.mocked(api.post).mock.calls[2][1]).toEqual(
     vi.mocked(api.post).mock.calls[0][1],
   );
-  expect(await screen.findByRole("status")).toHaveTextContent(
-    "Pending confirmation",
-  );
+  expect(await screen.findByRole("status")).toHaveTextContent("Pending");
 });
 it("retains the original request across cart closure when session storage is blocked", async () => {
   const blockedWrite = vi
