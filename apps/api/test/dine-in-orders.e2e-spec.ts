@@ -36,12 +36,13 @@ describe('dine-in order submission', () => {
   const saved = vi.fn();
   const create = vi.fn();
   const createItems = vi.fn();
+  const readItems = vi.fn();
   const tx = {
     $queryRaw: raw,
     shop: { findFirst: vi.fn(), update: vi.fn() },
     product: { findFirst: product, findMany: submittedProducts },
     order: { findUnique: saved, create },
-    orderItem: { createMany: createItems },
+    orderItem: { createMany: createItems, findMany: readItems },
   };
   const transaction = vi.fn((callback: (db: typeof tx) => unknown) =>
     callback(tx),
@@ -74,11 +75,24 @@ describe('dine-in order submission', () => {
       ])
       .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
     saved.mockReset().mockResolvedValue(null);
+    let persistedLines: Record<string, unknown>[] = [];
     createItems
       .mockReset()
-      .mockImplementation(async ({ data }: { data: unknown[] }) => ({
-        count: data.length,
-      }));
+      .mockImplementation(
+        async ({ data }: { data: Record<string, unknown>[] }) => {
+          persistedLines = data;
+          return { count: data.length };
+        },
+      );
+    readItems
+      .mockReset()
+      .mockImplementation(
+        async ({ where }: { where: { shopId: string; orderId: string } }) =>
+          persistedLines.filter(
+            (line) =>
+              line.shopId === where.shopId && line.orderId === where.orderId,
+          ),
+      );
     let nextNumber = 0n;
     tx.shop.update
       .mockReset()
@@ -1154,7 +1168,46 @@ describe('dine-in order submission', () => {
       );
     },
   );
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'returns saved snapshot names and prices after menu edits for %s',
+    async (mode) => {
+      const menuProduct = configuredProduct();
+      product.mockResolvedValue(menuProduct);
+      const body = {
+        ...(mode === 'DINE_IN' ? payload() : takeout()),
+        items: [configuredLine()],
+      };
+      const created = await post(body).expect(201);
+      const original = { ...create.mock.calls[0][0].data, id: 'order-a' };
+      menuProduct.name = 'Renamed coffee';
+      menuProduct.price = new Prisma.Decimal('99.00');
+      menuProduct.variants[0].name = 'Renamed size';
+      menuProduct.variants[0].priceAdjustment = new Prisma.Decimal('88.00');
+      menuProduct.addOns[0].addOn.name = 'Renamed milk';
+      menuProduct.addOns[0].addOn.priceAdjustment = new Prisma.Decimal('77.00');
+      // The compatibility JSON is not the authority for receipt reads.
+      saved.mockResolvedValue({ ...original, items: [] });
+      product.mockClear();
+      raw
+        .mockReset()
+        .mockResolvedValue([
+          { id: 'shop-a', isActive: true, acceptingOrders: true },
+        ]);
+      const replay = await post(body).expect(201);
+      expect(replay.body.order.items).toEqual(created.body.order.items);
+      expect(replay.body.order.totalPrice).toBe('34.62');
+      expect(product).not.toHaveBeenCalled();
+      expect(readItems).toHaveBeenLastCalledWith({
+        where: { shopId: 'shop-a', orderId: 'order-a' },
+        orderBy: { lineNumber: 'asc' },
+      });
+    },
+  );
   const forgedFields = [
+    { scope: 'line', field: 'productNameSnapshot', value: 'Forged name' },
+    { scope: 'line', field: 'basePriceSnapshot', value: '0.01' },
+    { scope: 'line', field: 'variantsSnapshot', value: [] },
+    { scope: 'line', field: 'addOnsSnapshot', value: [] },
     { scope: 'order', field: 'subtotalPrice', value: '0.01' },
     { scope: 'line', field: 'subtotalPrice', value: '0.01' },
     { scope: 'order', field: 'totalPrice', value: '0.01' },

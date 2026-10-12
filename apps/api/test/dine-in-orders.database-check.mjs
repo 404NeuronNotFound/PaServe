@@ -217,12 +217,42 @@ try {
     anon_access: false,
     browser_access: false,
   });
+  const priceMigration = await readFile(
+    new URL(
+      '../prisma/migrations/20261012200000_order_price_snapshots/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await client.query(
+    priceMigration.replace(/"order_items"/g, q('order_items')),
+  );
+  const legacyPrice = (
+    await client.query(
+      `SELECT "productNameSnapshot", "basePriceSnapshot", "lineTotalSnapshot" FROM ${q('order_items')} WHERE "orderId" = 'order-a'`,
+    )
+  ).rows[0];
+  assert.equal(legacyPrice.productNameSnapshot, 'Coffee');
+  assert.equal(legacyPrice.basePriceSnapshot, '10.01');
+  assert.equal(legacyPrice.lineTotalSnapshot, '20.02');
   const tx = {
     orderItem: {
+      findMany: async ({ where }) =>
+        (
+          await client.query(
+            `SELECT * FROM ${q('order_items')} WHERE "shopId" = $1 AND "orderId" = $2 ORDER BY "lineNumber"`,
+            [where.shopId, where.orderId],
+          )
+        ).rows.map((row) => ({
+          ...row,
+          basePriceSnapshot: new Prisma.Decimal(row.basePriceSnapshot),
+          unitPriceSnapshot: new Prisma.Decimal(row.unitPriceSnapshot),
+          lineTotalSnapshot: new Prisma.Decimal(row.lineTotalSnapshot),
+        })),
       createMany: async ({ data }) => {
         for (const row of data)
           await client.query(
-            `INSERT INTO ${q('order_items')} ("id", "shopId", "orderId", "productId", "lineNumber", "quantity", "notes", "snapshot", "createdAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+            `INSERT INTO ${q('order_items')} ("id", "shopId", "orderId", "productId", "lineNumber", "quantity", "notes", "snapshot", "createdAt", "productSnapshotId", "productNameSnapshot", "currency", "basePriceSnapshot", "unitPriceSnapshot", "lineTotalSnapshot", "variantsSnapshot", "addOnsSnapshot") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
             [
               randomUUID(),
               row.shopId,
@@ -233,6 +263,14 @@ try {
               row.notes,
               JSON.stringify(row.snapshot),
               row.createdAt,
+              row.productSnapshotId,
+              row.productNameSnapshot,
+              row.currency,
+              row.basePriceSnapshot.toFixed(2),
+              row.unitPriceSnapshot.toFixed(2),
+              row.lineTotalSnapshot.toFixed(2),
+              JSON.stringify(row.variantsSnapshot),
+              JSON.stringify(row.addOnsSnapshot),
             ],
           );
         return { count: data.length };

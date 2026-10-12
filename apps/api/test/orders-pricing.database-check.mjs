@@ -84,6 +84,7 @@ try {
           '20261012170000_shop_accepting_orders',
           '20261012180000_parent_order_metadata',
           '20261012190000_order_items',
+          '20261012200000_order_price_snapshots',
         ]) {
           const sql = await readFile(
             new URL(
@@ -395,6 +396,7 @@ try {
           product: tx.product,
           order: tx.order,
           orderItem: {
+            findMany: (args) => tx.orderItem.findMany(args),
             createMany: async ({ data }) => {
               reachedItemInsert = true;
               return tx.orderItem.createMany({
@@ -450,6 +452,7 @@ try {
           { shopId: foreignShop.id, productId: null },
           {
             productId: foreignProduct.id,
+            productSnapshotId: foreignProduct.id,
             snapshot: { ...saved.items[0], productId: foreignProduct.id },
           },
           { lineNumber: 1 },
@@ -813,6 +816,65 @@ try {
           where: { id: shop.id },
           data: { isActive: false },
         });
+        const receiptBeforeMenuEdits = await orders.create(
+          shop.slug,
+          pickupRequest,
+        );
+        const linesBeforeMenuEdits = await tx.orderItem.findMany({
+          where: { shopId: shop.id, orderId: pickup.order.id },
+          orderBy: { lineNumber: 'asc' },
+        });
+        assert.equal(linesBeforeMenuEdits[0].productNameSnapshot, 'Coffee');
+        assert.equal(
+          linesBeforeMenuEdits[0].basePriceSnapshot.toFixed(2),
+          '150.03',
+        );
+        assert.equal(linesBeforeMenuEdits[0].variantsSnapshot[0].name, 'Large');
+        assert.equal(
+          linesBeforeMenuEdits[0].addOnsSnapshot[0].name,
+          'Oat milk',
+        );
+        await tx.product.update({
+          where: { id: product.id, shopId: shop.id },
+          data: { name: 'Renamed coffee', price: '999.99' },
+        });
+        await tx.productVariant.update({
+          where: { id: variant.id, shopId: shop.id },
+          data: { name: 'Renamed size', priceAdjustment: '88.88' },
+        });
+        await tx.addOn.update({
+          where: { id: milk.id, shopId: shop.id },
+          data: { name: 'Renamed modifier', priceAdjustment: '77.77' },
+        });
+        assert.deepEqual(
+          (await orders.create(shop.slug, pickupRequest)).order,
+          receiptBeforeMenuEdits.order,
+        );
+        assert.deepEqual(
+          await tx.orderItem.findMany({
+            where: { shopId: shop.id, orderId: pickup.order.id },
+            orderBy: { lineNumber: 'asc' },
+          }),
+          linesBeforeMenuEdits,
+        );
+        await tx.productAddOn.deleteMany({
+          where: { shopId: shop.id, productId: product.id, addOnId: milk.id },
+        });
+        await tx.productVariant.delete({
+          where: { id: variant.id, shopId: shop.id },
+        });
+        await tx.addOn.delete({ where: { id: milk.id, shopId: shop.id } });
+        await tx.product.delete({ where: { id: product.id, shopId: shop.id } });
+        assert.deepEqual(
+          (await orders.create(shop.slug, pickupRequest)).order,
+          receiptBeforeMenuEdits.order,
+        );
+        const preserved = await tx.orderItem.findFirstOrThrow({
+          where: { shopId: shop.id, orderId: pickup.order.id },
+        });
+        assert.equal(preserved.productId, null);
+        assert.equal(preserved.productSnapshotId, product.id);
+        assert.deepEqual(preserved.snapshot, linesBeforeMenuEdits[0].snapshot);
         assert.equal(
           (await orders.create(shop.slug, pickupRequest)).order.id,
           pickup.order.id,

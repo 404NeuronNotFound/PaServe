@@ -15,6 +15,10 @@ import { PublicProductService } from '../products/public-product.service.js';
 import { CreateOrderDto } from './create-order.dto.js';
 import { TableContextService } from '../tables/table-context.service.js';
 import { OrderTokenService } from './order-token.service.js';
+import {
+  copyPriceSnapshot,
+  readPriceSnapshot,
+} from './order-price-snapshots.js';
 
 @Injectable()
 export class OrdersService {
@@ -70,7 +74,10 @@ export class OrdersService {
         }),
       )
       .digest('hex');
-    const response = (order: Order): CustomerOrderResponse => {
+    const response = async (
+      order: Order,
+      tx: Prisma.TransactionClient,
+    ): Promise<CustomerOrderResponse> => {
       if (order.requestHash !== hash)
         throw new ConflictException({
           code: 'ORDER_REQUEST_CONFLICT',
@@ -80,6 +87,25 @@ export class OrdersService {
         throw new Error('Invalid persisted order status.');
       if (order.paymentStatus !== 'UNPAID')
         throw new Error('Invalid persisted payment status.');
+      const savedItems = await tx.orderItem.findMany({
+        where: { shopId: order.shopId, orderId: order.id },
+        orderBy: { lineNumber: 'asc' },
+      });
+      if (
+        savedItems.length !== dto.items.length ||
+        savedItems.some((item, index) => item.lineNumber !== index + 1)
+      )
+        throw new Error('Invalid persisted receipt lines.');
+      const receiptItems = savedItems.map(readPriceSnapshot);
+      if (
+        !receiptItems
+          .reduce(
+            (sum, item) => sum.plus(item.totalPrice),
+            new Prisma.Decimal(0),
+          )
+          .equals(order.totalPrice)
+      )
+        throw new Error('Invalid persisted receipt total.');
       const common = {
         id: order.id,
         status: 'PENDING' as const,
@@ -92,8 +118,7 @@ export class OrdersService {
         // No order-level adjustments are modeled; the saved total is also the subtotal.
         subtotalPrice: order.totalPrice.toFixed(2),
         totalPrice: order.totalPrice.toFixed(2),
-        items:
-          order.items as unknown as CustomerOrderResponse['order']['items'],
+        items: receiptItems,
         createdAt: order.createdAt.toISOString(),
       };
       if (order.mode === 'TAKEOUT')
@@ -126,7 +151,7 @@ export class OrdersService {
               shopId_requestId: { shopId: shop.id, requestId: dto.requestId },
             },
           });
-          if (saved) return response(saved);
+          if (saved) return response(saved, tx);
           if (!shop.isActive) throw unavailable();
           if (!shop.acceptingOrders)
             throw new ConflictException({
@@ -168,16 +193,18 @@ export class OrdersService {
           const items = [];
           for (const item of dto.items)
             items.push(
-              await this.products.quote(
-                slug,
-                item.productId,
-                {
-                  variantIds: [...item.variantIds],
-                  addOnIds: [...item.addOnIds],
-                  quantity: item.quantity,
-                  ...(item.notes !== undefined ? { notes: item.notes } : {}),
-                },
-                tx,
+              copyPriceSnapshot(
+                await this.products.quote(
+                  slug,
+                  item.productId,
+                  {
+                    variantIds: [...item.variantIds],
+                    addOnIds: [...item.addOnIds],
+                    quantity: item.quantity,
+                    ...(item.notes !== undefined ? { notes: item.notes } : {}),
+                  },
+                  tx,
+                ),
               ),
             );
           const subtotal = items.reduce(
@@ -227,12 +254,21 @@ export class OrdersService {
               quantity: item.quantity,
               notes: item.notes ?? null,
               snapshot: item as unknown as Prisma.InputJsonValue,
+              productSnapshotId: item.productId,
+              productNameSnapshot: item.productName,
+              currency: item.currency,
+              basePriceSnapshot: new Prisma.Decimal(item.basePrice),
+              unitPriceSnapshot: new Prisma.Decimal(item.unitPrice),
+              lineTotalSnapshot: new Prisma.Decimal(item.totalPrice),
+              variantsSnapshot:
+                item.variants as unknown as Prisma.InputJsonValue,
+              addOnsSnapshot: item.addOns as unknown as Prisma.InputJsonValue,
               createdAt,
             })),
           });
           if (inserted.count !== items.length)
             throw new Error('Incomplete persisted order items.');
-          return response(order);
+          return response(order, tx);
         },
         {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
