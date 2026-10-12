@@ -6,6 +6,7 @@ import {
   IsIn,
   IsString,
   IsUUID,
+  MaxLength,
   Matches,
   ValidateIf,
   ValidateNested,
@@ -28,6 +29,11 @@ export class CreateDineInOrderDto {
   @IsString()
   @Matches(PUBLIC_TABLE_CODE_PATTERN)
   tableCode!: string;
+
+  @IsString()
+  @MaxLength(1024)
+  @Matches(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/)
+  tableToken!: string;
 
   @IsArray()
   @ArrayMinSize(1)

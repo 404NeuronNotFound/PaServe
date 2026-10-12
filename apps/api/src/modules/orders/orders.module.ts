@@ -5,6 +5,7 @@ import { PublicProductRepository } from '../products/public-product.repository.j
 import { PublicProductService } from '../products/public-product.service.js';
 import { OrdersService } from './orders.service.js';
 import { CreateDineInOrderDto } from './create-dine-in-order.dto.js';
+import { TableContextService } from '../tables/table-context.service.js';
 
 @Controller('menu/:shopSlug/orders')
 export class OrdersController {
@@ -21,6 +22,11 @@ export class OrdersController {
 }
 @Module({
   controllers: [OrdersController],
-  providers: [OrdersService, PublicProductService, PublicProductRepository],
+  providers: [
+    OrdersService,
+    PublicProductService,
+    PublicProductRepository,
+    TableContextService,
+  ],
 })
 export class OrdersModule {}

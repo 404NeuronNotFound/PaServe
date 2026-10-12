@@ -5,6 +5,8 @@ import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { OrdersService } from '../dist/modules/orders/orders.service.js';
 import { Prisma } from '../dist/generated/prisma/client.js';
+import { ConfigService } from '@nestjs/config';
+import { TableContextService } from '../dist/modules/tables/table-context.service.js';
 
 // Exercise the exact migration in an isolated schema; all DDL/fixtures roll back.
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -66,8 +68,9 @@ try {
     quotes++;
     return { productId: 'coffee', productName: 'Coffee', quantity: 2, currency: 'PHP', basePrice: '10.01', unitPrice: '10.01', totalPrice: '20.02', variants: [], addOns: [] };
   } };
-  const service = new OrdersService({ $transaction: callback => callback(tx) }, products);
-  const submit = (slug, tableCode) => service.create(slug, { requestId: randomUUID(), tableCode, items: [{ productId: randomUUID(), quantity: 2, variantIds: [], addOnIds: [] }] });
+  const contexts = new TableContextService(new ConfigService());
+  const service = new OrdersService({ $transaction: callback => callback(tx) }, products, contexts);
+  const submit = (slug, tableCode) => service.create(slug, { requestId: randomUUID(), tableCode, tableToken: contexts.issue(slug, tableCode), items: [{ productId: randomUUID(), quantity: 2, variantIds: [], addOnIds: [] }] });
   const accepted = await submit('cafe-a', 'T12');
   assert.equal(accepted.order.table.number, 'Patio 4');
   const { rows: [binding] } = await client.query(`SELECT "shopId", "tableId" FROM ${q('orders')} WHERE "id" = $1`, [accepted.order.id]);
@@ -76,6 +79,9 @@ try {
   assert.equal(acceptedB.order.table.number, '12');
   const before = await client.query(`SELECT count(*) FROM ${q('orders')}`);
   const quotesBefore = quotes;
+  const tampered = (slug, code) => service.create(slug, { requestId: randomUUID(), tableCode: code, tableToken: contexts.issue('cafe-a', 'T12'), items: [{ productId: randomUUID(), quantity: 2, variantIds: [], addOnIds: [] }] });
+  await assert.rejects(() => tampered('cafe-b', 'T12'), error => error.status === 403 && error.response.code === 'TABLE_CONTEXT_INVALID');
+  await assert.rejects(() => tampered('cafe-a', 'T14'), error => error.status === 403 && error.response.code === 'TABLE_CONTEXT_INVALID');
   for (const code of ['T13', 'T14', 'T99']) {
     await assert.rejects(() => submit('cafe-a', code), error => error.status === 404 && error.response.code === 'TABLE_NOT_AVAILABLE');
   }

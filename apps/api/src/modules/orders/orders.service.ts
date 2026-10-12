@@ -10,12 +10,14 @@ import { Prisma, type Order } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { PublicProductService } from '../products/public-product.service.js';
 import { CreateDineInOrderDto } from './create-dine-in-order.dto.js';
+import { TableContextService } from '../tables/table-context.service.js';
 
 @Injectable()
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly products: PublicProductService,
+    private readonly contexts: TableContextService,
   ) {}
 
   async create(
@@ -29,6 +31,7 @@ export class OrdersService {
       });
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$(?![\s\S])/.test(slug) || slug.length > 100)
       throw unavailable();
+    this.contexts.verify(dto.tableToken, slug, dto.tableCode);
     const hash = createHash('sha256')
       .update(
         JSON.stringify({

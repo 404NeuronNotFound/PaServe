@@ -4,6 +4,8 @@ import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
+import { ConfigService } from '@nestjs/config';
+import { TableContextService } from '../src/modules/tables/table-context.service.js';
 
 describe('public table menus', () => {
   let app: INestApplication<App>;
@@ -32,14 +34,12 @@ describe('public table menus', () => {
         ? { code: where.code, number: 'Patio 4', shop: { slug: 'cafe' } }
         : null,
     );
-    findShop
-      .mockResolvedValueOnce({ id: 'shop-a' })
-      .mockResolvedValue({
-        name: 'Cafe',
-        slug: 'cafe',
-        categories: [],
-        products: [],
-      });
+    findShop.mockResolvedValueOnce({ id: 'shop-a' }).mockResolvedValue({
+      name: 'Cafe',
+      slug: 'cafe',
+      categories: [],
+      products: [],
+    });
   });
   const get = (slug = 'cafe', token = code) =>
     request(app.getHttpServer()).get(
@@ -54,7 +54,13 @@ describe('public table menus', () => {
         shopSlug: 'cafe',
         code: token,
         number: 'Patio 4',
+        checkoutToken: expect.any(String),
       });
+      new TableContextService(new ConfigService()).verify(
+        response.body.table.checkoutToken,
+        'cafe',
+        token,
+      );
       expect(response.body.shop.slug).toBe('cafe');
       expect(JSON.stringify(response.body)).not.toContain('shop-a');
       expect(findTable).toHaveBeenCalledWith({

@@ -3,12 +3,14 @@ import type { Response } from 'express';
 import { publicTablePath, type PublicMenuResponse } from '@paserve/contracts';
 import { PublicMenuRepository } from './public-menu.repository.js';
 import { PublicTablesRepository } from '../tables/public-tables.repository.js';
+import { TableContextService } from '../tables/table-context.service.js';
 
 @Controller('menu')
 export class PublicMenuController {
   constructor(
     private readonly menus: PublicMenuRepository,
     private readonly tables: PublicTablesRepository,
+    private readonly contexts: TableContextService,
   ) {}
   @Get(':shopSlug/table/:tableCode')
   async readTable(
@@ -25,7 +27,10 @@ export class PublicMenuController {
     const table = await this.tables.resolve(slug, code);
     if (!table) throw this.tableUnavailable();
     // Recheck active table and shop in the menu query after resolving the code.
-    return { ...(await this.load(slug, code)), table };
+    return {
+      ...(await this.load(slug, code)),
+      table: { ...table, checkoutToken: this.contexts.issue(slug, code) },
+    };
   }
   private tableUnavailable() {
     return new NotFoundException({

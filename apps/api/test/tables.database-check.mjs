@@ -11,6 +11,8 @@ import { TABLE_CODE_PATTERN, publicTablePath } from '@paserve/contracts';
 import { PublicTablesRepository } from '../dist/modules/tables/public-tables.repository.js';
 import { PublicMenuRepository } from '../dist/modules/categories/public-menu.repository.js';
 import { PublicMenuController } from '../dist/modules/categories/public-menu.controller.js';
+import { ConfigService } from '@nestjs/config';
+import { TableContextService } from '../dist/modules/tables/table-context.service.js';
 
 const prisma = new PrismaService();
 const rollback = new Error('Intentional table fixture rollback');
@@ -41,11 +43,14 @@ try {
     assert.notEqual(one.code, two.code);
     const publicTables = new PublicTablesRepository(tx);
     const publicMenus = new PublicMenuRepository(tx);
-    const controller = new PublicMenuController(publicMenus, publicTables);
+    const contexts = new TableContextService(new ConfigService());
+    const controller = new PublicMenuController(publicMenus, publicTables, contexts);
     const response = { setHeader() {} };
     const scanned = await controller.readTable(a.slug, one.code, response);
     assert.equal(scanned.shop.slug, a.slug);
-    assert.deepEqual(scanned.table, { shopSlug: a.slug, code: one.code, number: '12' });
+    contexts.verify(scanned.table.checkoutToken, a.slug, one.code);
+    const { checkoutToken: _checkoutToken, ...tableContext } = scanned.table;
+    assert.deepEqual(tableContext, { shopSlug: a.slug, code: one.code, number: '12' });
     assert.ok(!JSON.stringify(scanned).includes(one.id) && !JSON.stringify(scanned).includes(a.id));
     assert.equal(await publicTables.resolve(b.slug, one.code), null);
     await assert.rejects(controller.readTable(b.slug, one.code, response));

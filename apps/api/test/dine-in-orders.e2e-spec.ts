@@ -6,11 +6,15 @@ import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { Prisma } from '../src/generated/prisma/client.js';
 import { requestValidationPipe } from '../src/common/pipes/request-validation.pipe.js';
+import { TableContextService } from '../src/modules/tables/table-context.service.js';
+import { ConfigService } from '@nestjs/config';
+const contexts = new TableContextService(new ConfigService());
 
 const id = '10000000-0000-4000-8000-000000000001';
 const payload = () => ({
   requestId: id,
   tableCode: 'T12',
+  tableToken: contexts.issue('cafe', 'T12'),
   items: [
     {
       productId: id,
@@ -105,6 +109,8 @@ describe('dine-in order submission', () => {
     { ...payload(), mode: 'TAKEAWAY' },
     { ...payload(), mode: null },
     { ...payload(), tableCode: undefined },
+    { ...payload(), tableToken: undefined },
+    { ...payload(), tableToken: 'invalid' },
     { ...payload(), tableCode: id },
     { ...payload(), tableId: id },
     { ...payload(), shopId: id },
@@ -128,7 +134,9 @@ describe('dine-in order submission', () => {
     expect(create).not.toHaveBeenCalled();
     expect(raw.mock.calls[1][1]).toBe('shop-a');
     expect(raw.mock.calls[1][2]).toBe('T12');
-    expect(raw.mock.calls[1][0].join('?')).toContain('AND "isActive" = true FOR SHARE');
+    expect(raw.mock.calls[1][0].join('?')).toContain(
+      'AND "isActive" = true FOR SHARE',
+    );
   });
   it('rejects inactive shops', async () => {
     raw.mockReset().mockResolvedValue([]);
@@ -178,7 +186,35 @@ describe('dine-in order submission', () => {
     const replay = await post().expect(201);
     expect(replay.body.order.id).toBe('order-a');
     expect(create).toHaveBeenCalledTimes(1);
-    await post({ ...payload(), tableCode: 'T13' }).expect(409);
+    await post({
+      ...payload(),
+      items: [{ ...payload().items[0], quantity: 3 }],
+    }).expect(409);
     expect(create).toHaveBeenCalledTimes(1);
+  });
+  it('rejects editing a valid table code while keeping the scanned-table signature', async () => {
+    await post({ ...payload(), tableCode: 'T13' }).expect(403);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it('rejects using another shop route with the scanned context', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/menu/other/orders')
+      .send(payload())
+      .expect(403);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it('rejects modifying signed claims even if the format is valid', async () => {
+    const token = payload().tableToken;
+    const [claims, signature] = token.split('.');
+    const changed = {
+      ...JSON.parse(Buffer.from(claims, 'base64url').toString()),
+      code: 'T13',
+    };
+    await post({
+      ...payload(),
+      tableCode: 'T13',
+      tableToken: `${Buffer.from(JSON.stringify(changed)).toString('base64url')}.${signature}`,
+    }).expect(403);
+    expect(transaction).not.toHaveBeenCalled();
   });
 });
