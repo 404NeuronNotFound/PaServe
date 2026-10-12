@@ -124,7 +124,17 @@ export class OrdersService {
           const items = [];
           for (const item of dto.items)
             items.push(
-              await this.products.quote(slug, item.productId, item, tx),
+              await this.products.quote(
+                slug,
+                item.productId,
+                {
+                  variantIds: [...item.variantIds],
+                  addOnIds: [...item.addOnIds],
+                  quantity: item.quantity,
+                  ...(item.notes !== undefined ? { notes: item.notes } : {}),
+                },
+                tx,
+              ),
             );
           const total = items.reduce(
             (sum, item) => sum.plus(item.totalPrice),
@@ -152,7 +162,10 @@ export class OrdersService {
           });
           return response(order);
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          timeout: 30_000,
+        },
       );
     } catch (error) {
       if (

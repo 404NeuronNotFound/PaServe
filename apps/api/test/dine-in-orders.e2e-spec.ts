@@ -43,7 +43,11 @@ describe('dine-in order submission', () => {
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
-      .useValue({ $transaction: transaction })
+      .useValue({
+        $transaction: transaction,
+        shop: tx.shop,
+        product: tx.product,
+      })
       .compile();
     app = module.createNestApplication();
     app.setGlobalPrefix('api/v1');
@@ -100,6 +104,7 @@ describe('dine-in order submission', () => {
     });
     expect(transaction.mock.calls[0][1]).toEqual({
       isolationLevel: 'Serializable',
+      timeout: 30_000,
     });
   });
   it('accepts explicit dine-in mode', async () => {
@@ -279,5 +284,149 @@ describe('dine-in order submission', () => {
     expect(replay.body.order.mode).toBe('TAKEOUT');
     await post().expect(409);
     expect(create).toHaveBeenCalledTimes(1);
+  });
+  const variantId = '10000000-0000-4000-8000-000000000002';
+  const groupId = '10000000-0000-4000-8000-000000000003';
+  const addOnId = '10000000-0000-4000-8000-000000000004';
+  const anotherId = '10000000-0000-4000-8000-000000000005';
+  const configuredProduct = (
+    base = '10.01',
+    variant = '5.10',
+    addOn = '2.20',
+  ) => ({
+    id,
+    name: 'Coffee',
+    price: new Prisma.Decimal(base),
+    status: 'AVAILABLE',
+    optionGroups: [{ id: groupId, name: 'Size', isRequired: true }],
+    variants: [
+      {
+        id: variantId,
+        optionGroupId: groupId,
+        name: 'Large',
+        isDefault: false,
+        priceAdjustment: new Prisma.Decimal(variant),
+      },
+    ],
+    addOns: [
+      {
+        addOn: {
+          id: addOnId,
+          name: 'Oat milk',
+          priceAdjustment: new Prisma.Decimal(addOn),
+        },
+      },
+    ],
+  });
+  const configuredLine = () => ({
+    ...payload().items[0],
+    variantIds: [variantId],
+    addOnIds: [addOnId],
+  });
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'recalculates current base/option prices after an earlier preview for %s',
+    async (mode) => {
+      product.mockResolvedValue(configuredProduct());
+      const { productId, ...selection } = configuredLine();
+      const preview = await request(app.getHttpServer())
+        .post(`/api/v1/menu/cafe/products/${productId}/quote`)
+        .send(selection)
+        .expect(201);
+      expect(preview.body.totalPrice).toBe('34.62');
+      product.mockResolvedValue(configuredProduct('20.03', '6.07', '2.15'));
+      const body =
+        mode === 'DINE_IN'
+          ? { ...payload(), mode, items: [configuredLine()] }
+          : { ...takeout(), items: [configuredLine()] };
+      const result = await post(body).expect(201);
+      expect(result.body.order.totalPrice).toBe('56.50');
+      expect(result.body.order.items[0]).toMatchObject({
+        productId: id,
+        quantity: 2,
+        notes: 'Less ice',
+        basePrice: '20.03',
+        unitPrice: '28.25',
+        totalPrice: '56.50',
+        variants: [{ id: variantId, priceAdjustment: '6.07' }],
+        addOns: [{ id: addOnId, priceAdjustment: '2.15' }],
+      });
+      expect(create.mock.calls[0][0].data.totalPrice.toFixed(2)).toBe('56.50');
+      expect(create.mock.calls[0][0].data.items[0]).toEqual(
+        result.body.order.items[0],
+      );
+    },
+  );
+  const forgedFields = [
+    { scope: 'order', field: 'totalPrice', value: '0.01' },
+    { scope: 'order', field: 'subtotal', value: '0.01' },
+    { scope: 'order', field: 'currency', value: 'USD' },
+    { scope: 'line', field: 'unitPrice', value: '0.01' },
+    { scope: 'line', field: 'totalPrice', value: '0.01' },
+    { scope: 'line', field: 'basePrice', value: '0.01' },
+    {
+      scope: 'line',
+      field: 'variants',
+      value: [{ id: variantId, priceAdjustment: '0.00' }],
+    },
+    {
+      scope: 'line',
+      field: 'addOns',
+      value: [{ id: addOnId, priceAdjustment: '0.00' }],
+    },
+  ];
+  it.each(
+    forgedFields.flatMap((fields) =>
+      ['DINE_IN', 'TAKEOUT'].map((mode) => ({ ...fields, mode })),
+    ),
+  )(
+    'rejects client price/display fields before any database access: $mode $scope.$field',
+    async ({ scope, field, value, mode }) => {
+      const body = mode === 'DINE_IN' ? payload() : takeout();
+      const forged =
+        scope === 'order'
+          ? { ...body, [field]: value }
+          : { ...body, items: [{ ...body.items[0], [field]: value }] };
+      const result = await post(forged).expect(400);
+      expect(result.body.code).toBe('VALIDATION_ERROR');
+      expect(transaction).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    { ...configuredLine(), variantIds: [] },
+    { ...configuredLine(), variantIds: [anotherId] },
+    { ...configuredLine(), addOnIds: [anotherId] },
+    { ...configuredLine(), variantIds: [variantId, variantId] },
+    { ...configuredLine(), addOnIds: [addOnId, addOnId] },
+    { ...configuredLine(), quantity: 1.5 },
+    { ...configuredLine(), quantity: '2' },
+    { ...configuredLine(), quantity: 100 },
+    { ...configuredLine(), notes: null },
+  ])(
+    'rejects invalid identifiers/options/quantity/notes without insertion: %j',
+    async (line) => {
+      product.mockResolvedValue(configuredProduct());
+      await post({ ...takeout(), items: [line] }).expect(400);
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
+  it('accepts the maximum supported 100 selection-only lines with exact totals', async () => {
+    const items = Array.from({ length: 100 }, () => ({
+      ...payload().items[0],
+      quantity: 99,
+    }));
+    const result = await post({ ...takeout(), items }).expect(201);
+    expect(result.body.order.items).toHaveLength(100);
+    expect(result.body.order.totalPrice).toBe('99099.00');
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(transaction.mock.calls[0][1].timeout).toBe(30000);
+  });
+  it('rejects oversized batches before pricing or creating an order', async () => {
+    await post({
+      ...takeout(),
+      items: Array.from({ length: 101 }, () => payload().items[0]),
+    }).expect(400);
+    expect(product).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 });
