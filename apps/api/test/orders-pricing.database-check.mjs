@@ -190,6 +190,7 @@ try {
         const pickup = await orders.create(shop.slug, pickupRequest);
         assert.equal(pickup.order.status, 'PENDING');
         assert.equal(pickup.order.totalPrice, '422.50');
+        assert.equal(pickup.order.subtotalPrice, '422.50');
         assert.equal(pickup.order.table, null);
         const saved = await tx.order.findUniqueOrThrow({
           where: { id: pickup.order.id },
@@ -222,6 +223,7 @@ try {
         });
         assert.equal(repeated.order.items.length, 2);
         assert.equal(repeated.order.totalPrice, '633.75');
+        assert.equal(repeated.order.subtotalPrice, '633.75');
         assert.equal(repeated.order.items[1].notes, 'Separate cup');
         const availableProduct = await tx.product.create({
           data: {

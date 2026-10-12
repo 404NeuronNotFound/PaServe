@@ -773,6 +773,7 @@ describe('dine-in order submission', () => {
           : { ...takeout(), items: [configuredLine()] };
       const result = await post(body).expect(201);
       expect(result.body.order.totalPrice).toBe('56.50');
+      expect(result.body.order.subtotalPrice).toBe('56.50');
       expect(result.body.order.items[0]).toMatchObject({
         productId: id,
         quantity: 2,
@@ -1008,6 +1009,8 @@ describe('dine-in order submission', () => {
     },
   );
   const forgedFields = [
+    { scope: 'order', field: 'subtotalPrice', value: '0.01' },
+    { scope: 'line', field: 'subtotalPrice', value: '0.01' },
     { scope: 'order', field: 'totalPrice', value: '0.01' },
     { scope: 'order', field: 'subtotal', value: '0.01' },
     { scope: 'order', field: 'currency', value: 'USD' },
@@ -1061,6 +1064,102 @@ describe('dine-in order submission', () => {
       expect(create).not.toHaveBeenCalled();
     },
   );
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'calculates exact multi-line subtotal and total from current database amounts for %s',
+    async (mode) => {
+      const secondId = '10000000-0000-4000-8000-000000000099';
+      product.mockImplementation(
+        async ({ where }: { where: { id: string } }) =>
+          where.id === id
+            ? configuredProduct('0.10', '0.20', '0.30')
+            : {
+                ...configuredProduct('0.07'),
+                id: secondId,
+                optionGroups: [],
+                variants: [],
+                addOns: [],
+              },
+      );
+      const body = mode === 'DINE_IN' ? payload() : takeout();
+      const result = await post({
+        ...body,
+        items: [
+          { ...configuredLine(), quantity: 3 },
+          { ...body.items[0], productId: secondId, quantity: 3 },
+        ],
+      }).expect(201);
+      expect(
+        result.body.order.items.map(
+          (item: { unitPrice: string; totalPrice: string }) => [
+            item.unitPrice,
+            item.totalPrice,
+          ],
+        ),
+      ).toEqual([
+        ['0.60', '1.80'],
+        ['0.07', '0.21'],
+      ]);
+      expect(result.body.order.subtotalPrice).toBe('2.01');
+      expect(result.body.order.totalPrice).toBe('2.01');
+      expect(create.mock.calls[0][0].data.totalPrice.toFixed(2)).toBe('2.01');
+    },
+  );
+  it('preserves saved prices on replay and reprices a fresh request after menu price changes', async () => {
+    product.mockResolvedValue(configuredProduct());
+    const body = { ...takeout(), items: [configuredLine()] };
+    const original = await post(body).expect(201);
+    saved.mockResolvedValue({
+      ...create.mock.calls[0][0].data,
+      id: 'order-a',
+      createdAt: new Date(),
+    });
+    product
+      .mockClear()
+      .mockResolvedValue(configuredProduct('20.03', '6.07', '2.15'));
+    raw
+      .mockReset()
+      .mockResolvedValue([
+        { id: 'shop-a', isActive: true, acceptingOrders: true },
+      ]);
+    const replay = await post(body).expect(201);
+    expect(replay.body.order.subtotalPrice).toBe(
+      original.body.order.subtotalPrice,
+    );
+    expect(replay.body.order.totalPrice).toBe('34.62');
+    expect(product).not.toHaveBeenCalled();
+    saved.mockResolvedValue(null);
+    const fresh = await post({ ...body, requestId: anotherId }).expect(201);
+    expect(fresh.body.order.subtotalPrice).toBe('56.50');
+    expect(fresh.body.order.totalPrice).toBe('56.50');
+  });
+  it('allows a zero-priced order with exact zero subtotal and total', async () => {
+    product.mockResolvedValue({
+      ...configuredProduct('0.00'),
+      optionGroups: [],
+      variants: [],
+      addOns: [],
+    });
+    const result = await post(takeout()).expect(201);
+    expect(result.body.order.subtotalPrice).toBe('0.00');
+    expect(result.body.order.totalPrice).toBe('0.00');
+  });
+  it('rejects an order exceeding the persisted total range without inserting it', async () => {
+    product.mockResolvedValue({
+      ...configuredProduct('99999999.99'),
+      optionGroups: [],
+      variants: [],
+      addOns: [],
+    });
+    const result = await post({
+      ...takeout(),
+      items: [
+        { ...payload().items[0], quantity: 99 },
+        { ...payload().items[0], quantity: 99 },
+      ],
+    }).expect(400);
+    expect(result.body.code).toBe('ORDER_TOTAL_TOO_LARGE');
+    expect(create).not.toHaveBeenCalled();
+  });
   it('accepts the maximum supported 100 selection-only lines with exact totals', async () => {
     const items = Array.from({ length: 100 }, () => ({
       ...payload().items[0],

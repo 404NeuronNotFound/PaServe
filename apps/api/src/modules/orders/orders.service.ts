@@ -80,6 +80,8 @@ export class OrdersService {
         id: order.id,
         status: 'PENDING' as const,
         currency: PRODUCT_CURRENCY,
+        // No order-level adjustments are modeled; the saved total is also the subtotal.
+        subtotalPrice: order.totalPrice.toFixed(2),
         totalPrice: order.totalPrice.toFixed(2),
         items:
           order.items as unknown as CustomerOrderResponse['order']['items'],
@@ -169,10 +171,11 @@ export class OrdersService {
                 tx,
               ),
             );
-          const total = items.reduce(
+          const subtotal = items.reduce(
             (sum, item) => sum.plus(item.totalPrice),
             new Prisma.Decimal(0),
           );
+          const total = subtotal;
           if (total.greaterThan('9999999999.99'))
             throw new BadRequestException({
               code: 'ORDER_TOTAL_TOO_LARGE',
