@@ -209,6 +209,7 @@ export interface ShopMembershipResponse {
 }
 
 export interface UpdateShopRequest {
+  acceptingOrders?: boolean;
   menuLayout?: MenuLayout;
   primaryColor?: string;
   accentColor?: string;
@@ -223,6 +224,7 @@ export interface UpdateShopRequest {
 }
 
 export type ShopSettings = CreateShopResponse["shop"] & {
+  acceptingOrders?: boolean;
   menuLayout?: MenuLayout;
   primaryColor?: string | null;
   accentColor?: string | null;
