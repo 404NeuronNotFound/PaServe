@@ -44,6 +44,7 @@ it("clears the access token and private cache and navigates to login after logou
     {},
     {
       headers: { "X-PaServe-Client": "web" },
+      timeout: 15_000,
     },
   );
   expect(useSessionStore.getState().accessToken).toBeNull();

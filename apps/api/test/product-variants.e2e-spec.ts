@@ -276,6 +276,29 @@ describe('product variants management', () => {
     expect(result.body.code).toBe('VARIANT_DELETE_CONFLICT');
     expect(transaction).toHaveBeenCalledOnce();
   });
+  it.each(['40001', '40P01'])(
+    'reports pg adapter commit conflicts (%s) without repeating deletion',
+    async (originalCode) => {
+      const error = new Error('TransactionWriteConflict', {
+        cause: { kind: 'TransactionWriteConflict', originalCode },
+      });
+      error.name = 'DriverAdapterError';
+      transaction.mockRejectedValue(error);
+      const result = await remove().expect(409);
+      expect(result.body.code).toBe('VARIANT_DELETE_CONFLICT');
+      expect(transaction).toHaveBeenCalledOnce();
+    },
+  );
+  it('does not label unrelated adapter failures as deletion conflicts', async () => {
+    const error = new Error('Connection failure', {
+      cause: { kind: 'ConnectionClosed' },
+    });
+    error.name = 'DriverAdapterError';
+    transaction.mockRejectedValue(error);
+    const result = await remove().expect(500);
+    expect(result.body.code).toBe('INTERNAL_SERVER_ERROR');
+    expect(transaction).toHaveBeenCalledOnce();
+  });
   it.each(['\ud800', '\udfff'])(
     'rejects malformed Unicode variant/group name %j before storage',
     async (name) => {

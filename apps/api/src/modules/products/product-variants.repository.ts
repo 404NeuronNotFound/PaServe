@@ -7,6 +7,7 @@ import {
 import { Prisma } from '../../generated/prisma/client.js';
 import { isUUID } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
+import { isTransactionConflict } from '../../database/transaction-conflict.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import type {
   CreateProductOptionGroupRequest,
@@ -230,10 +231,7 @@ export class ProductVariantsRepository {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2034'
-      )
+      if (isTransactionConflict(error))
         throw new ConflictException({
           code: 'VARIANT_DELETE_CONFLICT',
           message:

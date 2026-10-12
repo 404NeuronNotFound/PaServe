@@ -4,10 +4,14 @@ import type {
   LoginResponse,
 } from "@paserve/contracts";
 import axios, { type InternalAxiosRequestConfig } from "axios";
-import { api } from "../../../lib/api/client";
+import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../../lib/api/client";
 import { useSessionStore } from "../stores/session";
 
 const cookieHeaders = { "X-PaServe-Client": "web" };
+const cookieRequest = {
+  headers: cookieHeaders,
+  timeout: AUTH_REQUEST_TIMEOUT_MS,
+};
 export const currentUserKey = ["auth", "me"] as const;
 let refreshPromise: Promise<LoginResponse> | null = null;
 let logoutPromise: Promise<void> | null = null;
@@ -15,9 +19,11 @@ let logoutPromise: Promise<void> | null = null;
 export async function loginAccount(
   input: LoginRequest,
 ): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>("/auth/login", input, {
-    headers: cookieHeaders,
-  });
+  const { data } = await api.post<LoginResponse>(
+    "/auth/login",
+    input,
+    cookieRequest,
+  );
   useSessionStore.getState().setAccessToken(data.accessToken);
   return data;
 }
@@ -28,7 +34,7 @@ export function refreshSession(): Promise<LoginResponse> {
   }
   if (!refreshPromise) {
     refreshPromise = api
-      .post<LoginResponse>("/auth/refresh", {}, { headers: cookieHeaders })
+      .post<LoginResponse>("/auth/refresh", {}, cookieRequest)
       .then(({ data }) => {
         useSessionStore.getState().setAccessToken(data.accessToken);
         return data;
@@ -82,6 +88,7 @@ api.interceptors.response.use(
 export async function getCurrentUser(): Promise<CurrentUserResponse> {
   if (!useSessionStore.getState().accessToken) await refreshSession();
   const { data } = await api.get<CurrentUserResponse>("/auth/me", {
+    timeout: AUTH_REQUEST_TIMEOUT_MS,
     headers: {
       Authorization: `Bearer ${useSessionStore.getState().accessToken}`,
     },
@@ -94,7 +101,7 @@ export function logoutAccount(): Promise<void> {
     logoutPromise = (async () => {
       // Finish rotation before logout so the server revokes the current cookie.
       if (refreshPromise) await refreshPromise.catch(() => undefined);
-      await api.post("/auth/logout", {}, { headers: cookieHeaders });
+      await api.post("/auth/logout", {}, cookieRequest);
       useSessionStore.getState().setAccessToken(null);
     })().finally(() => {
       logoutPromise = null;
