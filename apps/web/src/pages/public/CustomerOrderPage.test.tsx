@@ -14,6 +14,7 @@ import { pendingOrders } from "../../features/cart/pending-orders";
 import { useCart } from "../../features/cart/cart";
 import { useCustomerTables } from "../../features/shops/customer-table";
 import { api } from "../../lib/api/client";
+import { feedback } from "../../app/stores/feedback";
 
 vi.mock("../../lib/api/client", () => ({
   api: { get: vi.fn(), post: vi.fn() },
@@ -82,6 +83,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   if (show)
     Object.defineProperty(HTMLDialogElement.prototype, "showModal", show);
   else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
@@ -257,4 +259,43 @@ it("supports older confirmations without displaying an internal ID as the order 
   setup();
   expect(screen.getByText("Unavailable")).toBeInTheDocument();
   expect(screen.queryByText("order-a")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Copy order number" }),
+  ).not.toBeInTheDocument();
+});
+
+it("copies only the saved readable number for communicating with counter staff", async () => {
+  const user = userEvent.setup();
+  const write = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+  const toast = vi.spyOn(feedback, "toast").mockImplementation(() => "copied");
+  saveOrderReceipt("cafe", "Cafe", order);
+  setup();
+  expect(
+    screen.getByRole("region", { name: "Order number" }),
+  ).toHaveTextContent(
+    "Tell the counter staff this number if your QR cannot be scanned.",
+  );
+  await user.click(screen.getByRole("button", { name: "Copy order number" }));
+  expect(write).toHaveBeenCalledExactlyOnceWith("ORD-000042");
+  expect(toast).toHaveBeenCalledWith("Order number copied.");
+  expect(api.post).not.toHaveBeenCalled();
+});
+
+it("preserves the number and supports retry when clipboard permission is denied", async () => {
+  const user = userEvent.setup();
+  const write = vi
+    .spyOn(navigator.clipboard, "writeText")
+    .mockRejectedValueOnce(new Error("denied"))
+    .mockResolvedValueOnce();
+  const toast = vi.spyOn(feedback, "toast").mockImplementation(() => "copied");
+  saveOrderReceipt("cafe", "Cafe", order);
+  setup();
+  await user.click(screen.getByRole("button", { name: "Copy order number" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("copy it manually");
+  expect(screen.getByText("ORD-000042")).toBeInTheDocument();
+  expect(toast).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Copy order number" }));
+  expect(write).toHaveBeenCalledTimes(2);
+  expect(toast).toHaveBeenCalledWith("Order number copied.");
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });

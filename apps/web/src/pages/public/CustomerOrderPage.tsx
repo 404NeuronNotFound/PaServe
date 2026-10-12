@@ -11,6 +11,7 @@ import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import { readOrderReceipt } from "../../features/cart/order-receipt";
 import { formatCartPrice } from "../../lib/money";
 import "./customer-order-page.css";
+import { OrderNumber } from "./OrderNumber";
 
 export function CustomerOrderPage() {
   const { shopSlug = "", orderId = "" } = useParams();
@@ -56,11 +57,11 @@ export function CustomerOrderPage() {
             </p>
           </header>
           <div className="order-receipt-details">
+            <OrderNumber
+              key={`${shopSlug}:${orderId}`}
+              value={receipt.orderNumber}
+            />
             <dl>
-              <div className="order-receipt-number">
-                <dt>Order number</dt>
-                <dd>{receipt.orderNumber ?? "Unavailable"}</dd>
-              </div>
               <div>
                 <dt>Status</dt>
                 <dd className="order-receipt-status" role="status">

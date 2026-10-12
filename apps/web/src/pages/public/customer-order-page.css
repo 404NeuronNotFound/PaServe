@@ -73,9 +73,38 @@
   margin: 0;
   font-weight: 650;
 }
-.order-receipt-number dd {
-  font-size: clamp(1.5rem, 5vw, 2rem);
-  letter-spacing: -0.03em;
+.order-receipt-number {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+.order-receipt-number h2 {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-muted);
+}
+.order-receipt-number-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.order-receipt-number-value {
+  flex: 1 1 260px;
+  min-width: 0;
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  line-height: 1.2;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+}
+.order-receipt-number-hint {
+  margin: 12px 0 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
 .order-receipt-status {
   display: flex;
