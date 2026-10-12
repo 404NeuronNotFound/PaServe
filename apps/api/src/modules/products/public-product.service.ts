@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  ADD_ON_LIMITS,
   PRODUCT_CURRENCY,
   normalizeCustomerNote,
   type PublicProductDetailsResponse,
@@ -113,10 +114,12 @@ export class PublicProductService {
       )
     )
       throw invalid();
+    // The eligible set contains only available add-ons assigned to this product/shop.
     const addOns = dto.addOnIds.map((id) =>
       details.addOns.find((addOn) => addOn.id === id),
     );
     if (
+      dto.addOnIds.length > ADD_ON_LIMITS.selectionMax ||
       new Set(dto.addOnIds).size !== dto.addOnIds.length ||
       addOns.some((value) => !value)
     )

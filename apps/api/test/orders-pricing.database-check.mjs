@@ -296,6 +296,109 @@ try {
         assert.equal(restored.order.status, 'PENDING');
         assert.equal(restored.order.totalPrice, '422.50');
         const before = await tx.order.count();
+        const unassignedAddOn = await tx.addOn.create({
+          data: {
+            shopId: shop.id,
+            name: 'Unassigned extra',
+            priceAdjustment: '1.00',
+          },
+        });
+        const otherProductAddOn = await tx.addOn.create({
+          data: {
+            shopId: shop.id,
+            name: 'Other product extra',
+            priceAdjustment: '1.00',
+          },
+        });
+        await tx.productAddOn.create({
+          data: {
+            shopId: shop.id,
+            productId: availableProduct.id,
+            addOnId: otherProductAddOn.id,
+          },
+        });
+        const foreignAddOn = await tx.addOn.create({
+          data: {
+            shopId: foreignShop.id,
+            name: 'Foreign extra',
+            priceAdjustment: '1.00',
+          },
+        });
+        await tx.productAddOn.create({
+          data: {
+            shopId: foreignShop.id,
+            productId: foreignProduct.id,
+            addOnId: foreignAddOn.id,
+          },
+        });
+        const rejectAddOns = async (mode, addOnIds, mixed = false) => {
+          const invalidLine = { ...items[0], addOnIds };
+          await assert.rejects(
+            () =>
+              orders.create(shop.slug, {
+                ...pickupRequest,
+                requestId: randomUUID(),
+                mode,
+                items: mixed ? [items[0], invalidLine] : [invalidLine],
+                ...(mode === 'DINE_IN'
+                  ? {
+                      tableCode: table.code,
+                      tableToken: contexts.issue(shop.slug, table.code),
+                    }
+                  : {}),
+              }),
+            (error) =>
+              error.status === 400 &&
+              error.getResponse().code === 'PRODUCT_SELECTION_INVALID',
+          );
+          assert.equal(await tx.order.count(), before);
+        };
+        for (const mode of ['DINE_IN', 'TAKEOUT']) {
+          for (const addOnIds of [
+            [randomUUID()],
+            [unassignedAddOn.id],
+            [otherProductAddOn.id],
+            [foreignAddOn.id],
+            [milk.id, milk.id],
+          ])
+            await rejectAddOns(mode, addOnIds);
+          await rejectAddOns(mode, [unassignedAddOn.id], true);
+        }
+        for (const state of ['disabled', 'detached']) {
+          await pricing.quote(shop.slug, product.id, items[0], tx);
+          if (state === 'disabled')
+            await tx.addOn.update({
+              where: { id: milk.id, shopId: shop.id },
+              data: { isAvailable: false },
+            });
+          else
+            await tx.productAddOn.deleteMany({
+              where: {
+                shopId: shop.id,
+                productId: product.id,
+                addOnId: milk.id,
+              },
+            });
+          for (const mode of ['DINE_IN', 'TAKEOUT'])
+            await rejectAddOns(mode, [milk.id]);
+          assert.equal(
+            (await orders.create(shop.slug, pickupRequest)).order.id,
+            pickup.order.id,
+          );
+          if (state === 'disabled')
+            await tx.addOn.update({
+              where: { id: milk.id, shopId: shop.id },
+              data: { isAvailable: true },
+            });
+          else
+            await tx.productAddOn.create({
+              data: {
+                shopId: shop.id,
+                productId: product.id,
+                addOnId: milk.id,
+              },
+            });
+        }
         const otherProductVariant = await tx.productVariant.create({
           data: {
             shopId: shop.id,
@@ -546,7 +649,8 @@ try {
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        timeout: 60000,
+        // One rollback-only fixture runs many independent Phase 10/11 submissions.
+        timeout: 120000,
       },
     ),
     (error) => error === rollback,

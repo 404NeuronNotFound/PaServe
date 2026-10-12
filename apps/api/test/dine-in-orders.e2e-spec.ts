@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { ADD_ON_LIMITS } from '@paserve/contracts';
 import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { configureRequestBody } from '../src/common/http/request-body.js';
@@ -904,6 +905,106 @@ describe('dine-in order submission', () => {
         }).expect(400);
         expect(transaction).not.toHaveBeenCalled();
       });
+    },
+  );
+  describe.each(['DINE_IN', 'TAKEOUT'] as const)(
+    '%s add-on validation',
+    (mode) => {
+      const orderBody = () => ({
+        ...(mode === 'DINE_IN' ? payload() : takeout()),
+        items: [configuredLine()],
+      });
+      it('rejects stale add-on eligibility after a successful preview', async () => {
+        product.mockResolvedValue(configuredProduct());
+        const { productId, ...selection } = configuredLine();
+        await request(app.getHttpServer())
+          .post(`/api/v1/menu/cafe/products/${productId}/quote`)
+          .send(selection)
+          .expect(201);
+        product.mockResolvedValue({ ...configuredProduct(), addOns: [] });
+        const result = await post(orderBody()).expect(400);
+        expect(result.body.code).toBe('PRODUCT_SELECTION_INVALID');
+        expect(result.body.message).toBe(
+          'Choose available options for this product and complete all required choices.',
+        );
+        expect(create).not.toHaveBeenCalled();
+        expect(product.mock.calls.at(-1)![0].select.addOns.where).toEqual({
+          shopId: 'shop-a',
+          productId: id,
+          addOn: { shopId: 'shop-a', isAvailable: true },
+        });
+      });
+      it.each([0, 1])(
+        'rejects mixed batches containing an ineligible modifier at position %s',
+        async (position) => {
+          product.mockResolvedValue(configuredProduct());
+          const lines = [
+            configuredLine(),
+            { ...configuredLine(), addOnIds: [anotherId] },
+          ];
+          if (position === 0) lines.reverse();
+          const result = await post({ ...orderBody(), items: lines }).expect(
+            400,
+          );
+          expect(result.body.code).toBe('PRODUCT_SELECTION_INVALID');
+          expect(create).not.toHaveBeenCalled();
+        },
+      );
+      it.each([0, ADD_ON_LIMITS.selectionMax])(
+        'accepts %s allowed modifiers including free choices',
+        async (count) => {
+          const choices = Array.from({ length: count }, (_, index) => ({
+            addOn: {
+              id: `20000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, '0')}`,
+              name: `Modifier ${index}`,
+              priceAdjustment: new Prisma.Decimal(
+                index === 0 ? '0.00' : '1.00',
+              ),
+            },
+          }));
+          product.mockResolvedValue({
+            ...configuredProduct(),
+            addOns: choices,
+          });
+          const result = await post({
+            ...orderBody(),
+            items: [
+              {
+                ...configuredLine(),
+                addOnIds: choices.map(({ addOn }) => addOn.id),
+              },
+            ],
+          }).expect(201);
+          expect(result.body.order.items[0].addOns).toHaveLength(count);
+          expect(result.body.order.totalPrice).toBe(count ? '128.22' : '30.22');
+          if (count)
+            expect(result.body.order.items[0].addOns[0].priceAdjustment).toBe(
+              '0.00',
+            );
+        },
+      );
+      it.each(['over limit', 'duplicates', 'malformed'])(
+        'rejects %s modifiers before database access',
+        async (kind) => {
+          const ids =
+            kind === 'over limit'
+              ? Array.from(
+                  { length: ADD_ON_LIMITS.selectionMax + 1 },
+                  (_, index) =>
+                    `20000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, '0')}`,
+                )
+              : kind === 'duplicates'
+                ? [addOnId, addOnId]
+                : ['bad'];
+          const result = await post({
+            ...orderBody(),
+            items: [{ ...configuredLine(), addOnIds: ids }],
+          }).expect(400);
+          expect(result.body.code).toBe('VALIDATION_ERROR');
+          expect(transaction).not.toHaveBeenCalled();
+          expect(create).not.toHaveBeenCalled();
+        },
+      );
     },
   );
   const forgedFields = [
