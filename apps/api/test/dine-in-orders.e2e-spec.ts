@@ -74,7 +74,11 @@ describe('dine-in order submission', () => {
     submittedProducts
       .mockReset()
       .mockImplementation(({ where }: { where: { id: { in: string[] } } }) =>
-        where.id.in.map((productId) => ({ id: productId })),
+        where.id.in.map((productId) => ({
+          id: productId,
+          status: 'AVAILABLE',
+          isArchived: false,
+        })),
       );
     tx.shop.findFirst.mockResolvedValue({
       id: 'shop-a',
@@ -319,7 +323,13 @@ describe('dine-in order submission', () => {
     'resolves every distinct product under the route shop for %s and preserves separate lines',
     async (mode) => {
       const secondId = '10000000-0000-4000-8000-000000000099';
-      submittedProducts.mockResolvedValue([{ id: secondId }, { id }]);
+      submittedProducts.mockResolvedValue(
+        [secondId, id].map((productId) => ({
+          id: productId,
+          status: 'AVAILABLE',
+          isArchived: false,
+        })),
+      );
       product.mockImplementation(
         async ({ where }: { where: { id: string } }) => ({
           id: where.id,
@@ -340,7 +350,7 @@ describe('dine-in order submission', () => {
       const result = await post({ ...body, items: lines }).expect(201);
       expect(submittedProducts).toHaveBeenCalledExactlyOnceWith({
         where: { shopId: 'shop-a', id: { in: [id, secondId] } },
-        select: { id: true },
+        select: { id: true, status: true, isArchived: true },
       });
       expect(
         result.body.order.items.map(
@@ -388,7 +398,9 @@ describe('dine-in order submission', () => {
             .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
           const result = await post({ ...body, items: lines }).expect(404);
           expect(result.body.code).toBe('PRODUCT_NOT_AVAILABLE');
-          expect(result.body.message).toBe('This product is unavailable.');
+          expect(result.body.message).toBe(
+            'This product is unavailable. Refresh the menu and update your cart before ordering again.',
+          );
         }
         expect(product).not.toHaveBeenCalled();
         expect(create).not.toHaveBeenCalled();
@@ -416,6 +428,78 @@ describe('dine-in order submission', () => {
       });
     },
   );
+  describe.each(['DINE_IN', 'TAKEOUT'] as const)(
+    '%s latest product availability',
+    (mode) => {
+      it.each([
+        { status: 'SOLD_OUT', isArchived: false },
+        { status: 'HIDDEN', isArchived: false },
+        { status: 'AVAILABLE', isArchived: true },
+      ])(
+        'rejects a previously previewed product that changed to %j and accepts it after restoration',
+        async (state) => {
+          const body = mode === 'DINE_IN' ? payload() : takeout();
+          const { productId, ...selection } = body.items[0];
+          await request(app.getHttpServer())
+            .post(`/api/v1/menu/cafe/products/${productId}/quote`)
+            .send(selection)
+            .expect(201);
+          product.mockClear();
+          submittedProducts.mockResolvedValue([{ id, ...state }]);
+          const rejected = await post(body).expect(404);
+          expect(rejected.body.code).toBe('PRODUCT_NOT_AVAILABLE');
+          expect(rejected.body.message).toBe(
+            'This product is unavailable. Refresh the menu and update your cart before ordering again.',
+          );
+          expect(product).not.toHaveBeenCalled();
+          expect(create).not.toHaveBeenCalled();
+          submittedProducts.mockResolvedValue([
+            { id, status: 'AVAILABLE', isArchived: false },
+          ]);
+          raw
+            .mockReset()
+            .mockResolvedValueOnce([
+              { id: 'shop-a', isActive: true, acceptingOrders: true },
+            ])
+            .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
+          await post(body).expect(201);
+          expect(create).toHaveBeenCalledTimes(1);
+        },
+      );
+      it.each([0, 1])(
+        'rejects a mixed cart with an unavailable product at position %s before pricing',
+        async (position) => {
+          const secondId = '10000000-0000-4000-8000-000000000099';
+          const body = mode === 'DINE_IN' ? payload() : takeout();
+          const lines = [
+            body.items[0],
+            { ...body.items[0], productId: secondId },
+          ];
+          if (position === 0) lines.reverse();
+          submittedProducts.mockResolvedValue([
+            { id, status: 'AVAILABLE', isArchived: false },
+            { id: secondId, status: 'SOLD_OUT', isArchived: false },
+          ]);
+          await post({ ...body, items: lines }).expect(404);
+          expect(product).not.toHaveBeenCalled();
+          expect(create).not.toHaveBeenCalled();
+        },
+      );
+    },
+  );
+  it.each([
+    { status: 'AVAILABLE' },
+    { isOrderable: true },
+    { isAvailable: true },
+    { isArchived: false },
+  ])('rejects frontend availability fields on a line: %j', async (state) => {
+    await post({
+      ...payload(),
+      items: [{ ...payload().items[0], ...state }],
+    }).expect(400);
+    expect(transaction).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
   it('rejects sold-out or missing products without saving an order', async () => {
     product.mockResolvedValue(null);
     await post().expect(404);

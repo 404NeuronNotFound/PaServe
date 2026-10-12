@@ -314,7 +314,9 @@ describe('public product details and selection quotes', () => {
   it('does not expose missing, hidden, archived, or foreign products', async () => {
     product.mockResolvedValue(null);
     const response = await request(app.getHttpServer()).get(path).expect(404);
-    expect(response.body.message).toBe('This product is unavailable.');
+    expect(response.body.message).toBe(
+      'This product is unavailable. Refresh the menu and update your cart before ordering again.',
+    );
   });
   it('does not read products from an inactive or missing shop', async () => {
     shop.mockResolvedValue(null);

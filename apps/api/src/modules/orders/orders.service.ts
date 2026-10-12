@@ -138,15 +138,21 @@ export class OrdersService {
           ];
           const submittedProducts = await tx.product.findMany({
             where: { shopId: shop.id, id: { in: productIds } },
-            select: { id: true },
+            select: { id: true, status: true, isArchived: true },
           });
           const foundIds = new Set(
             submittedProducts.map((product) => product.id),
           );
-          if (productIds.some((id) => !foundIds.has(id)))
+          if (
+            productIds.some((id) => !foundIds.has(id)) ||
+            submittedProducts.some(
+              (product) => product.status !== 'AVAILABLE' || product.isArchived,
+            )
+          )
             throw new NotFoundException({
               code: 'PRODUCT_NOT_AVAILABLE',
-              message: 'This product is unavailable.',
+              message:
+                'This product is unavailable. Refresh the menu and update your cart before ordering again.',
             });
           const items = [];
           for (const item of dto.items)

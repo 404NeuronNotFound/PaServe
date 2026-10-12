@@ -16,7 +16,8 @@ import type { ProductSelectionDto } from './public-product.dto.js';
 const unavailable = () =>
   new NotFoundException({
     code: 'PRODUCT_NOT_AVAILABLE',
-    message: 'This product is unavailable.',
+    message:
+      'This product is unavailable. Refresh the menu and update your cart before ordering again.',
   });
 @Injectable()
 export class PublicProductService {

@@ -223,6 +223,78 @@ try {
         assert.equal(repeated.order.items.length, 2);
         assert.equal(repeated.order.totalPrice, '633.75');
         assert.equal(repeated.order.items[1].notes, 'Separate cup');
+        const availableProduct = await tx.product.create({
+          data: {
+            shopId: shop.id,
+            name: 'Still available',
+            slug: 'still-available',
+            price: '10.00',
+          },
+        });
+        const availableLine = {
+          productId: availableProduct.id,
+          quantity: 1,
+          variantIds: [],
+          addOnIds: [],
+        };
+        const availabilityCount = await tx.order.count();
+        for (const state of [
+          { status: 'SOLD_OUT', isArchived: false },
+          { status: 'HIDDEN', isArchived: false },
+          { status: 'AVAILABLE', isArchived: true },
+        ]) {
+          // A successful preview is intentionally stale by the next submission.
+          assert.equal(
+            (await pricing.quote(shop.slug, product.id, items[0], tx))
+              .totalPrice,
+            '422.50',
+          );
+          await tx.product.update({
+            where: { id: product.id, shopId: shop.id },
+            data: state,
+          });
+          for (const mode of ['DINE_IN', 'TAKEOUT']) {
+            for (const lines of [
+              [items[0]],
+              [availableLine, items[0]],
+              [items[0], availableLine],
+            ]) {
+              await assert.rejects(
+                () =>
+                  orders.create(shop.slug, {
+                    ...pickupRequest,
+                    requestId: randomUUID(),
+                    mode,
+                    items: lines,
+                    ...(mode === 'DINE_IN'
+                      ? {
+                          tableCode: table.code,
+                          tableToken: contexts.issue(shop.slug, table.code),
+                        }
+                      : {}),
+                  }),
+                (error) =>
+                  error.status === 404 &&
+                  error.getResponse().code === 'PRODUCT_NOT_AVAILABLE',
+              );
+              assert.equal(await tx.order.count(), availabilityCount);
+            }
+          }
+          assert.equal(
+            (await orders.create(shop.slug, pickupRequest)).order.id,
+            pickup.order.id,
+          );
+          await tx.product.update({
+            where: { id: product.id, shopId: shop.id },
+            data: { status: 'AVAILABLE', isArchived: false },
+          });
+        }
+        const restored = await orders.create(shop.slug, {
+          ...pickupRequest,
+          requestId: randomUUID(),
+        });
+        assert.equal(restored.order.status, 'PENDING');
+        assert.equal(restored.order.totalPrice, '422.50');
         const before = await tx.order.count();
         const missingProductId = randomUUID();
         for (const mode of ['DINE_IN', 'TAKEOUT']) {

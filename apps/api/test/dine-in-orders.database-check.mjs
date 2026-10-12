@@ -139,7 +139,7 @@ try {
   // Prisma product/order delegates are adapted; table resolution uses service SQL unchanged.
   await client.query(`SET LOCAL search_path TO "${schema}"`);
   await client.query(
-    `CREATE TABLE ${q('products')} ("id" TEXT PRIMARY KEY, "shopId" TEXT NOT NULL REFERENCES ${q('shops')}("id"))`,
+    `CREATE TABLE ${q('products')} ("id" TEXT PRIMARY KEY, "shopId" TEXT NOT NULL REFERENCES ${q('shops')}("id"), "status" TEXT NOT NULL DEFAULT 'AVAILABLE', "isArchived" BOOLEAN NOT NULL DEFAULT false)`,
   );
   await client.query(
     `INSERT INTO ${q('products')} ("id", "shopId") VALUES ('coffee-a', 'a'), ('coffee-b', 'b')`,
@@ -152,7 +152,7 @@ try {
       findMany: async ({ where }) =>
         (
           await client.query(
-            `SELECT "id" FROM ${q('products')} WHERE "shopId" = $1 AND "id" = ANY($2::text[])`,
+            `SELECT "id", "status", "isArchived" FROM ${q('products')} WHERE "shopId" = $1 AND "id" = ANY($2::text[])`,
             [where.shopId, where.id.in],
           )
         ).rows,
