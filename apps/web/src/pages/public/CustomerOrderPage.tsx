@@ -70,11 +70,16 @@ export function CustomerOrderPage() {
               </div>
               <div className="order-receipt-total">
                 <dt>
-                  Total <span>(PHP)</span>
+                  Order total <span>(PHP)</span>
                 </dt>
-                <dd>{formatCartPrice(receipt.totalPrice)}</dd>
+                <dd aria-describedby="order-total-note">
+                  {formatCartPrice(receipt.totalPrice)}
+                </dd>
               </div>
             </dl>
+            <p id="order-total-note" className="order-receipt-note">
+              This is the total saved for your submitted order.
+            </p>
             <p className="order-receipt-note">
               Submission does not confirm payment. Ask the counter for the
               latest order status.

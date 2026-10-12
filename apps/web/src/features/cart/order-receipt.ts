@@ -11,6 +11,7 @@ export interface OrderReceipt {
   table: { code: string; number: string } | null;
   status: "PENDING";
   currency: "PHP";
+  /** Exact saved server total; never derived from current cart or menu prices. */
   totalPrice: string;
 }
 

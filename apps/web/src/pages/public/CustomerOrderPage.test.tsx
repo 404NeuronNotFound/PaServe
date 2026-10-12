@@ -167,11 +167,23 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
     )!;
     expect(snapshot).not.toContain(saved.qrToken);
     expect(snapshot).not.toContain(table.checkoutToken);
+    expect(JSON.parse(snapshot).totalPrice).toBe(saved.totalPrice);
+    // New purchases after submission must not replace the saved order total.
+    useCart.getState().add("cafe", {
+      ...quote,
+      basePrice: "99.00",
+      unitPrice: "99.00",
+      totalPrice: "99.00",
+    });
     view.unmount();
     orderReceipts.clearMemory();
     setup();
     expect(screen.getByText("ORD-000042")).toBeInTheDocument();
     expect(screen.getByText("₱12.00")).toBeInTheDocument();
+    expect(screen.queryByText("₱99.00")).not.toBeInTheDocument();
+    expect(screen.getByText("₱12.00")).toHaveAccessibleDescription(
+      "This is the total saved for your submitted order.",
+    );
     expect(api.post).toHaveBeenCalledTimes(1);
   },
 );
@@ -253,6 +265,20 @@ it("does not expose another shop's receipt", () => {
   ).toBeInTheDocument();
   expect(screen.queryByText("ORD-000042")).not.toBeInTheDocument();
 });
+
+it.each(["invalid", "-1.00", "12.345"])(
+  "does not substitute cart estimates when the saved total is invalid: %s",
+  (totalPrice) => {
+    useCart.getState().add("cafe", quote);
+    saveOrderReceipt("cafe", "Cafe", { ...order, totalPrice });
+    setup();
+    expect(
+      screen.getByRole("heading", { name: "Order receipt unavailable" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("₱10.00")).not.toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
+  },
+);
 
 it("supports older confirmations without displaying an internal ID as the order number", () => {
   saveOrderReceipt("cafe", "Cafe", { ...order, orderNumber: undefined });
