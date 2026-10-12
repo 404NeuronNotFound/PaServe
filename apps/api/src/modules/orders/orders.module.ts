@@ -4,7 +4,7 @@ import type { Response } from 'express';
 import { PublicProductRepository } from '../products/public-product.repository.js';
 import { PublicProductService } from '../products/public-product.service.js';
 import { OrdersService } from './orders.service.js';
-import { CreateDineInOrderDto } from './create-dine-in-order.dto.js';
+import { CreateOrderDto } from './create-order.dto.js';
 import { TableContextService } from '../tables/table-context.service.js';
 
 @Controller('menu/:shopSlug/orders')
@@ -13,7 +13,7 @@ export class OrdersController {
   @Post()
   create(
     @Param('shopSlug') slug: string,
-    @Body() dto: CreateDineInOrderDto,
+    @Body() dto: CreateOrderDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     res.setHeader('Cache-Control', 'no-store');

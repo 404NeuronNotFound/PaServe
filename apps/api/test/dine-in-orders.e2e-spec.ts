@@ -217,4 +217,67 @@ describe('dine-in order submission', () => {
     }).expect(403);
     expect(transaction).not.toHaveBeenCalled();
   });
+  const takeout = () => ({
+    requestId: id,
+    mode: 'TAKEOUT',
+    items: payload().items,
+  });
+  it('creates tableless pickup with authoritative pricing and no table lookup', async () => {
+    const result = await post(takeout()).expect(201);
+    expect(result.body.order).toMatchObject({
+      mode: 'TAKEOUT',
+      table: null,
+      status: 'PLACED',
+      totalPrice: '20.02',
+    });
+    expect(raw).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][0].data).toMatchObject({
+      mode: 'TAKEOUT',
+      shopId: 'shop-a',
+      tableId: null,
+      tableCode: null,
+      tableNumber: null,
+    });
+    expect(product.mock.calls[0][0].where.shopId).toBe('shop-a');
+  });
+  it.each([
+    { ...takeout(), tableCode: 'T12' },
+    { ...takeout(), tableToken: payload().tableToken },
+    { ...takeout(), tableCode: null },
+    { ...takeout(), tableToken: null },
+    { ...takeout(), tableId: id },
+    { ...takeout(), shopId: id },
+    { ...takeout(), mode: 'PICKUP' },
+    { ...takeout(), mode: undefined },
+    { ...takeout(), items: [] },
+    { ...takeout(), items: [{ ...payload().items[0], totalPrice: '0.01' }] },
+  ])('rejects invalid or mixed takeout fields: %j', async (body) => {
+    await post(body).expect(400);
+    expect(create).not.toHaveBeenCalled();
+  });
+  it('rejects pickup for an inactive shop', async () => {
+    raw.mockReset().mockResolvedValue([]);
+    const result = await post(takeout()).expect(404);
+    expect(result.body.code).toBe('SHOP_NOT_AVAILABLE');
+    expect(product).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+  it('rejects unavailable or other-shop pickup items without creating an order', async () => {
+    product.mockResolvedValue(null);
+    await post(takeout()).expect(404);
+    expect(create).not.toHaveBeenCalled();
+  });
+  it('replays pickup safely and rejects reuse of the same request ID for dine-in', async () => {
+    await post(takeout()).expect(201);
+    saved.mockResolvedValue({
+      ...create.mock.calls[0][0].data,
+      id: 'order-a',
+      createdAt: new Date(),
+    });
+    raw.mockReset().mockResolvedValue([{ id: 'shop-a' }]);
+    const replay = await post(takeout()).expect(201);
+    expect(replay.body.order.mode).toBe('TAKEOUT');
+    await post().expect(409);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
 });
