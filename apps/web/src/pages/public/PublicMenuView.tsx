@@ -1,5 +1,6 @@
 ﻿import type { PublicMenuResponse } from "@paserve/contracts";
 import { useId, useState } from "react";
+import type { CustomerOrderResponse } from "@paserve/contracts";
 import {
   FiArrowUpRight,
   FiCoffee,
@@ -21,9 +22,11 @@ import { CurrentTable } from "./CurrentTable";
 export function PublicMenuView({
   menu,
   preview = false,
+  onOrderPlaced,
 }: {
   menu: PublicMenuResponse;
   preview?: boolean;
+  onOrderPlaced?: (order: CustomerOrderResponse["order"]) => void;
 }) {
   const Root = preview ? "div" : "main";
   const { shop, categories, products, featuredProducts } = menu;
@@ -133,6 +136,7 @@ export function PublicMenuView({
             )}
             {!preview && (
               <CustomerCart
+                onOrderPlaced={onOrderPlaced}
                 key={`${shop.slug}:${menu.table?.code ?? "browse"}`}
                 shop={shop}
                 table={menu.table}

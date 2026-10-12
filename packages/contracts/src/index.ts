@@ -680,6 +680,7 @@ export interface DineInOrderResponse {
   order: {
     id: string;
     mode: "DINE_IN";
+    /** Awaiting staff confirmation; implements the roadmap's PENDING_CONFIRMATION state. */
     status: "PENDING";
     table: PublicTableContext;
     /** Parent metadata emitted by current API; optional for older confirmations. */

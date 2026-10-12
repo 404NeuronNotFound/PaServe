@@ -78,6 +78,7 @@ export function CustomerOrder({
   initialMode,
   onReviewChange,
   editing = false,
+  onOrderPlaced,
 }: {
   shopSlug: string;
   table?: PublicTableContext;
@@ -85,6 +86,7 @@ export function CustomerOrder({
   initialMode?: "DINE_IN" | "TAKEOUT";
   onReviewChange?: (review: CartReviewSnapshot | null) => void;
   editing?: boolean;
+  onOrderPlaced?: (order: CustomerOrderResponse["order"]) => void;
 }) {
   const key = `paserve-pending-order:v1:${shopSlug}`;
   const [attempt, setAttempt] = useState<Attempt | null>(() =>
@@ -279,6 +281,7 @@ export function CustomerOrder({
       setAttempt(null);
       setReview(null);
       pendingOrders.remove(key);
+      onOrderPlaced?.(data.order);
     } catch (cause) {
       if (!sent) setReview(null);
       const status = isAxiosError(cause) ? cause.response?.status : undefined;

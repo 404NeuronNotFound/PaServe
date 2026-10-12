@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FiArrowRight, FiShoppingBag, FiTrash2 } from "react-icons/fi";
 import type {
   PublicMenuResponse,
+  CustomerOrderResponse,
   PublicTableContext,
 } from "@paserve/contracts";
 import {
@@ -23,9 +24,11 @@ import { CartReview, type CartReviewSnapshot } from "./CartReview";
 export function CustomerCart({
   shop,
   table,
+  onOrderPlaced,
 }: {
   shop: PublicMenuResponse["shop"];
   table?: PublicTableContext;
+  onOrderPlaced?: (order: CustomerOrderResponse["order"]) => void;
 }) {
   const items = useCart((state) => cartItemsForShop(state.shops, shop.slug));
   const [open, setOpen] = useState(false);
@@ -183,6 +186,7 @@ export function CustomerCart({
               onModeChange={setMode}
               onReviewChange={setReview}
               editing={Object.values(edits).some(Boolean)}
+              onOrderPlaced={onOrderPlaced}
             />
             {!review && (
               <>

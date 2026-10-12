@@ -6,6 +6,7 @@ import type { PublicMenuResponse } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import "./public-menu.css";
 import { PublicMenuView } from "./PublicMenuView";
+import { saveOrderReceipt } from "../../features/cart/order-receipt";
 import {
   useCustomerTables,
   customerTableCode,
@@ -126,5 +127,16 @@ function PublicMenuSession({
         )}
       </main>
     );
-  return <PublicMenuView key={shopSlug} menu={menu.data} />;
+  return (
+    <PublicMenuView
+      key={shopSlug}
+      menu={menu.data}
+      onOrderPlaced={(order) => {
+        saveOrderReceipt(shopSlug, menu.data.shop.name, order);
+        navigate(
+          `/menu/${encodeURIComponent(shopSlug)}/orders/${encodeURIComponent(order.id)}`,
+        );
+      }}
+    />
+  );
 }
