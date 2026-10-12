@@ -13,6 +13,7 @@ import {
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
+  IsBoolean,
   IsIn,
   IsUrl,
   IsString,
@@ -26,6 +27,10 @@ const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
 export class UpdateShopDto implements UpdateShopRequest {
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsBoolean()
+  acceptingOrders?: boolean;
+
   @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsIn(MENU_LAYOUTS, { message: 'Choose Grid, List, or Compact.' })
   menuLayout?: MenuLayout;

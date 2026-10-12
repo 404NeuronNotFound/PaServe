@@ -41,6 +41,10 @@ try {
         await tx.$executeRawUnsafe(
           `CREATE TABLE ${q('restaurant_tables')} (LIKE public.restaurant_tables INCLUDING DEFAULTS INCLUDING CONSTRAINTS)`,
         );
+        // Support both pre-rollout and already-upgraded source schemas.
+        await tx.$executeRawUnsafe(
+          `ALTER TABLE ${q('shops')} DROP COLUMN IF EXISTS "acceptingOrders"`,
+        );
         await tx.$executeRawUnsafe(
           `ALTER TABLE ${q('restaurant_tables')} ADD PRIMARY KEY ("id")`,
         );
@@ -73,6 +77,7 @@ try {
           '20261012140000_takeout_mode',
           '20261012140100_takeout_order_tables',
           '20261012160000_pending_order_status',
+          '20261012170000_shop_accepting_orders',
         ]) {
           const sql = await readFile(
             new URL(
@@ -98,6 +103,7 @@ try {
         const shop = await tx.shop.create({
           data: { name: 'Phase 10 fixture', slug: 'phase10-cafe' },
         });
+        assert.equal(shop.acceptingOrders, true);
         const foreignShop = await tx.shop.create({
           data: { name: 'Foreign fixture', slug: 'phase10-other' },
         });
@@ -206,6 +212,40 @@ try {
           table.id,
         );
         const before = await tx.order.count();
+        await tx.shop.update({
+          where: { id: shop.id },
+          data: { acceptingOrders: false },
+        });
+        for (const mode of ['DINE_IN', 'TAKEOUT']) {
+          await assert.rejects(
+            () =>
+              orders.create(shop.slug, {
+                ...pickupRequest,
+                requestId: randomUUID(),
+                mode,
+                ...(mode === 'DINE_IN'
+                  ? {
+                      tableCode: table.code,
+                      tableToken: contexts.issue(shop.slug, table.code),
+                    }
+                  : {}),
+              }),
+            (error) => error.getResponse().code === 'SHOP_NOT_ACCEPTING_ORDERS',
+          );
+        }
+        assert.equal(await tx.order.count(), before);
+        assert.equal(
+          (await orders.create(shop.slug, pickupRequest)).order.id,
+          pickup.order.id,
+        );
+        assert.equal(
+          (await pricing.quote(shop.slug, product.id, items[0], tx)).totalPrice,
+          '422.50',
+        );
+        await tx.shop.update({
+          where: { id: shop.id },
+          data: { acceptingOrders: true },
+        });
         const rejected = async (changedItems) => {
           await assert.rejects(() =>
             orders.create(shop.slug, {
@@ -302,7 +342,7 @@ try {
     await prisma.$queryRaw`SELECT count(*)::int AS count FROM pg_namespace WHERE nspname = ${schema}`;
   assert.equal(leftover.count, 0);
   console.log(
-    'Real Prisma/PostgreSQL order pricing passed: current base and modifier prices, exact totals, pending persistence, dine-in/takeout binding, invalid and partially invalid orders, inactive options/products/categories/shops, replay after deactivation and RLS. All schema/data changes rolled back.',
+    'Real Prisma/PostgreSQL order pricing passed: current base and modifier prices, exact totals, pending persistence, dine-in/takeout binding, invalid and partially invalid orders, inactive options/products/categories/shops, paused intake with menu quotes available, replay after pause/deactivation and RLS. All schema/data changes rolled back.',
   );
 } finally {
   await prisma.$disconnect();

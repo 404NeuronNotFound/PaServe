@@ -20,6 +20,14 @@ try {
   await client.query(
     `CREATE TABLE ${q('shops')} ("id" TEXT PRIMARY KEY, "slug" TEXT UNIQUE, "isActive" BOOLEAN NOT NULL DEFAULT true)`,
   );
+  const intakeMigration = await readFile(
+    new URL(
+      '../prisma/migrations/20261012170000_shop_accepting_orders/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await client.query(intakeMigration.replace(/"shops"/g, q('shops')));
   await client.query(
     `CREATE TABLE ${q('restaurant_tables')} ("id" TEXT PRIMARY KEY, "shopId" TEXT NOT NULL REFERENCES ${q('shops')}("id"), "code" TEXT, "number" TEXT, "isActive" BOOLEAN NOT NULL DEFAULT true)`,
   );

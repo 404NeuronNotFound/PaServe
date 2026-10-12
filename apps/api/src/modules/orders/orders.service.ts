@@ -104,10 +104,10 @@ export class OrdersService {
     try {
       return await this.prisma.$transaction(
         async (tx) => {
-          // Lock shop/table state until commit; deactivation cannot slip between resolution and insert.
+          // Lock shop/table state until commit; pauses or deactivation cannot slip between resolution and insert.
           const shops = await tx.$queryRaw<
-            { id: string; isActive: boolean }[]
-          >`SELECT "id", "isActive" FROM "shops" WHERE "slug" = ${slug} FOR SHARE`;
+            { id: string; isActive: boolean; acceptingOrders: boolean }[]
+          >`SELECT "id", "isActive", "acceptingOrders" FROM "shops" WHERE "slug" = ${slug} FOR SHARE`;
           const shop = shops[0];
           if (!shop) throw unavailable();
           const saved = await tx.order.findUnique({
@@ -117,6 +117,12 @@ export class OrdersService {
           });
           if (saved) return response(saved);
           if (!shop.isActive) throw unavailable();
+          if (!shop.acceptingOrders)
+            throw new ConflictException({
+              code: 'SHOP_NOT_ACCEPTING_ORDERS',
+              message:
+                'This shop is temporarily not accepting orders. Please try again later.',
+            });
           let table: { id: string; number: string } | undefined;
           if (mode === 'DINE_IN') {
             this.contexts.verify(dto.tableToken!, slug, dto.tableCode!);

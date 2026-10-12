@@ -4,10 +4,14 @@ import type { UpdateShopRequest } from '@paserve/contracts';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 export type ShopSettingsData = Pick<
   UpdateShopRequest,
-  'name' | 'menuLayout'
+  'name' | 'menuLayout' | 'acceptingOrders'
 > & {
-  [K in Exclude<keyof UpdateShopRequest, 'name' | 'menuLayout'>]?:
-    string | null;
+  [
+    K in Exclude<
+      keyof UpdateShopRequest,
+      'name' | 'menuLayout' | 'acceptingOrders'
+    >
+  ]?: string | null;
 };
 
 const settingsSelect = {
@@ -16,6 +20,7 @@ const settingsSelect = {
   slug: true,
   description: true,
   isActive: true,
+  acceptingOrders: true,
   createdAt: true,
   displayName: true,
   phone: true,

@@ -127,6 +127,51 @@ describe('Owner-only shop updates', () => {
       .set('Authorization', `Bearer ${token}`)
       .send(body as object);
 
+  it.each([false, true])(
+    'allows the owner to set acceptingOrders=%s',
+    async (acceptingOrders) => {
+      const response = await patch(shopA, { acceptingOrders }).expect(200);
+      expect(response.body.shop.acceptingOrders).toBe(acceptingOrders);
+      expect(update).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: shopA,
+            members: {
+              some: {
+                userId,
+                role: 'OWNER',
+                user: { isActive: true },
+              },
+            },
+          }),
+          data: { acceptingOrders },
+          select: expect.objectContaining({ acceptingOrders: true }),
+        }),
+      );
+      findFirst.mockResolvedValue({ ...response.body.shop, createdAt });
+      const loaded = await request(app.getHttpServer())
+        .get(`/api/v1/shops/${shopA}/settings`)
+        .set('Authorization', 'Bearer valid-token')
+        .expect(200);
+      expect(loaded.body.shop.acceptingOrders).toBe(acceptingOrders);
+    },
+  );
+  it.each(['false', 'true', 0, 1, null, {}, []])(
+    'rejects invalid order-intake flag %j',
+    async (acceptingOrders) => {
+      await patch(shopA, { acceptingOrders }).expect(400);
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'] as const)(
+    'denies %s order-intake changes',
+    async (role) => {
+      members.set(shopB, membership(shopB, role));
+      await patch(shopB, { acceptingOrders: false }).expect(403);
+      await patch(missingShop, { acceptingOrders: false }).expect(404);
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
   it('uses the URL context even when a different active shop is suggested in a header', async () => {
     await patch(shopB).set('X-Active-Shop-Id', shopA).expect(403);
     expect(update).not.toHaveBeenCalled();

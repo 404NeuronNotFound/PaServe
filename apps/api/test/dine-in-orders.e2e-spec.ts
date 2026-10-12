@@ -65,10 +65,16 @@ describe('dine-in order submission', () => {
     vi.clearAllMocks();
     raw
       .mockReset()
-      .mockResolvedValueOnce([{ id: 'shop-a', isActive: true }])
+      .mockResolvedValueOnce([
+        { id: 'shop-a', isActive: true, acceptingOrders: true },
+      ])
       .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
     saved.mockReset().mockResolvedValue(null);
-    tx.shop.findFirst.mockResolvedValue({ id: 'shop-a', isActive: true });
+    tx.shop.findFirst.mockResolvedValue({
+      id: 'shop-a',
+      isActive: true,
+      acceptingOrders: true,
+    });
     product.mockReset().mockResolvedValue({
       id,
       name: 'Coffee',
@@ -183,7 +189,9 @@ describe('dine-in order submission', () => {
   it('rejects inactive or foreign tables before pricing or insertion', async () => {
     raw
       .mockReset()
-      .mockResolvedValueOnce([{ id: 'shop-a', isActive: true }])
+      .mockResolvedValueOnce([
+        { id: 'shop-a', isActive: true, acceptingOrders: true },
+      ])
       .mockResolvedValueOnce([]);
     await post().expect(404);
     expect(product).not.toHaveBeenCalled();
@@ -194,10 +202,112 @@ describe('dine-in order submission', () => {
       'AND "isActive" = true FOR SHARE',
     );
   });
-  it('rejects inactive shops', async () => {
-    raw.mockReset().mockResolvedValue([]);
-    await post().expect(404);
-    expect(create).not.toHaveBeenCalled();
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'rejects a nonexistent route shop before pricing or insertion for %s',
+    async (mode) => {
+      raw.mockReset().mockResolvedValue([]);
+      await post(mode === 'DINE_IN' ? payload() : takeout()).expect(404);
+      expect(saved).not.toHaveBeenCalled();
+      expect(product).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'rejects an inactive route shop before table resolution or pricing for %s',
+    async (mode) => {
+      raw
+        .mockReset()
+        .mockResolvedValue([
+          { id: 'shop-a', isActive: false, acceptingOrders: true },
+        ]);
+      await post(mode === 'DINE_IN' ? payload() : takeout()).expect(404);
+      expect(raw).toHaveBeenCalledTimes(1);
+      expect(product).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'blocks new %s orders at a paused shop and resumes when intake reopens',
+    async (mode) => {
+      const body = mode === 'DINE_IN' ? payload() : takeout();
+      raw
+        .mockReset()
+        .mockResolvedValue([
+          { id: 'shop-a', isActive: true, acceptingOrders: false },
+        ]);
+      const result = await post(body).expect(409);
+      expect(result.body.code).toBe('SHOP_NOT_ACCEPTING_ORDERS');
+      expect(raw).toHaveBeenCalledTimes(1);
+      expect(product).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+      raw
+        .mockReset()
+        .mockResolvedValueOnce([
+          { id: 'shop-a', isActive: true, acceptingOrders: true },
+        ])
+        .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
+      await post(body).expect(201);
+      expect(create).toHaveBeenCalledTimes(1);
+    },
+  );
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'confirms matching %s retries after intake pauses and rejects changed payloads',
+    async (mode) => {
+      const body = mode === 'DINE_IN' ? payload() : takeout();
+      await post(body).expect(201);
+      saved.mockResolvedValue({
+        ...create.mock.calls[0][0].data,
+        id: 'order-a',
+        createdAt: new Date(),
+      });
+      raw
+        .mockReset()
+        .mockResolvedValue([
+          { id: 'shop-a', isActive: true, acceptingOrders: false },
+        ]);
+      const replay = await post(body).expect(201);
+      expect(replay.body.order.id).toBe('order-a');
+      await post({
+        ...body,
+        items: [{ ...body.items[0], quantity: 3 }],
+      }).expect(409);
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(raw).toHaveBeenCalledTimes(2);
+    },
+  );
+  it('resolves the route slug with a row lock and ignores header/query shop hints', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/menu/cafe/orders?shopId=foreign-shop&shopSlug=other')
+      .set('X-Shop-Id', 'foreign-shop')
+      .set('X-Shop-Slug', 'other')
+      .send(takeout())
+      .expect(201);
+    expect(raw.mock.calls[0][1]).toBe('cafe');
+    expect(raw.mock.calls[0][0].join('?')).toContain(
+      '"acceptingOrders" FROM "shops" WHERE "slug" = ? FOR SHARE',
+    );
+    expect(saved).toHaveBeenCalledWith({
+      where: { shopId_requestId: { shopId: 'shop-a', requestId: id } },
+    });
+    expect(create.mock.calls[0][0].data.shopId).toBe('shop-a');
+  });
+  it.each(['BadSlug', 'cafe_', 'a'.repeat(101)])(
+    'rejects malformed route shop %s before database access',
+    async (slug) => {
+      await request(app.getHttpServer())
+        .post(`/api/v1/menu/${slug}/orders`)
+        .send(takeout())
+        .expect(404);
+      expect(transaction).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    { shopSlug: 'other' },
+    { acceptingOrders: true },
+    { isActive: true },
+  ])('rejects client shop overrides: %j', async (override) => {
+    await post({ ...takeout(), ...override }).expect(400);
+    expect(transaction).not.toHaveBeenCalled();
   });
   it('rejects sold-out or missing products without saving an order', async () => {
     product.mockResolvedValue(null);
@@ -238,7 +348,11 @@ describe('dine-in order submission', () => {
       createdAt: new Date(),
     };
     saved.mockResolvedValue(original);
-    raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: true }]);
+    raw
+      .mockReset()
+      .mockResolvedValue([
+        { id: 'shop-a', isActive: true, acceptingOrders: true },
+      ]);
     const replay = await post().expect(201);
     expect(replay.body.order.id).toBe('order-a');
     expect(create).toHaveBeenCalledTimes(1);
@@ -330,7 +444,11 @@ describe('dine-in order submission', () => {
       id: 'order-a',
       createdAt: new Date(),
     });
-    raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: true }]);
+    raw
+      .mockReset()
+      .mockResolvedValue([
+        { id: 'shop-a', isActive: true, acceptingOrders: true },
+      ]);
     const replay = await post(takeout()).expect(201);
     expect(replay.body.order.mode).toBe('TAKEOUT');
     await post().expect(409);
@@ -344,7 +462,11 @@ describe('dine-in order submission', () => {
       createdAt: new Date(),
     };
     saved.mockResolvedValue(original);
-    raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: false }]);
+    raw
+      .mockReset()
+      .mockResolvedValue([
+        { id: 'shop-a', isActive: false, acceptingOrders: true },
+      ]);
     const replay = await post(takeout()).expect(201);
     expect(replay.body.order.status).toBe('PENDING');
     expect(create).toHaveBeenCalledTimes(1);
@@ -363,7 +485,11 @@ describe('dine-in order submission', () => {
       status: 'PLACED',
       createdAt: new Date(),
     });
-    raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: true }]);
+    raw
+      .mockReset()
+      .mockResolvedValue([
+        { id: 'shop-a', isActive: true, acceptingOrders: true },
+      ]);
     await post(takeout()).expect(500);
     expect(create).toHaveBeenCalledTimes(1);
   });
@@ -375,14 +501,22 @@ describe('dine-in order submission', () => {
       id: 'order-a',
       createdAt: new Date(),
     });
-    raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: false }]);
+    raw
+      .mockReset()
+      .mockResolvedValue([
+        { id: 'shop-a', isActive: false, acceptingOrders: true },
+      ]);
     const clock = vi
       .spyOn(Date, 'now')
       .mockReturnValue(Date.now() + 5 * 60 * 60 * 1000);
     try {
       await post(original).expect(201);
       saved.mockResolvedValue(null);
-      raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: true }]);
+      raw
+        .mockReset()
+        .mockResolvedValue([
+          { id: 'shop-a', isActive: true, acceptingOrders: true },
+        ]);
       await post({
         ...original,
         requestId: '10000000-0000-4000-8000-000000000009',

@@ -67,6 +67,7 @@ model Shop {
   accentColor String? @db.VarChar(7)
   menuLayout MenuLayout @default(list)
   isActive    Boolean  @default(true)
+  acceptingOrders Boolean @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
