@@ -83,6 +83,7 @@ try {
           '20261012160000_pending_order_status',
           '20261012170000_shop_accepting_orders',
           '20261012180000_parent_order_metadata',
+          '20261012190000_order_items',
         ]) {
           const sql = await readFile(
             new URL(
@@ -98,7 +99,7 @@ try {
             .filter(Boolean)) {
             await tx.$executeRawUnsafe(
               statement.replace(
-                /"(orders|shops|restaurant_tables|OrderMode)"/g,
+                /"(order_items|products|orders|shops|restaurant_tables|OrderMode)"/g,
                 (_match, name) => q(name),
               ),
             );
@@ -214,6 +215,14 @@ try {
         );
         assert.equal(saved.items[0].unitPrice, '211.25');
         assert.equal(saved.items[0].notes, 'Less ice\nNo sugar');
+        const persistedItems = await tx.orderItem.findMany({
+          where: { shopId: shop.id, orderId: saved.id },
+          orderBy: { lineNumber: 'asc' },
+        });
+        assert.equal(persistedItems.length, 1);
+        assert.equal(persistedItems[0].productId, product.id);
+        assert.equal(persistedItems[0].quantity, 2);
+        assert.deepEqual(persistedItems[0].snapshot, saved.items[0]);
         const dineIn = await orders.create(shop.slug, {
           requestId: randomUUID(),
           mode: 'DINE_IN',
@@ -242,6 +251,26 @@ try {
         assert.equal(repeated.order.totalPrice, '633.75');
         assert.equal(repeated.order.subtotalPrice, '633.75');
         assert.equal(repeated.order.items[1].notes, 'Separate cup');
+        const separateLines = await tx.orderItem.findMany({
+          where: { shopId: shop.id, orderId: repeated.order.id },
+          orderBy: { lineNumber: 'asc' },
+        });
+        assert.deepEqual(
+          separateLines.map((line) => [line.lineNumber, line.quantity]),
+          [
+            [1, 2],
+            [2, 1],
+          ],
+        );
+        assert.equal(separateLines[1].notes, 'Separate cup');
+        const replayLineCount = await tx.orderItem.count({
+          where: { shopId: shop.id },
+        });
+        await orders.create(shop.slug, pickupRequest);
+        assert.equal(
+          await tx.orderItem.count({ where: { shopId: shop.id } }),
+          replayLineCount,
+        );
         const availableProduct = await tx.product.create({
           data: {
             shopId: shop.id,
@@ -314,7 +343,135 @@ try {
         });
         assert.equal(restored.order.status, 'PENDING');
         assert.equal(restored.order.totalPrice, '422.50');
+        const historicalProduct = await tx.product.create({
+          data: {
+            shopId: shop.id,
+            name: 'Historical product',
+            slug: 'historical-product',
+            price: '1.00',
+          },
+        });
+        const historicalRequest = {
+          ...pickupRequest,
+          requestId: randomUUID(),
+          items: [
+            {
+              productId: historicalProduct.id,
+              quantity: 1,
+              variantIds: [],
+              addOnIds: [],
+            },
+          ],
+        };
+        const historicalOrder = await orders.create(
+          shop.slug,
+          historicalRequest,
+        );
+        await tx.product.delete({
+          where: { id: historicalProduct.id, shopId: shop.id },
+        });
+        const historicalLine = await tx.orderItem.findFirstOrThrow({
+          where: { orderId: historicalOrder.order.id, shopId: shop.id },
+        });
+        assert.equal(historicalLine.productId, null);
+        assert.equal(historicalLine.shopId, shop.id);
+        assert.equal(historicalLine.snapshot.productId, historicalProduct.id);
+        assert.deepEqual(
+          (await orders.create(shop.slug, historicalRequest)).order.items,
+          historicalOrder.order.items,
+        );
         const before = await tx.order.count();
+        // A failed child insert must undo the already-inserted parent and counter.
+        const itemCountBefore = await tx.orderItem.count({
+          where: { shopId: shop.id },
+        });
+        const counterBefore = (
+          await tx.shop.findUniqueOrThrow({ where: { id: shop.id } })
+        ).lastOrderNumber;
+        let reachedItemInsert = false;
+        const brokenTx = {
+          $queryRaw: tx.$queryRaw.bind(tx),
+          shop: tx.shop,
+          product: tx.product,
+          order: tx.order,
+          orderItem: {
+            createMany: async ({ data }) => {
+              reachedItemInsert = true;
+              return tx.orderItem.createMany({
+                data: data.map((row, index) =>
+                  index === 0 ? { ...row, quantity: 100 } : row,
+                ),
+              });
+            },
+          },
+        };
+        const failingOrders = new OrdersService(
+          {
+            $transaction: async (callback) => {
+              // A savepoint models the per-order transaction inside the outer rollback fixture.
+              await tx.$executeRawUnsafe('SAVEPOINT failed_order_items');
+              try {
+                return await callback(brokenTx);
+              } catch (error) {
+                await tx.$executeRawUnsafe(
+                  'ROLLBACK TO SAVEPOINT failed_order_items',
+                );
+                throw error;
+              } finally {
+                await tx.$executeRawUnsafe(
+                  'RELEASE SAVEPOINT failed_order_items',
+                );
+              }
+            },
+          },
+          pricing,
+          contexts,
+          new OrderTokenService(new ConfigService()),
+        );
+        await assert.rejects(() =>
+          failingOrders.create(shop.slug, {
+            ...pickupRequest,
+            requestId: randomUUID(),
+            items: [items[0], { ...items[0], quantity: 1 }],
+          }),
+        );
+        assert.equal(reachedItemInsert, true);
+        assert.equal(await tx.order.count(), before);
+        assert.equal(
+          await tx.orderItem.count({ where: { shopId: shop.id } }),
+          itemCountBefore,
+        );
+        assert.equal(
+          (await tx.shop.findUniqueOrThrow({ where: { id: shop.id } }))
+            .lastOrderNumber,
+          counterBefore,
+        );
+        for (const override of [
+          { shopId: foreignShop.id, productId: null },
+          {
+            productId: foreignProduct.id,
+            snapshot: { ...saved.items[0], productId: foreignProduct.id },
+          },
+          { lineNumber: 1 },
+        ]) {
+          await tx.$executeRawUnsafe('SAVEPOINT invalid_order_item');
+          await assert.rejects(() =>
+            tx.orderItem.createMany({
+              data: [
+                {
+                  ...persistedItems[0],
+                  lineNumber: 2,
+                  id: randomUUID(),
+                  ...override,
+                },
+              ],
+            }),
+          );
+          await tx.$executeRawUnsafe(
+            'ROLLBACK TO SAVEPOINT invalid_order_item',
+          );
+          await tx.$executeRawUnsafe('RELEASE SAVEPOINT invalid_order_item');
+        }
         const unassignedAddOn = await tx.addOn.create({
           data: {
             shopId: shop.id,

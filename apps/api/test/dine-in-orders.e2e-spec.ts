@@ -35,11 +35,13 @@ describe('dine-in order submission', () => {
   const submittedProducts = vi.fn();
   const saved = vi.fn();
   const create = vi.fn();
+  const createItems = vi.fn();
   const tx = {
     $queryRaw: raw,
     shop: { findFirst: vi.fn(), update: vi.fn() },
     product: { findFirst: product, findMany: submittedProducts },
     order: { findUnique: saved, create },
+    orderItem: { createMany: createItems },
   };
   const transaction = vi.fn((callback: (db: typeof tx) => unknown) =>
     callback(tx),
@@ -72,6 +74,11 @@ describe('dine-in order submission', () => {
       ])
       .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
     saved.mockReset().mockResolvedValue(null);
+    createItems
+      .mockReset()
+      .mockImplementation(async ({ data }: { data: unknown[] }) => ({
+        count: data.length,
+      }));
     let nextNumber = 0n;
     tx.shop.update
       .mockReset()
@@ -108,6 +115,74 @@ describe('dine-in order submission', () => {
   });
   const post = (body: unknown = payload()) =>
     request(app.getHttpServer()).post('/api/v1/menu/cafe/orders').send(body);
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'persists each configured cart line separately in the parent transaction for %s',
+    async (mode) => {
+      const body = mode === 'DINE_IN' ? payload() : takeout();
+      const result = await post({
+        ...body,
+        items: [
+          body.items[0],
+          { ...body.items[0], quantity: 1, notes: 'Separate cup' },
+        ],
+      }).expect(201);
+      expect(transaction).toHaveBeenCalledTimes(1);
+      expect(createItems).toHaveBeenCalledTimes(1);
+      const rows = createItems.mock.calls[0][0].data;
+      expect(rows).toHaveLength(2);
+      expect(
+        rows.map((row: { lineNumber: number; quantity: number }) => [
+          row.lineNumber,
+          row.quantity,
+        ]),
+      ).toEqual([
+        [1, 2],
+        [2, 1],
+      ]);
+      expect(rows[0]).toMatchObject({
+        shopId: 'shop-a',
+        orderId: 'order-a',
+        productId: id,
+        notes: 'Less ice',
+        snapshot: result.body.order.items[0],
+      });
+      expect(rows[1]).toMatchObject({
+        productId: id,
+        notes: 'Separate cup',
+        snapshot: result.body.order.items[1],
+      });
+      expect(create.mock.invocationCallOrder[0]).toBeLessThan(
+        createItems.mock.invocationCallOrder[0],
+      );
+      saved.mockResolvedValue({
+        ...create.mock.calls[0][0].data,
+        id: 'order-a',
+      });
+      raw
+        .mockReset()
+        .mockResolvedValue([
+          { id: 'shop-a', isActive: true, acceptingOrders: true },
+        ]);
+      await post({
+        ...body,
+        items: [
+          body.items[0],
+          { ...body.items[0], quantity: 1, notes: 'Separate cup' },
+        ],
+      }).expect(201);
+      expect(createItems).toHaveBeenCalledTimes(1);
+    },
+  );
+  it.each(['write failure', 'incomplete write'])(
+    'fails creation when item persistence returns %s',
+    async (kind) => {
+      if (kind === 'write failure')
+        createItems.mockRejectedValue(new Error('Item insert failed'));
+      else createItems.mockResolvedValue({ count: 0 });
+      await post(takeout()).expect(500);
+      expect(createItems).toHaveBeenCalledTimes(1);
+    },
+  );
   it.each(['DINE_IN', 'TAKEOUT'] as const)(
     'creates server-authored parent metadata for %s and preserves it on replay',
     async (mode) => {

@@ -127,11 +127,32 @@ model Order {
   updatedAt   DateTime  @updatedAt
   shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Restrict)
   table       RestaurantTable? @relation(fields: [tableId, shopId], references: [id, shopId], onDelete: Restrict, onUpdate: Restrict)
+  orderItems OrderItem[]
 
+  @@unique([id, shopId])
   @@unique([shopId, requestId])
   @@unique([shopId, orderNumber])
   @@index([shopId, tableId, createdAt])
   @@map("orders")
+}
+
+model OrderItem {
+  id String @id @default(uuid())
+  shopId String
+  orderId String
+  productId String?
+  lineNumber Int
+  quantity Int
+  notes String? @db.VarChar(300)
+  snapshot Json
+  createdAt DateTime @default(now())
+  order Order @relation(fields: [orderId, shopId], references: [id, shopId], onDelete: Cascade, onUpdate: Restrict)
+  // SQL preserves shopId when product deletion sets only productId to null.
+  product Product? @relation(fields: [productId, shopId], references: [id, shopId], onDelete: NoAction, onUpdate: Restrict)
+
+  @@unique([orderId, lineNumber])
+  @@index([shopId, orderId])
+  @@map("order_items")
 }
 
 model ShopMember {
@@ -193,6 +214,7 @@ model Product {
   optionGroups ProductOptionGroup[]
   variants     ProductVariant[]
   addOns       ProductAddOn[]
+  orderItems OrderItem[]
 
   @@unique([shopId, slug])
   @@unique([id, shopId])

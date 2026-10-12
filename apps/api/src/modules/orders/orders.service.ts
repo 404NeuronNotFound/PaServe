@@ -218,6 +218,20 @@ export class OrdersService {
               items: items as unknown as Prisma.InputJsonValue,
             },
           });
+          const inserted = await tx.orderItem.createMany({
+            data: items.map((item, index) => ({
+              shopId: shop.id,
+              orderId: order.id,
+              productId: item.productId,
+              lineNumber: index + 1,
+              quantity: item.quantity,
+              notes: item.notes ?? null,
+              snapshot: item as unknown as Prisma.InputJsonValue,
+              createdAt,
+            })),
+          });
+          if (inserted.count !== items.length)
+            throw new Error('Incomplete persisted order items.');
           return response(order);
         },
         {

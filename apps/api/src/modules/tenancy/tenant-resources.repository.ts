@@ -9,6 +9,7 @@ export const TENANT_RESOURCE_KINDS = [
   'addOn',
   'table',
   'order',
+  'orderItem',
 ] as const;
 export type TenantResourceKind = (typeof TENANT_RESOURCE_KINDS)[number];
 
@@ -33,6 +34,11 @@ export class TenantResourcesRepository {
       shop: shopAccessWhere(userId, shopId),
     };
     const select = { id: true, shopId: true } as const;
+    if (kind === 'orderItem')
+      return this.prisma.orderItem.findFirst({
+        where: { id: resourceId, shopId, order: { shopId, shop: where.shop } },
+        select,
+      });
     if (kind === 'product')
       return this.prisma.product.findFirst({ where, select });
     if (kind === 'addOn') return this.prisma.addOn.findFirst({ where, select });

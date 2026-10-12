@@ -20,7 +20,7 @@ describe('tenant resource isolation', () => {
     memberships.requireMembership.mockResolvedValue({ shopId, role: 'OWNER' });
   });
 
-  it.each(['product', 'category', 'table', 'order'] as const)(
+  it.each(['product', 'category', 'table', 'order', 'orderItem'] as const)(
     'resolves a %s only using user, shop and resource IDs',
     async (kind) => {
       resources.findResource.mockResolvedValue({ id: resourceId, shopId });
@@ -69,12 +69,17 @@ describe('tenant resource isolation', () => {
 
   it('rejects unsupported resource kinds', async () => {
     await expect(
-      service.requireResource(userId, shopId, 'unknown' as 'product', resourceId),
+      service.requireResource(
+        userId,
+        shopId,
+        'unknown' as 'product',
+        resourceId,
+      ),
     ).rejects.toMatchObject({ status: 400 });
     expect(resources.findResource).not.toHaveBeenCalled();
   });
 
-  it.each(['product', 'category', 'table', 'order'] as const)(
+  it.each(['product', 'category', 'table', 'order', 'orderItem'] as const)(
     'scopes the actual %s query and rechecks live access',
     async (kind) => {
       const prisma = {
@@ -82,6 +87,7 @@ describe('tenant resource isolation', () => {
         category: { findFirst: vi.fn() },
         restaurantTable: { findFirst: vi.fn() },
         order: { findFirst: vi.fn() },
+        orderItem: { findFirst: vi.fn() },
       };
       const repo = new TenantResourcesRepository(
         prisma as unknown as PrismaService,
@@ -90,15 +96,22 @@ describe('tenant resource isolation', () => {
       expect(
         prisma[kind === 'table' ? 'restaurantTable' : kind].findFirst,
       ).toHaveBeenCalledWith({
-        where: {
-          id: resourceId,
-          shopId,
-          shop: {
-            id: shopId,
-            isActive: true,
-            members: { some: { userId, user: { isActive: true } } },
-          },
-        },
+        where:
+          kind === 'orderItem'
+            ? {
+                id: resourceId,
+                shopId,
+                order: { shopId, shop: shopAccessWhere(userId, shopId) },
+              }
+            : {
+                id: resourceId,
+                shopId,
+                shop: {
+                  id: shopId,
+                  isActive: true,
+                  members: { some: { userId, user: { isActive: true } } },
+                },
+              },
         select: { id: true, shopId: true },
       });
     },

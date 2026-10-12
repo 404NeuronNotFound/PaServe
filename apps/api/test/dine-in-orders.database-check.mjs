@@ -63,7 +63,26 @@ try {
   await client.query(
     `INSERT INTO ${q('restaurant_tables')} ("id", "shopId", "code", "number") VALUES ('table-a', 'a', 'T12', 'Patio 4'), ('table-b', 'b', 'T12', '12')`,
   );
-  const insert = (id, shop, table, request, total = '20.02', items = '[{}]') =>
+  const insert = (
+    id,
+    shop,
+    table,
+    request,
+    total = '20.02',
+    items = JSON.stringify([
+      {
+        productId: shop === 'a' ? 'coffee-a' : 'coffee-b',
+        productName: 'Coffee',
+        quantity: 2,
+        currency: 'PHP',
+        basePrice: '10.01',
+        unitPrice: '10.01',
+        totalPrice: '20.02',
+        variants: [],
+        addOns: [],
+      },
+    ]),
+  ) =>
     client.query(
       `INSERT INTO ${q('orders')} ("id", "shopId", "tableId", "requestId", "requestHash", "tableCode", "tableNumber", "totalPrice", "items") VALUES ($1,$2,$3,$4,'hash','T12','Patio 4',$5,$6) RETURNING *`,
       [id, shop, table, request, total, items],
@@ -159,15 +178,66 @@ try {
   // Prisma product/order delegates are adapted; table resolution uses service SQL unchanged.
   await client.query(`SET LOCAL search_path TO "${schema}"`);
   await client.query(
-    `CREATE TABLE ${q('products')} ("id" TEXT PRIMARY KEY, "shopId" TEXT NOT NULL REFERENCES ${q('shops')}("id"), "status" TEXT NOT NULL DEFAULT 'AVAILABLE', "isArchived" BOOLEAN NOT NULL DEFAULT false)`,
+    `CREATE TABLE ${q('products')} ("id" TEXT PRIMARY KEY, "shopId" TEXT NOT NULL REFERENCES ${q('shops')}("id"), "status" TEXT NOT NULL DEFAULT 'AVAILABLE', "isArchived" BOOLEAN NOT NULL DEFAULT false, UNIQUE ("id", "shopId"))`,
   );
   await client.query(
     `INSERT INTO ${q('products')} ("id", "shopId") VALUES ('coffee-a', 'a'), ('coffee-b', 'b')`,
   );
+  const itemsMigration = await readFile(
+    new URL(
+      '../prisma/migrations/20261012190000_order_items/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await client.query(
+    itemsMigration.replace(/"(orders|order_items|products)"/g, (_match, name) =>
+      q(name),
+    ),
+  );
+  assert.equal(
+    (
+      await client.query(
+        `SELECT count(*)::int AS count FROM ${q('order_items')} WHERE "orderId" = 'order-a'`,
+      )
+    ).rows[0].count,
+    1,
+  );
   await client.query(
     `INSERT INTO ${q('restaurant_tables')} ("id", "shopId", "code", "number", "isActive") VALUES ('inactive-a', 'a', 'T13', '13', false), ('foreign-b', 'b', 'T14', '14', true)`,
   );
+  const itemSecurity = (
+    await client.query(
+      `SELECT relrowsecurity AS rls, has_table_privilege('anon', $2, 'SELECT') AS anon_access, has_table_privilege('authenticated', $2, 'SELECT') AS browser_access FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = $1 AND c.relname = 'order_items'`,
+      [schema, q('order_items')],
+    )
+  ).rows[0];
+  assert.deepEqual(itemSecurity, {
+    rls: true,
+    anon_access: false,
+    browser_access: false,
+  });
   const tx = {
+    orderItem: {
+      createMany: async ({ data }) => {
+        for (const row of data)
+          await client.query(
+            `INSERT INTO ${q('order_items')} ("id", "shopId", "orderId", "productId", "lineNumber", "quantity", "notes", "snapshot", "createdAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+            [
+              randomUUID(),
+              row.shopId,
+              row.orderId,
+              row.productId,
+              row.lineNumber,
+              row.quantity,
+              row.notes,
+              JSON.stringify(row.snapshot),
+              row.createdAt,
+            ],
+          );
+        return { count: data.length };
+      },
+    },
     shop: {
       update: async ({ where }) => {
         const row = (
@@ -251,10 +321,10 @@ try {
   };
   let quotes = 0;
   const products = {
-    quote: async () => {
+    quote: async (_slug, productId) => {
       quotes++;
       return {
-        productId: 'coffee',
+        productId,
         productName: 'Coffee',
         quantity: 2,
         currency: 'PHP',
