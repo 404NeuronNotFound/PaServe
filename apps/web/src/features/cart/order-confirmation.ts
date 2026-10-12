@@ -6,6 +6,11 @@ import {
 import { parseCartLine } from "./cart-storage";
 import { sumPrices } from "./cart";
 import { isPublicTableContext } from "../shops/customer-table";
+import {
+  isOrderNumber,
+  isOrderReceiptId,
+  isOrderTotal,
+} from "./order-receipt-fields";
 
 const record = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);
@@ -20,14 +25,11 @@ export function isCreatedOrderResponse(
   if (!record(value) || !record(value.order)) return false;
   const order = value.order;
   if (
-    typeof order.id !== "string" ||
-    !order.id ||
-    order.id.length > 100 ||
+    !isOrderReceiptId(order.id) ||
     order.status !== "PENDING_CONFIRMATION" ||
     order.mode !== (request.mode ?? "DINE_IN") ||
     order.currency !== "PHP" ||
-    typeof order.totalPrice !== "string" ||
-    !/^\d{1,10}\.\d{2}$/.test(order.totalPrice) ||
+    !isOrderTotal(order.totalPrice) ||
     typeof order.createdAt !== "string" ||
     !Number.isFinite(Date.parse(order.createdAt)) ||
     !Array.isArray(order.items) ||
@@ -45,9 +47,7 @@ export function isCreatedOrderResponse(
   ].some((field) => order[field] !== undefined);
   if (
     hasParentMetadata &&
-    (typeof order.orderNumber !== "string" ||
-      !/^ORD-\d{6,19}$/.test(order.orderNumber) ||
-      BigInt(order.orderNumber.slice(4)) <= 0n ||
+    (!isOrderNumber(order.orderNumber) ||
       order.paymentStatus !== "UNPAID" ||
       typeof order.updatedAt !== "string" ||
       !Number.isFinite(Date.parse(order.updatedAt)) ||

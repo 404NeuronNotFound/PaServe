@@ -9,6 +9,7 @@ import { PublicMenuPage } from "./PublicMenuPage";
 import {
   orderReceipts,
   saveOrderReceipt,
+  readOrderReceipt,
 } from "../../features/cart/order-receipt";
 import { pendingOrders } from "../../features/cart/pending-orders";
 import { useCart } from "../../features/cart/cart";
@@ -223,37 +224,79 @@ it("retains the receipt during navigation when browser storage is blocked", () =
   }
 });
 
-it("keeps checkout open and preserves the cart when the response cannot be confirmed", async () => {
-  vi.mocked(api.get).mockResolvedValue({
-    data: {
-      shop: { slug: "cafe", name: "Cafe", description: null },
-      categories: [],
-      products: [],
-      featuredProducts: [],
-    },
-  });
-  vi.mocked(api.post).mockResolvedValue({
-    data: { order: { ...order, totalPrice: "1.00" } },
-  });
-  useCart.getState().add("cafe", quote);
-  setup("/menu/cafe");
-  await screen.findByRole("heading", { name: "Cafe" });
-  await userEvent.click(screen.getByRole("button", { name: "View cart (1)" }));
-  await userEvent.click(screen.getByRole("button", { name: "Review order" }));
-  await userEvent.click(
-    screen.getByRole("button", { name: "Place pickup order" }),
-  );
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    "not been confirmed",
-  );
-  expect(
-    screen.queryByRole("heading", { name: "Order submitted" }),
-  ).not.toBeInTheDocument();
-  expect(useCart.getState().shops.cafe).toHaveLength(1);
-  expect(
-    sessionStorage.getItem("paserve-order-receipt:v1:cafe:order-a"),
-  ).toBeNull();
+it.each([{ totalPrice: "1.00" }, { id: ".." }])(
+  "keeps checkout open and preserves the cart for an invalid response: %j",
+  async (invalid) => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        shop: { slug: "cafe", name: "Cafe", description: null },
+        categories: [],
+        products: [],
+        featuredProducts: [],
+      },
+    });
+    vi.mocked(api.post).mockResolvedValue({
+      data: { order: { ...order, ...invalid } },
+    });
+    useCart.getState().add("cafe", quote);
+    setup("/menu/cafe");
+    await screen.findByRole("heading", { name: "Cafe" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "View cart (1)" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Review order" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Place pickup order" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "not been confirmed",
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Order submitted" }),
+    ).not.toBeInTheDocument();
+    expect(useCart.getState().shops.cafe).toHaveLength(1);
+    expect(
+      sessionStorage.getItem("paserve-order-receipt:v1:cafe:order-a"),
+    ).toBeNull();
+  },
+);
+it("restores only display data from storage containing credentials and notes", () => {
+  saveOrderReceipt("cafe", "Cafe", { ...order, mode: "DINE_IN", table });
+  const key = "paserve-order-receipt:v1:cafe:order-a";
+  const raw = JSON.parse(sessionStorage.getItem(key)!);
+  Object.assign(raw, { qrToken: "private-order-token", notes: "private note" });
+  raw.table.checkoutToken = "private-table-token";
+  sessionStorage.setItem(key, JSON.stringify(raw));
+  orderReceipts.clearMemory();
+  const restored = readOrderReceipt("cafe", "order-a");
+  expect(restored).not.toBeNull();
+  expect(restored).not.toHaveProperty("qrToken");
+  expect(restored).not.toHaveProperty("notes");
+  expect(restored!.table).toEqual({ code: "T12", number: "Patio 4" });
 });
+it.each([
+  { status: "CONFIRMED" },
+  { status: "QUEUED" },
+  { id: "other-order" },
+  { orderNumber: "ORD-9999999999999999999" },
+  { totalPrice: 12 },
+  { currency: "USD" },
+])(
+  "does not claim a waiting receipt from corrupted display fields: %j",
+  (invalid) => {
+    saveOrderReceipt("cafe", "Cafe", order);
+    const key = "paserve-order-receipt:v1:cafe:order-a";
+    const raw = JSON.parse(sessionStorage.getItem(key)!);
+    sessionStorage.setItem(key, JSON.stringify({ ...raw, ...invalid }));
+    orderReceipts.clearMemory();
+    setup();
+    expect(
+      screen.getByRole("heading", { name: "Order receipt unavailable" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
+  },
+);
 
 it.each([
   null,
@@ -298,7 +341,7 @@ it("retains an older saved receipt after the persisted status rename", () => {
   expect(screen.getByRole("status")).toHaveTextContent("Pending");
 });
 
-it.each(["invalid", "-1.00", "12.345"])(
+it.each(["invalid", "-1.00", "12.345", "12.00\n"])(
   "does not substitute cart estimates when the saved total is invalid: %s",
   (totalPrice) => {
     useCart.getState().add("cafe", quote);
@@ -309,6 +352,21 @@ it.each(["invalid", "-1.00", "12.345"])(
     ).toBeInTheDocument();
     expect(screen.queryByText("₱10.00")).not.toBeInTheDocument();
     expect(api.post).not.toHaveBeenCalled();
+  },
+);
+it.each(["invalid", "T12\n", "../other"])(
+  "does not restore an invalid dine-in table code: %j",
+  (code) => {
+    saveOrderReceipt("cafe", "Cafe", {
+      ...order,
+      mode: "DINE_IN",
+      table: { ...table, code },
+    });
+    setup();
+    expect(
+      screen.getByRole("heading", { name: "Order receipt unavailable" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   },
 );
 

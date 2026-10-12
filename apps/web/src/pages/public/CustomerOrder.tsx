@@ -379,9 +379,11 @@ export function CustomerOrder({
             ? "Pickup order placed."
             : `Order placed for Table ${receipt.table.number}.`}{" "}
           Total {formatCartPrice(receipt.totalPrice)}. Order reference:{" "}
-          {receipt.orderNumber ?? receipt.id} Pending. Your order is not yet in
-          the kitchen queue. The cashier must confirm your order and payment
+          {receipt.orderNumber ?? "Unavailable"}. Pending. Your order is not yet
+          in the kitchen queue. The cashier must confirm your order and payment
           before the kitchen starts preparing it.
+          {!receipt.orderNumber &&
+            " Ask the counter staff for help with your submitted order."}
         </p>
       )}
       {error && <InlineMessage tone="error">{error}</InlineMessage>}

@@ -3,6 +3,12 @@ import type {
   PublicMenuResponse,
 } from "@paserve/contracts";
 import { createPendingOrderStorage } from "./pending-orders";
+import { isPublicTableContext } from "../shops/customer-table";
+import {
+  isOrderNumber,
+  isOrderReceiptId,
+  isOrderTotal,
+} from "./order-receipt-fields";
 
 /** Display snapshot only; never an authorization source or a live status lookup. */
 export interface OrderReceipt {
@@ -77,29 +83,42 @@ export function readOrderReceipt(
       Array.isArray(value) ||
       value.shopSlug !== shopSlug ||
       value.id !== orderId ||
+      !isOrderReceiptId(value.id) ||
       typeof value.shopName !== "string" ||
       !value.shopName.trim() ||
-      !(
-        value.orderNumber === null ||
-        (typeof value.orderNumber === "string" &&
-          /^ORD-\d{6,19}$/.test(value.orderNumber) &&
-          BigInt(value.orderNumber.slice(4)) > 0n)
-      ) ||
+      !(value.orderNumber === null || isOrderNumber(value.orderNumber)) ||
       value.status !== "PENDING_CONFIRMATION" ||
       value.currency !== "PHP" ||
-      typeof value.totalPrice !== "string" ||
-      !/^(?:0|[1-9]\d{0,9})\.\d{2}$/.test(value.totalPrice) ||
+      !isOrderTotal(value.totalPrice) ||
       !(value.mode === "TAKEOUT"
         ? value.table === null
         : value.mode === "DINE_IN" &&
           value.table &&
-          typeof value.table.code === "string" &&
-          !!value.table.code &&
-          typeof value.table.number === "string" &&
-          !!value.table.number.trim())
+          isPublicTableContext({
+            shopSlug,
+            code: value.table.code,
+            number: value.table.number,
+          }))
     )
       return null;
-    return value as OrderReceipt;
+    // Restore only display fields; legacy or tampered storage must not surface
+    // credentials, notes, or other request data through the receipt reader.
+    return {
+      shopSlug,
+      shopName: value.shopName,
+      primaryColor: value.primaryColor,
+      accentColor: value.accentColor,
+      id: value.id,
+      orderNumber: value.orderNumber,
+      mode: value.mode,
+      table:
+        value.mode === "DINE_IN"
+          ? { code: value.table.code, number: value.table.number }
+          : null,
+      status: "PENDING_CONFIRMATION",
+      currency: "PHP",
+      totalPrice: value.totalPrice,
+    };
   } catch {
     return null;
   }

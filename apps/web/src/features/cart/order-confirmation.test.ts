@@ -119,6 +119,30 @@ it("accepts complete parent metadata for saved-order confirmation", () => {
     ),
   ).toBe(true);
 });
+it.each(["..", "../other", "order-a/other", "order-a?other=1", "order-a\n"])(
+  "rejects unsafe receipt navigation IDs: %j",
+  (id) => {
+    expect(
+      isCreatedOrderResponse(
+        { order: { ...order, ...parentMetadata, id } },
+        request,
+        "cafe",
+      ),
+    ).toBe(false);
+  },
+);
+it.each(["ORD-000001\n", "ORD-9999999999999999999"])(
+  "rejects a noncanonical or out-of-scope order number: %j",
+  (orderNumber) => {
+    expect(
+      isCreatedOrderResponse(
+        { order: { ...order, ...parentMetadata, orderNumber } },
+        request,
+        "cafe",
+      ),
+    ).toBe(false);
+  },
+);
 it.each([
   { orderNumber: "ORD-000000" },
   { paymentStatus: "PAID" },

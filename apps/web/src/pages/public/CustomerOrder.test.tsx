@@ -77,6 +77,34 @@ it("defaults a tableless cart to pickup and submits without table fields", async
   expect(useCart.getState().shops.cafe).toEqual([]);
 });
 it.each(["TAKEOUT", "DINE_IN"] as const)(
+  "keeps the internal ID out of a legacy %s inline receipt",
+  async (mode) => {
+    vi.mocked(api.post).mockResolvedValue({
+      data: {
+        order: {
+          ...response.data.order,
+          mode,
+          table: mode === "DINE_IN" ? table : null,
+        },
+      },
+    });
+    if (mode === "DINE_IN") useCustomerTables.getState().setResolved(table);
+    render(
+      <CustomerOrder
+        shopSlug="cafe"
+        {...(mode === "DINE_IN" ? { table } : {})}
+      />,
+    );
+    await placeOrder(
+      mode === "DINE_IN" ? "Place dine-in order" : "Place pickup order",
+    );
+    const receipt = await screen.findByRole("status");
+    expect(receipt).toHaveTextContent("Order reference: Unavailable");
+    expect(receipt).toHaveTextContent("Ask the counter staff for help");
+    expect(receipt).not.toHaveTextContent("pickup-a");
+  },
+);
+it.each(["TAKEOUT", "DINE_IN"] as const)(
   "displays the friendly order number for %s without exposing secure identifiers",
   async (mode) => {
     const token = `cGF5bG9hZA.${"a".repeat(43)}`;
