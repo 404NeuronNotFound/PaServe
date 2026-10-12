@@ -651,10 +651,27 @@ export interface PublicTableContext {
   code: string;
   number: string;
 }
-/** Prepared selection data; the future order endpoint must resolve/revalidate it. */
+/** Selection data; order submission resolves/revalidates the table and items. */
 export interface CustomerCheckoutRequest {
+  mode?: "DINE_IN";
   tableCode?: string;
   items: (ProductSelectionRequest & { productId: string })[];
+}
+export interface CreateDineInOrderRequest extends CustomerCheckoutRequest {
+  requestId: string;
+  tableCode: string;
+}
+export interface DineInOrderResponse {
+  order: {
+    id: string;
+    mode: "DINE_IN";
+    status: "PLACED";
+    table: PublicTableContext;
+    currency: typeof PRODUCT_CURRENCY;
+    totalPrice: string;
+    items: ProductSelectionQuoteResponse[];
+    createdAt: string;
+  };
 }
 export interface RestaurantTable {
   id: string;
