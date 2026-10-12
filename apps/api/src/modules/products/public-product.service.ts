@@ -21,20 +21,26 @@ const unavailable = () =>
 @Injectable()
 export class PublicProductService {
   constructor(private readonly repository: PublicProductRepository) {}
-  private async read(slug: string, productId: string) {
+  private async read(
+    slug: string,
+    productId: string,
+    db?: Prisma.TransactionClient,
+  ) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 100)
       throw unavailable();
-    const result = await this.repository.read(slug, productId);
+    const result = await this.repository.read(slug, productId, db);
     if (!result) throw unavailable();
     return result;
   }
   async details(
     slug: string,
     productId: string,
+    db?: Prisma.TransactionClient,
   ): Promise<PublicProductDetailsResponse> {
     const { optionGroups, variants, addOns, ...product } = await this.read(
       slug,
       productId,
+      db,
     );
     return {
       product: {
@@ -74,8 +80,9 @@ export class PublicProductService {
     slug: string,
     productId: string,
     dto: ProductSelectionDto,
+    db?: Prisma.TransactionClient,
   ): Promise<ProductSelectionQuoteResponse> {
-    const details = await this.details(slug, productId);
+    const details = await this.details(slug, productId, db);
     if (!details.product.isOrderable) throw unavailable();
     const invalid = () =>
       new BadRequestException({

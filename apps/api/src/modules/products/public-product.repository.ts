@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 
 @Injectable()
 export class PublicProductRepository {
   constructor(private readonly prisma: PrismaService) {}
-  async read(slug: string, productId: string) {
-    const shop = await this.prisma.shop.findFirst({
+  async read(
+    slug: string,
+    productId: string,
+    db: Prisma.TransactionClient = this.prisma,
+  ) {
+    const shop = await db.shop.findFirst({
       where: { slug, isActive: true },
       select: { id: true },
     });
@@ -15,7 +20,7 @@ export class PublicProductRepository {
       { createdAt: 'asc' },
       { id: 'asc' },
     ] as const;
-    return this.prisma.product.findFirst({
+    return db.product.findFirst({
       where: {
         id: productId,
         shopId: shop.id,

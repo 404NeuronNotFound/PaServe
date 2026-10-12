@@ -8,6 +8,7 @@ export const TENANT_RESOURCE_KINDS = [
   'category',
   'addOn',
   'table',
+  'order',
 ] as const;
 export type TenantResourceKind = (typeof TENANT_RESOURCE_KINDS)[number];
 
@@ -37,6 +38,7 @@ export class TenantResourcesRepository {
     if (kind === 'addOn') return this.prisma.addOn.findFirst({ where, select });
     if (kind === 'table')
       return this.prisma.restaurantTable.findFirst({ where, select });
+    if (kind === 'order') return this.prisma.order.findFirst({ where, select });
     return this.prisma.category.findFirst({ where, select });
   }
 }

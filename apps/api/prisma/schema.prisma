@@ -75,6 +75,7 @@ model Shop {
   products   Product[]
   addOns     AddOn[]
   tables     RestaurantTable[]
+  orders     Order[]
 
   @@map("shops")
 }
@@ -89,10 +90,38 @@ model RestaurantTable {
   updatedAt DateTime @updatedAt
 
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orders Order[]
 
+  @@unique([id, shopId])
   @@unique([shopId, number])
   @@unique([shopId, code])
   @@map("restaurant_tables")
+}
+
+enum OrderMode {
+  DINE_IN
+}
+
+model Order {
+  id          String    @id @default(uuid())
+  shopId      String
+  tableId     String
+  requestId   String
+  requestHash String
+  mode        OrderMode @default(DINE_IN)
+  status      String    @default("PLACED")
+  tableCode   String
+  tableNumber String    @db.VarChar(40)
+  currency    String    @default("PHP")
+  totalPrice  Decimal   @db.Decimal(12, 2)
+  items       Json
+  createdAt   DateTime  @default(now())
+  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  table       RestaurantTable @relation(fields: [tableId, shopId], references: [id, shopId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([shopId, requestId])
+  @@index([shopId, tableId, createdAt])
+  @@map("orders")
 }
 
 model ShopMember {

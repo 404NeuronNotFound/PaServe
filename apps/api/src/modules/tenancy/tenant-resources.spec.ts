@@ -20,7 +20,7 @@ describe('tenant resource isolation', () => {
     memberships.requireMembership.mockResolvedValue({ shopId, role: 'OWNER' });
   });
 
-  it.each(['product', 'category', 'table'] as const)(
+  it.each(['product', 'category', 'table', 'order'] as const)(
     'resolves a %s only using user, shop and resource IDs',
     async (kind) => {
       resources.findResource.mockResolvedValue({ id: resourceId, shopId });
@@ -69,18 +69,19 @@ describe('tenant resource isolation', () => {
 
   it('rejects unsupported resource kinds', async () => {
     await expect(
-      service.requireResource(userId, shopId, 'order' as 'product', resourceId),
+      service.requireResource(userId, shopId, 'unknown' as 'product', resourceId),
     ).rejects.toMatchObject({ status: 400 });
     expect(resources.findResource).not.toHaveBeenCalled();
   });
 
-  it.each(['product', 'category', 'table'] as const)(
+  it.each(['product', 'category', 'table', 'order'] as const)(
     'scopes the actual %s query and rechecks live access',
     async (kind) => {
       const prisma = {
         product: { findFirst: vi.fn() },
         category: { findFirst: vi.fn() },
         restaurantTable: { findFirst: vi.fn() },
+        order: { findFirst: vi.fn() },
       };
       const repo = new TenantResourcesRepository(
         prisma as unknown as PrismaService,
