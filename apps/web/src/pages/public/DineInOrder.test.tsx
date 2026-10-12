@@ -5,6 +5,7 @@ import { CustomerOrder as DineInOrder } from "./CustomerOrder";
 import { useCart } from "../../features/cart/cart";
 import { useCustomerTables } from "../../features/shops/customer-table";
 import { api } from "../../lib/api/client";
+import { pendingOrders } from "../../features/cart/pending-orders";
 vi.mock("../../lib/api/client", () => ({ api: { post: vi.fn() } }));
 const table = {
   shopSlug: "cafe",
@@ -28,16 +29,24 @@ const response = {
     order: {
       id: "order-a",
       mode: "DINE_IN",
-      status: "PLACED",
+      status: "PENDING",
       table,
       totalPrice: "12.00",
       currency: "PHP",
-      items: [],
+      items: [
+        {
+          ...quote,
+          basePrice: "12.00",
+          unitPrice: "12.00",
+          totalPrice: "12.00",
+        },
+      ],
       createdAt: "2026-10-12",
     },
   },
 };
 beforeEach(() => {
+  pendingOrders.clearMemory();
   sessionStorage.clear();
   vi.resetAllMocks();
   useCart.setState({ shops: {} });

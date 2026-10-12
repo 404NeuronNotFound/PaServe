@@ -14,6 +14,7 @@ import { CustomerOrder } from "./CustomerOrder";
 import { useCart } from "../../features/cart/cart";
 import { useCustomerTables } from "../../features/shops/customer-table";
 import { api } from "../../lib/api/client";
+import { pendingOrders } from "../../features/cart/pending-orders";
 import type { ProductSelectionQuoteResponse } from "@paserve/contracts";
 vi.mock("../../lib/api/client", () => ({ api: { post: vi.fn() } }));
 const configured: ProductSelectionQuoteResponse = {
@@ -57,10 +58,10 @@ const receipt = {
       id: "order-a",
       mode: "TAKEOUT",
       table: null,
-      status: "PLACED",
+      status: "PENDING",
       currency: "PHP",
       totalPrice: "44.00",
-      items: [],
+      items: [configured, regular],
       createdAt: "2026-10-12",
     },
   },
@@ -74,6 +75,7 @@ const close = Object.getOwnPropertyDescriptor(
   "close",
 );
 beforeEach(() => {
+  pendingOrders.clearMemory();
   vi.resetAllMocks();
   sessionStorage.clear();
   useCart.setState({ shops: {} });
@@ -168,7 +170,28 @@ it("never submits saved frontend price snapshots and displays the server's recal
     })),
   });
   vi.mocked(api.post).mockResolvedValue({
-    data: { order: { ...receipt.data.order, totalPrice: "56.50" } },
+    data: {
+      order: {
+        ...receipt.data.order,
+        totalPrice: "56.50",
+        items: [
+          {
+            ...configured,
+            basePrice: "20.03",
+            unitPrice: "28.25",
+            totalPrice: "56.50",
+            variants: configured.variants.map((option) => ({
+              ...option,
+              priceAdjustment: "6.07",
+            })),
+            addOns: configured.addOns.map((option) => ({
+              ...option,
+              priceAdjustment: "2.15",
+            })),
+          },
+        ],
+      },
+    },
   });
   render(<CustomerOrder shopSlug="cafe" />);
   await userEvent.click(screen.getByRole("button", { name: "Review order" }));
@@ -203,6 +226,38 @@ it("lets the customer return to editing without submitting", async () => {
   expect(screen.getByRole("button", { name: "Review order" })).toBeEnabled();
   expect(screen.getAllByRole("spinbutton")).toHaveLength(2);
   expect(api.post).not.toHaveBeenCalled();
+});
+it("does not submit when Review order is double-clicked", async () => {
+  render(<CustomerOrder shopSlug="cafe" />);
+  await userEvent.dblClick(
+    screen.getByRole("button", { name: "Review order" }),
+  );
+  expect(api.post).not.toHaveBeenCalled();
+  expect(
+    screen.getByRole("region", { name: "Review your order" }),
+  ).toBeInTheDocument();
+});
+it("sends a pending order only once when confirmation is clicked repeatedly", async () => {
+  let finish!: (value: typeof receipt) => void;
+  vi.mocked(api.post).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<CustomerOrder shopSlug="cafe" />);
+  await userEvent.click(screen.getByRole("button", { name: "Review order" }));
+  const submit = screen.getByRole("button", { name: "Place pickup order" });
+  fireEvent.click(submit);
+  fireEvent.click(submit);
+  expect(api.post).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Placing order…" })).toBeDisabled();
+  await act(async () => {
+    finish(receipt);
+  });
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Awaiting shop confirmation",
+  );
 });
 it("preserves every selected modifier through review, Edit cart and a fresh review", async () => {
   useCart.setState({ shops: { ...useCart.getState().shops, cafe: [] } });

@@ -5,6 +5,7 @@ import { CustomerOrder } from "./CustomerOrder";
 import { useCart } from "../../features/cart/cart";
 import { useCustomerTables } from "../../features/shops/customer-table";
 import { api } from "../../lib/api/client";
+import { pendingOrders } from "../../features/cart/pending-orders";
 vi.mock("../../lib/api/client", () => ({ api: { post: vi.fn() } }));
 const quote = {
   productId: "coffee",
@@ -28,16 +29,24 @@ const response = {
     order: {
       id: "pickup-a",
       mode: "TAKEOUT",
-      status: "PLACED",
+      status: "PENDING",
       table: null,
       totalPrice: "12.00",
       currency: "PHP",
-      items: [],
+      items: [
+        {
+          ...quote,
+          basePrice: "12.00",
+          unitPrice: "12.00",
+          totalPrice: "12.00",
+        },
+      ],
       createdAt: "2026-10-12",
     },
   },
 };
 beforeEach(() => {
+  pendingOrders.clearMemory();
   sessionStorage.clear();
   vi.resetAllMocks();
   useCart.setState({ shops: {} });
@@ -125,4 +134,61 @@ it("keeps pickup cart and retry request when a response unexpectedly binds a tab
     "not been confirmed",
   );
   expect(useCart.getState().shops.cafe).toHaveLength(1);
+});
+it("preserves an uncertain request after a later 404 rather than allowing a duplicate new order", async () => {
+  vi.mocked(api.post)
+    .mockRejectedValueOnce(new Error("lost"))
+    .mockRejectedValueOnce({ isAxiosError: true, response: { status: 404 } })
+    .mockResolvedValueOnce(response);
+  render(<CustomerOrder shopSlug="cafe" />);
+  await placeOrder("Place pickup order");
+  await screen.findByRole("alert");
+  const original = sessionStorage.getItem("paserve-pending-order:v1:cafe");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Confirm previous order" }),
+  );
+  expect(sessionStorage.getItem("paserve-pending-order:v1:cafe")).toBe(
+    original,
+  );
+  expect(useCart.getState().shops.cafe).toHaveLength(1);
+  await userEvent.click(
+    screen.getByRole("button", { name: "Confirm previous order" }),
+  );
+  expect(vi.mocked(api.post).mock.calls[2][1]).toEqual(
+    vi.mocked(api.post).mock.calls[0][1],
+  );
+  expect(await screen.findByRole("status")).toHaveTextContent(
+    "Awaiting shop confirmation",
+  );
+});
+it("retains the original request across cart closure when session storage is blocked", async () => {
+  const blockedWrite = vi
+    .spyOn(Storage.prototype, "setItem")
+    .mockImplementation(() => {
+      throw new Error("blocked");
+    });
+  const blockedRead = vi
+    .spyOn(Storage.prototype, "getItem")
+    .mockImplementation(() => {
+      throw new Error("blocked");
+    });
+  try {
+    vi.mocked(api.post)
+      .mockRejectedValueOnce(new Error("lost"))
+      .mockResolvedValueOnce(response);
+    const first = render(<CustomerOrder shopSlug="cafe" />);
+    await placeOrder("Place pickup order");
+    await screen.findByRole("alert");
+    const original = vi.mocked(api.post).mock.calls[0][1];
+    first.unmount();
+    render(<CustomerOrder shopSlug="cafe" />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Confirm previous order" }),
+    );
+    expect(vi.mocked(api.post).mock.calls[1][1]).toEqual(original);
+    expect(useCart.getState().shops.cafe).toEqual([]);
+  } finally {
+    blockedWrite.mockRestore();
+    blockedRead.mockRestore();
+  }
 });

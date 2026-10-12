@@ -678,7 +678,7 @@ export interface DineInOrderResponse {
   order: {
     id: string;
     mode: "DINE_IN";
-    status: "PLACED";
+    status: "PENDING";
     table: PublicTableContext;
     currency: typeof PRODUCT_CURRENCY;
     totalPrice: string;

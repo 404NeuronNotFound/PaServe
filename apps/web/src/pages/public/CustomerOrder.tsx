@@ -15,6 +15,8 @@ import {
 } from "../../features/cart/cart";
 import { parseCartLine } from "../../features/cart/cart-storage";
 import { orderSubmissionRequest } from "../../features/cart/order-submission";
+import { isCreatedOrderResponse } from "../../features/cart/order-confirmation";
+import { pendingOrders } from "../../features/cart/pending-orders";
 import { CartReview, type CartReviewSnapshot } from "./CartReview";
 import { api } from "../../lib/api/client";
 import { formatCartPrice } from "../../lib/money";
@@ -29,7 +31,7 @@ type Attempt = {
 function readAttempt(key: string, shopSlug: string): Attempt | null {
   try {
     const saved = JSON.parse(
-      sessionStorage.getItem(key) ?? "null",
+      pendingOrders.read(key) ?? "null",
     ) as Attempt | null;
     if (!(
       saved &&
@@ -237,11 +239,7 @@ export function CustomerOrder({
           review,
         };
         setAttempt(sent);
-        try {
-          sessionStorage.setItem(key, JSON.stringify(sent));
-        } catch {
-          /* Memory retry remains available. */
-        }
+        pendingOrders.write(key, sent);
       }
       // Refresh only the signature for the original table; never redirect a retry.
       if (
@@ -254,30 +252,13 @@ export function CustomerOrder({
           request: { ...sent.request, tableToken: table.checkoutToken },
         };
         setAttempt(sent);
-        try {
-          sessionStorage.setItem(key, JSON.stringify(sent));
-        } catch {
-          /* Keep memory retry. */
-        }
+        pendingOrders.write(key, sent);
       }
       const { data } = await api.post<CustomerOrderResponse>(
         `/menu/${encodeURIComponent(shopSlug)}/orders`,
         orderSubmissionRequest(sent.request),
       );
-      if (
-        typeof data.order?.id !== "string" ||
-        !data.order.id ||
-        data.order.mode !== (sent.request.mode ?? "DINE_IN") ||
-        data.order.status !== "PLACED" ||
-        data.order.currency !== "PHP" ||
-        typeof data.order.totalPrice !== "string" ||
-        !/^\d{1,10}\.\d{2}$/.test(data.order.totalPrice) ||
-        (data.order.mode === "TAKEOUT"
-          ? data.order.table !== null
-          : !isPublicTableContext(data.order.table) ||
-            data.order.table.shopSlug !== shopSlug ||
-            data.order.table.code !== sent.request.tableCode)
-      ) {
+      if (!isCreatedOrderResponse(data, sent.request, shopSlug)) {
         throw new Error("The order response could not be confirmed.");
       }
       setReceipt(data.order);
@@ -297,11 +278,7 @@ export function CustomerOrder({
       });
       setAttempt(null);
       setReview(null);
-      try {
-        sessionStorage.removeItem(key);
-      } catch {
-        /* Storage may be unavailable. */
-      }
+      pendingOrders.remove(key);
     } catch (cause) {
       if (!sent) setReview(null);
       const status = isAxiosError(cause) ? cause.response?.status : undefined;
@@ -313,6 +290,7 @@ export function CustomerOrder({
           "Scan the original table QR again, then confirm this same order. Your cart is saved.",
         );
       } else if (
+        !attempt &&
         status &&
         status >= 400 &&
         status < 500 &&
@@ -322,11 +300,7 @@ export function CustomerOrder({
       ) {
         setAttempt(null);
         setReview(null);
-        try {
-          sessionStorage.removeItem(key);
-        } catch {
-          /* Storage may be unavailable. */
-        }
+        pendingOrders.remove(key);
         setError(
           mode === "TAKEOUT"
             ? "This pickup order could not be placed. Check item availability, then try again."
@@ -399,7 +373,7 @@ export function CustomerOrder({
             ? "Pickup order placed."
             : `Order placed for Table ${receipt.table.number}.`}{" "}
           Total {formatCartPrice(receipt.totalPrice)}. Order reference:{" "}
-          {receipt.id}
+          {receipt.id} Awaiting shop confirmation.
         </p>
       )}
       {error && <InlineMessage tone="error">{error}</InlineMessage>}
@@ -445,6 +419,13 @@ export function CustomerOrder({
           </button>
         )}
         <button
+          key={
+            attempt
+              ? "retry-order"
+              : review && !staleReview
+                ? "submit-order"
+                : "review-order"
+          }
           ref={action}
           type="button"
           className="primary-button"
