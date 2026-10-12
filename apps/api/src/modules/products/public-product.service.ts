@@ -94,26 +94,34 @@ export class PublicProductService {
     const variants = dto.variantIds.map((id) =>
       details.variants.find((variant) => variant.id === id),
     );
-    const addOns = dto.addOnIds.map((id) =>
-      details.addOns.find((addOn) => addOn.id === id),
-    );
+    // Only current variants returned by the product/shop-scoped repository are eligible.
     if (
       new Set(dto.variantIds).size !== dto.variantIds.length ||
-      new Set(dto.addOnIds).size !== dto.addOnIds.length ||
-      variants.some((value) => !value) ||
-      addOns.some((value) => !value)
+      variants.some((value) => !value)
     )
       throw invalid();
     const chosenVariants = variants.filter((value) => value !== undefined);
-    const chosenAddOns = addOns.filter((value) => value !== undefined);
     const groups = chosenVariants.map((variant) => variant.optionGroupId);
     if (
       new Set(groups).size !== groups.length ||
+      groups.some(
+        (id) =>
+          id !== null && !details.optionGroups.some((group) => group.id === id),
+      ) ||
       details.optionGroups.some(
         (group) => group.isRequired && !groups.includes(group.id),
       )
     )
       throw invalid();
+    const addOns = dto.addOnIds.map((id) =>
+      details.addOns.find((addOn) => addOn.id === id),
+    );
+    if (
+      new Set(dto.addOnIds).size !== dto.addOnIds.length ||
+      addOns.some((value) => !value)
+    )
+      throw invalid();
+    const chosenAddOns = addOns.filter((value) => value !== undefined);
     const unitPrice = [...chosenVariants, ...chosenAddOns].reduce(
       (sum, option) => sum.plus(option.priceAdjustment),
       new Prisma.Decimal(details.product.price),

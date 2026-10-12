@@ -296,6 +296,105 @@ try {
         assert.equal(restored.order.status, 'PENDING');
         assert.equal(restored.order.totalPrice, '422.50');
         const before = await tx.order.count();
+        const otherProductVariant = await tx.productVariant.create({
+          data: {
+            shopId: shop.id,
+            productId: availableProduct.id,
+            name: 'Other product choice',
+            priceAdjustment: '1.00',
+          },
+        });
+        const foreignVariant = await tx.productVariant.create({
+          data: {
+            shopId: foreignShop.id,
+            productId: foreignProduct.id,
+            name: 'Foreign choice',
+            priceAdjustment: '1.00',
+          },
+        });
+        const conflictingVariant = await tx.productVariant.create({
+          data: {
+            shopId: shop.id,
+            productId: product.id,
+            optionGroupId: group.id,
+            name: 'Another size',
+            priceAdjustment: '2.00',
+          },
+        });
+        const rejectVariants = async (mode, variantIds, mixed = false) => {
+          const invalidLine = { ...items[0], variantIds };
+          await assert.rejects(
+            () =>
+              orders.create(shop.slug, {
+                ...pickupRequest,
+                requestId: randomUUID(),
+                mode,
+                items: mixed ? [items[0], invalidLine] : [invalidLine],
+                ...(mode === 'DINE_IN'
+                  ? {
+                      tableCode: table.code,
+                      tableToken: contexts.issue(shop.slug, table.code),
+                    }
+                  : {}),
+              }),
+            (error) =>
+              error.status === 400 &&
+              error.getResponse().code === 'PRODUCT_SELECTION_INVALID',
+          );
+          assert.equal(await tx.order.count(), before);
+        };
+        const deletedVariant = await tx.productVariant.create({
+          data: {
+            shopId: shop.id,
+            productId: product.id,
+            optionGroupId: group.id,
+            name: 'Deleted size',
+            priceAdjustment: '2.00',
+          },
+        });
+        await pricing.quote(
+          shop.slug,
+          product.id,
+          { ...items[0], variantIds: [deletedVariant.id] },
+          tx,
+        );
+        await tx.productVariant.delete({
+          where: { id: deletedVariant.id, shopId: shop.id },
+        });
+        for (const mode of ['DINE_IN', 'TAKEOUT']) {
+          for (const variantIds of [
+            [randomUUID()],
+            [deletedVariant.id],
+            [otherProductVariant.id],
+            [foreignVariant.id],
+            [variant.id, conflictingVariant.id],
+            [variant.id, variant.id],
+            [],
+          ])
+            await rejectVariants(mode, variantIds);
+          await rejectVariants(mode, [otherProductVariant.id], true);
+        }
+        for (const [delegate, choiceId] of [
+          [tx.productVariant, variant.id],
+          [tx.productOptionGroup, group.id],
+        ]) {
+          // Preview succeeds before the selected variant/group is disabled.
+          await pricing.quote(shop.slug, product.id, items[0], tx);
+          await delegate.update({
+            where: { id: choiceId, shopId: shop.id },
+            data: { isAvailable: false },
+          });
+          for (const mode of ['DINE_IN', 'TAKEOUT'])
+            await rejectVariants(mode, [variant.id]);
+          assert.equal(
+            (await orders.create(shop.slug, pickupRequest)).order.id,
+            pickup.order.id,
+          );
+          await delegate.update({
+            where: { id: choiceId, shopId: shop.id },
+            data: { isAvailable: true },
+          });
+        }
         const missingProductId = randomUUID();
         for (const mode of ['DINE_IN', 'TAKEOUT']) {
           for (const productId of [missingProductId, foreignProduct.id]) {

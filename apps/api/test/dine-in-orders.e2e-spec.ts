@@ -788,6 +788,124 @@ describe('dine-in order submission', () => {
       );
     },
   );
+  describe.each(['DINE_IN', 'TAKEOUT'] as const)(
+    '%s variant validation',
+    (mode) => {
+      const orderBody = () => ({
+        ...(mode === 'DINE_IN' ? payload() : takeout()),
+        items: [configuredLine()],
+      });
+      it.each(['variant', 'group'])(
+        'rejects a selected %s that became unavailable after preview',
+        async (kind) => {
+          product.mockResolvedValue(configuredProduct());
+          const { productId, ...selection } = configuredLine();
+          await request(app.getHttpServer())
+            .post(`/api/v1/menu/cafe/products/${productId}/quote`)
+            .send(selection)
+            .expect(201);
+          product.mockResolvedValue({
+            ...configuredProduct(),
+            variants: [],
+            ...(kind === 'group' ? { optionGroups: [] } : {}),
+          });
+          const result = await post(orderBody()).expect(400);
+          expect(result.body.code).toBe('PRODUCT_SELECTION_INVALID');
+          expect(result.body.message).toBe(
+            'Choose available options for this product and complete all required choices.',
+          );
+          expect(create).not.toHaveBeenCalled();
+          expect(
+            product.mock.calls.at(-1)![0].select.variants.where,
+          ).toMatchObject({
+            shopId: 'shop-a',
+            productId: id,
+            isAvailable: true,
+          });
+        },
+      );
+      it.each(['same group', 'ungrouped', 'missing group'])(
+        'rejects conflicting or invalid group choices: %s',
+        async (kind) => {
+          const data = configuredProduct();
+          const first = data.variants[0];
+          product.mockResolvedValue({
+            ...data,
+            optionGroups: kind === 'same group' ? data.optionGroups : [],
+            variants:
+              kind === 'ungrouped'
+                ? [
+                    { ...first, optionGroupId: null },
+                    { ...first, id: anotherId, optionGroupId: null },
+                  ]
+                : kind === 'missing group'
+                  ? [first]
+                  : [first, { ...first, id: anotherId }],
+          });
+          const result = await post({
+            ...orderBody(),
+            items: [
+              {
+                ...configuredLine(),
+                variantIds:
+                  kind === 'missing group'
+                    ? [variantId]
+                    : [variantId, anotherId],
+              },
+            ],
+          }).expect(400);
+          expect(result.body.code).toBe('PRODUCT_SELECTION_INVALID');
+          expect(create).not.toHaveBeenCalled();
+        },
+      );
+      it('accepts one current choice per required group with server prices', async () => {
+        const data = configuredProduct();
+        product.mockResolvedValue({
+          ...data,
+          optionGroups: [
+            ...data.optionGroups,
+            { id: anotherId, name: 'Temperature', isRequired: true },
+          ],
+          variants: [
+            ...data.variants,
+            {
+              ...data.variants[0],
+              id: anotherId,
+              optionGroupId: anotherId,
+              name: 'Iced',
+              priceAdjustment: new Prisma.Decimal('1.00'),
+            },
+          ],
+        });
+        const result = await post({
+          ...orderBody(),
+          items: [{ ...configuredLine(), variantIds: [variantId, anotherId] }],
+        }).expect(201);
+        expect(
+          result.body.order.items[0].variants.map(
+            (variant: { name: string }) => variant.name,
+          ),
+        ).toEqual(['Large', 'Iced']);
+        expect(result.body.order.totalPrice).toBe('36.62');
+      });
+      it('rejects a missing required choice even when the group has no available variants', async () => {
+        product.mockResolvedValue({ ...configuredProduct(), variants: [] });
+        const result = await post({
+          ...orderBody(),
+          items: [{ ...configuredLine(), variantIds: [] }],
+        }).expect(400);
+        expect(result.body.code).toBe('PRODUCT_SELECTION_INVALID');
+        expect(create).not.toHaveBeenCalled();
+      });
+      it('rejects duplicate selected variant IDs before database access', async () => {
+        await post({
+          ...orderBody(),
+          items: [{ ...configuredLine(), variantIds: [variantId, variantId] }],
+        }).expect(400);
+        expect(transaction).not.toHaveBeenCalled();
+      });
+    },
+  );
   const forgedFields = [
     { scope: 'order', field: 'totalPrice', value: '0.01' },
     { scope: 'order', field: 'subtotal', value: '0.01' },
