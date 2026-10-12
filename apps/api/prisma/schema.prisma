@@ -145,6 +145,14 @@ model OrderItem {
   quantity Int
   notes String? @db.VarChar(300)
   snapshot Json
+  productSnapshotId String
+  productNameSnapshot String
+  currency String @default("PHP")
+  basePriceSnapshot Decimal @db.Decimal(10, 2)
+  unitPriceSnapshot Decimal @db.Decimal(12, 2)
+  lineTotalSnapshot Decimal @db.Decimal(12, 2)
+  variantsSnapshot Json
+  addOnsSnapshot Json
   createdAt DateTime @default(now())
   order Order @relation(fields: [orderId, shopId], references: [id, shopId], onDelete: Cascade, onUpdate: Restrict)
   // SQL preserves shopId when product deletion sets only productId to null.
