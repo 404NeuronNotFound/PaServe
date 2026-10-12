@@ -14,6 +14,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { PublicProductService } from '../products/public-product.service.js';
 import { CreateOrderDto } from './create-order.dto.js';
 import { TableContextService } from '../tables/table-context.service.js';
+import { OrderTokenService } from './order-token.service.js';
 
 @Injectable()
 export class OrdersService {
@@ -21,6 +22,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly products: PublicProductService,
     private readonly contexts: TableContextService,
+    private readonly tokens: OrderTokenService,
   ) {}
 
   async create(
@@ -76,9 +78,16 @@ export class OrdersService {
         });
       if (order.status !== 'PENDING')
         throw new Error('Invalid persisted order status.');
+      if (order.paymentStatus !== 'UNPAID')
+        throw new Error('Invalid persisted payment status.');
       const common = {
         id: order.id,
         status: 'PENDING' as const,
+        paymentStatus: 'UNPAID' as const,
+        orderNumber: order.orderNumber,
+        qrToken: this.tokens.issue(order),
+        qrTokenExpiresAt: order.qrTokenExpiresAt.toISOString(),
+        updatedAt: order.updatedAt.toISOString(),
         currency: PRODUCT_CURRENCY,
         // No order-level adjustments are modeled; the saved total is also the subtotal.
         subtotalPrice: order.totalPrice.toFixed(2),
@@ -182,6 +191,12 @@ export class OrdersService {
               message:
                 'This order total is too large. Reduce the quantities and try again.',
             });
+          const numbering = await tx.shop.update({
+            where: { id: shop.id, isActive: true, acceptingOrders: true },
+            data: { lastOrderNumber: { increment: 1 } },
+            select: { lastOrderNumber: true },
+          });
+          const createdAt = new Date();
           const order = await tx.order.create({
             data: {
               shopId: shop.id,
@@ -190,6 +205,12 @@ export class OrdersService {
               requestHash: hash,
               mode,
               status: 'PENDING',
+              paymentStatus: 'UNPAID',
+              orderNumber: `ORD-${numbering.lastOrderNumber.toString().padStart(6, '0')}`,
+              ...this.tokens.metadata(),
+              qrTokenRevokedAt: null,
+              createdAt,
+              updatedAt: createdAt,
               tableCode: mode === 'DINE_IN' ? dto.tableCode : null,
               tableNumber: table?.number ?? null,
               currency: PRODUCT_CURRENCY,

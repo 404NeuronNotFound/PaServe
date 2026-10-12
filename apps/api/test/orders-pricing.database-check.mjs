@@ -9,6 +9,7 @@ import { PublicProductRepository } from '../dist/modules/products/public-product
 import { PublicProductService } from '../dist/modules/products/public-product.service.js';
 import { OrdersService } from '../dist/modules/orders/orders.service.js';
 import { TableContextService } from '../dist/modules/tables/table-context.service.js';
+import { OrderTokenService } from '../dist/modules/orders/order-token.service.js';
 
 // Real Prisma repository + real pricing/order services; all DDL/data rolls back.
 const schema = `phase10_pricing_${randomUUID().replaceAll('-', '')}`;
@@ -46,6 +47,9 @@ try {
           `ALTER TABLE ${q('shops')} DROP COLUMN IF EXISTS "acceptingOrders"`,
         );
         await tx.$executeRawUnsafe(
+          `ALTER TABLE ${q('shops')} DROP COLUMN IF EXISTS "lastOrderNumber"`,
+        );
+        await tx.$executeRawUnsafe(
           `ALTER TABLE ${q('restaurant_tables')} ADD PRIMARY KEY ("id")`,
         );
         await tx.$executeRawUnsafe(
@@ -78,6 +82,7 @@ try {
           '20261012140100_takeout_order_tables',
           '20261012160000_pending_order_status',
           '20261012170000_shop_accepting_orders',
+          '20261012180000_parent_order_metadata',
         ]) {
           const sql = await readFile(
             new URL(
@@ -156,6 +161,7 @@ try {
           { $transaction: (callback) => callback(tx) },
           pricing,
           contexts,
+          new OrderTokenService(new ConfigService()),
         );
         const items = [
           {
@@ -196,6 +202,16 @@ try {
           where: { id: pickup.order.id },
         });
         assert.equal(saved.totalPrice.toFixed(2), '422.50');
+        assert.equal(saved.orderNumber, 'ORD-000001');
+        assert.equal(saved.paymentStatus, 'UNPAID');
+        assert.equal(saved.createdAt.getTime(), saved.updatedAt.getTime());
+        assert.ok(saved.qrTokenExpiresAt.getTime() > saved.createdAt.getTime());
+        const tokenService = new OrderTokenService(new ConfigService());
+        tokenService.verify(pickup.order.qrToken, saved);
+        assert.equal(
+          (await orders.create(shop.slug, pickupRequest)).order.qrToken,
+          pickup.order.qrToken,
+        );
         assert.equal(saved.items[0].unitPrice, '211.25');
         assert.equal(saved.items[0].notes, 'Less ice\nNo sugar');
         const dineIn = await orders.create(shop.slug, {
@@ -206,6 +222,7 @@ try {
           items,
         });
         assert.equal(dineIn.order.status, 'PENDING');
+        assert.equal(dineIn.order.orderNumber, 'ORD-000002');
         assert.equal(dineIn.order.totalPrice, '422.50');
         assert.equal(
           (await tx.order.findUniqueOrThrow({ where: { id: dineIn.order.id } }))
@@ -647,6 +664,11 @@ try {
         const protection =
           await tx.$queryRaw`SELECT relrowsecurity AS rls FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = ${schema} AND c.relname = 'orders'`;
         assert.equal(protection[0].rls, true);
+        assert.equal(
+          (await tx.shop.findUniqueOrThrow({ where: { id: shop.id } }))
+            .lastOrderNumber,
+          BigInt(before),
+        );
         throw rollback;
       },
       {

@@ -68,6 +68,7 @@ model Shop {
   menuLayout MenuLayout @default(list)
   isActive    Boolean  @default(true)
   acceptingOrders Boolean @default(true)
+  lastOrderNumber BigInt @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -112,16 +113,23 @@ model Order {
   requestHash String
   mode        OrderMode @default(DINE_IN)
   status      String    @default("PENDING")
+  paymentStatus String @default("UNPAID")
+  orderNumber String @db.VarChar(32)
+  qrTokenNonce String
+  qrTokenExpiresAt DateTime
+  qrTokenRevokedAt DateTime?
   tableCode   String?
   tableNumber String?   @db.VarChar(40)
   currency    String    @default("PHP")
   totalPrice  Decimal   @db.Decimal(12, 2)
   items       Json
   createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Restrict)
   table       RestaurantTable? @relation(fields: [tableId, shopId], references: [id, shopId], onDelete: Restrict, onUpdate: Restrict)
 
   @@unique([shopId, requestId])
+  @@unique([shopId, orderNumber])
   @@index([shopId, tableId, createdAt])
   @@map("orders")
 }

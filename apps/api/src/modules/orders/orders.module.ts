@@ -6,6 +6,7 @@ import { PublicProductService } from '../products/public-product.service.js';
 import { OrdersService } from './orders.service.js';
 import { CreateOrderDto } from './create-order.dto.js';
 import { TableContextService } from '../tables/table-context.service.js';
+import { OrderTokenService } from './order-token.service.js';
 
 @Controller('menu/:shopSlug/orders')
 export class OrdersController {
@@ -27,6 +28,7 @@ export class OrdersController {
     PublicProductService,
     PublicProductRepository,
     TableContextService,
+    OrderTokenService,
   ],
 })
 export class OrdersModule {}

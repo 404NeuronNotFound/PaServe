@@ -37,7 +37,7 @@ describe('dine-in order submission', () => {
   const create = vi.fn();
   const tx = {
     $queryRaw: raw,
-    shop: { findFirst: vi.fn() },
+    shop: { findFirst: vi.fn(), update: vi.fn() },
     product: { findFirst: product, findMany: submittedProducts },
     order: { findUnique: saved, create },
   };
@@ -72,6 +72,10 @@ describe('dine-in order submission', () => {
       ])
       .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
     saved.mockReset().mockResolvedValue(null);
+    let nextNumber = 0n;
+    tx.shop.update
+      .mockReset()
+      .mockImplementation(async () => ({ lastOrderNumber: ++nextNumber }));
     submittedProducts
       .mockReset()
       .mockImplementation(({ where }: { where: { id: { in: string[] } } }) =>
@@ -104,6 +108,73 @@ describe('dine-in order submission', () => {
   });
   const post = (body: unknown = payload()) =>
     request(app.getHttpServer()).post('/api/v1/menu/cafe/orders').send(body);
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'creates server-authored parent metadata for %s and preserves it on replay',
+    async (mode) => {
+      const body = mode === 'DINE_IN' ? payload() : takeout();
+      const created = await post(body).expect(201);
+      expect(created.body.order).toMatchObject({
+        orderNumber: 'ORD-000001',
+        paymentStatus: 'UNPAID',
+        status: 'PENDING',
+      });
+      expect(created.body.order.qrToken).toMatch(
+        /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/,
+      );
+      const data = create.mock.calls[0][0].data;
+      expect(data.createdAt).toEqual(data.updatedAt);
+      expect(data.qrTokenNonce).toMatch(/^[0-9a-f-]{36}$/);
+      expect(data.qrTokenExpiresAt.getTime()).toBeGreaterThan(
+        data.createdAt.getTime(),
+      );
+      expect(data.qrToken).toBeUndefined();
+      expect(tx.shop.update).toHaveBeenCalledExactlyOnceWith({
+        where: { id: 'shop-a', isActive: true, acceptingOrders: true },
+        data: { lastOrderNumber: { increment: 1 } },
+        select: { lastOrderNumber: true },
+      });
+      saved.mockResolvedValue({
+        ...data,
+        id: 'order-a',
+        createdAt: new Date('2026-10-12T00:00:00Z'),
+      });
+      raw
+        .mockReset()
+        .mockResolvedValue([
+          { id: 'shop-a', isActive: true, acceptingOrders: true },
+        ]);
+      const replay = await post(body).expect(201);
+      expect(replay.body.order).toEqual(created.body.order);
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(tx.shop.update).toHaveBeenCalledTimes(1);
+    },
+  );
+  it('allocates distinct numbers and tokens for fresh orders', async () => {
+    const first = await post(takeout()).expect(201);
+    raw
+      .mockReset()
+      .mockResolvedValue([
+        { id: 'shop-a', isActive: true, acceptingOrders: true },
+      ]);
+    const second = await post({
+      ...takeout(),
+      requestId: '10000000-0000-4000-8000-000000000099',
+    }).expect(201);
+    expect(second.body.order.orderNumber).toBe('ORD-000002');
+    expect(second.body.order.qrToken).not.toBe(first.body.order.qrToken);
+  });
+  it.each([
+    { orderNumber: 'ORD-000001' },
+    { qrToken: 'forged' },
+    { paymentStatus: 'PAID' },
+    { status: 'ACCEPTED' },
+    { createdAt: '2026-01-01' },
+    { updatedAt: '2026-01-01' },
+  ])('rejects client parent metadata %j', async (fields) => {
+    await post({ ...takeout(), ...fields }).expect(400);
+    expect(transaction).not.toHaveBeenCalled();
+    expect(tx.shop.update).not.toHaveBeenCalled();
+  });
   it('accepts a valid configured 100-line order larger than the default JSON limit', async () => {
     const optionId = (n: number) =>
       `20000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;

@@ -7,6 +7,7 @@ import { OrdersService } from '../dist/modules/orders/orders.service.js';
 import { Prisma } from '../dist/generated/prisma/client.js';
 import { ConfigService } from '@nestjs/config';
 import { TableContextService } from '../dist/modules/tables/table-context.service.js';
+import { OrderTokenService } from '../dist/modules/orders/order-token.service.js';
 
 // Exercise the exact migration in an isolated schema; all DDL/fixtures roll back.
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -135,6 +136,25 @@ try {
     anon_access: false,
     browser_access: false,
   });
+  const parentMigration = await readFile(
+    new URL(
+      '../prisma/migrations/20261012180000_parent_order_metadata/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await client.query(
+    parentMigration.replace(/"(shops|orders)"/g, (_match, name) => q(name)),
+  );
+  const parent = (
+    await client.query(
+      `SELECT "orderNumber", "paymentStatus", "updatedAt", "qrTokenNonce" FROM ${q('orders')} WHERE "id" = 'order-a'`,
+    )
+  ).rows[0];
+  assert.equal(parent.orderNumber, 'ORD-000001');
+  assert.equal(parent.paymentStatus, 'UNPAID');
+  assert.ok(parent.updatedAt);
+  assert.match(parent.qrTokenNonce, /^[0-9a-f-]{36}$/);
   // Run the actual service's tagged SQL through pg in this rollback-only schema.
   // Prisma product/order delegates are adapted; table resolution uses service SQL unchanged.
   await client.query(`SET LOCAL search_path TO "${schema}"`);
@@ -148,6 +168,17 @@ try {
     `INSERT INTO ${q('restaurant_tables')} ("id", "shopId", "code", "number", "isActive") VALUES ('inactive-a', 'a', 'T13', '13', false), ('foreign-b', 'b', 'T14', '14', true)`,
   );
   const tx = {
+    shop: {
+      update: async ({ where }) => {
+        const row = (
+          await client.query(
+            `UPDATE ${q('shops')} SET "lastOrderNumber" = "lastOrderNumber" + 1 WHERE "id" = $1 AND "isActive" = true AND "acceptingOrders" = true RETURNING "lastOrderNumber"`,
+            [where.id],
+          )
+        ).rows[0];
+        return { lastOrderNumber: BigInt(row.lastOrderNumber) };
+      },
+    },
     product: {
       findMany: async ({ where }) =>
         (
@@ -186,6 +217,13 @@ try {
           'requestHash',
           'mode',
           'status',
+          'paymentStatus',
+          'orderNumber',
+          'qrTokenNonce',
+          'qrTokenExpiresAt',
+          'qrTokenRevokedAt',
+          'createdAt',
+          'updatedAt',
           'tableCode',
           'tableNumber',
           'currency',
@@ -233,6 +271,7 @@ try {
     { $transaction: (callback) => callback(tx) },
     products,
     contexts,
+    new OrderTokenService(new ConfigService()),
   );
   const submit = (slug, tableCode) =>
     service.create(slug, {
@@ -249,6 +288,23 @@ try {
       ],
     });
   const accepted = await submit('cafe-a', 'T12');
+  assert.equal(accepted.order.orderNumber, 'ORD-000002');
+  await rejects(
+    () =>
+      client.query(
+        `UPDATE ${q('orders')} SET "orderNumber" = 'ORD-000001' WHERE "id" = $1`,
+        [accepted.order.id],
+      ),
+    '23505',
+  );
+  await rejects(
+    () =>
+      client.query(
+        `UPDATE ${q('orders')} SET "paymentStatus" = 'PAID' WHERE "id" = $1`,
+        [accepted.order.id],
+      ),
+    '23514',
+  );
   assert.equal(accepted.order.table.number, 'Patio 4');
   assert.equal(accepted.order.status, 'PENDING');
   const {
@@ -259,6 +315,8 @@ try {
   );
   assert.deepEqual(binding, { shopId: 'a', tableId: 'table-a' });
   const acceptedB = await submit('cafe-b', 'T12');
+  // Both shops have one backfilled legacy order; numbering is independent per shop.
+  assert.equal(acceptedB.order.orderNumber, 'ORD-000002');
   assert.equal(acceptedB.order.table.number, '12');
   const pickupRequest = {
     requestId: randomUUID(),
