@@ -78,7 +78,7 @@ export function cartSelectionRequest(
   };
 }
 
-// Selection payload for a future checkout; the server must revalidate each line.
+// Selection payload for checkout; the server revalidates each line.
 export function cartCheckoutLines(
   shops: Record<string, CartItem[]>,
   slug: string,
@@ -109,7 +109,7 @@ export function cartCheckoutRequest(
   )
     throw new Error("Resolve the table link before preparing checkout.");
   return {
-    ...(code !== undefined ? { tableCode: code } : {}),
+    ...(code !== undefined ? { mode: "DINE_IN" as const, tableCode: code } : {}),
     items: cartCheckoutLines(shops, slug),
   };
 }

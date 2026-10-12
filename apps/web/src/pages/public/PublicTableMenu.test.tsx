@@ -155,6 +155,7 @@ it("keeps table context while browsing product details, adding to cart, and prep
     within(screen.getByRole("dialog")).getByText("Ordering for Table Patio 4"),
   ).toBeInTheDocument();
   expect(cartCheckoutRequest(useCart.getState().shops, "cafe")).toEqual({
+    mode: "DINE_IN",
     tableCode: "T12",
     items: [{ productId: "coffee", quantity: 1, variantIds: [], addOnIds: [] }],
   });

@@ -38,6 +38,7 @@ it("remembers only shop-scoped public codes and requires server resolution after
   );
   refreshed.getState().setResolved({ ...table, number: "New label" });
   expect(cartCheckoutRequest({}, "cafe", refreshed.getState())).toEqual({
+    mode: "DINE_IN",
     tableCode: "T12",
     items: [],
   });
@@ -62,6 +63,7 @@ it("includes the table automatically with selections, quantities and notes, with
   expect(
     cartCheckoutRequest(cart.getState().shops, "cafe", tables.getState()),
   ).toEqual({
+    mode: "DINE_IN",
     tableCode: "T12",
     items: [
       {

@@ -16,6 +16,7 @@ import { CustomerDialog } from "./CustomerDialog";
 import { CartQuantityControl } from "./CartQuantityControl";
 import { CartNotesEditor } from "./CartNotesEditor";
 import "./customer-cart.css";
+import { DineInOrder } from "./DineInOrder";
 
 export function CustomerCart({
   shop,
@@ -137,6 +138,7 @@ export function CustomerCart({
             </ul>
           </div>
           <footer className="customer-dialog-footer">
+            {table && <DineInOrder key={shop.slug} shopSlug={shop.slug} table={table} />}
             <div className="customer-cart-summary">
               <p role="status" className="customer-cart-total">
                 <span>Estimated subtotal</span>{" "}
