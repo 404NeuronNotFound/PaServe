@@ -23,7 +23,7 @@ export function isCreatedOrderResponse(
     typeof order.id !== "string" ||
     !order.id ||
     order.id.length > 100 ||
-    order.status !== "PENDING" ||
+    order.status !== "PENDING_CONFIRMATION" ||
     order.mode !== (request.mode ?? "DINE_IN") ||
     order.currency !== "PHP" ||
     typeof order.totalPrice !== "string" ||

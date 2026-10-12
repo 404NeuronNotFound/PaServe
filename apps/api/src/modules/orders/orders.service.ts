@@ -84,7 +84,7 @@ export class OrdersService {
           code: 'ORDER_REQUEST_CONFLICT',
           message: 'This request ID was already used for another order.',
         });
-      if (order.status !== 'PENDING')
+      if (order.status !== 'PENDING_CONFIRMATION')
         throw new Error('Invalid persisted order status.');
       if (order.paymentStatus !== 'UNPAID')
         throw new Error('Invalid persisted payment status.');
@@ -109,7 +109,7 @@ export class OrdersService {
         throw new Error('Invalid persisted receipt total.');
       const common = {
         id: order.id,
-        status: 'PENDING' as const,
+        status: 'PENDING_CONFIRMATION' as const,
         paymentStatus: 'UNPAID' as const,
         orderNumber: order.orderNumber,
         qrToken: this.tokens.issue(order),
@@ -234,7 +234,7 @@ export class OrdersService {
               requestId: dto.requestId,
               requestHash: hash,
               mode,
-              status: 'PENDING',
+              status: 'PENDING_CONFIRMATION',
               paymentStatus: 'UNPAID',
               orderNumber: formatOrderNumber(numbering.lastOrderNumber),
               ...this.tokens.metadata(),

@@ -112,7 +112,7 @@ model Order {
   requestId   String
   requestHash String
   mode        OrderMode @default(DINE_IN)
-  status      String    @default("PENDING")
+  status      String    @default("PENDING_CONFIRMATION")
   paymentStatus String @default("UNPAID")
   orderNumber String @db.VarChar(32)
   qrTokenNonce String

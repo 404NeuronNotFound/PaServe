@@ -94,6 +94,7 @@ try {
           '20261012180000_parent_order_metadata',
           '20261012190000_order_items',
           '20261012200000_order_price_snapshots',
+          '20261012210000_pending_confirmation_status',
         ]) {
           const sql = await readFile(
             new URL(
@@ -106,7 +107,9 @@ try {
             .replace(/^--.*$/gm, '')
             .split(';')
             .map((value) => value.trim())
-            .filter(Boolean)) {
+            .filter(
+              (value) => value && value !== 'BEGIN' && value !== 'COMMIT',
+            )) {
             await tx.$executeRawUnsafe(
               statement.replace(
                 /"(order_items|products|orders|shops|restaurant_tables|OrderMode)"/g,
@@ -205,7 +208,7 @@ try {
           items,
         };
         const pickup = await orders.create(shop.slug, pickupRequest);
-        assert.equal(pickup.order.status, 'PENDING');
+        assert.equal(pickup.order.status, 'PENDING_CONFIRMATION');
         assert.equal(pickup.order.totalPrice, '422.50');
         assert.equal(pickup.order.subtotalPrice, '422.50');
         assert.equal(pickup.order.table, null);
@@ -332,7 +335,7 @@ try {
           tableToken: contexts.issue(shop.slug, table.code),
           items,
         });
-        assert.equal(dineIn.order.status, 'PENDING');
+        assert.equal(dineIn.order.status, 'PENDING_CONFIRMATION');
         assert.equal(dineIn.order.orderNumber, 'ORD-000002');
         assert.equal(dineIn.order.totalPrice, '422.50');
         assert.equal(
@@ -443,7 +446,7 @@ try {
           ...pickupRequest,
           requestId: randomUUID(),
         });
-        assert.equal(restored.order.status, 'PENDING');
+        assert.equal(restored.order.status, 'PENDING_CONFIRMATION');
         assert.equal(restored.order.totalPrice, '422.50');
         const historicalProduct = await tx.product.create({
           data: {

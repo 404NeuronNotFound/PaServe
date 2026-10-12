@@ -48,6 +48,7 @@ try {
     '20261012180000_parent_order_metadata',
     '20261012190000_order_items',
     '20261012200000_order_price_snapshots',
+    '20261012210000_pending_confirmation_status',
   ]) {
     const sql = await readFile(
       new URL(
@@ -57,10 +58,12 @@ try {
       'utf8',
     );
     await setup.query(
-      sql.replace(
-        /"(shops|restaurant_tables|products|orders|order_items|OrderMode)"/g,
-        (_match, name) => q(name),
-      ),
+      sql
+        .replace(/^\s*(BEGIN|COMMIT);\s*$/gm, '')
+        .replace(
+          /"(shops|restaurant_tables|products|orders|order_items|OrderMode)"/g,
+          (_match, name) => q(name),
+        ),
     );
   }
   const shopId = randomUUID();

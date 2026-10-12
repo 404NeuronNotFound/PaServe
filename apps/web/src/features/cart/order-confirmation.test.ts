@@ -38,7 +38,7 @@ const line = {
 const order = {
   id: "order-a",
   mode: "TAKEOUT",
-  status: "PENDING",
+  status: "PENDING_CONFIRMATION",
   table: null,
   currency: "PHP",
   totalPrice: "56.50",

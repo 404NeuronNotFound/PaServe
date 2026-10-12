@@ -58,7 +58,7 @@ const receipt = {
       id: "order-a",
       mode: "TAKEOUT",
       table: null,
-      status: "PENDING",
+      status: "PENDING_CONFIRMATION",
       currency: "PHP",
       totalPrice: "44.00",
       items: [configured, regular],
@@ -256,7 +256,7 @@ it("sends a pending order only once when confirmation is clicked repeatedly", as
     finish(receipt);
   });
   expect(screen.getByRole("status")).toHaveTextContent(
-    "Awaiting shop confirmation",
+    "Pending confirmation",
   );
 });
 it("preserves every selected modifier through review, Edit cart and a fresh review", async () => {

@@ -65,7 +65,13 @@ export function CustomerOrderPage() {
               <div>
                 <dt>Status</dt>
                 <dd className="order-receipt-status" role="status">
-                  <FiClock aria-hidden="true" /> Awaiting shop confirmation
+                  <span className="order-receipt-status-label">
+                    <FiClock aria-hidden="true" /> Pending confirmation
+                  </span>
+                  <p className="order-receipt-note">
+                    Your order is not yet in the kitchen queue. Show your QR or
+                    order number at the counter and wait for staff confirmation.
+                  </p>
                 </dd>
               </div>
               <div className="order-receipt-total">

@@ -23,11 +23,14 @@ try {
           SELECT column_default FROM information_schema.columns
           WHERE table_schema = current_schema() AND table_name = 'orders'
             AND column_name = 'status'`;
-        assert.equal(column.column_default, "'PENDING'::text");
+        assert.equal(column.column_default, "'PENDING_CONFIRMATION'::text");
         const [constraint] = await tx.$queryRaw`
           SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint
           WHERE conrelid = 'orders'::regclass AND conname = 'orders_status_check'`;
-        assert.match(constraint.definition, /status = 'PENDING'::text/);
+        assert.match(
+          constraint.definition,
+          /status = 'PENDING_CONFIRMATION'::text/,
+        );
         for (const name of ['orders', 'order_items']) {
           const [security] = await tx.$queryRaw`
             SELECT relrowsecurity AS rls,
@@ -86,7 +89,7 @@ try {
           const saved = await tx.order.findUniqueOrThrow({
             where: { id: created.order.id },
           });
-          assert.equal(saved.status, 'PENDING');
+          assert.equal(saved.status, 'PENDING_CONFIRMATION');
           assert.equal(saved.paymentStatus, 'UNPAID');
           assert.equal(saved.tableId, mode === 'DINE_IN' ? table.id : null);
           assert.equal(created.order.status, saved.status);
@@ -118,7 +121,7 @@ try {
   );
   assert.equal(await prisma.shop.count({ where: { slug } }), 0);
   console.log(
-    'Configured database verified: PENDING/UNPAID dine-in and takeout creation, saved lines/prices, QR credentials, stable replay, numbering, SQL default/constraint and RLS. All fixtures rolled back.',
+    'Configured database verified: PENDING_CONFIRMATION/UNPAID dine-in and takeout creation, saved lines/prices, QR credentials, stable replay, numbering, SQL default/constraint and RLS. All fixtures rolled back.',
   );
 } finally {
   await prisma.$disconnect();

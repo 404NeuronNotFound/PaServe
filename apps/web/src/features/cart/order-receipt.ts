@@ -9,7 +9,7 @@ export interface OrderReceipt {
   orderNumber: string | null;
   mode: "DINE_IN" | "TAKEOUT";
   table: { code: string; number: string } | null;
-  status: "PENDING";
+  status: "PENDING_CONFIRMATION";
   currency: "PHP";
   /** Exact saved server total; never derived from current cart or menu prices. */
   totalPrice: string;
@@ -52,6 +52,9 @@ export function readOrderReceipt(
     const value = JSON.parse(
       orderReceipts.read(key(shopSlug, orderId)) ?? "null",
     );
+    // Upgrade older display-only receipts; server confirmations require the new status.
+    if (value && typeof value === "object" && value.status === "PENDING")
+      value.status = "PENDING_CONFIRMATION";
     if (
       !value ||
       typeof value !== "object" ||
@@ -66,7 +69,7 @@ export function readOrderReceipt(
           /^ORD-\d{6,19}$/.test(value.orderNumber) &&
           BigInt(value.orderNumber.slice(4)) > 0n)
       ) ||
-      value.status !== "PENDING" ||
+      value.status !== "PENDING_CONFIRMATION" ||
       value.currency !== "PHP" ||
       typeof value.totalPrice !== "string" ||
       !/^(?:0|[1-9]\d{0,9})\.\d{2}$/.test(value.totalPrice) ||

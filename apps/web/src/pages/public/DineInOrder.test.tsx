@@ -29,7 +29,7 @@ const response = {
     order: {
       id: "order-a",
       mode: "DINE_IN",
-      status: "PENDING",
+      status: "PENDING_CONFIRMATION",
       table,
       totalPrice: "12.00",
       currency: "PHP",

@@ -123,7 +123,7 @@ describe('dine-in order submission', () => {
     create.mockReset().mockImplementation(({ data }) => ({
       ...data,
       id: 'order-a',
-      status: 'PENDING',
+      status: 'PENDING_CONFIRMATION',
       createdAt: new Date('2026-10-12T00:00:00Z'),
     }));
   });
@@ -205,7 +205,7 @@ describe('dine-in order submission', () => {
       expect(created.body.order).toMatchObject({
         orderNumber: 'ORD-000001',
         paymentStatus: 'UNPAID',
-        status: 'PENDING',
+        status: 'PENDING_CONFIRMATION',
       });
       expect(created.body.order.qrToken).toMatch(
         /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/,
@@ -316,7 +316,7 @@ describe('dine-in order submission', () => {
     expect(result.headers['cache-control']).toBe('no-store');
     expect(result.body.order).toMatchObject({
       mode: 'DINE_IN',
-      status: 'PENDING',
+      status: 'PENDING_CONFIRMATION',
       totalPrice: '20.02',
       table: { shopSlug: 'cafe', code: 'T12', number: 'Patio 4' },
     });
@@ -700,7 +700,7 @@ describe('dine-in order submission', () => {
     const original = {
       ...create.mock.calls[0][0].data,
       id: 'order-a',
-      status: 'PENDING',
+      status: 'PENDING_CONFIRMATION',
       createdAt: new Date(),
     };
     saved.mockResolvedValue(original);
@@ -798,7 +798,7 @@ describe('dine-in order submission', () => {
     expect(result.body.order).toMatchObject({
       mode: 'TAKEOUT',
       table: null,
-      status: 'PENDING',
+      status: 'PENDING_CONFIRMATION',
       totalPrice: '20.02',
     });
     expect(raw).toHaveBeenCalledTimes(1);
@@ -869,7 +869,7 @@ describe('dine-in order submission', () => {
         { id: 'shop-a', isActive: false, acceptingOrders: true },
       ]);
     const replay = await post(takeout()).expect(201);
-    expect(replay.body.order.status).toBe('PENDING');
+    expect(replay.body.order.status).toBe('PENDING_CONFIRMATION');
     expect(create).toHaveBeenCalledTimes(1);
     saved.mockResolvedValue(null);
     await post({
@@ -878,7 +878,7 @@ describe('dine-in order submission', () => {
     }).expect(404);
     expect(create).toHaveBeenCalledTimes(1);
   });
-  it('does not misrepresent an unexpected saved status as PENDING', async () => {
+  it('does not misrepresent an unexpected saved status as PENDING_CONFIRMATION', async () => {
     await post(takeout()).expect(201);
     saved.mockResolvedValue({
       ...create.mock.calls[0][0].data,

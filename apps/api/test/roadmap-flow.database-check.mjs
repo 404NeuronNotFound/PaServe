@@ -141,7 +141,7 @@ try {
             .expect(400);
           const created = (await http('post', orderPath).send(body).expect(201))
             .body;
-          assert.equal(created.order.status, 'PENDING');
+          assert.equal(created.order.status, 'PENDING_CONFIRMATION');
           assert.equal(created.order.paymentStatus, 'UNPAID');
           assert.equal(created.order.totalPrice, '350.62');
           assert.equal(created.order.items[0].notes, selection.notes);
@@ -159,7 +159,7 @@ try {
           )
             .send({ qrToken: created.order.qrToken })
             .expect(200);
-          assert.equal(verification.body.order.status, 'PENDING');
+          assert.equal(verification.body.order.status, 'PENDING_CONFIRMATION');
           assert.equal(verification.body.order.paymentStatus, 'UNPAID');
           await http('get', `${base}/settings`).expect(401);
           const foreignShop = await tx.shop.create({
@@ -240,7 +240,7 @@ try {
   );
   assert.equal(await prisma.user.count({ where: { email } }), 0);
   console.log(
-    'Real HTTP/PostgreSQL roadmap flow passed: registration/login, OWNER shop/settings, catalog/modifiers, table context, exact quotes, dine-in/takeout PENDING/UNPAID orders, snapshots, QR, replay/tampering, foreign-shop and changed-role denial, paused intake and logout. All fixtures rolled back.',
+    'Real HTTP/PostgreSQL roadmap flow passed: registration/login, OWNER shop/settings, catalog/modifiers, table context, exact quotes, dine-in/takeout PENDING_CONFIRMATION/UNPAID orders, snapshots, QR, replay/tampering, foreign-shop and changed-role denial, paused intake and logout. All fixtures rolled back.',
   );
 } finally {
   await prisma.$disconnect();

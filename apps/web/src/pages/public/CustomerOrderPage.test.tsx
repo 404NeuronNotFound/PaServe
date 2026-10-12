@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -41,7 +41,7 @@ const order: CustomerOrderResponse["order"] = {
   orderNumber: "ORD-000042",
   mode: "TAKEOUT",
   table: null,
-  status: "PENDING",
+  status: "PENDING_CONFIRMATION",
   paymentStatus: "UNPAID",
   currency: "PHP",
   totalPrice: "12.00",
@@ -144,11 +144,17 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
     const title = await screen.findByRole("heading", {
       name: "Order submitted",
     });
-    expect(title).toHaveFocus();
+    await waitFor(() => expect(title).toHaveFocus());
     expect(screen.getByText("ORD-000042")).toBeInTheDocument();
     expect(screen.getByText("₱12.00")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Awaiting shop confirmation",
+      "Pending confirmation",
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Your order is not yet in the kitchen queue.",
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "wait for staff confirmation",
     );
     expect(
       screen.getByRole("heading", {
@@ -181,6 +187,12 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
     expect(screen.getByText("ORD-000042")).toBeInTheDocument();
     expect(screen.getByText("₱12.00")).toBeInTheDocument();
     expect(screen.queryByText("₱99.00")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Pending confirmation",
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Your order is not yet in the kitchen queue.",
+    );
     expect(screen.getByText("₱12.00")).toHaveAccessibleDescription(
       "This is the total saved for your submitted order.",
     );
@@ -264,6 +276,18 @@ it("does not expose another shop's receipt", () => {
     screen.getByRole("heading", { name: "Order receipt unavailable" }),
   ).toBeInTheDocument();
   expect(screen.queryByText("ORD-000042")).not.toBeInTheDocument();
+});
+
+it("retains an older saved receipt after the persisted status rename", () => {
+  saveOrderReceipt("cafe", "Cafe", order);
+  const key = "paserve-order-receipt:v1:cafe:order-a";
+  const legacy = JSON.parse(sessionStorage.getItem(key)!);
+  legacy.status = "PENDING";
+  sessionStorage.setItem(key, JSON.stringify(legacy));
+  orderReceipts.clearMemory();
+  setup();
+  expect(screen.getByText("ORD-000042")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Pending confirmation");
 });
 
 it.each(["invalid", "-1.00", "12.345"])(

@@ -29,7 +29,7 @@ const response = {
     order: {
       id: "pickup-a",
       mode: "TAKEOUT",
-      status: "PENDING",
+      status: "PENDING_CONFIRMATION",
       table: null,
       totalPrice: "12.00",
       currency: "PHP",
@@ -192,7 +192,7 @@ it("preserves an uncertain request after a later 404 rather than allowing a dupl
     vi.mocked(api.post).mock.calls[0][1],
   );
   expect(await screen.findByRole("status")).toHaveTextContent(
-    "Awaiting shop confirmation",
+    "Pending confirmation",
   );
 });
 it("retains the original request across cart closure when session storage is blocked", async () => {
