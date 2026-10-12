@@ -211,7 +211,49 @@ try {
             .tableId,
           table.id,
         );
+        // Repeated product IDs are separate configured lines, not missing products.
+        const repeated = await orders.create(shop.slug, {
+          ...pickupRequest,
+          requestId: randomUUID(),
+          items: [
+            items[0],
+            { ...items[0], quantity: 1, notes: 'Separate cup' },
+          ],
+        });
+        assert.equal(repeated.order.items.length, 2);
+        assert.equal(repeated.order.totalPrice, '633.75');
+        assert.equal(repeated.order.items[1].notes, 'Separate cup');
         const before = await tx.order.count();
+        const missingProductId = randomUUID();
+        for (const mode of ['DINE_IN', 'TAKEOUT']) {
+          for (const productId of [missingProductId, foreignProduct.id]) {
+            for (const lines of [
+              [{ ...items[0], productId }],
+              [items[0], { ...items[0], productId }],
+              [{ ...items[0], productId }, items[0]],
+            ]) {
+              await assert.rejects(
+                () =>
+                  orders.create(shop.slug, {
+                    ...pickupRequest,
+                    requestId: randomUUID(),
+                    mode,
+                    items: lines,
+                    ...(mode === 'DINE_IN'
+                      ? {
+                          tableCode: table.code,
+                          tableToken: contexts.issue(shop.slug, table.code),
+                        }
+                      : {}),
+                  }),
+                (error) =>
+                  error.status === 404 &&
+                  error.getResponse().code === 'PRODUCT_NOT_AVAILABLE',
+              );
+              assert.equal(await tx.order.count(), before);
+            }
+          }
+        }
         await tx.shop.update({
           where: { id: shop.id },
           data: { acceptingOrders: false },

@@ -136,12 +136,27 @@ try {
     browser_access: false,
   });
   // Run the actual service's tagged SQL through pg in this rollback-only schema.
-  // Only Prisma's order delegate is adapted; table resolution uses service SQL unchanged.
+  // Prisma product/order delegates are adapted; table resolution uses service SQL unchanged.
   await client.query(`SET LOCAL search_path TO "${schema}"`);
+  await client.query(
+    `CREATE TABLE ${q('products')} ("id" TEXT PRIMARY KEY, "shopId" TEXT NOT NULL REFERENCES ${q('shops')}("id"))`,
+  );
+  await client.query(
+    `INSERT INTO ${q('products')} ("id", "shopId") VALUES ('coffee-a', 'a'), ('coffee-b', 'b')`,
+  );
   await client.query(
     `INSERT INTO ${q('restaurant_tables')} ("id", "shopId", "code", "number", "isActive") VALUES ('inactive-a', 'a', 'T13', '13', false), ('foreign-b', 'b', 'T14', '14', true)`,
   );
   const tx = {
+    product: {
+      findMany: async ({ where }) =>
+        (
+          await client.query(
+            `SELECT "id" FROM ${q('products')} WHERE "shopId" = $1 AND "id" = ANY($2::text[])`,
+            [where.shopId, where.id.in],
+          )
+        ).rows,
+    },
     $queryRaw: async (strings, ...values) => {
       const sql = strings.reduce(
         (text, part, index) =>
@@ -225,7 +240,12 @@ try {
       tableCode,
       tableToken: contexts.issue(slug, tableCode),
       items: [
-        { productId: randomUUID(), quantity: 2, variantIds: [], addOnIds: [] },
+        {
+          productId: slug === 'cafe-a' ? 'coffee-a' : 'coffee-b',
+          quantity: 2,
+          variantIds: [],
+          addOnIds: [],
+        },
       ],
     });
   const accepted = await submit('cafe-a', 'T12');
@@ -244,7 +264,7 @@ try {
     requestId: randomUUID(),
     mode: 'TAKEOUT',
     items: [
-      { productId: randomUUID(), quantity: 2, variantIds: [], addOnIds: [] },
+      { productId: 'coffee-a', quantity: 2, variantIds: [], addOnIds: [] },
     ],
   };
   const pickup = await service.create('cafe-a', pickupRequest);

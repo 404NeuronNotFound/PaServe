@@ -132,6 +132,22 @@ export class OrdersService {
             table = tables[0];
             if (!table) throw unavailable();
           }
+          // Resolve all product identities in the validated tenant before pricing any line.
+          const productIds = [
+            ...new Set(dto.items.map((item) => item.productId)),
+          ];
+          const submittedProducts = await tx.product.findMany({
+            where: { shopId: shop.id, id: { in: productIds } },
+            select: { id: true },
+          });
+          const foundIds = new Set(
+            submittedProducts.map((product) => product.id),
+          );
+          if (productIds.some((id) => !foundIds.has(id)))
+            throw new NotFoundException({
+              code: 'PRODUCT_NOT_AVAILABLE',
+              message: 'This product is unavailable.',
+            });
           const items = [];
           for (const item of dto.items)
             items.push(

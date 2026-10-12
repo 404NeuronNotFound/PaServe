@@ -31,12 +31,13 @@ describe('dine-in order submission', () => {
   let app: INestApplication<App>;
   const raw = vi.fn();
   const product = vi.fn();
+  const submittedProducts = vi.fn();
   const saved = vi.fn();
   const create = vi.fn();
   const tx = {
     $queryRaw: raw,
     shop: { findFirst: vi.fn() },
-    product: { findFirst: product },
+    product: { findFirst: product, findMany: submittedProducts },
     order: { findUnique: saved, create },
   };
   const transaction = vi.fn((callback: (db: typeof tx) => unknown) =>
@@ -70,6 +71,11 @@ describe('dine-in order submission', () => {
       ])
       .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
     saved.mockReset().mockResolvedValue(null);
+    submittedProducts
+      .mockReset()
+      .mockImplementation(({ where }: { where: { id: { in: string[] } } }) =>
+        where.id.in.map((productId) => ({ id: productId })),
+      );
     tx.shop.findFirst.mockResolvedValue({
       id: 'shop-a',
       isActive: true,
@@ -309,6 +315,107 @@ describe('dine-in order submission', () => {
     await post({ ...takeout(), ...override }).expect(400);
     expect(transaction).not.toHaveBeenCalled();
   });
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'resolves every distinct product under the route shop for %s and preserves separate lines',
+    async (mode) => {
+      const secondId = '10000000-0000-4000-8000-000000000099';
+      submittedProducts.mockResolvedValue([{ id: secondId }, { id }]);
+      product.mockImplementation(
+        async ({ where }: { where: { id: string } }) => ({
+          id: where.id,
+          name: 'Coffee',
+          price: new Prisma.Decimal('10.01'),
+          status: 'AVAILABLE',
+          optionGroups: [],
+          variants: [],
+          addOns: [],
+        }),
+      );
+      const body = mode === 'DINE_IN' ? payload() : takeout();
+      const lines = [
+        body.items[0],
+        { ...body.items[0], productId: secondId },
+        { ...body.items[0], quantity: 1, notes: 'No ice' },
+      ];
+      const result = await post({ ...body, items: lines }).expect(201);
+      expect(submittedProducts).toHaveBeenCalledExactlyOnceWith({
+        where: { shopId: 'shop-a', id: { in: [id, secondId] } },
+        select: { id: true },
+      });
+      expect(
+        result.body.order.items.map(
+          (item: { productId: string }) => item.productId,
+        ),
+      ).toEqual([id, secondId, id]);
+      expect(
+        result.body.order.items.map(
+          (item: { quantity: number }) => item.quantity,
+        ),
+      ).toEqual([2, 2, 1]);
+      expect(result.body.order.items[2].notes).toBe('No ice');
+      expect(result.body.order.totalPrice).toBe('50.05');
+    },
+  );
+  describe.each(['DINE_IN', 'TAKEOUT'] as const)(
+    '%s product identity rejection',
+    (mode) => {
+      const unknownId = '10000000-0000-4000-8000-000000000099';
+      it('rejects unresolved products and mixed batches before pricing', async () => {
+        const body = mode === 'DINE_IN' ? payload() : takeout();
+        submittedProducts.mockImplementation(
+          async ({
+            where,
+          }: {
+            where: { shopId: string; id: { in: string[] } };
+          }) => {
+            expect(where.shopId).toBe('shop-a');
+            return where.id.in
+              .filter((productId) => productId === id)
+              .map((productId) => ({ id: productId }));
+          },
+        );
+        for (const lines of [
+          [{ ...body.items[0], productId: unknownId }],
+          [body.items[0], { ...body.items[0], productId: unknownId }],
+          [{ ...body.items[0], productId: unknownId }, body.items[0]],
+        ]) {
+          // Reset route resolution for each new attempt, keeping the scoped product result.
+          raw
+            .mockReset()
+            .mockResolvedValueOnce([
+              { id: 'shop-a', isActive: true, acceptingOrders: true },
+            ])
+            .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
+          const result = await post({ ...body, items: lines }).expect(404);
+          expect(result.body.code).toBe('PRODUCT_NOT_AVAILABLE');
+          expect(result.body.message).toBe('This product is unavailable.');
+        }
+        expect(product).not.toHaveBeenCalled();
+        expect(create).not.toHaveBeenCalled();
+      });
+      it('confirms an existing order without fetching products removed from the menu', async () => {
+        const body = mode === 'DINE_IN' ? payload() : takeout();
+        await post(body).expect(201);
+        saved.mockResolvedValue({
+          ...create.mock.calls[0][0].data,
+          id: 'order-a',
+          createdAt: new Date(),
+        });
+        submittedProducts.mockClear().mockResolvedValue([]);
+        product.mockClear().mockResolvedValue(null);
+        raw
+          .mockReset()
+          .mockResolvedValue([
+            { id: 'shop-a', isActive: true, acceptingOrders: true },
+          ]);
+        const result = await post(body).expect(201);
+        expect(result.body.order.id).toBe('order-a');
+        expect(submittedProducts).not.toHaveBeenCalled();
+        expect(product).not.toHaveBeenCalled();
+        expect(create).toHaveBeenCalledTimes(1);
+      });
+    },
+  );
   it('rejects sold-out or missing products without saving an order', async () => {
     product.mockResolvedValue(null);
     await post().expect(404);
