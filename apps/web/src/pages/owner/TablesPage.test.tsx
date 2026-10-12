@@ -137,22 +137,25 @@ it.each(["MANAGER", "CASHIER", "KITCHEN"] as const)(
     ).not.toBeInTheDocument();
   },
 );
-it.each(["", "   ", "x".repeat(41), "A\u00003", "A\u202e3", "A\t3"])(
-  "rejects invalid input %j and focuses the field",
-  async (value) => {
-    setup();
-    await screen.findByText(/No tables yet/);
-    const input = screen.getByLabelText("Table number");
-    fireEvent.change(input, { target: { value } });
-    fireEvent.click(screen.getByRole("button", { name: "Create table" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      /table number or label/,
-    );
-    expect(input).toHaveFocus();
-    expect(createTable).not.toHaveBeenCalled();
-  },
-);
-it.each(["A3", "Patio 4", "012", "露台 4", "x".repeat(40)])(
+it.each([
+  "",
+  "   ",
+  "x".repeat(41),
+  "🍽".repeat(41),
+  "A\u00003",
+  "A\u202e3",
+  "A\t3",
+])("rejects invalid input %j and focuses the field", async (value) => {
+  setup();
+  await screen.findByText(/No tables yet/);
+  const input = screen.getByLabelText("Table number");
+  fireEvent.change(input, { target: { value } });
+  fireEvent.click(screen.getByRole("button", { name: "Create table" }));
+  expect(screen.getByRole("alert")).toHaveTextContent(/table number or label/);
+  expect(input).toHaveFocus();
+  expect(createTable).not.toHaveBeenCalled();
+});
+it.each(["A3", "Patio 4", "012", "露台 4", "x".repeat(40), "🍽".repeat(40)])(
   "creates and displays label %s without numeric coercion",
   async (number) => {
     vi.mocked(createTable).mockImplementation(async (_shopId, input) => {

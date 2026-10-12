@@ -11,6 +11,8 @@ import type {
 } from "@paserve/contracts";
 import {
   useCustomerTables,
+  customerTableCode,
+  isPublicTableContext,
   type CustomerTableState,
 } from "../shops/customer-table";
 import {
@@ -95,12 +97,19 @@ export function cartCheckoutRequest(
     "codes" | "resolved"
   > = useCustomerTables.getState(),
 ): CustomerCheckoutRequest {
-  const code = tables.codes[slug];
-  const table = tables.resolved[slug];
-  if (code && (!table || table.shopSlug !== slug || table.code !== code))
+  const code = customerTableCode(tables.codes, slug);
+  const table = Object.hasOwn(tables.resolved, slug)
+    ? tables.resolved[slug]
+    : undefined;
+  if (
+    (code !== undefined || table !== undefined) &&
+    (!isPublicTableContext(table) ||
+      table.shopSlug !== slug ||
+      table.code !== code)
+  )
     throw new Error("Resolve the table link before preparing checkout.");
   return {
-    ...(code ? { tableCode: code } : {}),
+    ...(code !== undefined ? { tableCode: code } : {}),
     items: cartCheckoutLines(shops, slug),
   };
 }

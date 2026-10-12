@@ -6,7 +6,11 @@ import type { PublicMenuResponse } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import "./public-menu.css";
 import { PublicMenuView } from "./PublicMenuView";
-import { useCustomerTables } from "../../features/shops/customer-table";
+import {
+  useCustomerTables,
+  customerTableCode,
+  isPublicTableContext,
+} from "../../features/shops/customer-table";
 
 export function PublicMenuPage() {
   const { shopSlug = "", tableCode } = useParams();
@@ -26,16 +30,10 @@ function PublicMenuSession({
   tableCode?: string;
 }) {
   const [code] = useState(
-    () => tableCode ?? useCustomerTables.getState().codes[shopSlug],
+    () =>
+      tableCode ??
+      customerTableCode(useCustomerTables.getState().codes, shopSlug),
   );
-  useEffect(() => {
-    if (!code) return;
-    try {
-      useCustomerTables.getState().beginResolution(shopSlug, code);
-    } catch {
-      useCustomerTables.getState().clear(shopSlug);
-    }
-  }, [shopSlug, code]);
   const menu = useQuery({
     queryKey: code
       ? ["public-menu", shopSlug, "table", code]
@@ -51,17 +49,27 @@ function PublicMenuSession({
     staleTime: 0,
     refetchOnWindowFocus: !code,
   });
+  useEffect(() => {
+    if (!code || !menu.isFetching) return;
+    try {
+      useCustomerTables.getState().beginResolution(shopSlug, code);
+    } catch {
+      useCustomerTables.getState().clear(shopSlug);
+    }
+  }, [shopSlug, code, menu.isFetching]);
   const contextMatches =
     !menu.data ||
     (menu.data.shop.slug === shopSlug &&
-      (!code ||
-        (menu.data.table?.code === code &&
-          menu.data.table.shopSlug === shopSlug)));
+      (code
+        ? isPublicTableContext(menu.data.table) &&
+          menu.data.table.code === code &&
+          menu.data.table.shopSlug === shopSlug
+        : !menu.data.table));
   useEffect(() => {
     if (menu.isSuccess && !menu.isFetching && contextMatches && menu.data.table)
       useCustomerTables.getState().setResolved(menu.data.table);
     else if (
-      (menu.isSuccess && !contextMatches) ||
+      (menu.isSuccess && !menu.isFetching && !contextMatches) ||
       (menu.isError &&
         isAxiosError(menu.error) &&
         menu.error.response?.status === 404)

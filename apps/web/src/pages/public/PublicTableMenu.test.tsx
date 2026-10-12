@@ -58,13 +58,12 @@ afterEach(() => {
   });
   useCustomerTables.setState({ codes: {}, resolved: {} });
 });
-function setup(path = "/cafe/table/T12") {
+function setup(
+  path = "/cafe/table/T12",
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Link to="/cafe/table/T13">Scan another table</Link>
         <Link to="/other">Other shop</Link>
@@ -216,3 +215,52 @@ it("rejects a response with the wrong table context", async () => {
   await screen.findByRole("heading", { name: "Table menu unavailable" });
   expect(useCustomerTables.getState().resolved.cafe).toBeUndefined();
 });
+it("loads the plain menu for a constructor shop without a bogus inherited table code", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      ...menu,
+      shop: { ...menu.shop, slug: "constructor" },
+      table: undefined,
+    },
+  });
+  setup("/constructor");
+  await screen.findByRole("heading", { name: "Cafe", level: 1 });
+  expect(api.get).toHaveBeenCalledWith("/menu/constructor", expect.anything());
+});
+it("invalidates resolved context during refetch and keeps it blocked on network failure", async () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  setup("/cafe/table/T12", client);
+  await screen.findByText("Ordering for Table Patio 4");
+  expect(cartCheckoutRequest({}, "cafe").tableCode).toBe("T12");
+  let reject!: (error: Error) => void;
+  vi.mocked(api.get).mockImplementation(
+    () =>
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+  );
+  const refresh = client.refetchQueries({
+    queryKey: ["public-menu", "cafe", "table", "T12"],
+  });
+  await screen.findByText(/Loading menu/);
+  expect(() => cartCheckoutRequest({}, "cafe")).toThrow();
+  reject(new Error("offline"));
+  await refresh;
+  await screen.findByRole("heading", { name: "Table menu unavailable" });
+  expect(() => cartCheckoutRequest({}, "cafe")).toThrow();
+  expect(useCustomerTables.getState().codes.cafe).toBe("T12");
+});
+it.each([
+  { ...table, code: "../bad" },
+  { ...table, number: "\u0000" },
+])(
+  "shows malformed table responses as unavailable without crashing (%j)",
+  async (table) => {
+    vi.mocked(api.get).mockResolvedValue({ data: { ...menu, table } });
+    setup();
+    await screen.findByRole("heading", { name: "Table menu unavailable" });
+    expect(useCustomerTables.getState().resolved.cafe).toBeUndefined();
+  },
+);

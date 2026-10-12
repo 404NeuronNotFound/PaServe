@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import {
   createCustomerTableStore,
   CUSTOMER_TABLE_STORAGE_KEY,
+  customerTableCode,
 } from "./customer-table";
 import {
   cartCheckoutRequest,
@@ -128,5 +129,57 @@ it("rejects mismatched shop or code in prepared checkout context", () => {
       codes: { cafe: "T12" },
       resolved: { cafe: { ...table, code: "T13" } },
     }),
+  ).toThrow();
+});
+it.each(["constructor", "toString", "valueOf"])(
+  "does not treat inherited properties as a saved table for %s",
+  (slug) => {
+    const state = createCustomerTableStore(null).getState();
+    expect(customerTableCode(state.codes, slug)).toBeUndefined();
+    expect(cartCheckoutRequest({}, slug, state)).toEqual({ items: [] });
+  },
+);
+it("supports a real shop named constructor without leaking inherited context", () => {
+  const store = createCustomerTableStore(null);
+  store.getState().setResolved({ ...table, shopSlug: "constructor" });
+  expect(
+    cartCheckoutRequest({}, "constructor", store.getState()).tableCode,
+  ).toBe("T12");
+});
+it("rejects empty or orphaned context instead of silently preparing a tableless request", () => {
+  expect(() =>
+    cartCheckoutRequest({}, "cafe", { codes: { cafe: "" }, resolved: {} }),
+  ).toThrow();
+  expect(() =>
+    cartCheckoutRequest({}, "cafe", { codes: {}, resolved: { cafe: table } }),
+  ).toThrow();
+});
+it("copies resolved context so later mutation of a response cannot alter checkout", () => {
+  const store = createCustomerTableStore(null);
+  const response = { ...table };
+  store.getState().setResolved(response);
+  response.code = "T99";
+  expect(cartCheckoutRequest({}, "cafe", store.getState()).tableCode).toBe(
+    "T12",
+  );
+});
+it.each(["", "A\u00003", " 12 ", "x".repeat(41)])(
+  "rejects a malformed resolved label %j",
+  (number) => {
+    expect(() =>
+      createCustomerTableStore(null)
+        .getState()
+        .setResolved({ ...table, number }),
+    ).toThrow();
+  },
+);
+it("accepts a 40-character Unicode label with surrogate pairs, matching the API and database", () => {
+  const store = createCustomerTableStore(null);
+  store.getState().setResolved({ ...table, number: "🍽".repeat(40) });
+  expect(cartCheckoutRequest({}, "cafe", store.getState()).tableCode).toBe(
+    "T12",
+  );
+  expect(() =>
+    store.getState().setResolved({ ...table, number: "🍽".repeat(41) }),
   ).toThrow();
 });

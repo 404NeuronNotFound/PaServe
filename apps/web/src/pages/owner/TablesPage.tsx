@@ -104,7 +104,7 @@ function TableWorkspace({ userId }: { userId: string }) {
     if (
       !value ||
       !TABLE_NUMBER_PATTERN.test(value) ||
-      value.length > TABLE_LIMITS.numberMaxLength
+      [...value].length > TABLE_LIMITS.numberMaxLength
     ) {
       setFieldError(
         `Enter a table number or label of 1–${TABLE_LIMITS.numberMaxLength} characters without control characters.`,
@@ -256,7 +256,7 @@ function TableWorkspace({ userId }: { userId: string }) {
                 ref={input}
                 type="text"
                 autoComplete="off"
-                maxLength={TABLE_LIMITS.numberMaxLength}
+                maxLength={TABLE_LIMITS.numberMaxLength * 2}
                 placeholder="12, A3, Patio 4"
                 value={number}
                 disabled={disabled}

@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import { publicTablePath, type PublicTableContext } from "@paserve/contracts";
+import {
+  publicTablePath,
+  TABLE_LIMITS,
+  TABLE_NUMBER_PATTERN,
+  normalizeTableNumber,
+  type PublicTableContext,
+} from "@paserve/contracts";
 
 export const CUSTOMER_TABLE_STORAGE_KEY = "paserve-customer-tables:v1";
 type TableStorage = Pick<Storage, "getItem" | "setItem">;
@@ -9,6 +15,34 @@ export interface CustomerTableState {
   beginResolution: (shopSlug: string, code: string) => void;
   setResolved: (table: PublicTableContext) => void;
   clear: (shopSlug: string) => void;
+}
+export function customerTableCode(
+  codes: Record<string, string>,
+  slug: string,
+): string | undefined {
+  return Object.hasOwn(codes, slug) ? codes[slug] : undefined;
+}
+export function isPublicTableContext(
+  value: unknown,
+): value is PublicTableContext {
+  if (!value || typeof value !== "object") return false;
+  const table = value as Partial<PublicTableContext>;
+  if (
+    typeof table.shopSlug !== "string" ||
+    typeof table.code !== "string" ||
+    typeof table.number !== "string" ||
+    !table.number.length ||
+    [...table.number].length > TABLE_LIMITS.numberMaxLength ||
+    !TABLE_NUMBER_PATTERN.test(table.number) ||
+    normalizeTableNumber(table.number) !== table.number
+  )
+    return false;
+  try {
+    publicTablePath(table.shopSlug, table.code);
+    return true;
+  } catch {
+    return false;
+  }
 }
 function browserStorage(): TableStorage | null {
   try {
@@ -52,10 +86,18 @@ export function createCustomerTableStore(
       });
     },
     setResolved: (table) => {
-      publicTablePath(table.shopSlug, table.code);
+      if (!isPublicTableContext(table))
+        throw new Error("Invalid resolved table context.");
       set((state) => ({
         codes: { ...state.codes, [table.shopSlug]: table.code },
-        resolved: { ...state.resolved, [table.shopSlug]: table },
+        resolved: {
+          ...state.resolved,
+          [table.shopSlug]: {
+            shopSlug: table.shopSlug,
+            code: table.code,
+            number: table.number,
+          },
+        },
       }));
     },
     clear: (slug) =>
