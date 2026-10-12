@@ -151,6 +151,48 @@ it("shows separate configured lines, quantities, notes, subtotal and pickup type
   });
   expect(useCart.getState().shops.other).toHaveLength(1);
 });
+it("never submits saved frontend price snapshots and displays the server's recalculated total", async () => {
+  useCart.setState({ shops: {} });
+  useCart.getState().add("cafe", {
+    ...configured,
+    basePrice: "0.01",
+    unitPrice: "0.01",
+    totalPrice: "0.02",
+    variants: configured.variants.map((option) => ({
+      ...option,
+      priceAdjustment: "0.00",
+    })),
+    addOns: configured.addOns.map((option) => ({
+      ...option,
+      priceAdjustment: "0.00",
+    })),
+  });
+  vi.mocked(api.post).mockResolvedValue({
+    data: { order: { ...receipt.data.order, totalPrice: "56.50" } },
+  });
+  render(<CustomerOrder shopSlug="cafe" />);
+  await userEvent.click(screen.getByRole("button", { name: "Review order" }));
+  expect(
+    screen.getByRole("region", { name: "Review your order" }),
+  ).toHaveTextContent("Estimated subtotal₱0.02");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Place pickup order" }),
+  );
+  expect(api.post).toHaveBeenCalledWith("/menu/cafe/orders", {
+    mode: "TAKEOUT",
+    requestId: expect.any(String),
+    items: [
+      {
+        productId: "coffee",
+        quantity: 2,
+        variantIds: ["large"],
+        addOnIds: ["milk"],
+        notes: "Less ice\nNo sugar",
+      },
+    ],
+  });
+  expect(await screen.findByRole("status")).toHaveTextContent("Total ₱56.50");
+});
 it("lets the customer return to editing without submitting", async () => {
   await openCart();
   await userEvent.click(screen.getByRole("button", { name: "Review order" }));

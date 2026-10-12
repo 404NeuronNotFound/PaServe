@@ -14,6 +14,7 @@ import {
   type CartItem,
 } from "../../features/cart/cart";
 import { parseCartLine } from "../../features/cart/cart-storage";
+import { orderSubmissionRequest } from "../../features/cart/order-submission";
 import { CartReview, type CartReviewSnapshot } from "./CartReview";
 import { api } from "../../lib/api/client";
 import { formatCartPrice } from "../../lib/money";
@@ -261,7 +262,7 @@ export function CustomerOrder({
       }
       const { data } = await api.post<CustomerOrderResponse>(
         `/menu/${encodeURIComponent(shopSlug)}/orders`,
-        sent.request,
+        orderSubmissionRequest(sent.request),
       );
       if (
         typeof data.order?.id !== "string" ||
