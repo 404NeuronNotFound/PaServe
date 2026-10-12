@@ -1,0 +1,51 @@
+.current-table {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-block: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-secondary);
+  color: var(--color-text);
+  text-align: left;
+}
+.current-table > svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.current-table > div {
+  min-width: 0;
+}
+.current-table strong,
+.current-table span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.current-table span {
+  margin-top: 4px;
+  font-size: 0.85rem;
+}
+.customer-cart-table {
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+  max-width: 12ch;
+  min-width: 0;
+}
+.product-details-dialog > .current-table {
+  margin-inline: 24px;
+}
+.dine-in-order {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dine-in-order > .primary-button {
+  min-height: 44px;
+}
+@media (max-width: 520px) {
+  .product-details-dialog > .current-table {
+    margin-inline: 16px;
+  }
+}
