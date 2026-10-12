@@ -683,6 +683,8 @@ export interface DineInOrderResponse {
     status: "PENDING";
     table: PublicTableContext;
     currency: typeof PRODUCT_CURRENCY;
+    /** Always emitted by current API; optional for confirmations from older deployments. */
+    subtotalPrice?: string;
     totalPrice: string;
     items: ProductSelectionQuoteResponse[];
     createdAt: string;

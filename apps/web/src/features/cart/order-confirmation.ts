@@ -73,5 +73,9 @@ export function isCreatedOrderResponse(
       return false;
     totals.push(item.totalPrice);
   }
-  return sumPrices(totals) === order.totalPrice;
+  const subtotal = sumPrices(totals);
+  return (
+    subtotal === order.totalPrice &&
+    (order.subtotalPrice === undefined || order.subtotalPrice === subtotal)
+  );
 }

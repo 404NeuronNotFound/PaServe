@@ -48,6 +48,27 @@ const order = {
 it("accepts a pending order with matching selections and consistent server-calculated prices", () => {
   expect(isCreatedOrderResponse({ order }, request, "cafe")).toBe(true);
 });
+it("accepts an authoritative subtotal consistent with the server-priced lines", () => {
+  expect(
+    isCreatedOrderResponse(
+      { order: { ...order, subtotalPrice: "56.50" } },
+      request,
+      "cafe",
+    ),
+  ).toBe(true);
+});
+it.each(["55.00", "56.5", 56.5, null, "NaN"])(
+  "rejects inconsistent or invalid subtotal %j",
+  (subtotalPrice) => {
+    expect(
+      isCreatedOrderResponse(
+        { order: { ...order, subtotalPrice } },
+        request,
+        "cafe",
+      ),
+    ).toBe(false);
+  },
+);
 it.each([
   null,
   {},
