@@ -59,14 +59,18 @@ function setup() {
   );
   return { ...view, user: userEvent.setup() };
 }
-function failure(status: number, code: string) {
+function failure(
+  status: number,
+  code: string,
+  message = "This order QR is invalid or expired.",
+) {
   const error = new AxiosError("Denied");
   error.response = {
     status,
     statusText: "Denied",
     config: { headers: new AxiosHeaders() },
     headers: {},
-    data: { code, message: "This order QR is invalid or expired." },
+    data: { code, message },
   };
   return error;
 }
@@ -151,6 +155,23 @@ it("fails closed for an invalid token without displaying an order", async () => 
   ).toBeInTheDocument();
   expect(screen.queryByText("ORD-000042")).not.toBeInTheDocument();
   expect(screen.getByLabelText("Paste order QR contents")).toBeEnabled();
+});
+it("shows an ineligible-order error and permits scanning another order", async () => {
+  const message =
+    "This order is no longer awaiting cashier confirmation. Check its current status with the shop.";
+  vi.mocked(verifyScannedOrder).mockRejectedValue(
+    failure(409, "ORDER_NOT_PENDING_CONFIRMATION", message),
+  );
+  setup();
+  act(() => {
+    scan(token());
+  });
+  expect(await screen.findByText(message)).toBeInTheDocument();
+  expect(screen.queryByText("ORD-000042")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Paste order QR contents")).toBeEnabled();
+  expect(
+    screen.queryByRole("link", { name: "Sign in again" }),
+  ).not.toBeInTheDocument();
 });
 it.each([401, 403])(
   "blocks scanner actions after session/access failure (%s)",

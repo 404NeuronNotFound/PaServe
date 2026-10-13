@@ -114,6 +114,78 @@ describe('Cashier order QR verification', () => {
       .set('Authorization', 'Bearer staff-session')
       .send({ qrToken: token });
 
+  it.each([
+    'CONFIRMED',
+    'REJECTED',
+    'CANCELLED',
+    'COMPLETED',
+    'PREPARING',
+    'READY',
+    'unknown',
+    '',
+    'PENDING',
+  ])(
+    'rejects noneligible order state %s through both QR endpoints',
+    async (state) => {
+      persisted.status = state;
+      for (const endpoint of [scan, verify]) {
+        const result = await endpoint().expect(409);
+        expect(result.body.code).toBe('ORDER_NOT_PENDING_CONFIRMATION');
+        expect(result.body.order).toBeUndefined();
+      }
+      expect(updateOrder).not.toHaveBeenCalled();
+      expect(createOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('verifies credentials before revealing that an order is no longer eligible', async () => {
+    persisted.status = 'CONFIRMED';
+    const token = tokens.issue(persisted);
+    const altered = `${token.slice(0, -1)}${token.endsWith('a') ? 'b' : 'a'}`;
+    await scan(altered).expect(403);
+    await verify(altered).expect(403);
+  });
+  it('allows repeated read-only verification while pending and rejects replay after processing', async () => {
+    const token = tokens.issue(persisted);
+    await scan(token).expect(200);
+    await scan(token).expect(200);
+    await verify(token).expect(200);
+    await verify(token).expect(200);
+    expect(updateOrder).not.toHaveBeenCalled();
+    expect(createOrder).not.toHaveBeenCalled();
+    persisted.status = 'CONFIRMED';
+    await scan(token).expect(409);
+    await verify(token).expect(409);
+  });
+  it('rejects at the exact expiry boundary on both endpoints without renewing the token', async () => {
+    const token = tokens.issue(persisted);
+    const now = vi
+      .spyOn(Date, 'now')
+      .mockReturnValue(persisted.qrTokenExpiresAt.getTime() - 1);
+    try {
+      await scan(token).expect(200);
+      await verify(token).expect(200);
+      now.mockReturnValue(persisted.qrTokenExpiresAt.getTime());
+      await scan(token).expect(403);
+      await verify(token).expect(403);
+      expect(tokens.issue(persisted)).toBe(token);
+      expect(updateOrder).not.toHaveBeenCalled();
+    } finally {
+      now.mockRestore();
+    }
+  });
+  it('does not extend an expired credential when persisted expiry is moved later', async () => {
+    persisted.qrTokenExpiresAt = new Date(Date.now() - 1);
+    const token = tokens.issue(persisted);
+    persisted.qrTokenExpiresAt = new Date(Date.now() + 86400000);
+    await scan(token).expect(403);
+    await verify(token).expect(403);
+  });
+  it('rejects a signed credential after the persisted nonce changes', async () => {
+    const token = tokens.issue(persisted);
+    persisted.qrTokenNonce = '75992537-5d60-4d22-8e1e-60a114644681';
+    await scan(token).expect(403);
+    await verify(token).expect(403);
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
     'resolves a scanned token for live %s and returns only saved order details',
     async (allowedRole) => {

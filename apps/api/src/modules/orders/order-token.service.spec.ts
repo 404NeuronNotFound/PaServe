@@ -74,6 +74,19 @@ describe('order receipt tokens', () => {
     for (const token of ['', 'invalid', 'ORD-000001', 'x'.repeat(1025)])
       expect(() => service.verify(token, first)).toThrow();
   });
+  it('rejects invalid persisted expiry and nonce metadata even when signed', () => {
+    const invalidExpiry = {
+      ...order(),
+      qrTokenExpiresAt: new Date(Number.NaN),
+    };
+    expect(() =>
+      service.verify(service.issue(invalidExpiry), invalidExpiry),
+    ).toThrow();
+    const invalidNonce = { ...order(), qrTokenNonce: 'invalid' };
+    expect(() =>
+      service.verify(service.issue(invalidNonce), invalidNonce),
+    ).toThrow();
+  });
   it('requires a configured signing secret', () => {
     expect(
       () =>

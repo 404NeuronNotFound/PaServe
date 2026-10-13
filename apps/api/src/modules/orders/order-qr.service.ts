@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -72,6 +73,13 @@ export class OrderQrService {
         message: 'This order is unavailable in this shop.',
       });
     this.tokens.verify(token, order);
+    // Invalid credentials must not reveal that the order has been processed.
+    if (order.status !== 'PENDING_CONFIRMATION')
+      throw new ConflictException({
+        code: 'ORDER_NOT_PENDING_CONFIRMATION',
+        message:
+          'This order is no longer awaiting cashier confirmation. Check its current status with the shop.',
+      });
     // Return saved cashier details without exposing the bearer credential.
     return {
       verified: true as const,

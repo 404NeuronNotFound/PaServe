@@ -89,11 +89,18 @@ export class OrderTokenService {
   }
   // The caller must resolve this persisted order under the target shop first.
   verify(token: string, order: TokenOrder): void {
+    const expiresAt =
+      order.qrTokenExpiresAt instanceof Date
+        ? order.qrTokenExpiresAt.getTime()
+        : Number.NaN;
     if (
       typeof token !== 'string' ||
       token.length > 1024 ||
       order.qrTokenRevokedAt ||
-      order.qrTokenExpiresAt.getTime() <= Date.now()
+      typeof order.qrTokenNonce !== 'string' ||
+      !isUUID(order.qrTokenNonce) ||
+      !Number.isSafeInteger(expiresAt) ||
+      expiresAt <= Date.now()
     )
       throw invalidOrderToken();
     const expected = Buffer.from(this.issue(order));
