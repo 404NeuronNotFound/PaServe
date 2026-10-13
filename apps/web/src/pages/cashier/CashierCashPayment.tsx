@@ -7,6 +7,7 @@ import type {
 } from "@paserve/contracts";
 import {
   PAYMENT_REFERENCE_PATTERN,
+  CASH_AMOUNT_MAX,
   isSafeOtherPaymentText,
 } from "@paserve/contracts";
 import {
@@ -326,7 +327,11 @@ export function CashierCashPayment({
                     required
                     disabled={busy || blocked || confirm}
                     aria-invalid={description.length > 0 && invalidDescription}
-                    aria-describedby={description.length > 0 && invalidDescription ? "other-payment-description-hint other-payment-description-error" : "other-payment-description-hint"}
+                    aria-describedby={
+                      description.length > 0 && invalidDescription
+                        ? "other-payment-description-hint other-payment-description-error"
+                        : "other-payment-description-hint"
+                    }
                     onChange={(event) => {
                       setDescription(event.target.value);
                       setReceivedConfirmed(false);
@@ -338,7 +343,12 @@ export function CashierCashPayment({
                     voucher. Use Cash, GCash or Card for those methods. Do not
                     enter card details.
                   </p>
-                  {description.length > 0 && invalidDescription && <InlineMessage id="other-payment-description-error">Enter a plain-text method description of up to 80 characters without card details.</InlineMessage>}
+                  {description.length > 0 && invalidDescription && (
+                    <InlineMessage id="other-payment-description-error">
+                      Enter a plain-text method description of up to 80
+                      characters without card details.
+                    </InlineMessage>
+                  )}
                 </>
               )}
               <p>
@@ -413,7 +423,7 @@ export function CashierCashPayment({
                   inputMode="decimal"
                   autoComplete="off"
                   placeholder="0.00"
-                  maxLength={13}
+                  maxLength={CASH_AMOUNT_MAX.length}
                   value={amount}
                   disabled={busy || blocked || confirm}
                   onChange={(event) => {
@@ -429,13 +439,15 @@ export function CashierCashPayment({
                 />
               </div>
               <p id="cash-amount-hint">
-                Enter the cash actually received. It must cover the total.
+                Enter the cash actually received, with up to two decimal places.
+                It must cover the total. Maximum{" "}
+                {formatCartPrice(CASH_AMOUNT_MAX)}.
               </p>
               {invalidAmount && (
                 <InlineMessage id="cash-amount-error">
                   {normalized
                     ? "The amount received is below the order total."
-                    : "Enter a valid amount with up to two decimal places."}
+                    : `Enter a valid amount with up to two decimal places. Maximum ${formatCartPrice(CASH_AMOUNT_MAX)}.`}
                 </InlineMessage>
               )}
               <div className="cashier-cash-change" role="status">

@@ -125,6 +125,8 @@ it.each([
   ["200", "200.00"],
   [" 135.5 ", "135.50"],
   ["0", "0.00"],
+  ["0.1", "0.10"],
+  ["0.30", "0.30"],
   ["9999999999.99", "9999999999.99"],
 ])("normalizes entered cash %s", (raw, expected) => {
   expect(normalizeCashAmount(raw)).toBe(expected);
@@ -138,6 +140,10 @@ it.each([
   "01",
   ".5",
   "NaN",
+  "Infinity",
+  "+200",
+  "200abc",
+  "1_000",
   "",
 ])("rejects malformed cash %s", (raw) => {
   expect(normalizeCashAmount(raw)).toBeNull();

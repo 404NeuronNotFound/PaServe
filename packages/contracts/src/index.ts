@@ -792,6 +792,7 @@ export interface OrderDecisionResponse {
   };
 }
 /** Cash tender uses exact PHP decimal strings, bounded by Decimal(12,2). */
+export const CASH_AMOUNT_MAX = "9999999999.99";
 export const CASH_AMOUNT_PATTERN = /^(?:0|[1-9]\d{0,9})\.\d{2}$(?![\s\S])/;
 export function cashAmountCents(value: unknown): bigint | null {
   return typeof value === "string" && CASH_AMOUNT_PATTERN.test(value)

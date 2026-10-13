@@ -573,6 +573,28 @@ describe('Cash collection', () => {
         .changeDue,
     ).toBe('0.00');
   });
+  it('captures fractional tender using exact decimals', async () => {
+    saved.totalPrice = new Prisma.Decimal('0.10');
+    for (const field of [
+      'basePriceSnapshot',
+      'unitPriceSnapshot',
+      'lineTotalSnapshot',
+    ] as const)
+      saved.orderItems[0][field] = new Prisma.Decimal('0.10');
+    version = (await cash.review(userId, shopId, orderId)).order.reviewVersion;
+    const result = await collect({ amountReceived: '0.30' }).expect(200);
+    expect(result.body.payment.amountReceived).toBe('0.30');
+    expect(result.body.payment.changeDue).toBe('0.20');
+    expect(saved.amountReceived!.toFixed(2)).toBe('0.30');
+  });
+  it('accepts the Decimal(12,2) tender limit without rounding', async () => {
+    const result = await collect({ amountReceived: '9999999999.99' }).expect(
+      200,
+    );
+    expect(result.body.payment.amountReceived).toBe('9999999999.99');
+    expect(result.body.payment.changeDue).toBe('9999999864.49');
+    expect(saved.amountReceived!.toFixed(2)).toBe('9999999999.99');
+  });
   it('rejects underpayment without mutation', async () => {
     expect(
       (await collect({ amountReceived: '135.49' }).expect(400)).body.code,
@@ -587,6 +609,11 @@ describe('Cash collection', () => {
     '10000000000.00',
     ' 200.00',
     'NaN',
+    'Infinity',
+    '+200.00',
+    '200.00abc',
+    '1,000.00',
+    '1_000.00',
     '',
     '200.00\n',
     200,

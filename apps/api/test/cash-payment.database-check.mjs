@@ -281,7 +281,13 @@ try {
     await cash.review(users[winnerIndex].id, shop.id, order.id),
     winner,
   );
-  async function confirmedOrder(number) {
+  async function confirmedOrder(number, total = '10.00') {
+    const savedQuote = {
+      ...quote,
+      basePrice: total,
+      unitPrice: total,
+      totalPrice: total,
+    };
     return prisma.order.create({
       data: {
         shopId: shop.id,
@@ -289,8 +295,8 @@ try {
         requestHash: 'a'.repeat(64),
         mode: 'TAKEOUT',
         orderNumber: number,
-        totalPrice: '10.00',
-        items: [quote],
+        totalPrice: total,
+        items: [savedQuote],
         ...tokens.metadata(),
         status: 'CONFIRMED',
         decidedAt: new Date(),
@@ -300,12 +306,12 @@ try {
           create: {
             lineNumber: 1,
             quantity: 1,
-            snapshot: quote,
+            snapshot: savedQuote,
             productSnapshotId: quote.productId,
             productNameSnapshot: quote.productName,
-            basePriceSnapshot: '10.00',
-            unitPriceSnapshot: '10.00',
-            lineTotalSnapshot: '10.00',
+            basePriceSnapshot: total,
+            unitPriceSnapshot: total,
+            lineTotalSnapshot: total,
             variantsSnapshot: [],
             addOnsSnapshot: [],
           },
@@ -535,6 +541,44 @@ try {
   console.log(
     'Passed: OTHER requires a saved description and full-payment attestation, stores method/reference/actor with zero change, rejects common card details, preserves existing receipts and rejects altered retries.',
   );
+  for (const [number, total, tender, expectedChange] of [
+    ['ORD-000006', '0.10', '0.30', '0.20'],
+    ['ORD-000007', '10.00', '9999999999.99', '9999999989.99'],
+    ['ORD-000008', '0.00', '0.00', '0.00'],
+  ]) {
+    const tenderOrder = await confirmedOrder(number, total);
+    const tenderVersion = (
+      await cash.review(users[0].id, shop.id, tenderOrder.id)
+    ).order.reviewVersion;
+    const dto = {
+      requestId: randomUUID(),
+      reviewVersion: tenderVersion,
+      amountReceived: tender,
+    };
+    for (const invalid of ['0.001', '10000000000.00', 'Infinity', 200])
+      await assert.rejects(
+        cash.collect(users[0].id, shop.id, tenderOrder.id, {
+          ...dto,
+          amountReceived: invalid,
+        }),
+        { status: 400 },
+      );
+    const result = await cash.collect(
+      users[0].id,
+      shop.id,
+      tenderOrder.id,
+      dto,
+    );
+    const persisted = await prisma.order.findFirst({
+      where: { id: tenderOrder.id, shopId: shop.id },
+    });
+    assert.equal(persisted.amountReceived.toFixed(2), tender);
+    assert.equal(persisted.changeDue.toFixed(2), expectedChange);
+    assert.equal(result.payment.amountReceived, tender);
+  }
+  console.log(
+    'Passed: cash tender fractional precision, Decimal(12,2) maximum, zero-total exact payment and invalid-tender rejection before saving.',
+  );
   const raceOrder = await confirmedOrder('ORD-000003');
   const raceVersion = (await cash.review(users[0].id, shop.id, raceOrder.id))
     .order.reviewVersion;
@@ -594,9 +638,12 @@ try {
   await assert.rejects(cash.review(users[0].id, shop.id, otherOrder.id), {
     status: 404,
   });
-  await assert.rejects(cash.recordOther(users[0].id, shop.id, otherOrder.id, otherRequest), {
-    status: 404,
-  });
+  await assert.rejects(
+    cash.recordOther(users[0].id, shop.id, otherOrder.id, otherRequest),
+    {
+      status: 404,
+    },
+  );
   console.log(
     'Passed: cash migration, confirmed-only collection, underpayment, exact change, competing collectors commit once, idempotent replay, immutable receipts and revoked access.',
   );
