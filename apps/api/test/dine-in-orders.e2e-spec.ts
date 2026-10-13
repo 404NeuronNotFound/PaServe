@@ -894,6 +894,35 @@ describe('dine-in order submission', () => {
     await post(takeout()).expect(500);
     expect(create).toHaveBeenCalledTimes(1);
   });
+  it.each(
+    ['CONFIRMED', 'REJECTED'].flatMap((status) =>
+      ['DINE_IN', 'TAKEOUT'].map((mode) => ({ status, mode })),
+    ),
+  )(
+    'returns a safe conflict when a $mode retry reaches an already $status order',
+    async ({ status, mode }) => {
+      const original = mode === 'DINE_IN' ? payload() : takeout();
+      await post(original).expect(201);
+      saved.mockResolvedValue({
+        ...create.mock.calls[0][0].data,
+        id: 'order-a',
+        status,
+        createdAt: new Date(),
+      });
+      raw
+        .mockReset()
+        .mockResolvedValue([
+          { id: 'shop-a', isActive: true, acceptingOrders: true },
+        ]);
+      const reads = readItems.mock.calls.length;
+      const result = await post(original).expect(409);
+      expect(result.body.code).toBe('ORDER_ALREADY_PROCESSED');
+      expect(result.body.order).toBeUndefined();
+      expect(JSON.stringify(result.body)).not.toContain('qrToken');
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(readItems).toHaveBeenCalledTimes(reads);
+    },
+  );
   it('confirms an existing dine-in order with an expired authentic context but rejects new creation with that token', async () => {
     const original = payload();
     await post(original).expect(201);

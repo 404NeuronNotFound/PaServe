@@ -110,12 +110,25 @@ export function useQrCamera(onCode: (raw: string) => boolean) {
         const node = video.current;
         if (!node) {
           acquired.getTracks().forEach((track) => track.stop());
+          setPhase("idle");
+          setError(
+            "The camera preview is unavailable. Try again, or use the options below.",
+          );
           return;
         }
         stream.current = acquired;
         node.srcObject = acquired;
         await node.play();
         if (!current()) return;
+        const tracks = acquired.getVideoTracks();
+        if (
+          !tracks.length ||
+          tracks.every((track) => track.readyState === "ended")
+        )
+          throw new DOMException(
+            "Camera disconnected before playback",
+            "NotReadableError",
+          );
         if (document.hidden) {
           stop();
           return;

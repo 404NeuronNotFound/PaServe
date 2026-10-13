@@ -146,6 +146,10 @@ it.each([
   { ...order, orderNumber: "ORD-000001\n" },
   { ...order, orderNumber: "ORD-9999999999999999999" },
   { ...order, currency: "USD" },
+  { ...order, status: "CONFIRMED" },
+  { ...order, status: "UNKNOWN" },
+  { ...order, paymentStatus: "PAID" },
+  { ...order, reviewVersion: `${"a".repeat(64)}\n` },
 ])(
   "does not display a mismatched or invalid verification response %j",
   async (invalid) => {
@@ -157,6 +161,27 @@ it.each([
     ).rejects.toThrow("response could not be verified");
   },
 );
+it("projects only reviewed fields even if a response contains private metadata", async () => {
+  vi.spyOn(api, "post").mockResolvedValue({
+    data: {
+      verified: true,
+      order: {
+        ...order,
+        qrToken: "private",
+        requestHash: "private",
+        rawSnapshot: {},
+      },
+    },
+  });
+  const saved = await verifyScannedOrder(
+    shopId,
+    token,
+    new AbortController().signal,
+  );
+  expect(saved).toEqual(order);
+  expect(saved).not.toHaveProperty("qrToken");
+  expect(saved).not.toHaveProperty("requestHash");
+});
 it("decodes a real generated PaServe token QR using the production decoder", async () => {
   const png = await QRCode.toBuffer(token, { width: 800, margin: 4 });
   const { data, info } = await sharp(png)

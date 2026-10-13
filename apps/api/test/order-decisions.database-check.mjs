@@ -1,11 +1,12 @@
 import 'dotenv/config';
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../dist/database/prisma.service.js';
 import { OrderQrService } from '../dist/modules/orders/order-qr.service.js';
 import { OrderTokenService } from '../dist/modules/orders/order-token.service.js';
 import { OrderDecisionService } from '../dist/modules/orders/order-decision.service.js';
+import { OrdersService } from '../dist/modules/orders/orders.service.js';
 import { readFile } from 'node:fs/promises';
 
 // Every fixture and menu edit remains inside one rollback-only transaction.
@@ -114,6 +115,37 @@ try {
           },
         });
         const cashier = new OrderQrService(tx, tokens);
+        const originalRequest = {
+          requestId: order.requestId,
+          mode: 'TAKEOUT',
+          items: [
+            {
+              productId: product.id,
+              quantity: quote.quantity,
+              variantIds: quote.variants.map((option) => option.id),
+              addOnIds: quote.addOns.map((option) => option.id),
+              notes: quote.notes,
+            },
+          ],
+        };
+        const requestHash = createHash('sha256')
+          .update(
+            JSON.stringify({
+              mode: originalRequest.mode,
+              items: originalRequest.items.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                variantIds: [...item.variantIds].sort(),
+                addOnIds: [...item.addOnIds].sort(),
+                notes: item.notes,
+              })),
+            }),
+          )
+          .digest('hex');
+        await tx.order.updateMany({
+          where: { id: order.id, shopId: shop.id },
+          data: { requestHash },
+        });
         const token = tokens.issue(order);
         const initial = await cashier.scan(user.id, shop.id, token);
         assert.deepEqual(initial.order.items, [quote]);
@@ -178,6 +210,18 @@ try {
         });
         assert.equal(saved.status, 'CONFIRMED');
         assert.equal(saved.paymentStatus, 'UNPAID');
+        const checkout = new OrdersService(
+          { $transaction: (work) => work(tx) },
+          undefined,
+          undefined,
+          tokens,
+        );
+        await assert.rejects(
+          checkout.create(slug, originalRequest),
+          (error) =>
+            error.status === 409 &&
+            error.getResponse().code === 'ORDER_ALREADY_PROCESSED',
+        );
         assert.ok(saved.qrTokenRevokedAt instanceof Date);
         assert.ok(saved.decidedAt instanceof Date);
         await assert.rejects(cashier.scan(user.id, shop.id, token), {
@@ -187,7 +231,12 @@ try {
           decisions.decide(user.id, shop.id, order.id, 'CONFIRMED', dto),
           { status: 403 },
         );
-        assert.deepEqual(await tx.order.findFirst({ where: { id: order.id, shopId: shop.id } }), saved);
+        assert.deepEqual(
+          await tx.order.findFirst({
+            where: { id: order.id, shopId: shop.id },
+          }),
+          saved,
+        );
         await assert.rejects(
           decisions.decide(user.id, shop.id, order.id, 'REJECTED', dto),
           { status: 403 },

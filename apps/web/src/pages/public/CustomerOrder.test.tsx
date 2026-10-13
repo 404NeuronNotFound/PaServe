@@ -221,6 +221,59 @@ it("preserves an uncertain request after a later 404 rather than allowing a dupl
   );
   expect(await screen.findByRole("status")).toHaveTextContent("Pending");
 });
+it("resolves a processed checkout retry without resubmitting the already saved cart", async () => {
+  vi.mocked(api.post)
+    .mockRejectedValueOnce(new Error("Response lost"))
+    .mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 409, data: { code: "ORDER_ALREADY_PROCESSED" } },
+    });
+  render(<CustomerOrder shopSlug="cafe" />);
+  await placeOrder("Place pickup order");
+  await screen.findByRole("alert");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Confirm previous order" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "already been processed at the counter",
+  );
+  expect(
+    screen.queryByRole("button", { name: "Confirm previous order" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Review order" })).toBeDisabled();
+  expect(useCart.getState().shops.cafe).toEqual([]);
+  expect(sessionStorage.getItem("paserve-pending-order:v1:cafe")).toBeNull();
+  expect(api.post).toHaveBeenCalledTimes(2);
+});
+it("preserves new and edited cart lines when the previous checkout was processed", async () => {
+  vi.mocked(api.post)
+    .mockRejectedValueOnce(new Error("Response lost"))
+    .mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 409, data: { code: "ORDER_ALREADY_PROCESSED" } },
+    });
+  render(<CustomerOrder shopSlug="cafe" />);
+  await placeOrder("Place pickup order");
+  await screen.findByRole("alert");
+  const original = useCart.getState().shops.cafe[0];
+  useCart.setState({
+    shops: {
+      cafe: [
+        { ...original, quantity: 2, totalPrice: "20.00" },
+        { ...original, lineId: "new-line", productName: "Next coffee" },
+      ],
+    },
+  });
+  await userEvent.click(
+    screen.getByRole("button", { name: "Confirm previous order" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "already been processed",
+  );
+  expect(useCart.getState().shops.cafe).toHaveLength(2);
+  expect(screen.getByRole("button", { name: "Review order" })).toBeEnabled();
+  expect(api.post).toHaveBeenCalledTimes(2);
+});
 it("retains the original request across cart closure when session storage is blocked", async () => {
   const blockedWrite = vi
     .spyOn(Storage.prototype, "setItem")

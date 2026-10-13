@@ -125,6 +125,20 @@ export function CustomerOrder({
   );
   const count = items.length;
   const action = useRef<HTMLButtonElement>(null);
+  function clearSubmittedLines(completed: Attempt) {
+    // Remove only the unchanged lines already included in this saved order.
+    cartItemsForShop(useCart.getState().shops, shopSlug).forEach((item) => {
+      const index = completed.lines.indexOf(item.lineId);
+      if (
+        index >= 0 &&
+        JSON.stringify({
+          productId: item.productId,
+          ...cartSelectionRequest(item),
+        }) === JSON.stringify(completed.request.items[index])
+      )
+        useCart.getState().remove(shopSlug, item.lineId);
+    });
+  }
   function reviewOrder() {
     if (editing || busy.current) return;
     setError("");
@@ -265,20 +279,7 @@ export function CustomerOrder({
         throw new Error("The order response could not be confirmed.");
       }
       setReceipt(data.order);
-      const completed = sent;
-      // Retain any lines edited or added while the request was in flight.
-      cartItemsForShop(useCart.getState().shops, shopSlug).forEach((item) => {
-        const index = completed.lines.indexOf(item.lineId);
-        if (
-          index >= 0 &&
-          JSON.stringify({
-            productId: item.productId,
-            ...cartSelectionRequest(item),
-          }) === JSON.stringify(completed.request.items[index])
-        ) {
-          useCart.getState().remove(shopSlug, item.lineId);
-        }
-      });
+      clearSubmittedLines(sent);
       setAttempt(null);
       setReview(null);
       pendingOrders.remove(key);
@@ -289,7 +290,21 @@ export function CustomerOrder({
       const invalidContext =
         isAxiosError(cause) &&
         cause.response?.data?.code === "TABLE_CONTEXT_INVALID";
-      if (invalidContext) {
+      if (
+        sent &&
+        status === 409 &&
+        isAxiosError(cause) &&
+        cause.response?.data?.code === "ORDER_ALREADY_PROCESSED"
+      ) {
+        clearSubmittedLines(sent);
+        setAttempt(null);
+        setReview(null);
+        setReceipt(null);
+        pendingOrders.remove(key);
+        setError(
+          "This order has already been processed at the counter. Ask the staff for its current status. Unchanged submitted items were removed from your cart; any new or edited items are kept for your next order.",
+        );
+      } else if (invalidContext) {
         setError(
           "Scan the original table QR again, then confirm this same order. Your cart is saved.",
         );

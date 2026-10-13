@@ -33,12 +33,10 @@ export async function verifyScannedOrder(
     !["DINE_IN", "TAKEOUT"].includes(data.order.mode) ||
     data.order.currency !== "PHP" ||
     !isOrderTotal(data.order.totalPrice) ||
-    typeof data.order.status !== "string" ||
-    !data.order.status ||
-    typeof data.order.paymentStatus !== "string" ||
-    !data.order.paymentStatus ||
+    data.order.status !== "PENDING_CONFIRMATION" ||
+    data.order.paymentStatus !== "UNPAID" ||
     typeof data.order.reviewVersion !== "string" ||
-    !/^[a-f0-9]{64}$/.test(data.order.reviewVersion) ||
+    !/^[a-f0-9]{64}$(?![\s\S])/.test(data.order.reviewVersion) ||
     !(
       data.order.tableNumber === null ||
       typeof data.order.tableNumber === "string"
@@ -60,5 +58,28 @@ export async function verifyScannedOrder(
     throw new Error(
       "The order type and table could not be verified. Please try again.",
     );
-  return { ...data.order, items };
+  const {
+    id,
+    orderNumber,
+    mode,
+    status,
+    paymentStatus,
+    currency,
+    totalPrice,
+    tableNumber,
+    reviewVersion,
+  } = data.order;
+  return {
+    id,
+    shopId,
+    orderNumber,
+    mode,
+    status,
+    paymentStatus,
+    currency,
+    totalPrice,
+    tableNumber,
+    reviewVersion,
+    items,
+  };
 }

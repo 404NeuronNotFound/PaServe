@@ -90,9 +90,15 @@ it("verifies pasted QR contents, clears the credential, and shows only saved ser
   await user.click(screen.getByRole("button", { name: "Verify pasted QR" }));
   expect(await screen.findByText("ORD-000042")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Review order" })).toHaveFocus();
-  expect(screen.queryByLabelText("Paste order QR contents")).not.toBeInTheDocument();
-  expect(screen.queryByLabelText("Choose an order QR image")).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Start camera" })).not.toBeInTheDocument();
+  expect(
+    screen.queryByLabelText("Paste order QR contents"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByLabelText("Choose an order QR image"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Start camera" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.getByText(
       /Verification does not confirm this order or record payment\./,
@@ -218,7 +224,9 @@ it("allows another order after a successful scan", async () => {
   await screen.findByText("ORD-000042");
   await user.click(screen.getByRole("button", { name: "Scan another order" }));
   expect(screen.queryByText("ORD-000042")).not.toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Scan customer order QR" })).toHaveFocus();
+  expect(
+    screen.getByRole("heading", { name: "Scan customer order QR" }),
+  ).toHaveFocus();
   expect(screen.getByLabelText("Paste order QR contents")).toHaveValue("");
   expect(start).not.toHaveBeenCalled();
   act(() => {
@@ -226,11 +234,40 @@ it("allows another order after a successful scan", async () => {
   });
   await waitFor(() => expect(verifyScannedOrder).toHaveBeenCalledTimes(2));
 });
+it.each([401, 403, 500])(
+  "handles a response without a JSON error body (%s)",
+  async (status) => {
+    const error = failure(status, "ACCESS_DENIED");
+    error.response!.data = null;
+    vi.mocked(verifyScannedOrder).mockRejectedValue(error);
+    setup();
+    act(() => {
+      scan(token());
+    });
+    if (status === 500) {
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Unable to verify the order",
+      );
+      expect(screen.getByLabelText("Paste order QR contents")).toBeEnabled();
+    } else {
+      expect(
+        await screen.findByRole("link", {
+          name: status === 401 ? "Sign in again" : "Choose another shop",
+        }),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Paste order QR contents")).toBeDisabled();
+    }
+  },
+);
 it("keeps the loaded order in review when a late camera callback arrives", async () => {
   setup();
-  act(() => { scan(token()); });
+  act(() => {
+    scan(token());
+  });
   await screen.findByRole("heading", { name: "Review order" });
-  act(() => { scan(token()); });
+  act(() => {
+    scan(token());
+  });
   expect(verifyScannedOrder).toHaveBeenCalledTimes(1);
   expect(screen.getByText("ORD-000042")).toBeInTheDocument();
 });

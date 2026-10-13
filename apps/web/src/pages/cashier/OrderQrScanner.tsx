@@ -94,7 +94,7 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
           if (
             status === 401 ||
             (status === 403 &&
-              failure.response?.data.code !== "ORDER_TOKEN_INVALID")
+              failure.response?.data?.code !== "ORDER_TOKEN_INVALID")
           ) {
             setLostAccess(true);
             setExpiredSession(status === 401);
@@ -105,7 +105,7 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
             );
           } else
             setError(
-              typeof failure.response?.data.message === "string"
+              typeof failure.response?.data?.message === "string"
                 ? failure.response.data.message
                 : "Unable to verify the order. Check your connection and try again.",
             );

@@ -16,7 +16,7 @@ function failureMessage(error: unknown) {
   if (
     isAxiosError<ApiErrorResponse>(error) &&
     error.response &&
-    typeof error.response.data.message === "string"
+    typeof error.response.data?.message === "string"
   )
     return error.response.data.message;
   return "Unable to check the current order. Check your connection and refresh before proceeding.";

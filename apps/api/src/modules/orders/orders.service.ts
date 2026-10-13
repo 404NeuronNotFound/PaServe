@@ -84,6 +84,12 @@ export class OrdersService {
           code: 'ORDER_REQUEST_CONFLICT',
           message: 'This request ID was already used for another order.',
         });
+      if (['CONFIRMED', 'REJECTED'].includes(order.status))
+        throw new ConflictException({
+          code: 'ORDER_ALREADY_PROCESSED',
+          message:
+            'This order has already been processed at the counter. Ask the staff for its current status before placing another order.',
+        });
       if (order.status !== 'PENDING_CONFIRMATION')
         throw new Error('Invalid persisted order status.');
       if (order.paymentStatus !== 'UNPAID')

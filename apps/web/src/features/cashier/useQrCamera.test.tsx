@@ -32,11 +32,11 @@ function media(id = "rear") {
     },
   }.init();
 }
-function Harness() {
+function Harness({ preview = true }: { preview?: boolean }) {
   const { videoRef, phase, error, start, stop } = useQrCamera(detected);
   return (
     <>
-      <video ref={videoRef} />
+      {preview && <video ref={videoRef} />}
       <span>{phase}</span>
       <span>{error}</span>
       <button onClick={() => void start()}>Start</button>
@@ -139,6 +139,38 @@ it("releases a camera granted after the request was cancelled", async () => {
   await act(async () => resolve(source.stream));
   expect(source.stop).toHaveBeenCalled();
   expect(screen.getByText("idle")).toBeInTheDocument();
+});
+it("returns to idle if the preview disappears before camera permission is granted", async () => {
+  const source = media();
+  let resolve!: (stream: MediaStream) => void;
+  getUserMedia.mockImplementation(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  const view = render(<Harness />);
+  fireEvent.click(screen.getByText("Start"));
+  await waitFor(() => expect(getUserMedia).toHaveBeenCalled());
+  view.rerender(<Harness preview={false} />);
+  await act(async () => {
+    resolve(source.stream);
+  });
+  expect(source.stop).toHaveBeenCalledTimes(1);
+  expect(screen.getByText("idle")).toBeInTheDocument();
+});
+it("fails gracefully if the camera track ended before playback completed", async () => {
+  const source = media();
+  Object.assign(source.track, { readyState: "ended" });
+  getUserMedia.mockResolvedValue(source.stream);
+  render(<Harness />);
+  fireEvent.click(screen.getByText("Start"));
+  await waitFor(() =>
+    expect(screen.queryByText("starting")).not.toBeInTheDocument(),
+  );
+  expect(screen.getByText("idle")).toBeInTheDocument();
+  expect(source.stop).toHaveBeenCalled();
+  expect(detected).not.toHaveBeenCalled();
 });
 it("releases a camera granted after leaving the page", async () => {
   const source = media();

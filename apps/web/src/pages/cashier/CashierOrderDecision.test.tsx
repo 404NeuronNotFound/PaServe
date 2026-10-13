@@ -268,6 +268,23 @@ it("keeps actions blocked if a refreshed order has an ineligible state", async (
   );
   expect(decideOrder).not.toHaveBeenCalled();
 });
+it("fails closed with a useful message for a refresh error without a JSON body", async () => {
+  const error = new AxiosError("Proxy failed");
+  error.response = {
+    status: 502,
+    statusText: "Bad gateway",
+    config: { headers: new AxiosHeaders() },
+    headers: {},
+    data: null,
+  };
+  vi.mocked(verifyScannedOrder).mockRejectedValueOnce(error);
+  const { user } = setup();
+  await user.click(screen.getByRole("button", { name: "Refresh order" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Unable to check the current order",
+  );
+  expect(screen.getByRole("button", { name: "Confirm order" })).toBeDisabled();
+});
 it("ignores a late successful decision after unmount", async () => {
   let resolve!: (saved: typeof decision) => void;
   vi.mocked(decideOrder).mockImplementation(
