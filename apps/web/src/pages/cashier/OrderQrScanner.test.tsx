@@ -1,0 +1,193 @@
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
+import { AxiosError, AxiosHeaders } from "axios";
+import { OrderQrScanner } from "./OrderQrScanner";
+import { verifyScannedOrder } from "../../features/cashier/order-qr";
+import { readQrImage } from "../../features/cashier/qr-decoder";
+
+vi.mock("../../features/cashier/order-qr", async (original) => ({
+  ...(await original<typeof import("../../features/cashier/order-qr")>()),
+  verifyScannedOrder: vi.fn(),
+}));
+vi.mock("../../features/cashier/qr-decoder", () => ({ readQrImage: vi.fn() }));
+const stop = vi.fn();
+const start = vi.fn();
+let scan!: (raw: string) => boolean;
+vi.mock("../../features/cashier/useQrCamera", () => ({
+  cameraUnavailableReason: () =>
+    "Camera scanning is unsupported. Use the options below.",
+  useQrCamera: (callback: typeof scan) => {
+    scan = callback;
+    return {
+      videoRef: { current: null },
+      phase: "idle",
+      error: "",
+      cameras: [],
+      deviceId: "",
+      start,
+      stop,
+    };
+  },
+}));
+const shopId = "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e";
+const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828";
+const token = (shop = shopId) =>
+  `${Buffer.from(JSON.stringify({ v: 1, purpose: "order-receipt", shopId: shop, orderId, nonce: "75992537-5d60-4d22-8e1e-60a114644681", exp: 1792454400000 })).toString("base64url")}.${"a".repeat(43)}`;
+const order = {
+  id: orderId,
+  shopId,
+  orderNumber: "ORD-000042",
+  mode: "TAKEOUT" as const,
+  status: "PENDING_CONFIRMATION",
+  paymentStatus: "UNPAID",
+  currency: "PHP",
+  totalPrice: "135.50",
+  tableNumber: null,
+};
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(verifyScannedOrder).mockResolvedValue(order);
+});
+afterEach(() => vi.restoreAllMocks());
+function setup() {
+  const view = render(
+    <MemoryRouter>
+      <OrderQrScanner shopId={shopId} />
+    </MemoryRouter>,
+  );
+  return { ...view, user: userEvent.setup() };
+}
+function failure(status: number, code: string) {
+  const error = new AxiosError("Denied");
+  error.response = {
+    status,
+    statusText: "Denied",
+    config: { headers: new AxiosHeaders() },
+    headers: {},
+    data: { code, message: "This order QR is invalid or expired." },
+  };
+  return error;
+}
+it("does not request a camera automatically and provides fallback controls", () => {
+  setup();
+  expect(start).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Start camera" })).toBeDisabled();
+  expect(screen.getByLabelText("Choose an order QR image")).toBeEnabled();
+  expect(screen.getByLabelText("Paste order QR contents")).toBeEnabled();
+});
+it("verifies pasted QR contents, clears the credential, and shows only saved server details", async () => {
+  const { user } = setup();
+  await user.type(screen.getByLabelText("Paste order QR contents"), token());
+  await user.click(screen.getByRole("button", { name: "Verify pasted QR" }));
+  expect(await screen.findByText("ORD-000042")).toBeInTheDocument();
+  expect(screen.getByLabelText("Paste order QR contents")).toHaveValue("");
+  expect(
+    screen.getByText(
+      "Verification does not confirm this order or record payment.",
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(token())).not.toBeInTheDocument();
+  expect(stop).toHaveBeenCalled();
+});
+it.each(["T12", "ORD-000042", token("55b18d73-f2fb-4fe6-bb1c-30cf385c3b24")])(
+  "does not verify a table, number, or foreign-shop QR",
+  async (raw) => {
+    const { user } = setup();
+    await user.type(screen.getByLabelText("Paste order QR contents"), raw);
+    await user.click(screen.getByRole("button", { name: "Verify pasted QR" }));
+    expect(verifyScannedOrder).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+  },
+);
+it("reads an uploaded QR locally before verification", async () => {
+  vi.mocked(readQrImage).mockResolvedValue(token());
+  const { user } = setup();
+  const file = new File(["qr"], "order.png", { type: "image/png" });
+  await user.upload(screen.getByLabelText("Choose an order QR image"), file);
+  expect(readQrImage).toHaveBeenCalledWith(file);
+  expect(await screen.findByText("ORD-000042")).toBeInTheDocument();
+});
+it("keeps fallback actions available after image reading fails", async () => {
+  vi.mocked(readQrImage).mockRejectedValue(new Error("No QR code was found."));
+  const { user } = setup();
+  await user.upload(
+    screen.getByLabelText("Choose an order QR image"),
+    new File(["qr"], "order.png", { type: "image/png" }),
+  );
+  expect(await screen.findByText("No QR code was found.")).toBeInTheDocument();
+  expect(verifyScannedOrder).not.toHaveBeenCalled();
+  expect(screen.getByLabelText("Paste order QR contents")).toBeEnabled();
+});
+it("suppresses duplicate camera scans while verification is pending", async () => {
+  vi.mocked(verifyScannedOrder).mockImplementation(
+    () => new Promise(() => undefined),
+  );
+  setup();
+  act(() => {
+    scan(token());
+    scan(token());
+    scan(token());
+  });
+  expect(verifyScannedOrder).toHaveBeenCalledTimes(1);
+  expect(screen.getByLabelText("Choose an order QR image")).toBeDisabled();
+});
+it("fails closed for an invalid token without displaying an order", async () => {
+  vi.mocked(verifyScannedOrder).mockRejectedValue(
+    failure(403, "ORDER_TOKEN_INVALID"),
+  );
+  setup();
+  act(() => {
+    scan(token());
+  });
+  expect(
+    await screen.findByText("This order QR is invalid or expired."),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("ORD-000042")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Paste order QR contents")).toBeEnabled();
+});
+it.each([401, 403])(
+  "blocks scanner actions after session/access failure (%s)",
+  async (status) => {
+    vi.mocked(verifyScannedOrder).mockRejectedValue(
+      failure(status, "ACCESS_DENIED"),
+    );
+    setup();
+    act(() => {
+      scan(token());
+    });
+    expect(
+      await screen.findByRole("link", {
+        name: status === 401 ? "Sign in again" : "Choose another shop",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Paste order QR contents")).toBeDisabled();
+    expect(screen.getByLabelText("Choose an order QR image")).toBeDisabled();
+  },
+);
+it("aborts pending verification when leaving the page", async () => {
+  vi.mocked(verifyScannedOrder).mockImplementation(
+    () => new Promise(() => undefined),
+  );
+  const view = setup();
+  act(() => {
+    scan(token());
+  });
+  const signal = vi.mocked(verifyScannedOrder).mock.calls[0][2];
+  view.unmount();
+  expect(signal.aborted).toBe(true);
+});
+it("allows another order after a successful scan", async () => {
+  const { user } = setup();
+  act(() => {
+    scan(token());
+  });
+  await screen.findByText("ORD-000042");
+  await user.click(screen.getByRole("button", { name: "Scan another order" }));
+  expect(screen.queryByText("ORD-000042")).not.toBeInTheDocument();
+  act(() => {
+    scan(token());
+  });
+  await waitFor(() => expect(verifyScannedOrder).toHaveBeenCalledTimes(2));
+});

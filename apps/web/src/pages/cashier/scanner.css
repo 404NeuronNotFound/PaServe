@@ -1,0 +1,102 @@
+.phase-two .cashier-scanner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+  gap: 24px;
+  margin: 24px 0;
+}
+.phase-two .scanner-panel {
+  min-width: 0;
+  padding: clamp(18px, 3vw, 28px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+}
+.phase-two .scanner-panel h2,
+.phase-two .scanner-result h3 {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 0;
+}
+.phase-two .scanner-panel p {
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.phase-two .scanner-preview {
+  position: relative;
+  aspect-ratio: 4/3;
+  max-height: 420px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--color-primary);
+  color: var(--color-lime);
+  display: grid;
+  place-items: center;
+}
+.phase-two .scanner-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.phase-two .scanner-preview:not(.is-active) video {
+  visibility: hidden;
+}
+.phase-two .scanner-preview > span {
+  position: absolute;
+  padding: 18px;
+  text-align: center;
+}
+.phase-two .scanner-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 18px 0;
+}
+.phase-two .scanner-fallback form,
+.phase-two .scanner-fallback > .field {
+  margin: 24px 0;
+}
+.phase-two .scanner-fallback input[type="file"] {
+  height: auto;
+  padding: 12px;
+  width: 100%;
+  min-width: 0;
+}
+.phase-two .scanner-fallback textarea {
+  min-height: 100px;
+  resize: vertical;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  background: var(--color-canvas);
+  color: var(--color-text);
+  border-radius: 12px;
+  padding: 12px;
+}
+.phase-two .scanner-result {
+  border-top: 1px solid var(--color-border);
+  padding-top: 24px;
+  margin-top: 24px;
+}
+.phase-two .scanner-result dl {
+  display: grid;
+  gap: 14px;
+}
+.phase-two .scanner-result dl > div {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+.phase-two .scanner-result dt {
+  color: var(--color-muted);
+}
+.phase-two .scanner-result dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+@media (max-width: 1000px) {
+  .phase-two .cashier-scanner {
+    grid-template-columns: 1fr;
+  }
+}
