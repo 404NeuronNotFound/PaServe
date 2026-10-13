@@ -67,7 +67,9 @@ it.each(["CASHIER", "OWNER", "ADMIN", "MANAGER"] as const)(
       expect.any(AbortSignal),
     );
     expect(
-      screen.getByText(`Cafe A · ${role.toLowerCase()}`),
+      screen.getByRole("group", {
+        name: `Active shop: Cafe A. Role: ${role.toLowerCase()}.`,
+      }),
     ).toBeInTheDocument();
   },
 );

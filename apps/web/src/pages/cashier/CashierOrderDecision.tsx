@@ -149,7 +149,7 @@ export function CashierOrderDecision({
   if (decision)
     return (
       <section
-        className="scanner-panel scanner-result"
+        className="scanner-panel scanner-result cashier-outcome"
         aria-labelledby="cashier-decision-title"
       >
         <h2 id="cashier-decision-title" ref={resultHeading} tabIndex={-1}>

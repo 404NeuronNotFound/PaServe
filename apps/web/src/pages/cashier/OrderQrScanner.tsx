@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { isAxiosError } from "axios";
-import { FiCamera, FiUpload } from "react-icons/fi";
+import {
+  FiCamera,
+  FiUpload,
+  FiArrowRight,
+  FiHash,
+  FiChevronDown,
+  FiMaximize,
+  FiShield,
+  FiPause,
+} from "react-icons/fi";
 import type {
   ApiErrorResponse,
   VerifyOrderQrResponse,
@@ -209,12 +218,28 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
   return (
     <div className="cashier-scanner">
       <section className="scanner-panel" aria-labelledby="scanner-title">
-        <h2 id="scanner-title" ref={scannerHeading} tabIndex={-1}>
-          <FiCamera aria-hidden="true" /> Scan customer order QR
-        </h2>
-        <p>
-          Start the camera and hold the customer's order QR inside the view.
-          Keep the code steady and well lit.
+        <div className="scanner-panel-heading">
+          <div>
+            <p className="section-label">CAMERA SCAN</p>
+            <h2 id="scanner-title" ref={scannerHeading} tabIndex={-1}>
+              Scan customer order QR
+            </h2>
+          </div>
+          <span
+            className={`scanner-state${phase === "scanning" ? " is-live" : ""}`}
+          >
+            <span aria-hidden="true" />
+            {busy
+              ? "Verifying"
+              : phase === "scanning"
+                ? "Camera live"
+                : phase === "starting"
+                  ? "Connecting"
+                  : "Standby"}
+          </span>
+        </div>
+        <p className="scanner-description">
+          One scan brings the customer's order into focus.
         </p>
         <div
           className={`scanner-preview${phase === "scanning" ? " is-active" : ""}`}
@@ -225,13 +250,34 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
             playsInline
             aria-label="Order QR camera preview"
           />
+          <div className="scanner-viewfinder" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
+          </div>
           {phase !== "scanning" && (
-            <span>
-              {phase === "starting"
-                ? "Waiting for camera access…"
-                : "Camera is off"}
-            </span>
+            <div className="scanner-idle">
+              <span className="scanner-camera-icon">
+                <FiCamera aria-hidden="true" />
+              </span>
+              <strong>
+                {busy
+                  ? "Loading your order"
+                  : phase === "starting"
+                    ? "Waiting for camera access…"
+                    : "Ready when you are"}
+              </strong>
+              <span>
+                {busy
+                  ? "Checking the saved order details."
+                  : "Start the camera to scan a customer's QR."}
+              </span>
+            </div>
           )}
+          <span className="scanner-preview-caption">
+            <FiMaximize aria-hidden="true" /> Keep the QR inside the frame
+          </span>
         </div>
         <div className="scanner-controls">
           <button
@@ -241,14 +287,14 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
               busy || lostAccess || Boolean(unavailable) || phase !== "idle"
             }
           >
-            Start camera
+            <FiCamera aria-hidden="true" /> Start camera
           </button>
           <button
             className="secondary-button"
             onClick={stopCamera}
             disabled={phase === "idle"}
           >
-            Stop camera
+            <FiPause aria-hidden="true" /> Stop camera
           </button>
         </div>
         {cameras.length > 1 && (
@@ -269,7 +315,7 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
             {unavailable || cameraError}
           </InlineMessage>
         )}
-        <p role="status">
+        <p className="scanner-status" role="status">
           {busy
             ? "Reading and verifying the order QR…"
             : phase === "scanning"
@@ -297,76 +343,100 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
         className="scanner-panel scanner-fallback"
         aria-labelledby="scanner-fallback-title"
       >
-        <h2 id="scanner-fallback-title">Other scanning options</h2>
+        <p className="section-label">MANUAL LOOKUP</p>
+        <h2 id="scanner-fallback-title">Have an order number?</h2>
+        <p className="scanner-description">
+          A quick way in when the QR isn't handy.
+        </p>
         <form onSubmit={findNumber}>
           <div className="field">
             <label htmlFor="scanner-order-number">Find by order number</label>
-            <input
-              id="scanner-order-number"
-              value={number}
-              onChange={(event) => setNumber(event.target.value)}
-              placeholder="ORD-000006"
-              maxLength={23}
-              autoComplete="off"
-              disabled={busy || lostAccess}
-            />
-            <p>
-              Use the number on the customer's receipt. Searches only the active
-              shop.
+            <div className="scanner-number-input">
+              <FiHash aria-hidden="true" />
+              <input
+                id="scanner-order-number"
+                value={number}
+                onChange={(event) => setNumber(event.target.value)}
+                placeholder="ORD-000006"
+                maxLength={23}
+                autoComplete="off"
+                disabled={busy || lostAccess}
+                aria-describedby="scanner-number-hint"
+              />
+            </div>
+            <p id="scanner-number-hint">
+              Use the number beneath the customer's QR.
             </p>
           </div>
           <button
-            className="secondary-button"
+            className="primary-button scanner-find"
             disabled={busy || lostAccess || !number.trim()}
           >
-            Find order
+            Find order <FiArrowRight aria-hidden="true" />
           </button>
         </form>
-        <div className="field">
-          <label htmlFor="scanner-image">
-            <FiUpload aria-hidden="true" /> Choose an order QR image
-          </label>
-          <input
-            id="scanner-image"
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            disabled={busy || lostAccess}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
-              if (file) void image(file);
-            }}
-          />
-          <p>
-            Use a clear screenshot or photo. PNG, JPEG, or WebP, up to 10 MB.
-            The image is read on this device.
-          </p>
+        <div className="scanner-shop-note">
+          <FiShield aria-hidden="true" />
+          <span>Orders from your active shop only.</span>
         </div>
-        <form onSubmit={manual}>
-          <div className="field">
-            <label htmlFor="scanner-paste">Paste order QR contents</label>
-            <textarea
-              id="scanner-paste"
-              value={pasted}
-              onChange={(event) => setPasted(event.target.value)}
-              maxLength={1024}
-              autoComplete="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              disabled={busy || lostAccess}
-            />
-            <p>
-              Paste the text encoded in the customer's order QR. For an order
-              number, use Find by order number above.
-            </p>
+        <details className="scanner-more" open={unavailable ? true : undefined}>
+          <summary>
+            Other scanning options <FiChevronDown aria-hidden="true" />
+          </summary>
+          <div className="scanner-more-content">
+            <div className="field">
+              <label htmlFor="scanner-image">
+                <FiUpload aria-hidden="true" /> Choose an order QR image
+              </label>
+              <input
+                id="scanner-image"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={busy || lostAccess}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) void image(file);
+                }}
+              />
+              <p>PNG, JPEG or WebP · up to 10 MB. Read on this device.</p>
+            </div>
+            <form onSubmit={manual}>
+              <div className="field">
+                <label htmlFor="scanner-paste">Paste order QR contents</label>
+                <textarea
+                  id="scanner-paste"
+                  value={pasted}
+                  onChange={(event) => setPasted(event.target.value)}
+                  maxLength={1024}
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  disabled={busy || lostAccess}
+                />
+                <p>
+                  Paste the text encoded in the customer's order QR. For an
+                  order number, use Find by order number above.
+                </p>
+              </div>
+              <button
+                className="secondary-button"
+                disabled={busy || lostAccess || !pasted.trim()}
+              >
+                Verify pasted QR
+              </button>
+            </form>
           </div>
-          <button
-            className="secondary-button"
-            disabled={busy || lostAccess || !pasted.trim()}
-          >
-            Verify pasted QR
-          </button>
-        </form>
+        </details>
+        <div className="scanner-handoff">
+          <span className="section-label">THE COUNTER ROUTINE</span>
+          <p>
+            Find the order. Check it together.
+            <br />
+            Then make the call.
+          </p>
+          <span>Payment is handled separately.</span>
+        </div>
       </section>
     </div>
   );

@@ -182,3 +182,574 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Front counter: the same hospitality identity, arranged around the task. */
+.phase-two .cashier-workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.phase-two .cashier-workspace-header .section-label {
+  margin: 0 0 10px;
+  color: var(--color-muted);
+}
+.phase-two .cashier-workspace-header h1 {
+  margin: 0;
+  font-size: clamp(32px, 3.5vw, 48px);
+  font-weight: 400;
+  letter-spacing: -1.6px;
+  line-height: 1.12;
+}
+.phase-two .cashier-workspace-intro {
+  margin: 12px 0 0;
+  color: var(--color-muted);
+}
+.phase-two .cashier-shop-context {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.phase-two .cashier-shop-icon {
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--color-border);
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  background: var(--color-surface);
+}
+.phase-two .cashier-shop-context > div {
+  min-width: 0;
+  max-width: 260px;
+  overflow-wrap: anywhere;
+}
+.phase-two .cashier-shop-context strong {
+  display: block;
+  font-size: 14px;
+}
+.phase-two .cashier-shop-context > div > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-top: 5px;
+}
+.phase-two .cashier-switch {
+  gap: 8px;
+  font-size: 12px;
+}
+.phase-two .cashier-flow {
+  display: flex;
+  gap: clamp(18px, 4vw, 64px);
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 20px 0;
+  margin: 24px 0 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.phase-two .cashier-flow li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.phase-two .cashier-flow li > span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  font-size: 10px;
+}
+.phase-two .cashier-scanner {
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.85fr);
+  gap: 20px;
+  align-items: start;
+}
+.phase-two .scanner-panel {
+  padding: clamp(20px, 2.4vw, 32px);
+  border-radius: 24px;
+}
+.phase-two .scanner-panel .section-label {
+  color: var(--color-muted);
+  font-size: 10px;
+  margin: 0 0 8px;
+}
+.phase-two .scanner-panel h2 {
+  font-family: Georgia, serif;
+  font-size: clamp(24px, 2.3vw, 32px);
+  font-weight: 400;
+  letter-spacing: -0.7px;
+  margin: 0;
+  line-height: 1.2;
+}
+.phase-two .scanner-panel-heading,
+.phase-two .cashier-review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.phase-two .scanner-description {
+  color: var(--color-muted);
+  font-size: 13px;
+  margin: 12px 0 24px;
+}
+.phase-two .scanner-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  padding: 7px 10px;
+  border-radius: 30px;
+  font-size: 11px;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+.phase-two .scanner-state > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.phase-two .scanner-state.is-live {
+  background: var(--color-lime);
+  color: var(--color-primary);
+  border-color: var(--color-lime);
+}
+.phase-two .scanner-preview {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 440px;
+  min-height: 250px;
+  border-radius: 18px;
+  background: radial-gradient(
+    ellipse at center,
+    var(--color-primary-hover),
+    var(--color-primary) 75%
+  );
+  color: var(--color-lime);
+}
+.phase-two .scanner-preview video {
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+}
+.phase-two .scanner-viewfinder {
+  position: absolute;
+  width: min(65%, 300px);
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+.phase-two .scanner-viewfinder i {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: solid var(--color-lime);
+  opacity: 0.6;
+}
+.phase-two .scanner-viewfinder i:nth-child(1) {
+  top: 0;
+  left: 0;
+  border-width: 2px 0 0 2px;
+  border-top-left-radius: 12px;
+}
+.phase-two .scanner-viewfinder i:nth-child(2) {
+  top: 0;
+  right: 0;
+  border-width: 2px 2px 0 0;
+  border-top-right-radius: 12px;
+}
+.phase-two .scanner-viewfinder i:nth-child(3) {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 2px 2px;
+  border-bottom-left-radius: 12px;
+}
+.phase-two .scanner-viewfinder i:nth-child(4) {
+  bottom: 0;
+  right: 0;
+  border-width: 0 2px 2px 0;
+  border-bottom-right-radius: 12px;
+}
+.phase-two .scanner-idle {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 10px;
+  max-width: 70%;
+}
+.phase-two .scanner-camera-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 20px;
+  border: 1px solid #c9ef8333;
+  background: #c9ef8310;
+  margin-bottom: 6px;
+}
+.phase-two .scanner-camera-icon svg {
+  width: 27px;
+  height: 27px;
+  stroke-width: 1.4;
+}
+.phase-two .scanner-idle strong {
+  color: #fffefa;
+  font-family: Georgia, serif;
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 400;
+}
+.phase-two .scanner-idle > span:last-child {
+  color: #d6dfc8;
+  font-size: 12px;
+  max-width: 210px;
+  line-height: 1.6;
+}
+.phase-two .scanner-preview > .scanner-preview-caption {
+  position: absolute;
+  bottom: 15px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: #d6dfc8;
+}
+.phase-two .scanner-controls {
+  gap: 10px;
+  margin: 20px 0 12px;
+}
+.phase-two .scanner-controls button {
+  display: inline-flex;
+  gap: 9px;
+  align-items: center;
+  justify-content: center;
+}
+.phase-two .scanner-status {
+  color: var(--color-muted);
+  font-size: 12px;
+  margin-bottom: 0;
+}
+.phase-two .scanner-fallback form {
+  margin: 20px 0;
+}
+.phase-two .scanner-fallback .field {
+  gap: 10px;
+}
+.phase-two .scanner-fallback .field p {
+  color: var(--color-muted);
+  font-size: 12px;
+  margin: 0;
+}
+.phase-two .scanner-number-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 15px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.phase-two .scanner-number-input > svg {
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+.phase-two .scanner-number-input input {
+  border: 0;
+  background: transparent;
+  min-width: 0;
+  width: 100%;
+  padding-left: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  letter-spacing: 0.5px;
+}
+.phase-two .scanner-number-input:focus-within {
+  outline: 2px solid var(--color-text);
+  outline-offset: 3px;
+}
+.phase-two .scanner-find {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+}
+.phase-two .scanner-shop-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-muted);
+  margin: 0 0 24px;
+}
+.phase-two .scanner-more {
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.phase-two .scanner-more summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 18px 0;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+}
+.phase-two .scanner-more summary::-webkit-details-marker {
+  display: none;
+}
+.phase-two .scanner-more summary svg {
+  transition: transform 180ms ease;
+}
+.phase-two .scanner-more[open] summary svg {
+  transform: rotate(180deg);
+}
+.phase-two .scanner-more-content {
+  padding-bottom: 4px;
+}
+.phase-two .scanner-more input[type="file"] {
+  font-size: 12px;
+  background: var(--color-canvas);
+  padding: 8px;
+}
+.phase-two .scanner-more input::file-selector-button {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  min-height: 44px;
+  margin-right: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+.phase-two .scanner-more textarea {
+  min-height: 84px;
+  font-size: 12px;
+}
+.phase-two .scanner-handoff {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--color-secondary);
+}
+.phase-two .scanner-handoff p {
+  font-family: Georgia, serif;
+  font-size: 21px;
+  line-height: 1.35;
+  margin: 10px 0 12px;
+}
+.phase-two .scanner-handoff > span:last-child {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.phase-two .cashier-review-screen {
+  max-width: none;
+}
+.phase-two .cashier-review-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(290px, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+.phase-two .cashier-review-verified {
+  margin: 0;
+  font-size: 12px;
+  border-radius: 30px;
+  padding: 9px 12px;
+  background: var(--color-secondary);
+}
+.phase-two .cashier-review-receipt,
+.phase-two .cashier-review-summary {
+  min-width: 0;
+}
+.phase-two .cashier-review-order-number {
+  background: var(--color-primary);
+  color: #fffefa;
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+}
+.phase-two .cashier-review-order-number span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: #d6dfc8;
+}
+.phase-two .cashier-review-order-number strong {
+  font-size: clamp(27px, 3.5vw, 42px);
+  letter-spacing: -1.5px;
+  font-variant-numeric: tabular-nums;
+}
+.phase-two .cashier-review-receipt > h3 {
+  margin: 26px 0 16px;
+  font-size: 14px;
+}
+.phase-two .cashier-order-items {
+  gap: 12px;
+  margin-bottom: 0;
+}
+.phase-two .cashier-order-items > li {
+  padding: 20px;
+}
+.phase-two .cashier-order-items ul {
+  list-style: none;
+  padding-left: 0;
+  font-size: 13px;
+  margin: 0;
+}
+.phase-two .cashier-order-items ul span {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.phase-two .cashier-item-price {
+  font-size: 12px;
+}
+.phase-two .cashier-item-note {
+  border-color: var(--color-border);
+  font-size: 13px;
+}
+.phase-two .cashier-review-summary {
+  background: var(--color-canvas);
+  padding: 24px;
+  border-radius: 18px;
+  border: 1px solid var(--color-border);
+}
+.phase-two .cashier-review-summary dl {
+  font-size: 12px;
+  gap: 18px;
+  margin: 22px 0;
+}
+.phase-two .cashier-review-summary dd {
+  max-width: 65%;
+  text-align: right;
+}
+.phase-two .cashier-review-total {
+  padding: 22px 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  border-radius: 0;
+}
+.phase-two .cashier-review-total > span {
+  font-size: 12px;
+}
+.phase-two .cashier-review-total strong {
+  font-size: 32px;
+  letter-spacing: -1px;
+}
+.phase-two .cashier-review-total p,
+.phase-two .cashier-review-summary > p:not(.section-label),
+.phase-two .cashier-decision-controls p {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.phase-two .cashier-decision-controls {
+  padding: 0 0 18px;
+  border-top: 0;
+}
+.phase-two .cashier-decision-controls .field {
+  margin-top: 22px;
+}
+.phase-two .cashier-decision-controls label {
+  font-size: 12px;
+}
+.phase-two .cashier-decision-controls .scanner-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.phase-two .cashier-review-summary > button {
+  width: 100%;
+  gap: 8px;
+}
+.phase-two .cashier-outcome {
+  max-width: 680px;
+  margin: 32px auto;
+  padding: clamp(24px, 5vw, 56px);
+  text-align: center;
+  border-top: 4px solid var(--color-lime);
+}
+.phase-two .cashier-outcome h2 {
+  justify-content: center;
+  font-size: clamp(30px, 4vw, 46px);
+}
+.phase-two .cashier-outcome > p {
+  color: var(--color-muted);
+}
+.phase-two .cashier-outcome > p[role="status"] {
+  color: var(--color-text);
+  font-weight: 600;
+}
+.phase-two .cashier-outcome button {
+  margin-top: 16px;
+}
+@media (max-width: 1000px) {
+  .phase-two .cashier-scanner,
+  .phase-two .cashier-review-layout {
+    grid-template-columns: 1fr;
+  }
+  .phase-two .scanner-preview {
+    aspect-ratio: 16 / 9;
+  }
+}
+@media (max-width: 560px) {
+  .phase-two .cashier-workspace-header {
+    gap: 20px;
+  }
+  .phase-two .cashier-shop-context {
+    width: 100%;
+  }
+  .phase-two .cashier-switch {
+    margin-left: auto;
+  }
+  .phase-two .cashier-flow {
+    gap: 12px;
+    padding: 16px 0;
+  }
+  .phase-two .cashier-flow li {
+    font-size: 10px;
+    gap: 6px;
+  }
+  .phase-two .cashier-flow li > span {
+    width: 20px;
+    height: 20px;
+  }
+  .phase-two .scanner-preview {
+    min-height: 280px;
+  }
+  .phase-two .scanner-viewfinder {
+    width: 78%;
+    max-width: 230px;
+  }
+  .phase-two .scanner-controls > button {
+    flex: 1;
+  }
+  .phase-two .cashier-review-summary {
+    padding: 18px;
+  }
+  .phase-two .cashier-review-layout {
+    gap: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phase-two .scanner-more summary svg {
+    transition: none;
+  }
+}

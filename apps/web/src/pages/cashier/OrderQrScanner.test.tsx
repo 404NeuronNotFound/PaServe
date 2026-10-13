@@ -19,10 +19,11 @@ vi.mock("../../features/cashier/order-qr", async (original) => ({
 vi.mock("../../features/cashier/qr-decoder", () => ({ readQrImage: vi.fn() }));
 const stop = vi.fn();
 const start = vi.fn();
+let cameraUnavailable =
+  "Camera scanning is unsupported. Use the options below.";
 let scan!: (raw: string) => boolean;
 vi.mock("../../features/cashier/useQrCamera", () => ({
-  cameraUnavailableReason: () =>
-    "Camera scanning is unsupported. Use the options below.",
+  cameraUnavailableReason: () => cameraUnavailable,
   useQrCamera: (callback: typeof scan) => {
     scan = callback;
     return {
@@ -55,6 +56,7 @@ const order = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  cameraUnavailable = "Camera scanning is unsupported. Use the options below.";
   vi.mocked(verifyScannedOrder).mockResolvedValue(order);
   vi.mocked(lookupOrderNumber).mockResolvedValue(order);
 });
@@ -88,6 +90,19 @@ it("does not request a camera automatically and provides fallback controls", () 
   expect(screen.getByRole("button", { name: "Start camera" })).toBeDisabled();
   expect(screen.getByLabelText("Choose an order QR image")).toBeEnabled();
   expect(screen.getByLabelText("Paste order QR contents")).toBeEnabled();
+});
+it("keeps advanced fallback options compact on supported devices and lets the cashier expand them", async () => {
+  cameraUnavailable = "";
+  const { user } = setup();
+  const disclosure = screen
+    .getByText("Other scanning options")
+    .closest("details");
+  expect(disclosure).not.toHaveAttribute("open");
+  expect(screen.getByLabelText("Find by order number")).toBeVisible();
+  await user.click(screen.getByText("Other scanning options"));
+  expect(disclosure).toHaveAttribute("open");
+  expect(screen.getByLabelText("Paste order QR contents")).toBeVisible();
+  expect(start).not.toHaveBeenCalled();
 });
 it("verifies pasted QR contents, clears the credential, and shows only saved server details", async () => {
   const { user } = setup();
