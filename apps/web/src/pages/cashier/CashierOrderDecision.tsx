@@ -14,6 +14,7 @@ import { decideOrder } from "../../features/cashier/order-decision";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { CashierOrderReview } from "./CashierOrderReview";
+import { CashierCashPayment } from "./CashierCashPayment";
 
 function failureMessage(error: unknown) {
   if (
@@ -42,6 +43,7 @@ export function CashierOrderDecision({
   const [message, setMessage] = useState("");
   const [action, setAction] = useState<"confirm" | "reject" | null>(null);
   const [reason, setReason] = useState("");
+  const [collectingCash, setCollectingCash] = useState(false);
   const [decision, setDecision] = useState<
     OrderDecisionResponse["order"] | null
   >(null);
@@ -146,6 +148,14 @@ export function CashierOrderDecision({
     }
   }
 
+  if (collectingCash && decision?.status === "CONFIRMED")
+    return (
+      <CashierCashPayment
+        shopId={order.shopId}
+        orderId={order.id}
+        onNext={onNext}
+      />
+    );
   if (decision)
     return (
       <section
@@ -163,6 +173,14 @@ export function CashierOrderDecision({
           <p className="cashier-item-note">
             Reason: {decision.rejectionReason}
           </p>
+        )}
+        {decision.status === "CONFIRMED" && (
+          <button
+            className="primary-button"
+            onClick={() => setCollectingCash(true)}
+          >
+            Collect cash
+          </button>
         )}
         <button className="secondary-button" onClick={onNext}>
           Scan another order

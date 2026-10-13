@@ -17,6 +17,11 @@ import {
 } from "../../features/cashier/order-qr";
 import { decideOrder } from "../../features/cashier/order-decision";
 import { cashierLine } from "../../test/cashier-fixtures";
+import { reviewCashPayment } from "../../features/cashier/cash-payment";
+vi.mock("../../features/cashier/cash-payment", async (original) => ({
+  ...(await original<typeof import("../../features/cashier/cash-payment")>()),
+  reviewCashPayment: vi.fn(),
+}));
 
 vi.mock("../../features/cashier/order-qr", () => ({
   verifyScannedOrder: vi.fn(),
@@ -61,6 +66,10 @@ beforeEach(() => {
   vi.mocked(verifyScannedOrder).mockResolvedValue(order);
   vi.mocked(lookupOrderNumber).mockResolvedValue(order);
   vi.mocked(decideOrder).mockResolvedValue(decision);
+  vi.mocked(reviewCashPayment).mockResolvedValue({
+    order: { ...order, status: "CONFIRMED" },
+    payment: null,
+  });
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
     configurable: true,
     value: function (this: HTMLDialogElement) {
@@ -143,6 +152,22 @@ it("refreshes and confirms a manually found order without pretending its QR was 
     "",
     "confirm",
     "",
+    expect.any(AbortSignal),
+  );
+});
+it("opens a fresh cash review only after confirmation and explicit Collect cash", async () => {
+  const { user } = setup();
+  const dialog = await open("Confirm order", user);
+  await user.click(
+    within(dialog).getByRole("button", { name: "Confirm order" }),
+  );
+  await screen.findByRole("heading", { name: "Order confirmed" });
+  expect(reviewCashPayment).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Collect cash" }));
+  await screen.findByLabelText("Amount received (PHP)");
+  expect(reviewCashPayment).toHaveBeenCalledWith(
+    order.shopId,
+    order.id,
     expect.any(AbortSignal),
   );
 });

@@ -28,6 +28,8 @@ import {
 import { SelectField } from "../../components/forms/SelectField";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { CashierOrderDecision } from "./CashierOrderDecision";
+import { CashierCashPayment } from "./CashierCashPayment";
+import { lookupCashPayment } from "../../features/cashier/cash-payment";
 import "./scanner.css";
 
 export function OrderQrScanner({ shopId }: { shopId: string }) {
@@ -42,6 +44,7 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
   const [error, setError] = useState("");
   const [pasted, setPasted] = useState("");
   const [number, setNumber] = useState("");
+  const [paymentOrderId, setPaymentOrderId] = useState("");
   const [lostAccess, setLostAccess] = useState(false);
   const [expiredSession, setExpiredSession] = useState(false);
   const [order, setOrder] = useState<VerifyOrderQrResponse["order"] | null>(
@@ -157,10 +160,26 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
     setBusy(true);
     setError("");
     setPasted("");
-    load(
-      (controller) => lookupOrderNumber(shopId, number, controller.signal),
-      "",
-    );
+    load(async (controller) => {
+      try {
+        return await lookupOrderNumber(shopId, number, controller.signal);
+      } catch (failure) {
+        if (
+          !isAxiosError<ApiErrorResponse>(failure) ||
+          failure.response?.status !== 409 ||
+          failure.response.data?.code !== "ORDER_NOT_PENDING_CONFIRMATION"
+        )
+          throw failure;
+        const saved = await lookupCashPayment(
+          shopId,
+          number,
+          controller.signal,
+        );
+        if (mounted.current && !controller.signal.aborted)
+          setPaymentOrderId(saved.order.id);
+        return saved.order;
+      }
+    }, "");
   }
   function start(selected = "") {
     if (processing.current || lostAccess) return;
@@ -199,6 +218,23 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
       }
     }
   }
+  if (paymentOrderId)
+    return (
+      <div className="cashier-review-screen">
+        <CashierCashPayment
+          key={paymentOrderId}
+          shopId={shopId}
+          orderId={paymentOrderId}
+          onNext={() => {
+            setPaymentOrderId("");
+            setOrder(null);
+            setReviewToken("");
+            setError("");
+            lastCode.current = "";
+          }}
+        />
+      </div>
+    );
   if (order) {
     return (
       <div className="cashier-review-screen">

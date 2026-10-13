@@ -9,12 +9,14 @@ export function CashierOrderReview({
   children,
   busy = false,
   source = "qr",
+  purpose = "review",
 }: {
   order: VerifyOrderQrResponse["order"];
   onNext: () => void;
   children?: ReactNode;
   busy?: boolean;
   source?: "qr" | "number";
+  purpose?: "review" | "payment";
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const quantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -30,17 +32,22 @@ export function CashierOrderReview({
         <div>
           <p className="section-label">CUSTOMER ORDER / REVIEW</p>
           <h2 id="verified-order-title" ref={heading} tabIndex={-1}>
-            Review order
+            {purpose === "payment" ? "Collect cash" : "Review order"}
           </h2>
         </div>
         <p className="cashier-review-verified" role="status">
           <FiCheckCircle aria-hidden="true" />{" "}
-          {source === "qr" ? "Order QR verified" : "Order loaded by number"}
+          {purpose === "payment"
+            ? "Confirmed order"
+            : source === "qr"
+              ? "Order QR verified"
+              : "Order loaded by number"}
         </p>
       </header>
       <p className="scanner-description">
-        Check the items, options, customer notes and total with the customer
-        before taking payment or confirming the order.
+        {purpose === "payment"
+          ? "Check the saved total, collect the cash and return any change."
+          : "Check the items, options, customer notes and total with the customer before taking payment or confirming the order."}
       </p>
       <div className="cashier-review-layout">
         <div className="cashier-review-receipt">
@@ -143,10 +150,12 @@ export function CashierOrderReview({
             <strong>{formatCartPrice(order.totalPrice)}</strong>
             <p>Includes selected modifiers.</p>
           </div>
-          <p>
-            These are the saved details for the submitted order. Verification
-            does not confirm this order or record payment.
-          </p>
+          {purpose === "review" && (
+            <p>
+              These are the saved details for the submitted order. Verification
+              does not confirm this order or record payment.
+            </p>
+          )}
           {children}
           <button className="secondary-button" onClick={onNext} disabled={busy}>
             <FiArrowLeft aria-hidden="true" /> Scan another order

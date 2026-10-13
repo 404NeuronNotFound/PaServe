@@ -791,6 +791,29 @@ export interface OrderDecisionResponse {
     rejectionReason: string | null;
   };
 }
+/** Cash tender uses exact PHP decimal strings, bounded by Decimal(12,2). */
+export const CASH_AMOUNT_PATTERN = /^(?:0|[1-9]\d{0,9})\.\d{2}$(?![\s\S])/;
+export function cashAmountCents(value: unknown): bigint | null {
+  return typeof value === "string" && CASH_AMOUNT_PATTERN.test(value)
+    ? BigInt(value.replace(".", "")) : null;
+}
+export interface CashPaymentRequest {
+  requestId: string;
+  reviewVersion: string;
+  amountReceived: string;
+}
+export interface CashPaymentReceipt {
+  method: "CASH";
+  requestId: string;
+  amountReceived: string;
+  changeDue: string;
+  paidAt: string;
+  paidBy: string;
+}
+export interface CashPaymentReviewResponse {
+  order: VerifyOrderQrResponse["order"];
+  payment: CashPaymentReceipt | null;
+}
 export interface RestaurantTable {
   id: string;
   shopId: string;

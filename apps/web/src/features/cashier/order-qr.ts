@@ -51,10 +51,11 @@ export async function lookupOrderNumber(
     );
   return parseReview(data, shopId, data.order.id);
 }
-function parseReview(
+export function parseReview(
   data: VerifyOrderQrResponse,
   shopId: string,
   orderId: string,
+  forPayment = false,
 ) {
   if (
     !data ||
@@ -65,8 +66,10 @@ function parseReview(
     !["DINE_IN", "TAKEOUT"].includes(data.order.mode) ||
     data.order.currency !== "PHP" ||
     !isOrderTotal(data.order.totalPrice) ||
-    data.order.status !== "PENDING_CONFIRMATION" ||
-    data.order.paymentStatus !== "UNPAID" ||
+    data.order.status !== (forPayment ? "CONFIRMED" : "PENDING_CONFIRMATION") ||
+    !(forPayment ? ["UNPAID", "PAID"] : ["UNPAID"]).includes(
+      data.order.paymentStatus,
+    ) ||
     typeof data.order.reviewVersion !== "string" ||
     !/^[a-f0-9]{64}$(?![\s\S])/.test(data.order.reviewVersion) ||
     !(

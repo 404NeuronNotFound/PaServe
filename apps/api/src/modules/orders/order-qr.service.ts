@@ -93,6 +93,26 @@ export class OrderQrService {
     return this.load(userId, shopId, orderId, { orderNumber }, database, roles);
   }
 
+  async reviewPayment(
+    userId: string,
+    shopId: string,
+    orderId: string,
+    orderNumber: string,
+    database: Pick<Prisma.TransactionClient, 'order'>,
+    roles: typeof ORDER_QR_ROLES,
+  ): Promise<VerifyOrderQrResponse> {
+    this.number(orderNumber);
+    return this.load(
+      userId,
+      shopId,
+      orderId,
+      { orderNumber },
+      database,
+      roles,
+      true,
+    );
+  }
+
   private number(orderNumber: string) {
     if (!isValidOrderNumber(orderNumber))
       throw new BadRequestException({
@@ -108,6 +128,7 @@ export class OrderQrService {
     reference: { qrToken: string } | { orderNumber: string },
     database: Pick<Prisma.TransactionClient, 'order'>,
     roles: typeof ORDER_QR_ROLES,
+    forPayment = false,
   ): Promise<VerifyOrderQrResponse> {
     if (!isUUID(orderId))
       throw new BadRequestException({
@@ -143,7 +164,7 @@ export class OrderQrService {
             orderId,
             order: {
               shopId,
-              status: 'PENDING_CONFIRMATION',
+              status: forPayment ? 'CONFIRMED' : 'PENDING_CONFIRMATION',
               shop: shopAccessWhere(userId, shopId, roles),
             },
           },
@@ -172,13 +193,18 @@ export class OrderQrService {
     if ('qrToken' in reference) this.tokens.verify(reference.qrToken, order);
     // Invalid credentials must not reveal that the order has been processed.
     if (
-      order.status !== 'PENDING_CONFIRMATION' ||
-      order.paymentStatus !== 'UNPAID'
+      order.status !== (forPayment ? 'CONFIRMED' : 'PENDING_CONFIRMATION') ||
+      !(forPayment ? ['UNPAID', 'PAID'] : ['UNPAID']).includes(
+        order.paymentStatus,
+      )
     )
       throw new ConflictException({
-        code: 'ORDER_NOT_PENDING_CONFIRMATION',
-        message:
-          'This order is no longer awaiting cashier confirmation. Check its current status with the shop.',
+        code: forPayment
+          ? 'ORDER_NOT_CONFIRMED'
+          : 'ORDER_NOT_PENDING_CONFIRMATION',
+        message: forPayment
+          ? 'Confirm the order before collecting payment. Rejected orders cannot be paid.'
+          : 'This order is no longer awaiting cashier confirmation. Check its current status with the shop.',
       });
     // Load only saved snapshots. Deleted/edited menu entries cannot reprice an
     // existing order. Fail closed rather than displaying an incomplete receipt.

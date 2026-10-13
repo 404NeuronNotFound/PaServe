@@ -116,6 +116,14 @@ model Order {
   mode        OrderMode @default(DINE_IN)
   status      String    @default("PENDING_CONFIRMATION")
   paymentStatus String @default("UNPAID")
+  // Cash collection is atomic with paymentStatus; SQL protects paid receipts.
+  paymentMethod String?
+  paymentRequestId String?
+  paymentReviewVersion String?
+  amountReceived Decimal? @db.Decimal(12, 2)
+  changeDue Decimal? @db.Decimal(12, 2)
+  paidAt DateTime?
+  paidBy String?
   orderNumber String @db.VarChar(32)
   qrTokenNonce String
   qrTokenExpiresAt DateTime
@@ -137,6 +145,7 @@ model Order {
 
   @@unique([id, shopId])
   @@unique([shopId, requestId])
+  @@unique([shopId, paymentRequestId])
   @@unique([shopId, orderNumber])
   @@index([shopId, tableId, createdAt])
   @@map("orders")

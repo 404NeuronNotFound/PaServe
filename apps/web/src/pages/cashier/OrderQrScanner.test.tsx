@@ -10,6 +10,15 @@ import {
 } from "../../features/cashier/order-qr";
 import { readQrImage } from "../../features/cashier/qr-decoder";
 import { cashierLine } from "../../test/cashier-fixtures";
+import {
+  lookupCashPayment,
+  reviewCashPayment,
+} from "../../features/cashier/cash-payment";
+vi.mock("../../features/cashier/cash-payment", async (original) => ({
+  ...(await original<typeof import("../../features/cashier/cash-payment")>()),
+  lookupCashPayment: vi.fn(),
+  reviewCashPayment: vi.fn(),
+}));
 
 vi.mock("../../features/cashier/order-qr", async (original) => ({
   ...(await original<typeof import("../../features/cashier/order-qr")>()),
@@ -59,6 +68,14 @@ beforeEach(() => {
   cameraUnavailable = "Camera scanning is unsupported. Use the options below.";
   vi.mocked(verifyScannedOrder).mockResolvedValue(order);
   vi.mocked(lookupOrderNumber).mockResolvedValue(order);
+  vi.mocked(lookupCashPayment).mockResolvedValue({
+    order: { ...order, status: "CONFIRMED" },
+    payment: null,
+  });
+  vi.mocked(reviewCashPayment).mockResolvedValue({
+    order: { ...order, status: "CONFIRMED" },
+    payment: null,
+  });
 });
 afterEach(() => vi.restoreAllMocks());
 function setup() {
@@ -266,6 +283,23 @@ it("loads a receipt by number through a separate fallback, without calling QR ve
   );
   expect(verifyScannedOrder).not.toHaveBeenCalled();
   expect(stop).toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Scan another order" }));
+  expect(screen.getByLabelText("Find by order number")).toHaveValue("");
+});
+it("reopens a confirmed order by number for cash collection", async () => {
+  vi.mocked(lookupOrderNumber).mockRejectedValue(
+    failure(409, "ORDER_NOT_PENDING_CONFIRMATION"),
+  );
+  const { user } = setup();
+  await user.type(screen.getByLabelText("Find by order number"), "ORD-000042");
+  await user.click(screen.getByRole("button", { name: "Find order" }));
+  await screen.findByLabelText("Amount received (PHP)");
+  expect(lookupCashPayment).toHaveBeenCalledWith(
+    shopId,
+    "ORD-000042",
+    expect.any(AbortSignal),
+  );
+  expect(verifyScannedOrder).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Scan another order" }));
   expect(screen.getByLabelText("Find by order number")).toHaveValue("");
 });
