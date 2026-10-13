@@ -16,6 +16,7 @@ import { useCart } from "../../features/cart/cart";
 import { useCustomerTables } from "../../features/shops/customer-table";
 import { api } from "../../lib/api/client";
 import { feedback } from "../../app/stores/feedback";
+import { clearCustomerOrderQrs } from "../../features/cart/customer-order-qr";
 
 vi.mock("../../lib/api/client", () => ({
   api: { get: vi.fn(), post: vi.fn() },
@@ -66,6 +67,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   sessionStorage.clear();
   orderReceipts.clearMemory();
+  clearCustomerOrderQrs();
   pendingOrders.clearMemory();
   useCart.setState({ shops: {} });
   useCustomerTables.setState({ codes: {}, resolved: {} });
@@ -114,6 +116,42 @@ function setup(path = "/menu/cafe/orders/order-a") {
     </QueryClientProvider>,
   );
 }
+
+it("shows the server-token QR with the order number underneath, and preserves only the number after a full reload", async () => {
+  const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828";
+  const expiry = Date.parse("2030-01-01T00:00:00Z");
+  const qrToken = `${Buffer.from(JSON.stringify({ v: 1, purpose: "order-receipt", shopId: "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e", orderId, nonce: "75992537-5d60-4d22-8e1e-60a114644681", exp: expiry })).toString("base64url")}.${"a".repeat(43)}`;
+  saveOrderReceipt("cafe", "Cafe", {
+    ...order,
+    id: orderId,
+    qrToken,
+    qrTokenExpiresAt: new Date(expiry).toISOString(),
+  });
+  const path = `/menu/cafe/orders/${orderId}`;
+  const view = setup(path);
+  const image = await screen.findByRole("img", {
+    name: "Order QR for ORD-000042",
+  });
+  const number = screen.getByText("ORD-000042");
+  expect(
+    image.compareDocumentPosition(number) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(image).toHaveAttribute(
+    "src",
+    expect.stringContaining("data:image/svg+xml"),
+  );
+  expect(screen.queryByText(qrToken)).not.toBeInTheDocument();
+  expect(
+    sessionStorage.getItem(`paserve-order-receipt:v1:cafe:${orderId}`),
+  ).not.toContain(qrToken);
+  view.unmount();
+  clearCustomerOrderQrs();
+  orderReceipts.clearMemory();
+  setup(path);
+  expect(screen.getByText("ORD-000042")).toBeInTheDocument();
+  expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  expect(screen.getByText(/unavailable in this session/)).toBeInTheDocument();
+});
 
 it.each(["TAKEOUT", "DINE_IN"] as const)(
   "navigates from %s checkout to the saved receipt and recovers it after refresh",

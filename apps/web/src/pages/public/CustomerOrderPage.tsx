@@ -16,10 +16,13 @@ import { formatCartPrice } from "../../lib/money";
 import "./customer-order-page.css";
 import { OrderNumber } from "./OrderNumber";
 import { menuTheme } from "../../lib/menu-theme";
+import { readCustomerOrderQr } from "../../features/cart/customer-order-qr";
+import { CustomerOrderQr } from "./CustomerOrderQr";
 
 export function CustomerOrderPage() {
   const { shopSlug = "", orderId = "" } = useParams();
   const receipt = readOrderReceipt(shopSlug, orderId);
+  const qr = readCustomerOrderQr(shopSlug, orderId);
   const heading = useRef<HTMLHeadingElement>(null);
   const menuUrl =
     receipt?.mode === "DINE_IN"
@@ -70,6 +73,12 @@ export function CustomerOrderPage() {
           </header>
           <div className="order-receipt-layout">
             <div className="order-receipt-details">
+              <CustomerOrderQr
+                key={`qr:${shopSlug}:${orderId}`}
+                credential={
+                  qr && qr.orderNumber === receipt.orderNumber ? qr : null
+                }
+              />
               <OrderNumber
                 key={`${shopSlug}:${orderId}`}
                 value={receipt.orderNumber}

@@ -4,6 +4,7 @@ import type {
 } from "@paserve/contracts";
 import { createPendingOrderStorage } from "./pending-orders";
 import { isPublicTableContext } from "../shops/customer-table";
+import { captureCustomerOrderQr } from "./customer-order-qr";
 import {
   isOrderNumber,
   isOrderReceiptId,
@@ -42,6 +43,7 @@ export function saveOrderReceipt(
     "primaryColor" | "accentColor"
   > = {},
 ) {
+  captureCustomerOrderQr(shopSlug, order);
   const receipt: OrderReceipt = {
     shopSlug,
     shopName,

@@ -99,6 +99,31 @@
 .order-receipt-details {
   min-width: 0;
 }
+.order-receipt-qr {
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-canvas);
+  text-align: center;
+}
+.order-receipt-qr h2 {
+  margin: 0 0 16px;
+  font-size: 1rem;
+}
+.order-receipt-qr p {
+  line-height: 1.6;
+}
+.order-receipt-qr-image {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  background: #fff;
+  image-rendering: pixelated;
+}
 .order-receipt-number {
   position: relative;
   border-radius: 20px;
