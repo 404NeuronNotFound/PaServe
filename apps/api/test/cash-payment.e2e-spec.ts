@@ -351,6 +351,33 @@ describe('Cash collection', () => {
     await atomic().expect(403);
     await atomic('CASH', {}, true).expect(200);
   });
+  it('does not accept an unchecked QR to create payment on a historical confirmed order', async () => {
+    await atomic('CASH', { qrToken: 'arbitrary-token' }).expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+    expect(saved.paymentStatus).toBe('UNPAID');
+    await collect().expect(200);
+  });
+  it.each([
+    '4111111111111111',
+    '4111.1111.1111.1111',
+    '4111/1111/1111/1111',
+    '４１１１ １１１１ １１１１ １１１１',
+    '٤١١١ ١١١١ ١١١١ ١١١١',
+    'CVV: 123',
+    'PIN: 1234',
+    'expiry: 12/28',
+  ])(
+    'blocks card data in manual card reference before persistence: %s',
+    async (reference) => {
+      await card({ reference }).expect(400);
+      expect(updateOrder).not.toHaveBeenCalled();
+      await preparePending();
+      await atomic('CARD_MANUAL', { reference }).expect(400);
+      expect(saved.status).toBe('PENDING_CONFIRMATION');
+      expect(saved.paymentStatus).toBe('UNPAID');
+      expect(saved.preparationStatus).toBeNull();
+    },
+  );
   it('enforces authentication, tenant and live access for combined payment', async () => {
     await preparePending();
     await atomic('CASH', {}, false, shopId, false).expect(401);

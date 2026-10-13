@@ -10,6 +10,7 @@ import {
   PAYMENT_REFERENCE_PATTERN,
   CASH_AMOUNT_MAX,
   isSafeOtherPaymentText,
+  isSafeManualCardReference,
 } from "@paserve/contracts";
 import {
   reviewCashPayment,
@@ -93,6 +94,7 @@ export function CashierCashPayment({
   const recordLabel = pendingOrder ? "Confirm and pay" : paymentLabel;
   const invalidReference =
     !PAYMENT_REFERENCE_PATTERN.test(reference) ||
+    (card && !isSafeManualCardReference(reference)) ||
     (other && !isSafeOtherPaymentText(reference));
   const invalidDescription =
     other && (!description.trim() || !isSafeOtherPaymentText(description, 80));
@@ -456,7 +458,7 @@ export function CashierCashPayment({
               </p>
               {invalidReference && (
                 <InlineMessage id="gcash-reference-error">
-                  {other
+                  {other || card
                     ? "Use a receipt reference of up to 200 characters without card details."
                     : "Enter a plain-text reference of up to 200 characters."}
                 </InlineMessage>

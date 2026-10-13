@@ -99,6 +99,7 @@ export class PreparationQueueService {
           orderBy: { lineNumber: 'asc' },
           select: {
             productSnapshotId: true,
+            lineNumber: true,
             productNameSnapshot: true,
             currency: true,
             quantity: true,
@@ -114,22 +115,33 @@ export class PreparationQueueService {
     });
     const page = saved.slice(0, 50);
     const orders = page.map((order) => {
-      const items = order.orderItems.map(readPriceSnapshot);
-      if (
-        !order.queuedAt ||
-        order.currency !== 'PHP' ||
-        !items.length ||
-        !items
-          .reduce(
-            (total, item) => total.plus(item.totalPrice),
-            new Prisma.Decimal(0),
-          )
-          .equals(order.totalPrice)
-      )
+      let items: PreparationQueueResponse['orders'][number]['items'];
+      try {
+        if (
+          !order.orderItems.length ||
+          order.orderItems.length > 100 ||
+          order.orderItems.some((item, index) => item.lineNumber !== index + 1)
+        )
+          throw new Error('Invalid queue receipt lines');
+        items = order.orderItems.map(readPriceSnapshot);
+        if (
+          !order.queuedAt ||
+          order.currency !== 'PHP' ||
+          !items.length ||
+          !items
+            .reduce(
+              (total, item) => total.plus(item.totalPrice),
+              new Prisma.Decimal(0),
+            )
+            .equals(order.totalPrice)
+        )
+          throw new Error('Invalid queue receipt total');
+      } catch {
         throw new ConflictException({
           code: 'QUEUE_RECEIPT_UNAVAILABLE',
           message: 'The saved queue receipt could not be loaded.',
         });
+      }
       return {
         id: order.id,
         shopId: order.shopId,

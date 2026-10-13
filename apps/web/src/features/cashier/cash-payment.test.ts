@@ -44,6 +44,31 @@ const payment = {
 beforeEach(() => {
   vi.resetAllMocks();
 });
+it.each([
+  "4111.1111.1111.1111",
+  "４１１１ １１１１ １１１１ １１１１",
+  "CVV: 123",
+])("blocks raw card reference before sending it: %s", async (reference) => {
+  const dto = {
+    requestId,
+    reviewVersion: order.reviewVersion,
+    receivedConfirmed: true as const,
+    reference,
+  };
+  const signal = new AbortController().signal;
+  await expect(
+    recordManualCardPayment(shopId, orderId, dto, signal),
+  ).rejects.toThrow("terminal receipt");
+  await expect(
+    createPayment(
+      shopId,
+      orderId,
+      { ...dto, method: "CARD_MANUAL", orderNumber: order.orderNumber },
+      signal,
+    ),
+  ).rejects.toThrow("terminal receipt");
+  expect(api.post).not.toHaveBeenCalled();
+});
 it("preserves saved queue state and rejects queue state on an unpaid order", async () => {
   const queue = { status: "QUEUED", queuedAt: payment.paidAt };
   const signal = new AbortController().signal;

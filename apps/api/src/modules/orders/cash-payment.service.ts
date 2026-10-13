@@ -12,6 +12,7 @@ import {
   isValidOrderNumber,
   PAYMENT_REFERENCE_PATTERN,
   isSafeOtherPaymentText,
+  isSafeManualCardReference,
   PREPARATION_STATUSES,
   type CashPaymentReviewResponse,
 } from '@paserve/contracts';
@@ -121,6 +122,8 @@ export class CashPaymentService {
         !saved.changeDue ||
         !saved.amountReceived.minus(saved.changeDue).equals(order.totalPrice) ||
         (saved.paymentMethod !== 'CASH' && !saved.changeDue.isZero()) ||
+        (saved.paymentMethod === 'CARD_MANUAL' &&
+          !isSafeManualCardReference(saved.paymentReference)) ||
         (saved.paymentMethod === 'OTHER' &&
           (!saved.paymentDescription?.trim() ||
             !isSafeOtherPaymentText(saved.paymentDescription, 80) ||
@@ -260,6 +263,12 @@ export class CashPaymentService {
     const cashAmount = 'amountReceived' in dto ? dto.amountReceived : null;
     const rawReference = 'reference' in dto ? dto.reference : null;
     const rawDescription = 'description' in dto ? dto.description : null;
+    if (method === 'CARD_MANUAL' && !isSafeManualCardReference(rawReference))
+      throw new BadRequestException({
+        code: 'INVALID_CARD_REFERENCE',
+        message:
+          'Use a terminal receipt reference without card numbers or security details.',
+      });
     if (
       method === 'OTHER' &&
       (!isSafeOtherPaymentText(rawDescription, 80) ||
@@ -367,6 +376,11 @@ export class CashPaymentService {
               'This order is already paid. Do not collect or record another payment.',
             );
           }
+          if (confirmation && !confirming)
+            throw conflict(
+              'ORDER_NOT_PENDING_CONFIRMATION',
+              'This order is already confirmed. Use payment review to settle an unpaid historical order.',
+            );
           if (review.order.reviewVersion !== dto.reviewVersion)
             throw conflict(
               'ORDER_REVIEW_CHANGED',

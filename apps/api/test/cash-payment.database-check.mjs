@@ -495,6 +495,14 @@ try {
   await setup.query(`SET LOCAL search_path TO "${schema}", public`);
   await setup.query('ALTER TABLE orders DROP COLUMN "paymentDescription"');
   await setup.query(otherSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
+  const cardGuardSql = await readFile(
+    new URL(
+      '../prisma/migrations/20261014020000_manual_card_reference_guard/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await setup.query(cardGuardSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
   await setup.query('COMMIT');
   assert.deepEqual(
     await cash.review(users[winnerIndex].id, shop.id, order.id),
@@ -774,6 +782,118 @@ try {
     );
   }
   const rollbackOrder = await confirmedOrder('ORD-000030', '10.00', true);
+  const protectedCard = await confirmedOrder('ORD-000040', '10.00', true);
+  const protectedQr = tokens.issue(protectedCard);
+  const protectedVersion = (await qr.scan(users[0].id, shop.id, protectedQr))
+    .order.reviewVersion;
+  for (const reference of [
+    '4111.1111.1111.1111',
+    '４１１１ １１１１ １１１１ １１１１',
+    '٤١١١ ١١١١ ١١١١ ١١١١',
+    'CVV: 123',
+  ]) {
+    await assert.rejects(
+      cash.create(users[0].id, shop.id, protectedCard.id, {
+        requestId: randomUUID(),
+        reviewVersion: protectedVersion,
+        method: 'CARD_MANUAL',
+        qrToken: protectedQr,
+        receivedConfirmed: true,
+        reference,
+      }),
+      { status: 400 },
+    );
+    await assert.rejects(
+      prisma.order.updateMany({
+        where: { id: protectedCard.id, shopId: shop.id },
+        data: {
+          status: 'CONFIRMED',
+          paymentStatus: 'PAID',
+          decidedAt: new Date(),
+          decidedBy: users[0].id,
+          qrTokenRevokedAt: new Date(),
+          paymentMethod: 'CARD_MANUAL',
+          paymentRequestId: randomUUID(),
+          paymentReviewVersion: protectedVersion,
+          amountReceived: '10.00',
+          changeDue: '0.00',
+          paidAt: protectedCard.createdAt,
+          paidBy: users[0].id,
+          preparationStatus: 'QUEUED',
+          queuedAt: new Date(),
+          paymentReference: reference,
+        },
+      }),
+    );
+  }
+  assert.deepEqual(
+    await prisma.order.findFirst({
+      where: { id: protectedCard.id, shopId: shop.id },
+    }),
+    protectedCard,
+  );
+  const duplicateRequest = await prisma.order.findFirst({
+    where: { shopId: shop.id, paymentStatus: 'PAID' },
+  });
+  await assert.rejects(
+    cash.create(users[0].id, shop.id, protectedCard.id, {
+      requestId: duplicateRequest.paymentRequestId,
+      reviewVersion: protectedVersion,
+      method: 'CASH',
+      qrToken: protectedQr,
+      amountReceived: '10.00',
+    }),
+    { status: 409 },
+  );
+  assert.deepEqual(
+    await prisma.order.findFirst({
+      where: { id: protectedCard.id, shopId: shop.id },
+    }),
+    protectedCard,
+  );
+  const doubleOrder = await confirmedOrder('ORD-000041', '10.00', true);
+  const doubleQr = tokens.issue(doubleOrder);
+  const doubleVersion = (await qr.scan(users[0].id, shop.id, doubleQr)).order
+    .reviewVersion;
+  const doubleRequests = users.map(() => ({
+    requestId: randomUUID(),
+    reviewVersion: doubleVersion,
+    method: 'CASH',
+    qrToken: doubleQr,
+    amountReceived: '20.00',
+  }));
+  const doubleResults = await Promise.allSettled(
+    users.map((user, index) =>
+      cash.create(user.id, shop.id, doubleOrder.id, doubleRequests[index]),
+    ),
+  );
+  assert.equal(
+    doubleResults.filter((result) => result.status === 'fulfilled').length,
+    1,
+  );
+  const doubleWinner = doubleResults.findIndex(
+    (result) => result.status === 'fulfilled',
+  );
+  const doubleSaved = await prisma.order.findFirst({
+    where: { id: doubleOrder.id, shopId: shop.id },
+  });
+  assert.equal(
+    doubleSaved.paymentRequestId,
+    doubleRequests[doubleWinner].requestId,
+  );
+  assert.equal(doubleSaved.preparationStatus, 'QUEUED');
+  assert.deepEqual(
+    await cash.create(
+      users[doubleWinner].id,
+      shop.id,
+      doubleOrder.id,
+      doubleRequests[doubleWinner],
+    ),
+    doubleResults[doubleWinner].value,
+  );
+  console.log(
+    'Passed: card-number/security-code references blocked in API and database (including Unicode), cross-order payment request collision rolls back, competing combined payments enqueue once.',
+  );
   const rollbackQr = tokens.issue(rollbackOrder);
   const rollbackVersion = (await qr.scan(users[0].id, shop.id, rollbackQr))
     .order.reviewVersion;

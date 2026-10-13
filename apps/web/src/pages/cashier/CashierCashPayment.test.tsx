@@ -97,6 +97,35 @@ it("shows preparation queue state only from a saved paid receipt", async () => {
   );
   expect(await screen.findByText("Queued for preparation.")).toBeVisible();
 });
+it("reopens a saved card payment as a paid receipt without collection instructions", async () => {
+  vi.mocked(reviewCashPayment).mockResolvedValue({
+    ...paid,
+    payment: {
+      ...paid.payment,
+      method: "CARD_MANUAL",
+      amountReceived: order.totalPrice,
+      changeDue: "0.00",
+    },
+  });
+  render(
+    <CashierCashPayment shopId="shop-a" orderId="order-a" onNext={vi.fn()} />,
+  );
+  // Reopened receipts display the saved method without collection instructions.
+  expect(
+    await screen.findByRole("heading", {
+      name: "Card payment recorded manually",
+    }),
+  ).toBeVisible();
+  expect(screen.getByText("ORD-000042 is paid.")).toBeVisible();
+  expect(
+    screen.queryByText("Awaiting confirmation and payment"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(
+      "Check the saved total, collect the cash and return any change.",
+    ),
+  ).not.toBeInTheDocument();
+});
 async function setup() {
   const next = vi.fn(),
     user = userEvent.setup();

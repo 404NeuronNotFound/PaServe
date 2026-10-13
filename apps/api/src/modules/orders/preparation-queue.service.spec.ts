@@ -22,6 +22,7 @@ describe('Preparation queue pages', () => {
       queuedAt: new Date('2026-10-13T00:00:00.000Z'),
       orderItems: [
         {
+          lineNumber: 1,
           productSnapshotId: randomUUID(),
           productNameSnapshot: 'Coffee',
           currency: 'PHP',
@@ -89,4 +90,31 @@ describe('Preparation queue pages', () => {
       status: 409,
     });
   });
+  it.each([
+    'line-gap',
+    'corrupt-options',
+    'inconsistent-unit',
+    'empty',
+    'too-many',
+  ])(
+    'rejects corrupt queue snapshots with a controlled conflict: %s',
+    async (kind) => {
+      const order = row();
+      if (kind === 'line-gap') order.orderItems[0].lineNumber = 2;
+      if (kind === 'corrupt-options')
+        order.orderItems[0].variantsSnapshot = null as never;
+      if (kind === 'inconsistent-unit')
+        order.orderItems[0].unitPriceSnapshot = new Prisma.Decimal(9);
+      if (kind === 'empty') order.orderItems = [];
+      if (kind === 'too-many')
+        order.orderItems = Array.from({ length: 101 }, (_, index) => ({
+          ...row().orderItems[0],
+          lineNumber: index + 1,
+        }));
+      findMany.mockResolvedValue([order]);
+      await expect(service.list(actorId, shopId)).rejects.toMatchObject({
+        status: 409,
+      });
+    },
+  );
 });

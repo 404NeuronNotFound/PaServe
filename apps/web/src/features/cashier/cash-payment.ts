@@ -2,6 +2,7 @@ import {
   cashAmountCents,
   PAYMENT_REFERENCE_PATTERN,
   isSafeOtherPaymentText,
+  isSafeManualCardReference,
   type CashPaymentRequest,
   type CashPaymentReviewResponse,
   type ManualGcashPaymentRequest,
@@ -75,6 +76,8 @@ function parseCash(
       payment.changeDue ||
     cashAmountCents(payment.changeDue) === null ||
     (payment.method !== "CASH" && payment.changeDue !== "0.00") ||
+    (payment.method === "CARD_MANUAL" &&
+      !isSafeManualCardReference(payment.reference)) ||
     (payment.reference != null &&
       (payment.method === "CASH" ||
         typeof payment.reference !== "string" ||
@@ -200,6 +203,10 @@ export async function createPayment(
   dto: CreatePaymentRequest,
   signal: AbortSignal,
 ) {
+  if (dto.method === "CARD_MANUAL" && !isSafeManualCardReference(dto.reference))
+    throw new Error(
+      "Use a terminal receipt reference without card numbers or security details.",
+    );
   const { data } = await api.post<CashPaymentReviewResponse>(
     `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}/create-payment`,
     dto,
@@ -228,6 +235,10 @@ async function recordManualPayment(
   signal: AbortSignal,
   method: "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER",
 ) {
+  if (method === "CARD_MANUAL" && !isSafeManualCardReference(dto.reference))
+    throw new Error(
+      "Use a terminal receipt reference without card numbers or security details.",
+    );
   const route =
     method === "OTHER"
       ? "other-payment"

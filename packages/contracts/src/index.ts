@@ -828,10 +828,14 @@ export interface OtherPaymentRequest extends ManualGcashPaymentRequest {
 export function isSafeOtherPaymentText(value: unknown, maxLength = 200): value is string {
   if (typeof value !== "string" || value.length > maxLength || !PAYMENT_REFERENCE_PATTERN.test(value)) return false;
   const normalized = value.normalize("NFKC");
-  return !/\d(?:[ -]*\d){12}/.test(normalized) &&
+  return !/\p{Nd}(?:[^\p{L}\p{N}]*\p{Nd}){12}/u.test(normalized) &&
     !/\b(?:cvv|cvc|pan|pin|expiry|expiration|security[ -]*code)\b/i.test(normalized);
 }
 export const PAYMENT_REFERENCE_PATTERN = /^[^\p{Cc}\p{Cf}<>]{0,200}$(?![\s\S])/u;
+/** Terminal receipt identifiers only; reject recognizable raw card details. */
+export function isSafeManualCardReference(value: unknown): boolean {
+  return value == null || isSafeOtherPaymentText(value);
+}
 export interface CashPaymentReceipt {
   method: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER";
   requestId: string;
