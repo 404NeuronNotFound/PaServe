@@ -19,6 +19,7 @@ import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import { OrderQrService } from './order-qr.service.js';
 import type { CashPaymentDto } from './cash-payment.dto.js';
 import type { ManualGcashPaymentDto } from './manual-gcash-payment.dto.js';
+import type { ManualCardPaymentDto } from './manual-card-payment.dto.js';
 
 export const CASH_PAYMENT_ROLES = SHOP_ROLES.filter(
   (role) =>
@@ -100,21 +101,23 @@ export class CashPaymentService {
     let payment: CashPaymentReviewResponse['payment'] = null;
     if (saved.paymentStatus === 'PAID') {
       if (
-        !['CASH', 'GCASH_MANUAL'].includes(saved.paymentMethod ?? '') ||
+        !['CASH', 'GCASH_MANUAL', 'CARD_MANUAL'].includes(
+          saved.paymentMethod ?? '',
+        ) ||
         !saved.paymentRequestId ||
         !saved.paidAt ||
         !saved.paidBy ||
         !saved.amountReceived ||
         !saved.changeDue ||
         !saved.amountReceived.minus(saved.changeDue).equals(order.totalPrice) ||
-        (saved.paymentMethod === 'GCASH_MANUAL' && !saved.changeDue.isZero())
+        (saved.paymentMethod !== 'CASH' && !saved.changeDue.isZero())
       )
         throw conflict(
           'CASH_PAYMENT_DETAILS_UNAVAILABLE',
           'The saved payment receipt could not be loaded. Ask the shop owner for help.',
         );
       payment = {
-        method: saved.paymentMethod as 'CASH' | 'GCASH_MANUAL',
+        method: saved.paymentMethod as 'CASH' | 'GCASH_MANUAL' | 'CARD_MANUAL',
         requestId: saved.paymentRequestId,
         amountReceived: saved.amountReceived.toFixed(2),
         changeDue: saved.changeDue.toFixed(2),
@@ -144,12 +147,21 @@ export class CashPaymentService {
     return this.settle(actorId, shopId, orderId, dto, 'GCASH_MANUAL');
   }
 
+  async recordCard(
+    actorId: string,
+    shopId: string,
+    orderId: string,
+    dto: ManualCardPaymentDto,
+  ): Promise<CashPaymentReviewResponse> {
+    return this.settle(actorId, shopId, orderId, dto, 'CARD_MANUAL');
+  }
+
   private async settle(
     actorId: string,
     shopId: string,
     orderId: string,
     dto: CashPaymentDto | ManualGcashPaymentDto,
-    method: 'CASH' | 'GCASH_MANUAL',
+    method: 'CASH' | 'GCASH_MANUAL' | 'CARD_MANUAL',
   ): Promise<CashPaymentReviewResponse> {
     const cashAmount = 'amountReceived' in dto ? dto.amountReceived : null;
     const rawReference = 'reference' in dto ? dto.reference : null;
@@ -162,8 +174,7 @@ export class CashPaymentService {
         code: 'INVALID_PAYMENT_REFERENCE',
         message: 'Enter a plain-text reference of up to 200 characters.',
       });
-    const reference =
-      method === 'GCASH_MANUAL' ? rawReference?.trim() || null : null;
+    const reference = method !== 'CASH' ? rawReference?.trim() || null : null;
     if (
       !isUUID(orderId) ||
       !isUUID(dto.requestId) ||
@@ -174,7 +185,11 @@ export class CashPaymentService {
     )
       throw new BadRequestException({
         code:
-          method === 'CASH' ? 'INVALID_CASH_PAYMENT' : 'INVALID_GCASH_PAYMENT',
+          method === 'CASH'
+            ? 'INVALID_CASH_PAYMENT'
+            : method === 'CARD_MANUAL'
+              ? 'INVALID_CARD_PAYMENT'
+              : 'INVALID_GCASH_PAYMENT',
         message:
           'A valid reviewed order and payment confirmation are required.',
       });

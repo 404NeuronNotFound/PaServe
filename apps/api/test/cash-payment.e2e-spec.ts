@@ -159,6 +159,111 @@ describe('Cash collection', () => {
       .get(`/api/v1/shops/${shopId}/orders/${orderId}/cash-payment`)
       .set('Authorization', 'Bearer session');
   }
+  function card(
+    body: Record<string, unknown> = {},
+    targetShop = shopId,
+    authenticated = true,
+  ) {
+    const req = request(app.getHttpServer()).post(
+      `/api/v1/shops/${targetShop}/orders/${orderId}/card-manual-payment`,
+    );
+    if (authenticated) req.set('Authorization', 'Bearer session');
+    return req.send({
+      requestId,
+      reviewVersion: version,
+      receivedConfirmed: true,
+      ...body,
+    });
+  }
+  it.each(['CASHIER', 'OWNER', 'ADMIN', 'MANAGER'] as const)(
+    'records completed external card payment for live %s',
+    async (currentRole) => {
+      role = currentRole;
+      const result = await card({
+        reference: '  00001234 terminal receipt  ',
+      }).expect(200);
+      expect(result.headers['cache-control']).toBe('no-store');
+      expect(result.body.payment).toMatchObject({
+        method: 'CARD_MANUAL',
+        amountReceived: '135.50',
+        changeDue: '0.00',
+        paidBy: userId,
+        reference: '00001234 terminal receipt',
+      });
+      expect(saved.paymentMethod).toBe('CARD_MANUAL');
+      expect(saved.paymentStatus).toBe('PAID');
+      expect((await read().expect(200)).body).toEqual(result.body);
+      expect(
+        (await card({ reference: '00001234 terminal receipt' }).expect(200))
+          .body,
+      ).toEqual(result.body);
+      await card({ reference: 'different receipt' }).expect(409);
+      await collect().expect(409);
+      await gcash().expect(409);
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+    },
+  );
+  it.each([undefined, null, '', '   '])(
+    'allows an optional card reference %j',
+    async (reference) => {
+      expect(
+        (await card({ reference }).expect(200)).body.payment.reference,
+      ).toBeNull();
+    },
+  );
+  it.each([false, undefined, 'true', null, 1])(
+    'rejects unconfirmed card completion %j',
+    async (receivedConfirmed) => {
+      await card({ receivedConfirmed }).expect(400);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['PENDING_CONFIRMATION', 'REJECTED'])(
+    'rejects card settlement for %s orders',
+    async (status) => {
+      saved.status = status;
+      await card().expect(409);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('rejects stale card review and forged amount/actor/method/gateway fields', async () => {
+    await card({
+      amountReceived: '1.00',
+      paidBy: 'owner',
+      method: 'CASH',
+      gatewayVerified: true,
+    }).expect(400);
+    saved.orderItems[0].productNameSnapshot = 'Changed';
+    await card().expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it.each([123, 'a'.repeat(201), 'line\nnext', '<script>', 'ref\u202e'])(
+    'rejects malformed card reference %j',
+    async (reference) => {
+      await card({ reference }).expect(400);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('enforces card authentication, live role and shop scope', async () => {
+    await card({}, shopId, false).expect(401);
+    await card({}, '55b18d73-f2fb-4fe6-bb1c-30cf385c3b24').expect(404);
+    role = 'KITCHEN';
+    await card().expect(403);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rechecks card permission inside the payment transaction', async () => {
+    raw.mockImplementationOnce(async () => {
+      role = 'KITCHEN';
+      return [];
+    });
+    await card().expect(404);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it.each(['cash', 'gcash'])('cannot record card after %s', async (method) => {
+    await (method === 'cash' ? collect() : gcash()).expect(200);
+    await card().expect(409);
+    expect(updateOrder).toHaveBeenCalledTimes(1);
+  });
   function gcash(
     body: Record<string, unknown> = {},
     targetShop = shopId,

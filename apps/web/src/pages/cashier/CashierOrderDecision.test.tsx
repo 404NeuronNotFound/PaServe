@@ -130,6 +130,21 @@ it("revalidates before asking for a decision and keeps Cancel focused", async ()
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Confirm order" })).toHaveFocus();
 });
+it("opens manual card recording after confirmation", async () => {
+  const { user } = setup();
+  const dialog = await open("Confirm order", user);
+  await user.click(
+    within(dialog).getByRole("button", { name: "Confirm order" }),
+  );
+  await screen.findByRole("heading", { name: "Order confirmed" });
+  await user.click(screen.getByRole("button", { name: "Record card payment" }));
+  expect(await screen.findByLabelText("Payment method")).toHaveValue(
+    "CARD_MANUAL",
+  );
+  expect(
+    screen.getByRole("checkbox", { name: /full card payment completed/ }),
+  ).not.toBeChecked();
+});
 it("refreshes and confirms a manually found order without pretending its QR was scanned", async () => {
   const user = userEvent.setup();
   render(<CashierOrderDecision order={order} qrToken="" onNext={vi.fn()} />);

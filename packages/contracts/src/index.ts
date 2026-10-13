@@ -808,9 +808,10 @@ export interface ManualGcashPaymentRequest {
   receivedConfirmed: true;
   reference?: string | null;
 }
+export type ManualCardPaymentRequest = ManualGcashPaymentRequest;
 export const PAYMENT_REFERENCE_PATTERN = /^[^\p{Cc}\p{Cf}<>]{0,200}$(?![\s\S])/u;
 export interface CashPaymentReceipt {
-  method: "CASH" | "GCASH_MANUAL";
+  method: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL";
   requestId: string;
   amountReceived: string;
   changeDue: string;

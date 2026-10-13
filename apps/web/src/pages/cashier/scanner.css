@@ -193,6 +193,17 @@
   font-size: 13px;
   font-weight: 600;
 }
+.phase-two .cashier-gcash-confirm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.phase-two .cashier-gcash-confirm input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
 .phase-two .cashier-cash-input {
   display: flex;
   align-items: center;

@@ -370,11 +370,85 @@ try {
       data: { paymentMethod: 'CASH' },
     }),
   );
+  const cardSql = await readFile(
+    new URL(
+      '../prisma/migrations/20261013220000_manual_card_payments/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await setup.query('BEGIN');
+  await setup.query(`SET LOCAL search_path TO "${schema}", public`);
+  await setup.query(cardSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
+  await setup.query('COMMIT');
+  assert.deepEqual(
+    await cash.review(users[winnerIndex].id, shop.id, order.id),
+    winner,
+  );
+  assert.deepEqual(
+    await cash.review(users[0].id, shop.id, gcashOrder.id),
+    gcashResult,
+  );
+  const cardOrder = await confirmedOrder('ORD-000004');
+  const cardVersion = (await cash.review(users[0].id, shop.id, cardOrder.id))
+    .order.reviewVersion;
+  const cardRequest = {
+    requestId: randomUUID(),
+    reviewVersion: cardVersion,
+    receivedConfirmed: true,
+    reference: '00001234 terminal receipt',
+  };
+  const cardResult = await cash.recordCard(
+    users[0].id,
+    shop.id,
+    cardOrder.id,
+    cardRequest,
+  );
+  const savedCard = await prisma.order.findFirst({
+    where: { id: cardOrder.id, shopId: shop.id },
+  });
+  assert.equal(savedCard.paymentMethod, 'CARD_MANUAL');
+  assert.equal(savedCard.paymentStatus, 'PAID');
+  assert.equal(savedCard.amountReceived.toFixed(2), '10.00');
+  assert.equal(savedCard.changeDue.toFixed(2), '0.00');
+  assert.equal(savedCard.paymentReference, cardRequest.reference);
+  assert.equal(savedCard.paidBy, users[0].id);
+  assert.ok(savedCard.paidAt instanceof Date);
+  assert.deepEqual(
+    await cash.recordCard(users[0].id, shop.id, cardOrder.id, cardRequest),
+    cardResult,
+  );
+  assert.deepEqual(
+    await cash.lookup(users[0].id, shop.id, cardOrder.orderNumber),
+    cardResult,
+  );
+  await assert.rejects(
+    cash.recordCard(users[0].id, shop.id, cardOrder.id, {
+      ...cardRequest,
+      reference: 'changed',
+    }),
+    { status: 409 },
+  );
+  await assert.rejects(
+    cash.recordGcash(users[0].id, shop.id, cardOrder.id, cardRequest),
+    { status: 409 },
+  );
+  await assert.rejects(
+    prisma.order.updateMany({
+      where: { id: cardOrder.id, shopId: shop.id },
+      data: { paymentReference: 'changed' },
+    }),
+  );
   const raceOrder = await confirmedOrder('ORD-000003');
   const raceVersion = (await cash.review(users[0].id, shop.id, raceOrder.id))
     .order.reviewVersion;
   // GCash/cash share the same order lock and UNPAID predicate.
   const competing = await Promise.allSettled([
+    cash.recordCard(users[0].id, shop.id, raceOrder.id, {
+      requestId: randomUUID(),
+      reviewVersion: raceVersion,
+      receivedConfirmed: true,
+    }),
     cash.recordGcash(users[0].id, shop.id, raceOrder.id, {
       requestId: randomUUID(),
       reviewVersion: raceVersion,
@@ -397,7 +471,12 @@ try {
   const raceSaved = await prisma.order.findFirst({
     where: { id: raceOrder.id, shopId: shop.id },
   });
-  assert.ok(['CASH', 'GCASH_MANUAL'].includes(raceSaved.paymentMethod));
+  assert.ok(
+    ['CASH', 'GCASH_MANUAL', 'CARD_MANUAL'].includes(raceSaved.paymentMethod),
+  );
+  console.log(
+    'Passed: manual card migration preserves cash/GCash receipts, method/reference/actor persistence, full settlement, zero change, exact replay and competing card/cash/GCash commits once.',
+  );
   console.log(
     'Passed: manual GCash migration preserves CASH, exact full settlement, zero change, saved actor, replay, immutable method and competing cash/GCash recording commits once.',
   );

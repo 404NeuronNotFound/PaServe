@@ -4,6 +4,7 @@ import {
   type CashPaymentRequest,
   type CashPaymentReviewResponse,
   type ManualGcashPaymentRequest,
+  type ManualCardPaymentRequest,
 } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import { parseReview } from "./order-qr";
@@ -43,7 +44,7 @@ function parseCash(
   }
   if (
     !payment ||
-    !["CASH", "GCASH_MANUAL"].includes(payment.method) ||
+    !["CASH", "GCASH_MANUAL", "CARD_MANUAL"].includes(payment.method) ||
     typeof payment.requestId !== "string" ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       payment.requestId,
@@ -55,9 +56,9 @@ function parseCash(
     cashChange(payment.amountReceived, order.totalPrice) !==
       payment.changeDue ||
     cashAmountCents(payment.changeDue) === null ||
-    (payment.method === "GCASH_MANUAL" && payment.changeDue !== "0.00") ||
+    (payment.method !== "CASH" && payment.changeDue !== "0.00") ||
     (payment.reference != null &&
-      (payment.method !== "GCASH_MANUAL" ||
+      (payment.method === "CASH" ||
         typeof payment.reference !== "string" ||
         !payment.reference.trim() ||
         !PAYMENT_REFERENCE_PATTERN.test(payment.reference)))
@@ -146,8 +147,29 @@ export async function recordManualGcashPayment(
   dto: ManualGcashPaymentRequest,
   signal: AbortSignal,
 ) {
+  return recordManualPayment(shopId, orderId, dto, signal, "GCASH_MANUAL");
+}
+
+export async function recordManualCardPayment(
+  shopId: string,
+  orderId: string,
+  dto: ManualCardPaymentRequest,
+  signal: AbortSignal,
+) {
+  return recordManualPayment(shopId, orderId, dto, signal, "CARD_MANUAL");
+}
+
+async function recordManualPayment(
+  shopId: string,
+  orderId: string,
+  dto: ManualGcashPaymentRequest,
+  signal: AbortSignal,
+  method: "GCASH_MANUAL" | "CARD_MANUAL",
+) {
+  const route =
+    method === "CARD_MANUAL" ? "card-manual-payment" : "gcash-manual-payment";
   const { data } = await api.post<CashPaymentReviewResponse>(
-    `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}/gcash-manual-payment`,
+    `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}/${route}`,
     {
       requestId: dto.requestId,
       reviewVersion: dto.reviewVersion,
@@ -159,7 +181,7 @@ export async function recordManualGcashPayment(
   const saved = parseCash(data, shopId, orderId);
   if (
     !saved.payment ||
-    saved.payment.method !== "GCASH_MANUAL" ||
+    saved.payment.method !== method ||
     saved.payment.requestId !== dto.requestId ||
     (saved.payment.reference ?? null) !== (dto.reference?.trim() || null)
   )

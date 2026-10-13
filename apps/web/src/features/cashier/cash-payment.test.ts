@@ -7,6 +7,7 @@ import {
   collectCashPayment,
   lookupCashPayment,
   recordManualGcashPayment,
+  recordManualCardPayment,
 } from "./cash-payment";
 import { cashierLine } from "../../test/cashier-fixtures";
 vi.mock("../../lib/api/client", () => ({
@@ -40,6 +41,43 @@ const payment = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+});
+it("records external card completion and retains its reference without accepting another method", async () => {
+  const receipt = {
+    ...payment,
+    method: "CARD_MANUAL",
+    amountReceived: "135.50",
+    changeDue: "0.00",
+    reference: "00001234 terminal receipt",
+  };
+  vi.mocked(api.post).mockResolvedValue({
+    data: { order: { ...order, paymentStatus: "PAID" }, payment: receipt },
+  });
+  const dto = {
+    requestId,
+    reviewVersion: order.reviewVersion,
+    receivedConfirmed: true as const,
+    reference: receipt.reference,
+  };
+  const signal = new AbortController().signal;
+  expect(
+    (await recordManualCardPayment(shopId, orderId, dto, signal)).payment
+      ?.method,
+  ).toBe("CARD_MANUAL");
+  expect(api.post).toHaveBeenCalledWith(
+    `/shops/${shopId}/orders/${orderId}/card-manual-payment`,
+    dto,
+    { signal, timeout: 15000 },
+  );
+  vi.mocked(api.post).mockResolvedValue({
+    data: {
+      order: { ...order, paymentStatus: "PAID" },
+      payment: { ...receipt, method: "GCASH_MANUAL" },
+    },
+  });
+  await expect(
+    recordManualCardPayment(shopId, orderId, dto, signal),
+  ).rejects.toThrow();
 });
 it.each([
   ["200", "200.00"],
