@@ -17,6 +17,22 @@ import { VerifyOrderQrDto } from './verify-order-qr.dto.js';
 export class OrderQrController {
   constructor(private readonly qr: OrderQrService) {}
 
+  @Post('scan-qr')
+  @HttpCode(200)
+  @Roles(...ORDER_QR_ROLES)
+  scan(
+    @Body() dto: VerifyOrderQrDto,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.qr.scan(
+      request.user.id,
+      request.shopMembership.shopId,
+      dto.qrToken,
+    );
+  }
+
   @Post(':orderId/verify-qr')
   @HttpCode(200)
   @Roles(...ORDER_QR_ROLES)

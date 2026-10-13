@@ -12,7 +12,8 @@ export type OrderQrReference = {
   qrToken: string;
 };
 /** QR contents are the signed order token itself. Claims only route a read;
- * only the authenticated backend can verify the signature or grant access. */
+ * The active shop comes from staff context; the backend resolves the order ID.
+ * Parsing never supplies trusted order details or a destination URL. */
 export function parseOrderQr(raw: string): OrderQrReference | null {
   const qrToken = raw.trim();
   if (
@@ -54,13 +55,15 @@ export function parseOrderQr(raw: string): OrderQrReference | null {
 }
 export async function verifyScannedOrder(
   shopId: string,
-  reference: OrderQrReference,
+  qrToken: string,
   signal: AbortSignal,
 ) {
+  const reference = parseOrderQr(qrToken);
+  if (!reference) throw new Error("This is not a PaServe order QR.");
   if (reference.shopId !== shopId)
     throw new Error("This order QR belongs to another shop.");
   const { data } = await api.post<VerifyOrderQrResponse>(
-    `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(reference.orderId)}/verify-qr`,
+    `/shops/${encodeURIComponent(shopId)}/orders/scan-qr`,
     { qrToken: reference.qrToken },
     { signal, timeout: AUTH_REQUEST_TIMEOUT_MS },
   );

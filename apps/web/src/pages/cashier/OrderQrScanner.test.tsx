@@ -90,6 +90,11 @@ it("verifies pasted QR contents, clears the credential, and shows only saved ser
   ).toBeInTheDocument();
   expect(screen.queryByText(token())).not.toBeInTheDocument();
   expect(stop).toHaveBeenCalled();
+  expect(verifyScannedOrder).toHaveBeenCalledWith(
+    shopId,
+    token(),
+    expect.any(AbortSignal),
+  );
 });
 it.each(["T12", "ORD-000042", token("55b18d73-f2fb-4fe6-bb1c-30cf385c3b24")])(
   "does not verify a table, number, or foreign-shop QR",

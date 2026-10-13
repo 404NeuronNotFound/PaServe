@@ -56,11 +56,9 @@ it("sends only the signed token to a shop-scoped authenticated verification read
     .spyOn(api, "post")
     .mockResolvedValue({ data: { verified: true, order } });
   const signal = new AbortController().signal;
-  expect(
-    await verifyScannedOrder(shopId, parseOrderQr(token)!, signal),
-  ).toEqual(order);
+  expect(await verifyScannedOrder(shopId, token, signal)).toEqual(order);
   expect(post).toHaveBeenCalledWith(
-    `/shops/${shopId}/orders/${orderId}/verify-qr`,
+    `/shops/${shopId}/orders/scan-qr`,
     { qrToken: token },
     { signal, timeout: 15000 },
   );
@@ -70,10 +68,40 @@ it("never sends a foreign-shop scan to an API", async () => {
   await expect(
     verifyScannedOrder(
       "55b18d73-f2fb-4fe6-bb1c-30cf385c3b24",
-      parseOrderQr(token)!,
+      token,
       new AbortController().signal,
     ),
   ).rejects.toThrow("another shop");
+  expect(post).not.toHaveBeenCalled();
+});
+it("sends the token to the fixed active-shop endpoint and ignores embedded order details and URLs", async () => {
+  const raw = encode({
+    ...claims,
+    orderNumber: "ORD-999999",
+    totalPrice: "0.01",
+    paymentStatus: "PAID",
+    status: "CONFIRMED",
+    verificationUrl: "https://example.com/steal",
+  });
+  const post = vi
+    .spyOn(api, "post")
+    .mockResolvedValue({ data: { verified: true, order } });
+  const signal = new AbortController().signal;
+  const saved = await verifyScannedOrder(shopId, raw, signal);
+  expect(post).toHaveBeenCalledWith(
+    `/shops/${shopId}/orders/scan-qr`,
+    { qrToken: raw },
+    { signal, timeout: 15000 },
+  );
+  expect(saved).toEqual(order);
+  expect(saved.totalPrice).toBe("135.50");
+  expect(saved.paymentStatus).toBe("UNPAID");
+});
+it("rejects invalid scan contents before sending a request", async () => {
+  const post = vi.spyOn(api, "post");
+  await expect(
+    verifyScannedOrder(shopId, "ORD-000001", new AbortController().signal),
+  ).rejects.toThrow("not a PaServe order QR");
   expect(post).not.toHaveBeenCalled();
 });
 it.each([
@@ -92,11 +120,7 @@ it.each([
       data: { verified: true, order: invalid },
     });
     await expect(
-      verifyScannedOrder(
-        shopId,
-        parseOrderQr(token)!,
-        new AbortController().signal,
-      ),
+      verifyScannedOrder(shopId, token, new AbortController().signal),
     ).rejects.toThrow("response could not be verified");
   },
 );

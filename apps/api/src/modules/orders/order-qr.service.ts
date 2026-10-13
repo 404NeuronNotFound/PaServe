@@ -24,6 +24,15 @@ export class OrderQrService {
     private readonly tokens: OrderTokenService,
   ) {}
 
+  async scan(
+    userId: string,
+    shopId: string,
+    token: string,
+  ): Promise<VerifyOrderQrResponse> {
+    const { orderId } = this.tokens.resolveReference(token, shopId);
+    return this.verify(userId, shopId, orderId, token);
+  }
+
   async verify(
     userId: string,
     shopId: string,

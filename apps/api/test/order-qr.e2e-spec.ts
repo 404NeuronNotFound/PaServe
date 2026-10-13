@@ -108,6 +108,118 @@ describe('Cashier order QR verification', () => {
       .post(`/api/v1/shops/${targetShop}/orders/${targetOrder}/verify-qr`)
       .set('Authorization', 'Bearer staff-session')
       .send({ qrToken: token });
+  const scan = (token = tokens.issue(persisted), targetShop = shopId) =>
+    request(app.getHttpServer())
+      .post(`/api/v1/shops/${targetShop}/orders/scan-qr`)
+      .set('Authorization', 'Bearer staff-session')
+      .send({ qrToken: token });
+
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
+    'resolves a scanned token for live %s and returns only saved order details',
+    async (allowedRole) => {
+      role = allowedRole;
+      const result = await scan().expect(200);
+      expect(result.headers['cache-control']).toBe('no-store');
+      expect(result.body.order).toMatchObject({
+        id: orderId,
+        shopId,
+        orderNumber: persisted.orderNumber,
+        totalPrice: '135.50',
+        status: 'PENDING_CONFIRMATION',
+        paymentStatus: 'UNPAID',
+      });
+      expect(result.body.order.qrToken).toBeUndefined();
+      expect(findOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: orderId,
+            shopId,
+            shop: expect.objectContaining({
+              members: {
+                some: {
+                  userId,
+                  role: { in: ['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] },
+                  user: { isActive: true },
+                },
+              },
+            }),
+          }),
+        }),
+      );
+      expect(updateOrder).not.toHaveBeenCalled();
+      expect(createOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('requires authentication and a permitted live role for token resolution', async () => {
+    await request(app.getHttpServer())
+      .post(`/api/v1/shops/${shopId}/orders/scan-qr`)
+      .send({ qrToken: tokens.issue(persisted) })
+      .expect(401);
+    role = 'KITCHEN';
+    await scan().expect(403);
+    expect(findOrder).not.toHaveBeenCalled();
+  });
+  it.each(['membership', 'user', 'shop'])(
+    'denies inactive/missing %s before resolving a scanned token',
+    async (state) => {
+      if (state === 'membership') hasMembership = false;
+      if (state === 'user') activeUser = false;
+      if (state === 'shop') activeShop = false;
+      await scan().expect(404);
+      expect(findOrder).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['orderId', 'shopId', 'totalPrice', 'verificationUrl'])(
+    'rejects untrusted embedded %s before order lookup',
+    async (field) => {
+      const original = tokens.issue(persisted).split('.');
+      const claims = JSON.parse(
+        Buffer.from(original[0], 'base64url').toString('utf8'),
+      ) as Record<string, unknown>;
+      const values = {
+        orderId: otherOrder,
+        shopId: otherShop,
+        totalPrice: '0.01',
+        verificationUrl: 'https://example.com/steal',
+      };
+      claims[field] = values[field as keyof typeof values];
+      const forged = `${Buffer.from(JSON.stringify(claims)).toString('base64url')}.${original[1]}`;
+      await scan(forged).expect(403);
+      expect(findOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('rejects a valid token for another active shop without retargeting the request', async () => {
+    await scan(tokens.issue(persisted), otherShop).expect(403);
+    expect(findOrder).not.toHaveBeenCalled();
+  });
+  it('still enforces persisted revocation and expiry after signed resolution', async () => {
+    const token = tokens.issue(persisted);
+    persisted.qrTokenRevokedAt = new Date();
+    await scan(token).expect(403);
+    persisted.qrTokenRevokedAt = null;
+    persisted.qrTokenExpiresAt = new Date(0);
+    await scan(token).expect(403);
+  });
+  it('returns no order details when access changes after the scanner guard', async () => {
+    findOrder.mockResolvedValue(null);
+    await scan().expect(404);
+  });
+  it.each([
+    { qrToken: 'token', orderId: otherOrder },
+    { qrToken: 'token', totalPrice: '0.01' },
+    { qrToken: 'token', status: 'CONFIRMED' },
+    { qrToken: 'token', verificationUrl: 'https://example.com/steal' },
+  ])(
+    'refuses client-supplied order details in a scan request %j',
+    async (body) => {
+      await request(app.getHttpServer())
+        .post(`/api/v1/shops/${shopId}/orders/scan-qr`)
+        .set('Authorization', 'Bearer staff-session')
+        .send(body)
+        .expect(400);
+      expect(findOrder).not.toHaveBeenCalled();
+    },
+  );
 
   it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
     'permits live %s to verify without changing the order',

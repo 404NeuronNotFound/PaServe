@@ -73,7 +73,7 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
     lastCode.current = "";
     const controller = new AbortController();
     request.current = controller;
-    void verifyScannedOrder(shopId, reference, controller.signal)
+    void verifyScannedOrder(shopId, reference.qrToken, controller.signal)
       .then((saved) => {
         if (mounted.current && !controller.signal.aborted) setOrder(saved);
       })

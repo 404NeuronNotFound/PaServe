@@ -741,7 +741,8 @@ export interface TakeoutOrderResponse {
   order: Omit<DineInOrderResponse["order"], "mode" | "table"> & { mode: "TAKEOUT"; table: null };
 }
 export type CustomerOrderResponse = DineInOrderResponse | TakeoutOrderResponse;
-/** Authenticated cashier verification; this action does not change order state. */
+/** Authenticated cashier scanning/verification; only the signed token is input.
+ * The active shop is route context. Neither action changes order state. */
 export interface VerifyOrderQrRequest {
   qrToken: string;
 }
