@@ -2,7 +2,18 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
-import { FiUsers, FiLink } from "react-icons/fi";
+import {
+  FiUsers,
+  FiLink,
+  FiUserPlus,
+  FiSearch,
+  FiX,
+  FiLock,
+  FiClock,
+  FiArrowUpRight,
+  FiUserMinus,
+  FiMail,
+} from "react-icons/fi";
 import {
   STAFF_ROLES,
   type ApiErrorResponse,
@@ -32,7 +43,7 @@ const roles = STAFF_ROLES.map((value) => ({
 }));
 function errorMessage(error: unknown) {
   return isAxiosError<ApiErrorResponse>(error)
-    ? (error.response?.data.message ??
+    ? (error.response?.data?.message ??
         "Unable to complete this action. Check your connection and try again.")
     : "Unable to complete this action. Check your connection and try again.";
 }
@@ -41,6 +52,12 @@ type Decision = {
   id: string;
   email: string;
   role?: StaffRole;
+};
+const roleDescriptions: Record<StaffRole, string> = {
+  CASHIER: "Order scanning and payment collection.",
+  KITCHEN: "Kitchen preparation access.",
+  MANAGER: "Daily operations and order management.",
+  ADMIN: "Shop administration and management.",
 };
 export function StaffPage() {
   const { shopId } = useActiveShop();
@@ -53,6 +70,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const { shopId } = membership;
   const client = useQueryClient();
   const heading = useRef<HTMLHeadingElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
   const headingFocused = useRef(false);
   const mounted = useRef(false);
   const running = useRef(false);
@@ -64,6 +82,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const [copying, setCopying] = useState(false);
   const [lostAccess, setLostAccess] = useState(false);
   const [decision, setDecision] = useState<Decision | null>(null);
+  const [search, setSearch] = useState("");
   const authorized = membership.role === "OWNER" && !lostAccess;
   const query = useQuery({
     queryKey: ["staff", userId, shopId],
@@ -192,10 +211,17 @@ function StaffWorkspace({ userId }: { userId: string }) {
         </button>
       </section>
     );
+  const members = query.data.members.filter((member) =>
+    `${member.email} ${member.role}`
+      .toLowerCase()
+      .includes(search.trim().toLowerCase()),
+  );
+  const pendingCount = query.data.invitations.filter(
+    (invitation) => invitation.status === "PENDING",
+  ).length;
   return (
     <section className="shop-context-content staff-workspace">
       <header className="staff-heading">
-        <FiUsers aria-hidden="true" />
         <div>
           <p className="section-label">YOUR PEOPLE</p>
           <h1 ref={heading} tabIndex={-1}>
@@ -203,161 +229,288 @@ function StaffWorkspace({ userId }: { userId: string }) {
           </h1>
           <p>Manage access to {membership.shop.name}.</p>
         </div>
+        <div className="staff-overview" role="group" aria-label="Team overview">
+          <span>
+            <FiUsers aria-hidden="true" />
+            {query.data.members.length}{" "}
+            {query.data.members.length === 1 ? "member" : "members"}
+          </span>
+          <span>
+            <FiClock aria-hidden="true" />
+            {pendingCount} pending {pendingCount === 1 ? "invite" : "invites"}
+          </span>
+        </div>
       </header>
       <div className="staff-grid">
-        <section className="staff-panel" aria-labelledby="invite-staff-title">
-          <h2 id="invite-staff-title">Invite staff</h2>
-          <p>
-            They use their own account and password. Share the link directly
-            with the person you invite.
-          </p>
-          <form
-            className="registration-form"
-            onSubmit={(event) => void submit(event)}
-            noValidate
-          >
-            <div className="field">
-              <label htmlFor="staff-email">Staff email address</label>
-              <input
-                id="staff-email"
-                type="email"
-                autoComplete="email"
-                maxLength={254}
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
+        <section
+          className="staff-panel staff-invite-panel"
+          aria-labelledby="invite-staff-title"
+        >
+          <header className="staff-invite-heading">
+            <span className="staff-invite-icon">
+              <FiUserPlus aria-hidden="true" />
+            </span>
+            <p className="section-label">GROW YOUR TEAM</p>
+            <h2 id="invite-staff-title">Invite staff</h2>
+            <p>Give the right person the right access.</p>
+          </header>
+          <div className="staff-invite-body">
+            <form
+              className="registration-form"
+              onSubmit={(event) => void submit(event)}
+              noValidate
+            >
+              <div className="field">
+                <label htmlFor="staff-email">Staff email address</label>
+                <input
+                  id="staff-email"
+                  type="email"
+                  autoComplete="email"
+                  maxLength={254}
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  disabled={busy}
+                  required
+                  placeholder="name@example.com"
+                />
+              </div>
+              <SelectField
+                id="staff-role"
+                label="Shop role"
+                value={role}
+                options={roles}
+                onChange={(value) => setRole(value as StaffRole)}
                 disabled={busy}
-                required
+                describedBy="staff-role-description"
               />
-            </div>
-            <SelectField
-              id="staff-role"
-              label="Shop role"
-              value={role}
-              options={roles}
-              onChange={(value) => setRole(value as StaffRole)}
-              disabled={busy}
-            />
-            <button className="primary-button" disabled={busy}>
-              {busy ? "Saving…" : "Create invitation link"}
-            </button>
-          </form>
-          <p className="staff-hint">
-            Links expire after 7 days. Creating another invitation for the same
-            email replaces the previous unaccepted link.
-          </p>
-          {error && <InlineMessage>{error}</InlineMessage>}
-          {link && (
-            <div className="staff-link field">
-              <label htmlFor="invitation-link">
-                Invitation link — save it before leaving this page
-              </label>
-              <input
-                id="invitation-link"
-                value={link}
-                readOnly
-                onFocus={(event) => event.target.select()}
-              />
-              <button
-                className="secondary-button"
-                onClick={() => void copy()}
-                disabled={copying || busy}
-              >
-                <FiLink aria-hidden="true" />
-                {copying ? "Copying…" : "Copy invitation link"}
+              <p id="staff-role-description" className="staff-role-description">
+                {roleDescriptions[role]}
+              </p>
+              <button className="primary-button" disabled={busy}>
+                {busy ? "Saving…" : "Create invitation link"}
+                <FiArrowUpRight aria-hidden="true" />
               </button>
-            </div>
-          )}
+            </form>
+            <p className="staff-hint">
+              <FiLock aria-hidden="true" />
+              They sign in with their own account. Share the link directly with
+              the person you invite.
+            </p>
+            <details className="staff-invite-guidance">
+              <summary>How invitation links work</summary>
+              <p>
+                Links expire after 7 days. Creating another invitation for the
+                same email replaces the previous unaccepted link.
+              </p>
+            </details>
+            {error && <InlineMessage>{error}</InlineMessage>}
+            {link && (
+              <div className="staff-link field">
+                <label htmlFor="invitation-link">
+                  Invitation link — save it before leaving this page
+                </label>
+                <input
+                  id="invitation-link"
+                  value={link}
+                  readOnly
+                  onFocus={(event) => event.target.select()}
+                />
+                <button
+                  className="secondary-button"
+                  onClick={() => void copy()}
+                  disabled={copying || busy}
+                >
+                  <FiLink aria-hidden="true" />
+                  {copying ? "Copying…" : "Copy invitation link"}
+                </button>
+              </div>
+            )}
+          </div>
         </section>
-        <section className="staff-panel" aria-labelledby="staff-list-title">
-          <h2 id="staff-list-title">Shop members</h2>
-          <ul className="staff-list">
-            {query.data.members.map((member) => (
-              <li key={member.id}>
-                <div>
-                  <strong>{member.email}</strong>
-                  <span>
-                    {member.role.toLowerCase()}
-                    {!member.isActive ? " · account inactive" : ""}
-                  </span>
-                </div>
-                {member.role === "OWNER" ? (
-                  <span>Owner</span>
-                ) : (
-                  <div className="staff-actions">
-                    <SelectField
-                      id={`role-${member.id}`}
-                      label={`Role for ${member.email}`}
-                      value={member.role}
-                      options={roles}
-                      onChange={(value) => {
-                        if (value !== member.role)
+        <div className="staff-team-panels">
+          <section className="staff-panel" aria-labelledby="staff-list-title">
+            <header className="staff-panel-heading">
+              <div>
+                <p className="section-label">TEAM ACCESS</p>
+                <h2 id="staff-list-title">Shop members</h2>
+              </div>
+              <span className="staff-count">{query.data.members.length}</span>
+            </header>
+            <div className="staff-search">
+              <FiSearch aria-hidden="true" />
+              <input
+                aria-label="Search shop members"
+                ref={searchInput}
+                placeholder="Search by email or role"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  aria-label="Clear member search"
+                  onClick={() => {
+                    setSearch("");
+                    searchInput.current?.focus();
+                  }}
+                >
+                  <FiX aria-hidden="true" />
+                </button>
+              )}
+            </div>
+            {search && (
+              <p className="staff-search-results" role="status">
+                {members.length} {members.length === 1 ? "member" : "members"}{" "}
+                found.
+              </p>
+            )}
+            <ul className="staff-list">
+              {members.map((member) => (
+                <li key={member.id}>
+                  <div className="staff-person">
+                    <span className="staff-avatar" aria-hidden="true">
+                      {member.email.slice(0, 2).toUpperCase()}
+                    </span>
+                    <div className="staff-person-details">
+                      <strong>{member.email}</strong>
+                      <span>
+                        {member.role.toLowerCase()}
+                        {!member.isActive ? " · account inactive" : ""}
+                      </span>
+                    </div>
+                  </div>
+                  {member.role === "OWNER" ? (
+                    <span className="staff-owner-badge">
+                      <FiLock aria-hidden="true" /> Owner
+                    </span>
+                  ) : (
+                    <div className="staff-actions">
+                      <SelectField
+                        id={`role-${member.id}`}
+                        label={`Role for ${member.email}`}
+                        value={member.role}
+                        options={roles}
+                        onChange={(value) => {
+                          if (value !== member.role)
+                            setDecision({
+                              kind: "role",
+                              id: member.id,
+                              email: member.email,
+                              role: value as StaffRole,
+                            });
+                        }}
+                        disabled={busy}
+                      />
+                      <button
+                        className="secondary-button"
+                        disabled={busy}
+                        onClick={() =>
                           setDecision({
-                            kind: "role",
+                            kind: "remove",
                             id: member.id,
                             email: member.email,
-                            role: value as StaffRole,
-                          });
-                      }}
-                      disabled={busy}
-                    />
-                    <button
-                      className="secondary-button"
-                      disabled={busy}
-                      onClick={() =>
-                        setDecision({
-                          kind: "remove",
-                          id: member.id,
-                          email: member.email,
-                        })
-                      }
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-      <section className="staff-panel" aria-labelledby="invitations-title">
-        <h2 id="invitations-title">Recent invitations</h2>
-        {!query.data.invitations.length ? (
-          <p>No invitations yet.</p>
-        ) : (
-          <ul className="staff-list">
-            {query.data.invitations.map((invitation) => (
-              <li key={invitation.id}>
-                <div>
-                  <strong>{invitation.email}</strong>
-                  <span>
-                    {invitation.role.toLowerCase()} ·{" "}
-                    {invitation.status.toLowerCase()}
-                  </span>
-                  <span>
-                    Expires {new Date(invitation.expiresAt).toLocaleString()}
-                  </span>
-                </div>
-                {["PENDING", "EXPIRED"].includes(invitation.status) && (
+                          })
+                        }
+                      >
+                        <FiUserMinus aria-hidden="true" /> Remove
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {!members.length && (
+              <div className="staff-empty">
+                <FiUsers aria-hidden="true" />
+                <p>
+                  {search
+                    ? "No members match your search."
+                    : "No shop members to show."}
+                </p>
+                {search && (
                   <button
                     className="secondary-button"
-                    disabled={busy}
-                    onClick={() =>
-                      setDecision({
-                        kind: "revoke",
-                        id: invitation.id,
-                        email: invitation.email,
-                      })
-                    }
+                    onClick={() => {
+                      setSearch("");
+                      searchInput.current?.focus();
+                    }}
                   >
-                    Revoke invitation
+                    Show all members
                   </button>
                 )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+              </div>
+            )}
+          </section>
+          <section className="staff-panel" aria-labelledby="invitations-title">
+            <header className="staff-panel-heading">
+              <div>
+                <p className="section-label">INVITATION HISTORY</p>
+                <h2 id="invitations-title">Recent invitations</h2>
+              </div>
+              <span className="staff-count">
+                {query.data.invitations.length}
+              </span>
+            </header>
+            {!query.data.invitations.length ? (
+              <div className="staff-empty">
+                <FiMail aria-hidden="true" />
+                <p>No invitations yet.</p>
+                <span>Your first invitation will appear here.</span>
+              </div>
+            ) : (
+              <ul className="staff-list">
+                {query.data.invitations.map((invitation) => (
+                  <li key={invitation.id}>
+                    <div className="staff-person">
+                      <span
+                        className="staff-avatar staff-invitation-avatar"
+                        aria-hidden="true"
+                      >
+                        <FiMail />
+                      </span>
+                      <div className="staff-person-details">
+                        <strong>{invitation.email}</strong>
+                        <span>
+                          {invitation.role.toLowerCase()}{" "}
+                          <span
+                            className={`staff-invitation-status is-${invitation.status.toLowerCase()}`}
+                          >
+                            {invitation.status.toLowerCase()}
+                          </span>
+                        </span>
+                        <span>
+                          <FiClock aria-hidden="true" />{" "}
+                          {invitation.status === "PENDING"
+                            ? "Expires"
+                            : "Link expiry"}{" "}
+                          <time dateTime={invitation.expiresAt}>
+                            {new Date(invitation.expiresAt).toLocaleString()}
+                          </time>
+                        </span>
+                      </div>
+                    </div>
+                    {["PENDING", "EXPIRED"].includes(invitation.status) && (
+                      <button
+                        className="secondary-button"
+                        disabled={busy}
+                        onClick={() =>
+                          setDecision({
+                            kind: "revoke",
+                            id: invitation.id,
+                            email: invitation.email,
+                          })
+                        }
+                      >
+                        Revoke invitation
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </div>
       <DecisionDialog
         open={Boolean(decision)}
         title={

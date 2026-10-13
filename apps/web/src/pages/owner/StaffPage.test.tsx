@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -207,4 +207,50 @@ it("confirms a role change before saving", async () => {
     "staff-member",
     "KITCHEN",
   );
+});
+it("filters members by email or role and restores search focus on clear", async () => {
+  const user = setup();
+  const search = await screen.findByRole("textbox", {
+    name: "Search shop members",
+  });
+  const team = screen.getByRole("region", { name: "Shop members" });
+  await user.type(search, "CASHIER");
+  expect(within(team).getByText("staff@example.com")).toBeInTheDocument();
+  expect(within(team).queryByText("owner@example.com")).not.toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("1 member found.");
+  await user.click(screen.getByRole("button", { name: "Clear member search" }));
+  expect(search).toHaveFocus();
+  expect(within(team).getByText("owner@example.com")).toBeInTheDocument();
+  await user.type(search, "owner@");
+  expect(within(team).queryByText("staff@example.com")).not.toBeInTheDocument();
+  expect(changeStaffRole).not.toHaveBeenCalled();
+});
+it("offers recovery for empty member search without changing the invitation list", async () => {
+  const user = setup();
+  await user.type(
+    await screen.findByRole("textbox", { name: "Search shop members" }),
+    "no-match",
+  );
+  expect(screen.getByText("No members match your search.")).toBeInTheDocument();
+  expect(screen.getByText("new@example.com")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Show all members" }));
+  expect(
+    screen.getByRole("textbox", { name: "Search shop members" }),
+  ).toHaveValue("");
+  expect(screen.getByText("staff@example.com")).toBeInTheDocument();
+});
+it("shows real team counts and role guidance without granting access", async () => {
+  const user = setup();
+  const overview = await screen.findByRole("group", { name: "Team overview" });
+  expect(overview).toHaveTextContent("2 members");
+  expect(overview).toHaveTextContent("1 pending invite");
+  expect(
+    screen.getByRole("combobox", { name: "Shop role" }),
+  ).toHaveAccessibleDescription("Cashier Order scanning and payment collection.");
+  await user.click(screen.getByRole("combobox", { name: "Shop role" }));
+  await user.click(screen.getByRole("option", { name: "Kitchen" }));
+  expect(
+    screen.getByRole("combobox", { name: "Shop role" }),
+  ).toHaveAccessibleDescription("Kitchen Kitchen preparation access.");
+  expect(inviteStaff).not.toHaveBeenCalled();
 });
