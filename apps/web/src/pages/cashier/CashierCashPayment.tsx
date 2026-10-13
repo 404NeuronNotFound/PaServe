@@ -301,6 +301,15 @@ export function CashierCashPayment({
                 : "GCash payment recorded manually"}
         </h2>
         <p role="status">{review.order.orderNumber} is paid.</p>
+        {review.queue && (
+          <p role="status">
+            {review.queue.status === "QUEUED"
+              ? "Queued for preparation."
+              : review.queue.status === "PREPARING"
+                ? "Preparation is in progress."
+                : "Ready for collection."}
+          </p>
+        )}
         <dl>
           {review.payment.description && (
             <div>

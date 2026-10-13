@@ -8,6 +8,7 @@ import {
   type ManualCardPaymentRequest,
   type OtherPaymentRequest,
   type CreatePaymentRequest,
+  PREPARATION_STATUSES,
 } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import { parseReview } from "./order-qr";
@@ -38,6 +39,18 @@ function parseCash(
     true,
   );
   const payment = data.payment;
+  if (
+    data.queue != null &&
+    (order.paymentStatus !== "PAID" ||
+      !payment ||
+      !PREPARATION_STATUSES.includes(data.queue.status) ||
+      typeof data.queue.queuedAt !== "string" ||
+      !Number.isFinite(Date.parse(data.queue.queuedAt)) ||
+      Date.parse(data.queue.queuedAt) < Date.parse(payment.paidAt))
+  )
+    throw new Error(
+      "The saved preparation state could not be verified. Refresh the order.",
+    );
   if (order.paymentStatus === "UNPAID") {
     if (payment !== null)
       throw new Error(
@@ -79,6 +92,7 @@ function parseCash(
     );
   return {
     order,
+    ...(data.queue !== undefined ? { queue: data.queue } : {}),
     payment: {
       method: payment.method,
       requestId: payment.requestId,

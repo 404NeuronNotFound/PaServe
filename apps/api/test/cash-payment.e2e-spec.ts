@@ -24,11 +24,16 @@ describe('Cash collection', () => {
   const auth = vi.fn(),
     membership = vi.fn(),
     findOrder = vi.fn(),
+    findQueue = vi.fn(),
     updateOrder = vi.fn(),
     raw = vi.fn(),
     transaction = vi.fn();
   const database = {
-    order: { findFirst: findOrder, updateMany: updateOrder },
+    order: {
+      findFirst: findOrder,
+      updateMany: updateOrder,
+      findMany: findQueue,
+    },
     $queryRaw: raw,
   };
   let role: ShopRole,
@@ -57,6 +62,8 @@ describe('Cash collection', () => {
       changeDue: null,
       paidAt: null,
       paidBy: null,
+      preparationStatus: null as string | null,
+      queuedAt: null as Date | null,
       orderItems: [
         {
           lineNumber: 1,
@@ -126,6 +133,16 @@ describe('Cash collection', () => {
         : null,
     );
     raw.mockResolvedValue([{ id: orderId }]);
+    findQueue.mockImplementation(async ({ where }) =>
+      where.shopId === shopId &&
+      active &&
+      where.shop.members.some.role.in.includes(role) &&
+      saved.status === where.status &&
+      saved.paymentStatus === where.paymentStatus &&
+      saved.preparationStatus === where.preparationStatus
+        ? [saved]
+        : [],
+    );
     transaction.mockImplementation(async (work) => work(database));
     updateOrder.mockImplementation(async ({ where, data }) => {
       if (
@@ -217,6 +234,12 @@ describe('Cash collection', () => {
         paidBy: userId,
       });
       expect(saved.qrTokenRevokedAt).toBeInstanceOf(Date);
+      expect(saved.preparationStatus).toBe('QUEUED');
+      expect(saved.queuedAt).toEqual(saved.paidAt);
+      expect(result.body.queue).toEqual({
+        status: 'QUEUED',
+        queuedAt: saved.queuedAt!.toISOString(),
+      });
       expect(updateOrder).toHaveBeenCalledTimes(1);
       expect(updateOrder.mock.calls[0][0].where).toMatchObject({
         status: 'PENDING_CONFIRMATION',
@@ -245,8 +268,67 @@ describe('Cash collection', () => {
     );
     expect(saved.status).toBe('PENDING_CONFIRMATION');
     expect(saved.paymentStatus).toBe('UNPAID');
+    expect(saved.preparationStatus).toBeNull();
+    expect(saved.queuedAt).toBeNull();
     expect(saved.qrTokenRevokedAt).toBeNull();
     expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'KITCHEN'] as const)(
+    'lets %s read the persisted paid queue without payment details',
+    async (queueRole) => {
+      await preparePending();
+      await atomic().expect(200);
+      role = queueRole;
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/shops/${shopId}/preparation/queue`)
+        .set('Authorization', 'Bearer session')
+        .expect(200);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.body.orders).toHaveLength(1);
+      expect(response.body.orders[0]).toMatchObject({
+        id: orderId,
+        shopId,
+        preparationStatus: 'QUEUED',
+        totalPrice: '135.50',
+      });
+      expect(response.body.orders[0]).not.toHaveProperty('paymentReference');
+      expect(response.body.orders[0]).not.toHaveProperty('paidBy');
+      expect(findQueue.mock.calls[0][0].where).toMatchObject({
+        shopId,
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        preparationStatus: 'QUEUED',
+      });
+    },
+  );
+  it('denies cashier, anonymous and revoked queue access', async () => {
+    const path = `/api/v1/shops/${shopId}/preparation/queue`;
+    await request(app.getHttpServer()).get(path).expect(401);
+    await request(app.getHttpServer())
+      .get(path)
+      .set('Authorization', 'Bearer session')
+      .expect(403);
+    role = 'KITCHEN';
+    active = false;
+    await request(app.getHttpServer())
+      .get(path)
+      .set('Authorization', 'Bearer session')
+      .expect(404);
+    expect(findQueue).not.toHaveBeenCalled();
+  });
+  it('excludes unpaid orders and rejects malformed queue cursors', async () => {
+    role = 'KITCHEN';
+    const path = `/api/v1/shops/${shopId}/preparation/queue`;
+    const response = await request(app.getHttpServer())
+      .get(path)
+      .set('Authorization', 'Bearer session')
+      .expect(200);
+    expect(response.body).toEqual({ orders: [], nextCursor: null });
+    await request(app.getHttpServer())
+      .get(path)
+      .query({ cursor: 'invalid' })
+      .set('Authorization', 'Bearer session')
+      .expect(400);
   });
   it('requires manual attestation and appropriate fields for combined payment', async () => {
     await preparePending();

@@ -12,6 +12,7 @@ import {
   isValidOrderNumber,
   PAYMENT_REFERENCE_PATTERN,
   isSafeOtherPaymentText,
+  PREPARATION_STATUSES,
   type CashPaymentReviewResponse,
 } from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
@@ -92,6 +93,8 @@ export class CashPaymentService {
         changeDue: true,
         paidAt: true,
         paidBy: true,
+        preparationStatus: true,
+        queuedAt: true,
       },
     });
     if (!saved) throw this.unavailable();
@@ -140,7 +143,28 @@ export class CashPaymentService {
         description: saved.paymentDescription ?? null,
       };
     }
-    return { order, payment };
+    const queue =
+      saved.preparationStatus != null
+        ? {
+            status:
+              saved.preparationStatus as (typeof PREPARATION_STATUSES)[number],
+            queuedAt: saved.queuedAt?.toISOString(),
+          }
+        : null;
+    if (
+      (queue &&
+        (!payment ||
+          !queue.queuedAt ||
+          !PREPARATION_STATUSES.includes(queue.status) ||
+          saved.queuedAt!.getTime() < saved.paidAt!.getTime())) ||
+      (!queue && saved.queuedAt != null)
+    )
+      throw conflict();
+    return {
+      order,
+      payment,
+      queue: queue ? { ...queue, queuedAt: queue.queuedAt! } : null,
+    };
   }
 
   async collect(
@@ -389,6 +413,8 @@ export class CashPaymentService {
               changeDue: amount.minus(total),
               paidAt: now,
               paidBy: actorId,
+              preparationStatus: 'QUEUED',
+              queuedAt: now,
             },
           });
           if (changed.count !== 1) throw conflict();

@@ -87,6 +87,16 @@ afterEach(() => {
     Object.defineProperty(HTMLDialogElement.prototype, "close", originalClose);
   else Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
 });
+it("shows preparation queue state only from a saved paid receipt", async () => {
+  vi.mocked(reviewCashPayment).mockResolvedValue({
+    ...paid,
+    queue: { status: "QUEUED", queuedAt: paid.payment.paidAt },
+  });
+  render(
+    <CashierCashPayment shopId="shop-a" orderId="order-a" onNext={vi.fn()} />,
+  );
+  expect(await screen.findByText("Queued for preparation.")).toBeVisible();
+});
 async function setup() {
   const next = vi.fn(),
     user = userEvent.setup();

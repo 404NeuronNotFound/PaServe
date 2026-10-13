@@ -126,6 +126,9 @@ model Order {
   changeDue Decimal? @db.Decimal(12, 2)
   paidAt DateTime?
   paidBy String?
+  // Preparation is separate from immutable approval/payment state.
+  preparationStatus String?
+  queuedAt DateTime?
   orderNumber String @db.VarChar(32)
   qrTokenNonce String
   qrTokenExpiresAt DateTime
@@ -150,6 +153,7 @@ model Order {
   @@unique([shopId, paymentRequestId])
   @@unique([shopId, orderNumber])
   @@index([shopId, tableId, createdAt])
+  @@index([shopId, preparationStatus, queuedAt, id])
   @@map("orders")
 }
 

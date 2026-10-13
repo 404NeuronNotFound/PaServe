@@ -10,6 +10,7 @@ import { OrderTokenService } from '../dist/modules/orders/order-token.service.js
 import { OrderQrService } from '../dist/modules/orders/order-qr.service.js';
 import { OrderDecisionService } from '../dist/modules/orders/order-decision.service.js';
 import { CashPaymentService } from '../dist/modules/orders/cash-payment.service.js';
+import { PreparationQueueService } from '../dist/modules/orders/preparation-queue.service.js';
 
 // Real competing service transactions use only this disposable schema. Public
 // tables and migration history remain untouched; close sessions before removal.
@@ -72,6 +73,8 @@ try {
   // Rebuild the pre-cash shape in our private schema, even after deployment,
   // then exercise the complete migration (including its trigger definition).
   for (const column of [
+    'preparationStatus',
+    'queuedAt',
     'paymentDescription',
     'paymentReference',
     'paymentMethod',
@@ -114,6 +117,14 @@ try {
   await setup.query(
     'ALTER TABLE orders ADD COLUMN "paymentDescription" VARCHAR(80)',
   );
+  const queueSql = await readFile(
+    new URL(
+      '../prisma/migrations/20261014010000_paid_order_queue/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await setup.query(queueSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
   await setup.query('COMMIT');
   created = true;
   prisma = new PrismaClient({
@@ -135,6 +146,7 @@ try {
   const qr = new OrderQrService(prisma, tokens);
   const decisions = new OrderDecisionService(prisma, qr);
   const cash = new CashPaymentService(prisma, qr);
+  const queue = new PreparationQueueService(prisma);
   const users = await Promise.all(
     [1, 2].map((n) =>
       prisma.user.create({
@@ -746,6 +758,12 @@ try {
     });
     assert.equal(record.status, 'CONFIRMED');
     assert.equal(record.paymentStatus, 'PAID');
+    assert.equal(record.preparationStatus, 'QUEUED');
+    assert.equal(record.queuedAt.getTime(), record.paidAt.getTime());
+    assert.deepEqual(result.queue, {
+      status: 'QUEUED',
+      queuedAt: record.queuedAt.toISOString(),
+    });
     assert.equal(record.decidedBy, users[0].id);
     assert.equal(record.paidBy, users[0].id);
     assert.equal(record.paidAt.getTime(), record.decidedAt.getTime());
@@ -780,6 +798,8 @@ try {
   });
   assert.equal(rolledBack.status, 'PENDING_CONFIRMATION');
   assert.equal(rolledBack.paymentStatus, 'UNPAID');
+  assert.equal(rolledBack.preparationStatus, null);
+  assert.equal(rolledBack.queuedAt, null);
   for (const field of [
     'paidAt',
     'paidBy',
@@ -827,6 +847,43 @@ try {
     where: { userId_shopId: { userId: users[0].id, shopId: shop.id } },
     data: { role: 'KITCHEN' },
   });
+  const queued = await queue.list(users[0].id, shop.id);
+  assert.ok(queued.orders.length >= 4);
+  assert.ok(
+    queued.orders.every(
+      (item) => item.shopId === shop.id && item.preparationStatus === 'QUEUED',
+    ),
+  );
+  assert.ok(!queued.orders.some((item) => item.id === rollbackOrder.id));
+  assert.equal(
+    new Set(queued.orders.map((item) => item.id)).size,
+    queued.orders.length,
+  );
+  const firstQueued = queued.orders[0];
+  const cursor = Buffer.from(
+    JSON.stringify([firstQueued.queuedAt, firstQueued.id]),
+  ).toString('base64url');
+  assert.deepEqual(
+    (await queue.list(users[0].id, shop.id, cursor)).orders,
+    queued.orders.slice(1),
+  );
+  assert.deepEqual((await queue.list(users[0].id, randomUUID())).orders, []);
+  assert.deepEqual((await queue.list(users[1].id, shop.id)).orders, []);
+  await assert.rejects(
+    prisma.order.updateMany({
+      where: { id: firstQueued.id, shopId: shop.id },
+      data: { queuedAt: new Date() },
+    }),
+  );
+  await assert.rejects(
+    prisma.order.updateMany({
+      where: { id: firstQueued.id, shopId: shop.id },
+      data: { preparationStatus: null, queuedAt: null },
+    }),
+  );
+  console.log(
+    'Passed: paid orders enter QUEUED atomically once, invalid payments and post-write failure leave no queue entry, immutable entry, kitchen read, tenant/role isolation and stable queue cursor.',
+  );
   await assert.rejects(cash.review(users[0].id, shop.id, order.id), {
     status: 404,
   });

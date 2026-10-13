@@ -845,6 +845,27 @@ export interface CashPaymentReceipt {
 export interface CashPaymentReviewResponse {
   order: VerifyOrderQrResponse["order"];
   payment: CashPaymentReceipt | null;
+  /** Absent on older servers; null for orders not yet queued. */
+  queue?: OrderPreparationReceipt | null;
+}
+export interface OrderPreparationReceipt {
+  status: PreparationStatus;
+  queuedAt: string;
+}
+export interface PreparationQueueResponse {
+  orders: Array<{
+    id: string;
+    shopId: string;
+    orderNumber: string;
+    mode: "DINE_IN" | "TAKEOUT";
+    tableNumber: string | null;
+    currency: "PHP";
+    totalPrice: string;
+    queuedAt: string;
+    preparationStatus: "QUEUED";
+    items: ProductSelectionQuoteResponse[];
+  }>;
+  nextCursor: string | null;
 }
 export interface RestaurantTable {
   id: string;

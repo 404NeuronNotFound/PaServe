@@ -44,13 +44,62 @@ const payment = {
 beforeEach(() => {
   vi.resetAllMocks();
 });
-it("creates confirmed payment from a pending review and rejects a mismatched saved result", async () => {
-  const dto = { requestId, reviewVersion: order.reviewVersion, method: "CASH" as const, orderNumber: order.orderNumber, amountReceived: "200.00" };
+it("preserves saved queue state and rejects queue state on an unpaid order", async () => {
+  const queue = { status: "QUEUED", queuedAt: payment.paidAt };
   const signal = new AbortController().signal;
-  vi.mocked(api.post).mockResolvedValue({ data: { order: { ...order, paymentStatus: "PAID" }, payment } });
-  expect((await createPayment(shopId, orderId, dto, signal)).payment?.changeDue).toBe("64.50");
-  expect(api.post).toHaveBeenCalledWith(`/shops/${shopId}/orders/${orderId}/create-payment`, dto, { signal, timeout: 15000 });
-  await expect(createPayment(shopId, orderId, { ...dto, amountReceived: "300.00" }, signal)).rejects.toThrow();
+  vi.mocked(api.get).mockResolvedValue({
+    data: { order: { ...order, paymentStatus: "PAID" }, payment, queue },
+  });
+  expect((await reviewCashPayment(shopId, orderId, signal)).queue).toEqual(
+    queue,
+  );
+  vi.mocked(api.get).mockResolvedValue({
+    data: { order, payment: null, queue },
+  });
+  await expect(reviewCashPayment(shopId, orderId, signal)).rejects.toThrow(
+    "preparation state",
+  );
+});
+it.each([
+  { status: "CONFIRMED", queuedAt: payment.paidAt },
+  { status: "QUEUED", queuedAt: "invalid" },
+  { status: "QUEUED", queuedAt: "2026-10-12T00:00:00.000Z" },
+])("rejects invalid saved queue receipt %j", async (queue) => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: { order: { ...order, paymentStatus: "PAID" }, payment, queue },
+  });
+  await expect(
+    reviewCashPayment(shopId, orderId, new AbortController().signal),
+  ).rejects.toThrow("preparation state");
+});
+it("creates confirmed payment from a pending review and rejects a mismatched saved result", async () => {
+  const dto = {
+    requestId,
+    reviewVersion: order.reviewVersion,
+    method: "CASH" as const,
+    orderNumber: order.orderNumber,
+    amountReceived: "200.00",
+  };
+  const signal = new AbortController().signal;
+  vi.mocked(api.post).mockResolvedValue({
+    data: { order: { ...order, paymentStatus: "PAID" }, payment },
+  });
+  expect(
+    (await createPayment(shopId, orderId, dto, signal)).payment?.changeDue,
+  ).toBe("64.50");
+  expect(api.post).toHaveBeenCalledWith(
+    `/shops/${shopId}/orders/${orderId}/create-payment`,
+    dto,
+    { signal, timeout: 15000 },
+  );
+  await expect(
+    createPayment(
+      shopId,
+      orderId,
+      { ...dto, amountReceived: "300.00" },
+      signal,
+    ),
+  ).rejects.toThrow();
 });
 it("records OTHER description and verifies the saved metadata", async () => {
   const receipt = {
