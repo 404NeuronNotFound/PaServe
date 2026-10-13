@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
-import { FiCheckCircle, FiDollarSign } from "react-icons/fi";
+import { FiCheckCircle } from "react-icons/fi";
 import type {
   ApiErrorResponse,
   CashPaymentReviewResponse,
@@ -192,7 +192,7 @@ export function CashierCashPayment({
         <>
           <label htmlFor="cash-amount">Amount received (PHP)</label>
           <div className="cashier-cash-input">
-            <FiDollarSign aria-hidden="true" />
+            <span className="cashier-cash-currency" aria-hidden="true">₱</span>
             <input
               id="cash-amount"
               inputMode="decimal"
