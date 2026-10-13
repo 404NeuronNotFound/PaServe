@@ -689,6 +689,26 @@ try {
         : { receivedConfirmed: true }),
       ...(method === 'OTHER' ? { description: 'Shop voucher' } : {}),
     };
+    // Mark Paid cannot be a standalone status flip without a valid receipt.
+    await assert.rejects(
+      prisma.order.updateMany({
+        where: { id: pending.id, shopId: shop.id },
+        data: { status: 'CONFIRMED', paymentStatus: 'PAID' },
+      }),
+    );
+    await assert.rejects(
+      cash.create(users[0].id, shop.id, pending.id, {
+        ...createRequest,
+        ...(method === 'CASH'
+          ? { amountReceived: '9.99' }
+          : { receivedConfirmed: false }),
+      }),
+      { status: 400 },
+    );
+    const beforePayment = await prisma.order.findFirst({
+      where: { id: pending.id, shopId: shop.id },
+    });
+    assert.deepEqual(beforePayment, pending);
     await assert.rejects(
       prisma.order.updateMany({
         where: { id: pending.id, shopId: shop.id },
