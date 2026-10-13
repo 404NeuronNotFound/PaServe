@@ -20,7 +20,7 @@ const order: VerifyOrderQrResponse["order"] = {
 it("displays saved items, modifiers, notes, type/table, total and statuses", () => {
   render(<CashierOrderReview order={order} onNext={vi.fn()} />);
   expect(
-    screen.getByRole("heading", { name: "Order QR verified" }),
+    screen.getByRole("heading", { name: "Review order" }),
   ).toHaveFocus();
   expect(screen.getByText("Dine-in · Table A3")).toBeInTheDocument();
   expect(
@@ -32,6 +32,9 @@ it("displays saved items, modifiers, notes, type/table, total and statuses", () 
   expect(screen.getByText("pending confirmation")).toBeInTheDocument();
   expect(screen.getByText("unpaid")).toBeInTheDocument();
   expect(screen.getAllByText("₱135.50")).toHaveLength(2);
+  expect(screen.getByRole("heading", { name: "Order items (2 items)" })).toBeInTheDocument();
+  expect(screen.getByText(/Check the items, options, customer notes and total/)).toBeInTheDocument();
+  expect(screen.getByText("Order total (PHP)")).toBeInTheDocument();
 });
 it("keeps repeated products as separate lines, including a plain line without notes", () => {
   render(

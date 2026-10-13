@@ -11,20 +11,24 @@ export function CashierOrderReview({
   onNext: () => void;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
+  const quantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
   useEffect(() => {
     heading.current?.focus();
   }, []);
   return (
-    <section className="scanner-result" aria-labelledby="verified-order-title">
-      <h3 id="verified-order-title" ref={heading} tabIndex={-1}>
+    <section className="scanner-panel scanner-result cashier-review" aria-labelledby="verified-order-title">
+      <h2 id="verified-order-title" ref={heading} tabIndex={-1}>
+        Review order
+      </h2>
+      <p className="cashier-review-verified" role="status">
         <FiCheckCircle aria-hidden="true" /> Order QR verified
-      </h3>
-      <p role="status">Order loaded for cashier review.</p>
+      </p>
+      <p>Check the items, options, customer notes and total with the customer before taking payment or confirming the order.</p>
+      <div className="cashier-review-order-number">
+        <span>Order number</span>
+        <strong>{order.orderNumber}</strong>
+      </div>
       <dl>
-        <div>
-          <dt>Order number</dt>
-          <dd>{order.orderNumber}</dd>
-        </div>
         <div>
           <dt>Order type</dt>
           <dd>
@@ -32,10 +36,6 @@ export function CashierOrderReview({
               ? `Dine-in · Table ${order.tableNumber}`
               : "Takeout / pickup"}
           </dd>
-        </div>
-        <div>
-          <dt>Saved total (PHP)</dt>
-          <dd>{formatCartPrice(order.totalPrice)}</dd>
         </div>
         <div>
           <dt>Order status</dt>
@@ -46,14 +46,14 @@ export function CashierOrderReview({
           <dd>{order.paymentStatus.toLowerCase().replaceAll("_", " ")}</dd>
         </div>
       </dl>
-      <h4>Order items</h4>
+      <h3>Order items ({quantity} {quantity === 1 ? "item" : "items"})</h3>
       <ol className="cashier-order-items">
         {order.items.map((item, index) => (
           <li key={index}>
             <div className="cashier-item-heading">
-              <h5>
+              <h4>
                 {item.quantity} × {item.productName}
-              </h5>
+              </h4>
               <strong>{formatCartPrice(item.totalPrice)}</strong>
             </div>
             <p className="cashier-item-price">
@@ -62,7 +62,7 @@ export function CashierOrderReview({
             </p>
             {!!item.variants.length && (
               <div>
-                <h6>Variants</h6>
+                <h5>Variants</h5>
                 <ul>
                   {item.variants.map((variant) => (
                     <li key={variant.id}>
@@ -81,7 +81,7 @@ export function CashierOrderReview({
             )}
             {!!item.addOns.length && (
               <div>
-                <h6>Add-ons</h6>
+                <h5>Add-ons</h5>
                 <ul>
                   {item.addOns.map((addOn) => (
                     <li key={addOn.id}>
@@ -103,13 +103,18 @@ export function CashierOrderReview({
             )}
             {item.notes && (
               <div className="cashier-item-note">
-                <h6>Customer note</h6>
+                <h5>Customer note</h5>
                 <p>{item.notes}</p>
               </div>
             )}
           </li>
         ))}
       </ol>
+      <div className="cashier-review-total">
+        <span>Order total (PHP)</span>
+        <strong>{formatCartPrice(order.totalPrice)}</strong>
+        <p>Includes selected modifiers.</p>
+      </div>
       <p>
         These are the saved details for the submitted order. Verification does
         not confirm this order or record payment.

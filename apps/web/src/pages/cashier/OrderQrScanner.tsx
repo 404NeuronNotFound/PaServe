@@ -25,6 +25,8 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
   const processing = useRef(false);
   const request = useRef<AbortController | null>(null);
   const lastCode = useRef("");
+  const scannerHeading = useRef<HTMLHeadingElement>(null);
+  const wasReviewing = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [pasted, setPasted] = useState("");
@@ -44,6 +46,10 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
   } = useQrCamera(scan);
   const unavailable = cameraUnavailableReason();
   useEffect(() => {
+    if (!order && wasReviewing.current) scannerHeading.current?.focus();
+    wasReviewing.current = Boolean(order);
+  }, [order]);
+  useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
@@ -51,7 +57,7 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
     };
   }, []);
   function scan(raw: string): boolean {
-    if (processing.current || lostAccess) return true;
+    if (processing.current || lostAccess || order) return true;
     const reference = parseOrderQr(raw);
     if (!reference || reference.shopId !== shopId) {
       if (lastCode.current !== raw.slice(0, 1025)) {
@@ -152,10 +158,24 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
       }
     }
   }
+  if (order) {
+    return (
+      <div className="cashier-review-screen">
+        <CashierOrderReview
+          order={order}
+          onNext={() => {
+            setOrder(null);
+            setError("");
+            lastCode.current = "";
+          }}
+        />
+      </div>
+    );
+  }
   return (
     <div className="cashier-scanner">
       <section className="scanner-panel" aria-labelledby="scanner-title">
-        <h2 id="scanner-title">
+        <h2 id="scanner-title" ref={scannerHeading} tabIndex={-1}>
           <FiCamera aria-hidden="true" /> Scan customer order QR
         </h2>
         <p>
@@ -237,16 +257,6 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
           >
             {expiredSession ? "Sign in again" : "Choose another shop"}
           </Link>
-        )}
-        {order && (
-          <CashierOrderReview
-            order={order}
-            onNext={() => {
-              setOrder(null);
-              setError("");
-              lastCode.current = "";
-            }}
-          />
         )}
       </section>
       <section
