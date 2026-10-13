@@ -265,6 +265,12 @@ try {
       data: { paymentStatus: 'UNPAID' },
     }),
   );
+  await assert.rejects(
+    prisma.order.updateMany({
+      where: { id: order.id, shopId: shop.id },
+      data: { paidBy: users[1 - winnerIndex].id },
+    }),
+  );
   // Upgrade a schema containing an actual paid CASH receipt before settling GCash.
   const gcashSql = await readFile(
     new URL(
@@ -651,6 +657,25 @@ try {
     {
       status: 404,
     },
+  );
+  // Historical payment attribution remains the original actor after a role change.
+  const historicalOther = await cash.review(
+    users[1].id,
+    shop.id,
+    otherOrder.id,
+  );
+  assert.equal(historicalOther.payment.paidBy, users[0].id);
+  assert.equal(historicalOther.payment.paidAt, otherResult.payment.paidAt);
+  assert.equal(
+    (
+      await prisma.order.findFirst({
+        where: { id: otherOrder.id, shopId: shop.id },
+      })
+    ).paidBy,
+    users[0].id,
+  );
+  console.log(
+    'Passed: cashier attribution comes from the authenticated user/live shop membership, is immutable, and survives actor role revocation.',
   );
   console.log(
     'Passed: cash migration, confirmed-only collection, underpayment, exact change, competing collectors commit once, idempotent replay, immutable receipts and revoked access.',

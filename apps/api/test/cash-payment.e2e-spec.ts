@@ -177,6 +177,64 @@ describe('Cash collection', () => {
       ...body,
     });
   }
+  it.each(['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
+    'records the authenticated cashier and server time for %s',
+    async (method) => {
+      const before = Date.now();
+      const result = await (
+        method === 'CASH'
+          ? collect()
+          : method === 'GCASH_MANUAL'
+            ? gcash()
+            : method === 'CARD_MANUAL'
+              ? card()
+              : other()
+      ).expect(200);
+      expect(result.body.payment.paidBy).toBe(userId);
+      expect(saved.paidBy).toBe(userId);
+      expect(Date.parse(result.body.payment.paidAt)).toBeGreaterThanOrEqual(
+        before,
+      );
+      expect(Date.parse(result.body.payment.paidAt)).toBeLessThanOrEqual(
+        Date.now(),
+      );
+      expect(updateOrder.mock.calls[0][0].where.shop.members.some.userId).toBe(
+        userId,
+      );
+    },
+  );
+  it.each(['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
+    'rejects client cashier/membership/time hints for %s',
+    async (method) => {
+      const forged = {
+        paidBy: '75992537-5d60-4d22-8e1e-60a114644682',
+        paidAt: '2000-01-01T00:00:00.000Z',
+        cashierId: 'other-cashier',
+        shopMemberId: 'other-membership',
+        role: 'OWNER',
+      };
+      await (
+        method === 'CASH'
+          ? collect(forged)
+          : method === 'GCASH_MANUAL'
+            ? gcash(forged)
+            : method === 'CARD_MANUAL'
+              ? card(forged)
+              : other(forged)
+      ).expect(400);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('does not let another authenticated cashier replay or replace original attribution', async () => {
+    await collect().expect(200);
+    auth.mockResolvedValue({
+      id: '75992537-5d60-4d22-8e1e-60a114644682',
+      memberships: [],
+    });
+    await collect().expect(409);
+    expect(saved.paidBy).toBe(userId);
+    expect(updateOrder).toHaveBeenCalledTimes(1);
+  });
   it.each(['CASHIER', 'OWNER', 'ADMIN', 'MANAGER'] as const)(
     'records controlled OTHER payment for live %s',
     async (currentRole) => {
