@@ -545,6 +545,8 @@ try {
     ['ORD-000006', '0.10', '0.30', '0.20'],
     ['ORD-000007', '10.00', '9999999999.99', '9999999989.99'],
     ['ORD-000008', '0.00', '0.00', '0.00'],
+    ['ORD-000009', '10.00', '10.00', '0.00'],
+    ['ORD-000010', '0.10', '0.11', '0.01'],
   ]) {
     const tenderOrder = await confirmedOrder(number, total);
     const tenderVersion = (
@@ -575,6 +577,12 @@ try {
     assert.equal(persisted.amountReceived.toFixed(2), tender);
     assert.equal(persisted.changeDue.toFixed(2), expectedChange);
     assert.equal(result.payment.amountReceived, tender);
+    assert.equal(result.payment.changeDue, expectedChange);
+    assert.equal(
+      (await cash.review(users[0].id, shop.id, tenderOrder.id)).payment
+        .changeDue,
+      expectedChange,
+    );
   }
   console.log(
     'Passed: cash tender fractional precision, Decimal(12,2) maximum, zero-total exact payment and invalid-tender rejection before saving.',

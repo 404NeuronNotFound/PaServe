@@ -327,6 +327,7 @@ it("loads server total, previews exact change and records only after deliberate 
     within(dialog).getByRole("button", { name: "Record cash payment" }),
   );
   await screen.findByRole("heading", { name: "Cash payment recorded" });
+  expect(screen.getByText("₱64.50")).toBeVisible();
   expect(screen.getByText("Return the change to the customer.")).toBeVisible();
   expect(collectCashPayment).toHaveBeenCalledWith(
     order.shopId,
@@ -392,6 +393,7 @@ it("shows existing paid receipt and prevents another collection", async () => {
   );
   await screen.findByRole("heading", { name: "Cash payment recorded" });
   expect(screen.getByText(/already has a saved cash payment/)).toBeVisible();
+  expect(screen.getByText("₱64.50")).toBeVisible();
   expect(
     screen.queryByText("Return the change to the customer."),
   ).not.toBeInTheDocument();

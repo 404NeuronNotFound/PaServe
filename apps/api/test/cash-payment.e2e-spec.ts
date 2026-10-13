@@ -573,6 +573,11 @@ describe('Cash collection', () => {
         .changeDue,
     ).toBe('0.00');
   });
+  it('rejects client total and change overrides without a payment write', async () => {
+    await collect({ totalPrice: '0.01', changeDue: '999.99' }).expect(400);
+    expect(updateOrder).not.toHaveBeenCalled();
+    expect(saved.paymentStatus).toBe('UNPAID');
+  });
   it('captures fractional tender using exact decimals', async () => {
     saved.totalPrice = new Prisma.Decimal('0.10');
     for (const field of [
