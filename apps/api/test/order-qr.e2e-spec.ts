@@ -263,6 +263,28 @@ describe('Cashier order QR verification', () => {
       expect(updateOrder).not.toHaveBeenCalled();
     },
   );
+  it.each([
+    'empty name',
+    'unsafe note',
+    'duplicate modifier',
+    'invalid modifier price',
+  ])('rejects malformed saved receipt metadata (%s)', async (kind) => {
+    const item = persisted.orderItems[0];
+    if (kind === 'empty name') item.productNameSnapshot = '';
+    if (kind === 'unsafe note') item.notes = 'Coffee\u202e';
+    if (kind === 'duplicate modifier') {
+      item.addOnsSnapshot.push({
+        ...item.addOnsSnapshot[0],
+        priceAdjustment: '0.00',
+      });
+    }
+    if (kind === 'invalid modifier price')
+      item.addOnsSnapshot[0].priceAdjustment = '7.75e0';
+    const result = await scan().expect(409);
+    expect(result.body.code).toBe('ORDER_DETAILS_UNAVAILABLE');
+    expect(result.body.order).toBeUndefined();
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
   it('rejects at the exact expiry boundary on both endpoints without renewing the token', async () => {
     const token = tokens.issue(persisted);
     const now = vi

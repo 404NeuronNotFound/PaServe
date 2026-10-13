@@ -314,6 +314,20 @@ describe('Cashier order decisions', () => {
     const result = await decide('reject').expect(200);
     expect(result.body.order.rejectionReason).toBeNull();
   });
+  it.each(['confirm', 'reject', 'confirm-number', 'reject-number'])(
+    'blocks %s when saved receipt metadata is invalid',
+    async (action) => {
+      saved.orderItems[0].productNameSnapshot = '';
+      const result = await (
+        action.endsWith('-number') ? numberRequest(action) : decide(action)
+      ).expect(409);
+      expect(result.body.code).toBe('ORDER_DETAILS_UNAVAILABLE');
+      expect(updateOrder).not.toHaveBeenCalled();
+      expect(saved.status).toBe('PENDING_CONFIRMATION');
+      expect(saved.paymentStatus).toBe('UNPAID');
+      expect(saved.qrTokenRevokedAt).toBeNull();
+    },
+  );
   it.each(['confirm', 'reject'])(
     'denies unauthenticated %s',
     async (action) => {
