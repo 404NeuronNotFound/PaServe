@@ -32,12 +32,37 @@ describe('Cashier order QR verification', () => {
     id: orderId,
     shopId,
     orderNumber: 'ORD-000001',
-    mode: 'TAKEOUT' as const,
+    mode: 'TAKEOUT' as 'TAKEOUT' | 'DINE_IN',
     status: 'PENDING_CONFIRMATION',
     paymentStatus: 'UNPAID',
     currency: 'PHP',
     totalPrice: new Prisma.Decimal('135.50'),
-    tableNumber: null,
+    tableNumber: null as string | null,
+    orderItems: [
+      {
+        lineNumber: 1,
+        productSnapshotId: 'saved-product',
+        productNameSnapshot: 'Saved Latte',
+        currency: 'PHP',
+        quantity: 2,
+        notes: 'Less ice.\nNo lid.',
+        basePriceSnapshot: new Prisma.Decimal('50.00'),
+        unitPriceSnapshot: new Prisma.Decimal('67.75'),
+        lineTotalSnapshot: new Prisma.Decimal('135.50'),
+        variantsSnapshot: [
+          {
+            id: 'saved-variant',
+            name: 'Large',
+            optionGroupId: 'saved-size',
+            isDefault: false,
+            priceAdjustment: '10.00',
+          },
+        ],
+        addOnsSnapshot: [
+          { id: 'saved-addon', name: 'Oat milk', priceAdjustment: '7.75' },
+        ],
+      },
+    ],
     ...tokens.metadata(),
     qrTokenRevokedAt: null as Date | null,
   });
@@ -156,6 +181,88 @@ describe('Cashier order QR verification', () => {
     await scan(token).expect(409);
     await verify(token).expect(409);
   });
+  it('loads saved item snapshots and table context without exposing raw persistence fields', async () => {
+    persisted.mode = 'DINE_IN';
+    persisted.tableNumber = 'A3';
+    Object.assign(persisted.orderItems[0], {
+      productId: null,
+      snapshot: { productName: 'Wrong legacy name', totalPrice: '999.00' },
+    });
+    const result = await scan().expect(200);
+    expect(result.body.order).toMatchObject({
+      mode: 'DINE_IN',
+      tableNumber: 'A3',
+      totalPrice: '135.50',
+      items: [
+        {
+          productName: 'Saved Latte',
+          quantity: 2,
+          unitPrice: '67.75',
+          totalPrice: '135.50',
+          notes: 'Less ice.\nNo lid.',
+          variants: [{ name: 'Large', priceAdjustment: '10.00' }],
+          addOns: [{ name: 'Oat milk', priceAdjustment: '7.75' }],
+        },
+      ],
+    });
+    expect(result.body.order.items[0].snapshot).toBeUndefined();
+    expect(result.body.order.items[0].lineNumber).toBeUndefined();
+    const liveShop = {
+      id: shopId,
+      isActive: true,
+      members: {
+        some: {
+          userId,
+          role: { in: ['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] },
+          user: { isActive: true },
+        },
+      },
+    };
+    expect(findOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          orderItems: expect.objectContaining({
+            orderBy: { lineNumber: 'asc' },
+            where: {
+              shopId,
+              orderId,
+              order: { shopId, status: 'PENDING_CONFIRMATION', shop: liveShop },
+            },
+          }),
+        }),
+      }),
+    );
+  });
+  it('preserves separate lines for repeated products with different notes', async () => {
+    persisted.orderItems.push({
+      ...persisted.orderItems[0],
+      lineNumber: 2,
+      notes: 'Regular ice.',
+    });
+    persisted.totalPrice = new Prisma.Decimal('271.00');
+    const result = await scan().expect(200);
+    expect(result.body.order.items).toHaveLength(2);
+    expect(
+      result.body.order.items.map((item: { notes: string }) => item.notes),
+    ).toEqual(['Less ice.\nNo lid.', 'Regular ice.']);
+  });
+  it.each(['missing', 'gap', 'unitPrice', 'parentTotal', 'lineTotal'])(
+    'rejects incomplete or inconsistent saved details (%s)',
+    async (kind) => {
+      if (kind === 'missing') persisted.orderItems = [];
+      if (kind === 'gap') persisted.orderItems[0].lineNumber = 2;
+      if (kind === 'unitPrice')
+        persisted.orderItems[0].unitPriceSnapshot = new Prisma.Decimal('1.00');
+      if (kind === 'parentTotal')
+        persisted.totalPrice = new Prisma.Decimal('1.00');
+      if (kind === 'lineTotal')
+        persisted.orderItems[0].lineTotalSnapshot = new Prisma.Decimal('1.00');
+      const result = await scan().expect(409);
+      expect(result.body.code).toBe('ORDER_DETAILS_UNAVAILABLE');
+      expect(result.body.order).toBeUndefined();
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
   it('rejects at the exact expiry boundary on both endpoints without renewing the token', async () => {
     const token = tokens.issue(persisted);
     const now = vi
@@ -311,6 +418,20 @@ describe('Cashier order QR verification', () => {
           currency: 'PHP',
           totalPrice: '135.50',
           tableNumber: null,
+          items: [
+            {
+              productId: 'saved-product',
+              productName: 'Saved Latte',
+              currency: 'PHP',
+              quantity: 2,
+              notes: 'Less ice.\nNo lid.',
+              basePrice: '50.00',
+              unitPrice: '67.75',
+              totalPrice: '135.50',
+              variants: persisted.orderItems[0].variantsSnapshot,
+              addOns: persisted.orderItems[0].addOnsSnapshot,
+            },
+          ],
         },
       });
       expect(updateOrder).not.toHaveBeenCalled();

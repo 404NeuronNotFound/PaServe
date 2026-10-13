@@ -6,6 +6,7 @@ import { AxiosError, AxiosHeaders } from "axios";
 import { OrderQrScanner } from "./OrderQrScanner";
 import { verifyScannedOrder } from "../../features/cashier/order-qr";
 import { readQrImage } from "../../features/cashier/qr-decoder";
+import { cashierLine } from "../../test/cashier-fixtures";
 
 vi.mock("../../features/cashier/order-qr", async (original) => ({
   ...(await original<typeof import("../../features/cashier/order-qr")>()),
@@ -45,6 +46,7 @@ const order = {
   currency: "PHP",
   totalPrice: "135.50",
   tableNumber: null,
+  items: [cashierLine],
 };
 beforeEach(() => {
   vi.resetAllMocks();
@@ -89,7 +91,7 @@ it("verifies pasted QR contents, clears the credential, and shows only saved ser
   expect(screen.getByLabelText("Paste order QR contents")).toHaveValue("");
   expect(
     screen.getByText(
-      "Verification does not confirm this order or record payment.",
+      /Verification does not confirm this order or record payment\./,
     ),
   ).toBeInTheDocument();
   expect(screen.queryByText(token())).not.toBeInTheDocument();

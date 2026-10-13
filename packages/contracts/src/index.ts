@@ -758,6 +758,8 @@ export interface VerifyOrderQrResponse {
     currency: string;
     totalPrice: string;
     tableNumber: string | null;
+    /** Saved receipt lines in submission order, never current menu data. */
+    items: ProductSelectionQuoteResponse[];
   };
 }
 export interface RestaurantTable {

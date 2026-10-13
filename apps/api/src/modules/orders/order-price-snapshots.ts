@@ -45,7 +45,19 @@ export function copyPriceSnapshot(
 }
 
 export function readPriceSnapshot(
-  item: OrderItem,
+  item: Pick<
+    OrderItem,
+    | 'productSnapshotId'
+    | 'productNameSnapshot'
+    | 'currency'
+    | 'quantity'
+    | 'notes'
+    | 'basePriceSnapshot'
+    | 'unitPriceSnapshot'
+    | 'lineTotalSnapshot'
+    | 'variantsSnapshot'
+    | 'addOnsSnapshot'
+  >,
 ): ProductSelectionQuoteResponse {
   return copyPriceSnapshot({
     productId: item.productSnapshotId,

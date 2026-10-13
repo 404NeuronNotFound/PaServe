@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { parseOrderQr, verifyScannedOrder } from "./order-qr";
 import { loadQrDecoder, readQrImage } from "./qr-decoder";
 import { api } from "../../lib/api/client";
+import { cashierLine } from "../../test/cashier-fixtures";
 
 const shopId = "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e";
 const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828";
@@ -28,6 +29,7 @@ const order = {
   currency: "PHP",
   totalPrice: "135.50",
   tableNumber: null,
+  items: [cashierLine],
 };
 afterEach(() => vi.restoreAllMocks());
 it("extracts routing fields without treating an unsigned fixture as verified", () => {
@@ -103,6 +105,36 @@ it("rejects invalid scan contents before sending a request", async () => {
     verifyScannedOrder(shopId, "ORD-000001", new AbortController().signal),
   ).rejects.toThrow("not a PaServe order QR");
   expect(post).not.toHaveBeenCalled();
+});
+it.each([
+  undefined,
+  [],
+  [{ ...cashierLine, quantity: 0 }],
+  [{ ...cashierLine, totalPrice: "1.00" }],
+  [{ ...cashierLine, unitPrice: "1.00" }],
+  [{ ...cashierLine, notes: "a".repeat(301) }],
+  [{ ...cashierLine, addOns: null }],
+])(
+  "fails closed for missing or inconsistent receipt lines %j",
+  async (items) => {
+    vi.spyOn(api, "post").mockResolvedValue({
+      data: { verified: true, order: { ...order, items } },
+    });
+    await expect(
+      verifyScannedOrder(shopId, token, new AbortController().signal),
+    ).rejects.toThrow("saved items could not be loaded");
+  },
+);
+it.each([
+  { ...order, mode: "DINE_IN", tableNumber: null },
+  { ...order, tableNumber: "A3" },
+])("rejects inconsistent table/type context %j", async (saved) => {
+  vi.spyOn(api, "post").mockResolvedValue({
+    data: { verified: true, order: saved },
+  });
+  await expect(
+    verifyScannedOrder(shopId, token, new AbortController().signal),
+  ).rejects.toThrow("type and table");
 });
 it.each([
   { ...order, shopId: "other" },

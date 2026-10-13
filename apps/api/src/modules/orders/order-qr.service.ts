@@ -13,9 +13,13 @@ import { isUUID } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import { OrderTokenService } from './order-token.service.js';
+import { Prisma } from '../../generated/prisma/client.js';
+import { readPriceSnapshot } from './order-price-snapshots.js';
 
-export const ORDER_QR_ROLES = SHOP_ROLES.filter((role) =>
-  hasShopPermission(role, 'shop.orders.qr.scan'),
+export const ORDER_QR_ROLES = SHOP_ROLES.filter(
+  (role) =>
+    hasShopPermission(role, 'shop.orders.qr.scan') &&
+    hasShopPermission(role, 'shop.orders.read'),
 );
 
 @Injectable()
@@ -65,6 +69,31 @@ export class OrderQrService {
         qrTokenNonce: true,
         qrTokenExpiresAt: true,
         qrTokenRevokedAt: true,
+        orderItems: {
+          where: {
+            shopId,
+            orderId,
+            order: {
+              shopId,
+              status: 'PENDING_CONFIRMATION',
+              shop: shopAccessWhere(userId, shopId, ORDER_QR_ROLES),
+            },
+          },
+          orderBy: { lineNumber: 'asc' },
+          select: {
+            lineNumber: true,
+            productSnapshotId: true,
+            productNameSnapshot: true,
+            currency: true,
+            quantity: true,
+            notes: true,
+            basePriceSnapshot: true,
+            unitPriceSnapshot: true,
+            lineTotalSnapshot: true,
+            variantsSnapshot: true,
+            addOnsSnapshot: true,
+          },
+        },
       },
     });
     if (!order)
@@ -80,6 +109,33 @@ export class OrderQrService {
         message:
           'This order is no longer awaiting cashier confirmation. Check its current status with the shop.',
       });
+    // Load only saved snapshots. Deleted/edited menu entries cannot reprice an
+    // existing order. Fail closed rather than displaying an incomplete receipt.
+    let items: VerifyOrderQrResponse['order']['items'];
+    try {
+      if (
+        !order.orderItems.length ||
+        order.orderItems.length > 100 ||
+        order.orderItems.some((item, index) => item.lineNumber !== index + 1)
+      )
+        throw new Error('Invalid receipt lines');
+      items = order.orderItems.map(readPriceSnapshot);
+      if (
+        !items
+          .reduce(
+            (sum, item) => sum.plus(item.totalPrice),
+            new Prisma.Decimal(0),
+          )
+          .equals(order.totalPrice)
+      )
+        throw new Error('Invalid receipt total');
+    } catch {
+      throw new ConflictException({
+        code: 'ORDER_DETAILS_UNAVAILABLE',
+        message:
+          "This order's saved details could not be loaded. Ask the shop owner for help.",
+      });
+    }
     // Return saved cashier details without exposing the bearer credential.
     return {
       verified: true as const,
@@ -93,6 +149,7 @@ export class OrderQrService {
         currency: order.currency,
         totalPrice: order.totalPrice.toFixed(2),
         tableNumber: order.tableNumber,
+        items,
       },
     };
   }

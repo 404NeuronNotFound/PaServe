@@ -3,6 +3,7 @@ import { api } from "../../lib/api/client";
 import "../auth/api/session";
 import { AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import { isOrderNumber, isOrderTotal } from "../cart/order-receipt-fields";
+import { parseCashierItems } from "./order-items";
 
 const uuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$(?![\s\S])/i;
@@ -88,5 +89,18 @@ export async function verifyScannedOrder(
     throw new Error(
       "The order verification response could not be verified. Please try again.",
     );
-  return data.order;
+  const items = parseCashierItems(data.order.items, data.order.totalPrice);
+  if (!items)
+    throw new Error(
+      "The order's saved items could not be loaded. Please try again or ask the shop owner for help.",
+    );
+  if (
+    data.order.mode === "DINE_IN"
+      ? !data.order.tableNumber?.trim()
+      : data.order.tableNumber !== null
+  )
+    throw new Error(
+      "The order type and table could not be verified. Please try again.",
+    );
+  return { ...data.order, items };
 }

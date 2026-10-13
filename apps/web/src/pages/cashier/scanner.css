@@ -95,6 +95,48 @@
   overflow-wrap: anywhere;
   font-weight: 600;
 }
+.phase-two .cashier-order-items {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 16px;
+}
+.phase-two .cashier-order-items > li {
+  padding: 18px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  overflow-wrap: anywhere;
+}
+.phase-two .cashier-item-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.phase-two .cashier-item-heading h5 {
+  margin: 0;
+  font-size: 1rem;
+}
+.phase-two .cashier-order-items h6 {
+  margin: 12px 0 6px;
+  font-size: 0.875rem;
+}
+.phase-two .cashier-order-items ul {
+  padding-left: 20px;
+}
+.phase-two .cashier-item-price {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+.phase-two .cashier-item-note {
+  border-left: 3px solid var(--color-primary);
+  padding-left: 12px;
+}
+.phase-two .cashier-item-note p {
+  white-space: pre-wrap;
+  margin: 0;
+}
 @media (max-width: 1000px) {
   .phase-two .cashier-scanner {
     grid-template-columns: 1fr;

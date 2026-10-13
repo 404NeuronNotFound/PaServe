@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { isAxiosError } from "axios";
-import { FiCamera, FiUpload, FiCheckCircle } from "react-icons/fi";
+import { FiCamera, FiUpload } from "react-icons/fi";
 import type {
   ApiErrorResponse,
   VerifyOrderQrResponse,
@@ -17,7 +17,7 @@ import {
 } from "../../features/cashier/useQrCamera";
 import { SelectField } from "../../components/forms/SelectField";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
-import { formatCartPrice } from "../../lib/money";
+import { CashierOrderReview } from "./CashierOrderReview";
 import "./scanner.css";
 
 export function OrderQrScanner({ shopId }: { shopId: string }) {
@@ -239,54 +239,14 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
           </Link>
         )}
         {order && (
-          <section
-            className="scanner-result"
-            aria-labelledby="verified-order-title"
-            role="status"
-          >
-            <h3 id="verified-order-title">
-              <FiCheckCircle aria-hidden="true" /> Order QR verified
-            </h3>
-            <dl>
-              <div>
-                <dt>Order number</dt>
-                <dd>{order.orderNumber}</dd>
-              </div>
-              <div>
-                <dt>Order type</dt>
-                <dd>
-                  {order.mode === "DINE_IN"
-                    ? `Dine-in${order.tableNumber ? ` · Table ${order.tableNumber}` : ""}`
-                    : "Takeout / pickup"}
-                </dd>
-              </div>
-              <div>
-                <dt>Saved total (PHP)</dt>
-                <dd>{formatCartPrice(order.totalPrice)}</dd>
-              </div>
-              <div>
-                <dt>Order status</dt>
-                <dd>{order.status.toLowerCase().replaceAll("_", " ")}</dd>
-              </div>
-              <div>
-                <dt>Payment status</dt>
-                <dd>
-                  {order.paymentStatus.toLowerCase().replaceAll("_", " ")}
-                </dd>
-              </div>
-            </dl>
-            <p>Verification does not confirm this order or record payment.</p>
-            <button
-              className="secondary-button"
-              onClick={() => {
-                setOrder(null);
-                setError("");
-                lastCode.current = "";
-              }}
-            >
-              Scan another order
-            </button>
-          </section>
+          <CashierOrderReview
+            order={order}
+            onNext={() => {
+              setOrder(null);
+              setError("");
+              lastCode.current = "";
+            }}
+          />
         )}
       </section>
       <section
