@@ -123,7 +123,8 @@ it("keeps advanced fallback options compact on supported devices and lets the ca
 });
 it("verifies pasted QR contents, clears the credential, and shows only saved server details", async () => {
   const { user } = setup();
-  await user.type(screen.getByLabelText("Paste order QR contents"), token());
+  await user.click(screen.getByLabelText("Paste order QR contents"));
+  await user.paste(token());
   await user.click(screen.getByRole("button", { name: "Verify pasted QR" }));
   expect(await screen.findByText("ORD-000042")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Review order" })).toHaveFocus();
@@ -153,7 +154,8 @@ it.each(["T12", "ORD-000042", token("55b18d73-f2fb-4fe6-bb1c-30cf385c3b24")])(
   "does not verify a table, number, or foreign-shop QR",
   async (raw) => {
     const { user } = setup();
-    await user.type(screen.getByLabelText("Paste order QR contents"), raw);
+    await user.click(screen.getByLabelText("Paste order QR contents"));
+    await user.paste(raw);
     await user.click(screen.getByRole("button", { name: "Verify pasted QR" }));
     expect(verifyScannedOrder).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toBeInTheDocument();

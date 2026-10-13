@@ -44,6 +44,9 @@ export function CashierOrderDecision({
   const [action, setAction] = useState<"confirm" | "reject" | null>(null);
   const [reason, setReason] = useState("");
   const [collectingCash, setCollectingCash] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "GCASH_MANUAL">(
+    "CASH",
+  );
   const [decision, setDecision] = useState<
     OrderDecisionResponse["order"] | null
   >(null);
@@ -151,6 +154,7 @@ export function CashierOrderDecision({
   if (collectingCash && decision?.status === "CONFIRMED")
     return (
       <CashierCashPayment
+        initialMethod={paymentMethod}
         shopId={order.shopId}
         orderId={order.id}
         onNext={onNext}
@@ -175,12 +179,26 @@ export function CashierOrderDecision({
           </p>
         )}
         {decision.status === "CONFIRMED" && (
-          <button
-            className="primary-button"
-            onClick={() => setCollectingCash(true)}
-          >
-            Collect cash
-          </button>
+          <div className="scanner-controls">
+            <button
+              className="primary-button"
+              onClick={() => {
+                setPaymentMethod("CASH");
+                setCollectingCash(true);
+              }}
+            >
+              Collect cash
+            </button>
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setPaymentMethod("GCASH_MANUAL");
+                setCollectingCash(true);
+              }}
+            >
+              Record GCash payment
+            </button>
+          </div>
         )}
         <button className="secondary-button" onClick={onNext}>
           Scan another order

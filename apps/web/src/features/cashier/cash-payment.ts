@@ -1,7 +1,9 @@
 import {
   cashAmountCents,
+  PAYMENT_REFERENCE_PATTERN,
   type CashPaymentRequest,
   type CashPaymentReviewResponse,
+  type ManualGcashPaymentRequest,
 } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import { parseReview } from "./order-qr";
@@ -41,7 +43,7 @@ function parseCash(
   }
   if (
     !payment ||
-    payment.method !== "CASH" ||
+    !["CASH", "GCASH_MANUAL"].includes(payment.method) ||
     typeof payment.requestId !== "string" ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       payment.requestId,
@@ -52,20 +54,27 @@ function parseCash(
     !Number.isFinite(Date.parse(payment.paidAt)) ||
     cashChange(payment.amountReceived, order.totalPrice) !==
       payment.changeDue ||
-    cashAmountCents(payment.changeDue) === null
+    cashAmountCents(payment.changeDue) === null ||
+    (payment.method === "GCASH_MANUAL" && payment.changeDue !== "0.00") ||
+    (payment.reference != null &&
+      (payment.method !== "GCASH_MANUAL" ||
+        typeof payment.reference !== "string" ||
+        !payment.reference.trim() ||
+        !PAYMENT_REFERENCE_PATTERN.test(payment.reference)))
   )
     throw new Error(
-      "The saved cash receipt could not be verified. Ask the shop owner for help.",
+      "The saved payment receipt could not be verified. Ask the shop owner for help.",
     );
   return {
     order,
     payment: {
-      method: "CASH",
+      method: payment.method,
       requestId: payment.requestId,
       amountReceived: payment.amountReceived,
       changeDue: payment.changeDue,
       paidAt: payment.paidAt,
       paidBy: payment.paidBy,
+      reference: payment.reference ?? null,
     },
   };
 }
@@ -121,11 +130,41 @@ export async function collectCashPayment(
   const saved = parseCash(data, shopId, orderId);
   if (
     !saved.payment ||
+    saved.payment.method !== "CASH" ||
     saved.payment.requestId !== dto.requestId ||
     saved.payment.amountReceived !== dto.amountReceived
   )
     throw new Error(
       "The payment result could not be confirmed. Refresh before collecting cash again.",
+    );
+  return saved;
+}
+
+export async function recordManualGcashPayment(
+  shopId: string,
+  orderId: string,
+  dto: ManualGcashPaymentRequest,
+  signal: AbortSignal,
+) {
+  const { data } = await api.post<CashPaymentReviewResponse>(
+    `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}/gcash-manual-payment`,
+    {
+      requestId: dto.requestId,
+      reviewVersion: dto.reviewVersion,
+      receivedConfirmed: dto.receivedConfirmed,
+      ...(dto.reference !== undefined ? { reference: dto.reference } : {}),
+    },
+    { signal, timeout: AUTH_REQUEST_TIMEOUT_MS },
+  );
+  const saved = parseCash(data, shopId, orderId);
+  if (
+    !saved.payment ||
+    saved.payment.method !== "GCASH_MANUAL" ||
+    saved.payment.requestId !== dto.requestId ||
+    (saved.payment.reference ?? null) !== (dto.reference?.trim() || null)
+  )
+    throw new Error(
+      "The payment result could not be confirmed. Refresh before recording payment again.",
     );
   return saved;
 }

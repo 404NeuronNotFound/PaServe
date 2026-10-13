@@ -5,9 +5,11 @@ import type {
   ApiErrorResponse,
   CashPaymentReviewResponse,
 } from "@paserve/contracts";
+import { PAYMENT_REFERENCE_PATTERN } from "@paserve/contracts";
 import {
   reviewCashPayment,
   collectCashPayment,
+  recordManualGcashPayment,
   normalizeCashAmount,
   cashChange,
 } from "../../features/cashier/cash-payment";
@@ -24,19 +26,24 @@ function failureMessage(error: unknown) {
     return error.response.data.message;
   return error instanceof Error
     ? error.message
-    : "Unable to check payment. Refresh before collecting cash.";
+    : "Unable to check payment. Refresh before recording payment.";
 }
 export function CashierCashPayment({
   shopId,
   orderId,
   onNext,
+  initialMethod = "CASH",
 }: {
   shopId: string;
   orderId: string;
   onNext: () => void;
+  initialMethod?: "CASH" | "GCASH_MANUAL";
 }) {
   const [review, setReview] = useState<CashPaymentReviewResponse | null>(null);
   const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState(initialMethod);
+  const [receivedConfirmed, setReceivedConfirmed] = useState(false);
+  const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(true);
   const [blocked, setBlocked] = useState(true);
   const [error, setError] = useState("");
@@ -53,6 +60,11 @@ export function CashierCashPayment({
       ? cashChange(normalized, review.order.totalPrice)
       : null;
   const invalidAmount = amount.length > 0 && change === null;
+  const gcash = method === "GCASH_MANUAL";
+  const invalidReference = !PAYMENT_REFERENCE_PATTERN.test(reference);
+  const eligible = gcash
+    ? receivedConfirmed && !invalidReference
+    : normalized !== null && change !== null;
   useEffect(() => {
     active.current = true;
     const request = new AbortController();
@@ -93,13 +105,15 @@ export function CashierCashPayment({
       setBlocked(false);
       if (review && saved.order.reviewVersion !== review.order.reviewVersion) {
         setAmount("");
+        setReceivedConfirmed(false);
         attempt.current = null;
         if (!saved.payment)
           setError(
-            "The order changed. Review the saved total and enter the amount received again.",
+            gcash
+              ? "The order changed. Review the saved total and verify GCash receipt again."
+              : "The order changed. Review the saved total and enter the amount received again.",
           );
-      } else if (open && !saved.payment && normalized && change !== null)
-        setConfirm(true);
+      } else if (open && !saved.payment && eligible) setConfirm(true);
     } catch (error) {
       if (active.current && !request.signal.aborted) {
         setBlocked(true);
@@ -111,8 +125,7 @@ export function CashierCashPayment({
     }
   }
   async function collect() {
-    if (running.current || blocked || !review || !normalized || change === null)
-      return;
+    if (running.current || blocked || !review || !eligible) return;
     running.current = true;
     setBusy(true);
     setError("");
@@ -120,16 +133,28 @@ export function CashierCashPayment({
     controller.current = request;
     try {
       attempt.current ??= crypto.randomUUID();
-      const saved = await collectCashPayment(
-        shopId,
-        orderId,
-        {
-          requestId: attempt.current,
-          reviewVersion: review.order.reviewVersion,
-          amountReceived: normalized,
-        },
-        request.signal,
-      );
+      const saved = gcash
+        ? await recordManualGcashPayment(
+            shopId,
+            orderId,
+            {
+              requestId: attempt.current,
+              reviewVersion: review.order.reviewVersion,
+              receivedConfirmed: true,
+              ...(reference.trim() ? { reference: reference.trim() } : {}),
+            },
+            request.signal,
+          )
+        : await collectCashPayment(
+            shopId,
+            orderId,
+            {
+              requestId: attempt.current,
+              reviewVersion: review.order.reviewVersion,
+              amountReceived: normalized!,
+            },
+            request.signal,
+          );
       if (active.current && !request.signal.aborted) {
         setReview(saved);
         setConfirm(false);
@@ -140,7 +165,7 @@ export function CashierCashPayment({
         setBlocked(true);
         setConfirm(false);
         setError(
-          `${failureMessage(error)} The payment result is unconfirmed. Refresh its saved state before collecting or recording cash again.`,
+          `${failureMessage(error)} The payment result is unconfirmed. Refresh its saved state before collecting or recording payment again.`,
         );
       }
     } finally {
@@ -157,9 +182,14 @@ export function CashierCashPayment({
         <span className="cashier-cash-emblem">
           <FiCheckCircle aria-hidden="true" />
         </span>
-        <p className="section-label">PAYMENT COMPLETE / CASH</p>
+        <p className="section-label">
+          PAYMENT COMPLETE /{" "}
+          {review.payment.method === "CASH" ? "CASH" : "GCASH MANUAL"}
+        </p>
         <h2 id="cash-paid-title" ref={resultHeading} tabIndex={-1}>
-          Cash payment recorded
+          {review.payment.method === "CASH"
+            ? "Cash payment recorded"
+            : "GCash payment recorded manually"}
         </h2>
         <p role="status">{review.order.orderNumber} is paid.</p>
         <dl>
@@ -171,15 +201,25 @@ export function CashierCashPayment({
             <dt>Amount received</dt>
             <dd>{formatCartPrice(review.payment.amountReceived)}</dd>
           </div>
-          <div className="cashier-cash-change">
-            <dt>Change due</dt>
-            <dd>{formatCartPrice(review.payment.changeDue)}</dd>
-          </div>
+          {review.payment.method === "CASH" && (
+            <div className="cashier-cash-change">
+              <dt>Change due</dt>
+              <dd>{formatCartPrice(review.payment.changeDue)}</dd>
+            </div>
+          )}
+          {review.payment.reference && (
+            <div>
+              <dt>Reference note / number</dt>
+              <dd>{review.payment.reference}</dd>
+            </div>
+          )}
         </dl>
         <p>
-          {recordedHere
-            ? "Return the change to the customer."
-            : "This order already has a saved cash payment. Check with the cashier before handling any cash or change."}
+          {review.payment.method === "GCASH_MANUAL"
+            ? "The cashier recorded this payment after checking GCash receipt. No gateway verification was performed."
+            : recordedHere
+              ? "Return the change to the customer."
+              : "This order already has a saved cash payment. Check with the cashier before handling any cash or change."}
         </p>
         <button className="primary-button" onClick={onNext}>
           Scan another order
@@ -190,49 +230,124 @@ export function CashierCashPayment({
     <div className="cashier-cash-controls">
       {review && (
         <>
-          <label htmlFor="cash-amount">Amount received (PHP)</label>
-          <div className="cashier-cash-input">
-            <span className="cashier-cash-currency" aria-hidden="true">₱</span>
-            <input
-              id="cash-amount"
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="0.00"
-              maxLength={13}
-              value={amount}
-              disabled={busy || blocked || confirm}
-              onChange={(event) => {
-                setAmount(event.target.value);
-                attempt.current = null;
-              }}
-              aria-invalid={invalidAmount}
-              aria-describedby={
-                invalidAmount
-                  ? "cash-amount-hint cash-amount-error"
-                  : "cash-amount-hint"
-              }
-            />
-          </div>
-          <p id="cash-amount-hint">
-            Enter the cash actually received. It must cover the total.
-          </p>
-          {invalidAmount && (
-            <InlineMessage id="cash-amount-error">
-              {normalized
-                ? "The amount received is below the order total."
-                : "Enter a valid amount with up to two decimal places."}
-            </InlineMessage>
+          <label htmlFor="payment-method">Payment method</label>
+          <select
+            id="payment-method"
+            value={method}
+            disabled={busy || blocked || confirm}
+            onChange={(event) => {
+              setMethod(event.target.value as "CASH" | "GCASH_MANUAL");
+              setAmount("");
+              setReceivedConfirmed(false);
+              setReference("");
+              attempt.current = null;
+            }}
+          >
+            <option value="CASH">Cash</option>
+            <option value="GCASH_MANUAL">GCash (manual)</option>
+          </select>
+          {gcash ? (
+            <>
+              <p>
+                Check that {formatCartPrice(review.order.totalPrice)} was
+                received in the shop’s GCash account before recording payment.
+              </p>
+              <p>
+                This records the cashier’s confirmation. No gateway verification
+                is performed.
+              </p>
+              <label htmlFor="gcash-reference">
+                Reference note / number (optional)
+              </label>
+              <input
+                id="gcash-reference"
+                value={reference}
+                maxLength={200}
+                autoComplete="off"
+                disabled={busy || blocked || confirm}
+                aria-invalid={invalidReference}
+                aria-describedby={
+                  invalidReference
+                    ? "gcash-reference-hint gcash-reference-error"
+                    : "gcash-reference-hint"
+                }
+                onChange={(event) => {
+                  setReference(event.target.value);
+                  attempt.current = null;
+                }}
+              />
+              <p id="gcash-reference-hint">
+                Up to 200 characters. Recorded as a cashier note.
+              </p>
+              {invalidReference && (
+                <InlineMessage id="gcash-reference-error">
+                  Enter a plain-text reference of up to 200 characters.
+                </InlineMessage>
+              )}
+              <label className="cashier-gcash-confirm">
+                <input
+                  type="checkbox"
+                  checked={receivedConfirmed}
+                  disabled={busy || blocked || confirm}
+                  onChange={(event) => {
+                    setReceivedConfirmed(event.target.checked);
+                    attempt.current = null;
+                  }}
+                />
+                I verified the full payment was received via GCash.
+              </label>
+            </>
+          ) : (
+            <>
+              <label htmlFor="cash-amount">Amount received (PHP)</label>
+              <div className="cashier-cash-input">
+                <span className="cashier-cash-currency" aria-hidden="true">
+                  ₱
+                </span>
+                <input
+                  id="cash-amount"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  placeholder="0.00"
+                  maxLength={13}
+                  value={amount}
+                  disabled={busy || blocked || confirm}
+                  onChange={(event) => {
+                    setAmount(event.target.value);
+                    attempt.current = null;
+                  }}
+                  aria-invalid={invalidAmount}
+                  aria-describedby={
+                    invalidAmount
+                      ? "cash-amount-hint cash-amount-error"
+                      : "cash-amount-hint"
+                  }
+                />
+              </div>
+              <p id="cash-amount-hint">
+                Enter the cash actually received. It must cover the total.
+              </p>
+              {invalidAmount && (
+                <InlineMessage id="cash-amount-error">
+                  {normalized
+                    ? "The amount received is below the order total."
+                    : "Enter a valid amount with up to two decimal places."}
+                </InlineMessage>
+              )}
+              <div className="cashier-cash-change" role="status">
+                <span>Change due</span>
+                <strong>
+                  {change === null ? "—" : formatCartPrice(change)}
+                </strong>
+              </div>
+            </>
           )}
-          <div className="cashier-cash-change" role="status">
-            <span>Change due</span>
-            <strong>{change === null ? "—" : formatCartPrice(change)}</strong>
-          </div>
           <button
             className="primary-button"
-            disabled={busy || blocked || confirm || change === null}
+            disabled={busy || blocked || confirm || !eligible}
             onClick={() => void refresh(true)}
           >
-            Record cash payment
+            {gcash ? "Record GCash payment" : "Record cash payment"}
           </button>
         </>
       )}
@@ -243,17 +358,19 @@ export function CashierCashPayment({
       >
         Refresh payment
       </button>
-      {busy && <p role="status">Checking or recording cash payment…</p>}
+      {busy && <p role="status">Checking or recording payment…</p>}
       {error && <InlineMessage>{error}</InlineMessage>}
       <DecisionDialog
         open={confirm}
-        title="Record cash payment?"
+        title={gcash ? "Record manual GCash payment?" : "Record cash payment?"}
         description={
-          review && normalized && change !== null
-            ? `Record ${formatCartPrice(normalized)} received for ${review.order.orderNumber}, with ${formatCartPrice(change)} change due? Only continue once the cash is in hand.`
-            : "Check the cash before recording payment."
+          gcash && review
+            ? `Record ${formatCartPrice(review.order.totalPrice)} received via GCash for ${review.order.orderNumber}? Only continue after verifying receipt in the shop’s GCash account.`
+            : review && normalized && change !== null
+              ? `Record ${formatCartPrice(normalized)} received for ${review.order.orderNumber}, with ${formatCartPrice(change)} change due? Only continue once the cash is in hand.`
+              : "Check the cash before recording payment."
         }
-        confirmLabel="Record cash payment"
+        confirmLabel={gcash ? "Record GCash payment" : "Record cash payment"}
         cancelLabel="Keep reviewing"
         onConfirm={collect}
         onClose={() => setConfirm(false)}
@@ -266,12 +383,13 @@ export function CashierCashPayment({
       onNext={onNext}
       busy={busy || confirm}
       purpose="payment"
+      paymentMethod={method}
     >
       {controls}
     </CashierOrderReview>
   ) : (
-    <section className="scanner-panel" aria-label="Cash payment">
-      <h2>Collect cash</h2>
+    <section className="scanner-panel" aria-label="Order payment">
+      <h2>{gcash ? "Record GCash payment" : "Collect cash"}</h2>
       {controls}
       <button className="secondary-button" onClick={onNext} disabled={busy}>
         Scan another order

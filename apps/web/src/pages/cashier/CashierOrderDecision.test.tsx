@@ -363,3 +363,23 @@ it("ignores a late successful decision after unmount", async () => {
     expect(screen.queryByText(/has been confirmed/)).not.toBeInTheDocument(),
   );
 });
+it("opens manual GCash recording after confirmation", async () => {
+  const { user } = setup();
+  const dialog = await open("Confirm order", user);
+  await user.click(
+    within(dialog).getByRole("button", { name: "Confirm order" }),
+  );
+  await screen.findByRole("heading", { name: "Order confirmed" });
+  await user.click(
+    screen.getByRole("button", { name: "Record GCash payment" }),
+  );
+  expect(await screen.findByLabelText("Payment method")).toHaveValue(
+    "GCASH_MANUAL",
+  );
+  expect(
+    screen.getByRole("checkbox", { name: /I verified the full payment/ }),
+  ).not.toBeChecked();
+  expect(
+    screen.queryByLabelText("Amount received (PHP)"),
+  ).not.toBeInTheDocument();
+});

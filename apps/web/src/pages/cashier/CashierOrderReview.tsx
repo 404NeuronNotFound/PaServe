@@ -10,6 +10,7 @@ export function CashierOrderReview({
   busy = false,
   source = "qr",
   purpose = "review",
+  paymentMethod = "CASH",
 }: {
   order: VerifyOrderQrResponse["order"];
   onNext: () => void;
@@ -17,6 +18,7 @@ export function CashierOrderReview({
   busy?: boolean;
   source?: "qr" | "number";
   purpose?: "review" | "payment";
+  paymentMethod?: "CASH" | "GCASH_MANUAL";
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const quantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -32,7 +34,11 @@ export function CashierOrderReview({
         <div>
           <p className="section-label">CUSTOMER ORDER / REVIEW</p>
           <h2 id="verified-order-title" ref={heading} tabIndex={-1}>
-            {purpose === "payment" ? "Collect cash" : "Review order"}
+            {purpose === "payment"
+              ? paymentMethod === "GCASH_MANUAL"
+                ? "Record GCash payment"
+                : "Collect cash"
+              : "Review order"}
           </h2>
         </div>
         <p className="cashier-review-verified" role="status">
@@ -46,7 +52,9 @@ export function CashierOrderReview({
       </header>
       <p className="scanner-description">
         {purpose === "payment"
-          ? "Check the saved total, collect the cash and return any change."
+          ? paymentMethod === "GCASH_MANUAL"
+            ? "Check the saved total and verify receipt in the shop’s GCash account before recording payment."
+            : "Check the saved total, collect the cash and return any change."
           : "Check the items, options, customer notes and total with the customer before taking payment or confirming the order."}
       </p>
       <div className="cashier-review-layout">

@@ -48,6 +48,7 @@ describe('Cash collection', () => {
       paymentMethod: null,
       paymentRequestId: null,
       paymentReviewVersion: null,
+      paymentReference: null,
       amountReceived: null,
       changeDue: null,
       paidAt: null,
@@ -158,6 +159,136 @@ describe('Cash collection', () => {
       .get(`/api/v1/shops/${shopId}/orders/${orderId}/cash-payment`)
       .set('Authorization', 'Bearer session');
   }
+  function gcash(
+    body: Record<string, unknown> = {},
+    targetShop = shopId,
+    authenticated = true,
+  ) {
+    const req = request(app.getHttpServer()).post(
+      `/api/v1/shops/${targetShop}/orders/${orderId}/gcash-manual-payment`,
+    );
+    if (authenticated) req.set('Authorization', 'Bearer session');
+    return req.send({
+      requestId,
+      reviewVersion: version,
+      receivedConfirmed: true,
+      ...body,
+    });
+  }
+  it('stores optional GCash reference as text and rejects altered retries', async () => {
+    const result = await gcash({
+      reference: '  001234567890 - checked receipt  ',
+    }).expect(200);
+    expect(result.body.payment.reference).toBe(
+      '001234567890 - checked receipt',
+    );
+    expect(saved.paymentReference).toBe('001234567890 - checked receipt');
+    expect((await read().expect(200)).body.payment.reference).toBe(
+      '001234567890 - checked receipt',
+    );
+    expect(
+      (await gcash({ reference: '001234567890 - checked receipt' }).expect(200))
+        .body,
+    ).toEqual(result.body);
+    await gcash({ reference: 'different reference' }).expect(409);
+    expect(updateOrder).toHaveBeenCalledTimes(1);
+  });
+  it.each([undefined, null, '', '   '])(
+    'accepts omitted or blank optional GCash reference: %j',
+    async (reference) => {
+      const result = await gcash({ reference }).expect(200);
+      expect(result.body.payment.reference).toBeNull();
+      expect(saved.paymentReference).toBeNull();
+    },
+  );
+  it.each([
+    12345,
+    'a'.repeat(201),
+    'line\nnext',
+    '<script>',
+    'ref\u0000',
+    'ref\u202e',
+  ])('rejects invalid GCash reference: %j', async (reference) => {
+    await gcash({ reference }).expect(400);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
+    'records manually verified GCash for live %s',
+    async (currentRole) => {
+      role = currentRole;
+      const result = await gcash().expect(200);
+      expect(result.headers['cache-control']).toBe('no-store');
+      expect(result.body.order.paymentStatus).toBe('PAID');
+      expect(result.body.payment).toMatchObject({
+        method: 'GCASH_MANUAL',
+        amountReceived: '135.50',
+        changeDue: '0.00',
+        paidBy: userId,
+        requestId,
+      });
+      expect(saved.paymentMethod).toBe('GCASH_MANUAL');
+      expect((await read().expect(200)).body.payment.method).toBe(
+        'GCASH_MANUAL',
+      );
+      expect((await gcash().expect(200)).body).toEqual(result.body);
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+    },
+  );
+  it.each([false, 'true', null, 1])(
+    'rejects unverified GCash receipt %j',
+    async (receivedConfirmed) => {
+      await gcash({ receivedConfirmed }).expect(400);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('rejects missing GCash attestation and forged settlement fields', async () => {
+    await gcash({ receivedConfirmed: undefined }).expect(400);
+    await gcash({
+      amountReceived: '1.00',
+      changeDue: '9.00',
+      paidBy: 'owner',
+      paymentMethod: 'CASH',
+    }).expect(400);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('prevents cash overwriting GCash and GCash overwriting cash', async () => {
+    await gcash().expect(200);
+    await collect().expect(409);
+    expect(updateOrder).toHaveBeenCalledTimes(1);
+  });
+  it('prevents GCash recording after cash settlement', async () => {
+    await collect().expect(200);
+    await gcash().expect(409);
+    expect(updateOrder).toHaveBeenCalledTimes(1);
+  });
+  it.each(['PENDING_CONFIRMATION', 'REJECTED'])(
+    'rejects GCash for %s orders',
+    async (status) => {
+      saved.status = status;
+      await gcash().expect(409);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('rejects stale GCash review', async () => {
+    saved.orderItems[0].productNameSnapshot = 'Changed';
+    await gcash().expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('enforces GCash authentication, current role and shop isolation', async () => {
+    await gcash({}, shopId, false).expect(401);
+    await gcash({}, '55b18d73-f2fb-4fe6-bb1c-30cf385c3b24').expect(404);
+    role = 'KITCHEN';
+    await gcash().expect(403);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rechecks GCash permission inside transaction', async () => {
+    raw.mockImplementationOnce(async () => {
+      role = 'KITCHEN';
+      return [];
+    });
+    await gcash().expect(404);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
     'allows live %s and saves cash/change once',
     async (currentRole) => {

@@ -6,6 +6,7 @@ import {
   reviewCashPayment,
   collectCashPayment,
   lookupCashPayment,
+  recordManualGcashPayment,
 } from "./cash-payment";
 import { cashierLine } from "../../test/cashier-fixtures";
 vi.mock("../../lib/api/client", () => ({
@@ -137,5 +138,87 @@ it("rejects mismatched response number", async () => {
   vi.mocked(api.post).mockResolvedValue({ data: { order, payment: null } });
   await expect(
     lookupCashPayment(shopId, "ORD-000043", new AbortController().signal),
+  ).rejects.toThrow();
+});
+it("records manual GCash attestation without trusting a client amount", async () => {
+  vi.mocked(api.post).mockResolvedValue({
+    data: {
+      order: { ...order, paymentStatus: "PAID" },
+      payment: {
+        ...payment,
+        method: "GCASH_MANUAL",
+        amountReceived: "135.50",
+        changeDue: "0.00",
+      },
+    },
+  });
+  const dto = {
+    requestId,
+    reviewVersion: order.reviewVersion,
+    receivedConfirmed: true as const,
+  };
+  const signal = new AbortController().signal;
+  const saved = await recordManualGcashPayment(shopId, orderId, dto, signal);
+  expect(saved.payment?.method).toBe("GCASH_MANUAL");
+  expect(api.post).toHaveBeenCalledWith(
+    `/shops/${shopId}/orders/${orderId}/gcash-manual-payment`,
+    dto,
+    { signal, timeout: 15000 },
+  );
+});
+it("rejects manual GCash receipt with cash change or the wrong method", async () => {
+  for (const receipt of [payment, { ...payment, method: "GCASH_MANUAL" }]) {
+    vi.mocked(api.post).mockResolvedValue({
+      data: { order: { ...order, paymentStatus: "PAID" }, payment: receipt },
+    });
+    await expect(
+      recordManualGcashPayment(
+        shopId,
+        orderId,
+        {
+          requestId,
+          reviewVersion: order.reviewVersion,
+          receivedConfirmed: true,
+        },
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow();
+  }
+});
+it("retains a saved GCash reference and checks it against the submitted note", async () => {
+  const receipt = {
+    ...payment,
+    method: "GCASH_MANUAL",
+    amountReceived: "135.50",
+    changeDue: "0.00",
+    reference: "001234567890 - checked",
+  };
+  vi.mocked(api.post).mockResolvedValue({
+    data: { order: { ...order, paymentStatus: "PAID" }, payment: receipt },
+  });
+  const dto = {
+    requestId,
+    reviewVersion: order.reviewVersion,
+    receivedConfirmed: true as const,
+    reference: receipt.reference,
+  };
+  expect(
+    (
+      await recordManualGcashPayment(
+        shopId,
+        orderId,
+        dto,
+        new AbortController().signal,
+      )
+    ).payment?.reference,
+  ).toBe(receipt.reference);
+  expect(vi.mocked(api.post).mock.calls[0][1]).toEqual(dto);
+  await expect(
+    recordManualGcashPayment(
+      shopId,
+      orderId,
+      { ...dto, reference: "other" },
+      new AbortController().signal,
+    ),
   ).rejects.toThrow();
 });

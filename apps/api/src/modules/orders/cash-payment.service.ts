@@ -10,6 +10,7 @@ import {
   hasShopPermission,
   cashAmountCents,
   isValidOrderNumber,
+  PAYMENT_REFERENCE_PATTERN,
   type CashPaymentReviewResponse,
 } from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
@@ -17,6 +18,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import { OrderQrService } from './order-qr.service.js';
 import type { CashPaymentDto } from './cash-payment.dto.js';
+import type { ManualGcashPaymentDto } from './manual-gcash-payment.dto.js';
 
 export const CASH_PAYMENT_ROLES = SHOP_ROLES.filter(
   (role) =>
@@ -25,7 +27,7 @@ export const CASH_PAYMENT_ROLES = SHOP_ROLES.filter(
 );
 const conflict = (
   code = 'CASH_PAYMENT_CONFLICT',
-  message = 'The payment state changed. Refresh the order before collecting cash.',
+  message = 'The payment state changed. Refresh the order before recording payment.',
 ) => new ConflictException({ code, message });
 
 @Injectable()
@@ -77,6 +79,7 @@ export class CashPaymentService {
         paymentMethod: true,
         paymentRequestId: true,
         paymentReviewVersion: true,
+        paymentReference: true,
         amountReceived: true,
         changeDue: true,
         paidAt: true,
@@ -97,25 +100,27 @@ export class CashPaymentService {
     let payment: CashPaymentReviewResponse['payment'] = null;
     if (saved.paymentStatus === 'PAID') {
       if (
-        saved.paymentMethod !== 'CASH' ||
+        !['CASH', 'GCASH_MANUAL'].includes(saved.paymentMethod ?? '') ||
         !saved.paymentRequestId ||
         !saved.paidAt ||
         !saved.paidBy ||
         !saved.amountReceived ||
         !saved.changeDue ||
-        !saved.amountReceived.minus(saved.changeDue).equals(order.totalPrice)
+        !saved.amountReceived.minus(saved.changeDue).equals(order.totalPrice) ||
+        (saved.paymentMethod === 'GCASH_MANUAL' && !saved.changeDue.isZero())
       )
         throw conflict(
           'CASH_PAYMENT_DETAILS_UNAVAILABLE',
-          'The saved cash receipt could not be loaded. Ask the shop owner for help.',
+          'The saved payment receipt could not be loaded. Ask the shop owner for help.',
         );
       payment = {
-        method: 'CASH',
+        method: saved.paymentMethod as 'CASH' | 'GCASH_MANUAL',
         requestId: saved.paymentRequestId,
         amountReceived: saved.amountReceived.toFixed(2),
         changeDue: saved.changeDue.toFixed(2),
         paidAt: saved.paidAt.toISOString(),
         paidBy: saved.paidBy,
+        reference: saved.paymentReference ?? null,
       };
     }
     return { order, payment };
@@ -127,15 +132,51 @@ export class CashPaymentService {
     orderId: string,
     dto: CashPaymentDto,
   ): Promise<CashPaymentReviewResponse> {
+    return this.settle(actorId, shopId, orderId, dto, 'CASH');
+  }
+
+  async recordGcash(
+    actorId: string,
+    shopId: string,
+    orderId: string,
+    dto: ManualGcashPaymentDto,
+  ): Promise<CashPaymentReviewResponse> {
+    return this.settle(actorId, shopId, orderId, dto, 'GCASH_MANUAL');
+  }
+
+  private async settle(
+    actorId: string,
+    shopId: string,
+    orderId: string,
+    dto: CashPaymentDto | ManualGcashPaymentDto,
+    method: 'CASH' | 'GCASH_MANUAL',
+  ): Promise<CashPaymentReviewResponse> {
+    const cashAmount = 'amountReceived' in dto ? dto.amountReceived : null;
+    const rawReference = 'reference' in dto ? dto.reference : null;
+    if (
+      rawReference != null &&
+      (typeof rawReference !== 'string' ||
+        !PAYMENT_REFERENCE_PATTERN.test(rawReference))
+    )
+      throw new BadRequestException({
+        code: 'INVALID_PAYMENT_REFERENCE',
+        message: 'Enter a plain-text reference of up to 200 characters.',
+      });
+    const reference =
+      method === 'GCASH_MANUAL' ? rawReference?.trim() || null : null;
     if (
       !isUUID(orderId) ||
       !isUUID(dto.requestId) ||
-      cashAmountCents(dto.amountReceived) === null ||
+      (method === 'CASH'
+        ? cashAmountCents(cashAmount) === null
+        : !('receivedConfirmed' in dto) || dto.receivedConfirmed !== true) ||
       !/^[a-f0-9]{64}$(?![\s\S])/.test(dto.reviewVersion)
     )
       throw new BadRequestException({
-        code: 'INVALID_CASH_PAYMENT',
-        message: 'A valid cash amount and reviewed order are required.',
+        code:
+          method === 'CASH' ? 'INVALID_CASH_PAYMENT' : 'INVALID_GCASH_PAYMENT',
+        message:
+          'A valid reviewed order and payment confirmation are required.',
       });
     const access = shopAccessWhere(actorId, shopId, CASH_PAYMENT_ROLES);
     try {
@@ -158,23 +199,27 @@ export class CashPaymentService {
           if (review.payment) {
             if (
               review.payment.requestId === dto.requestId &&
-              review.payment.amountReceived === dto.amountReceived &&
+              review.payment.method === method &&
+              (review.payment.reference ?? null) === reference &&
+              (method !== 'CASH' ||
+                review.payment.amountReceived === cashAmount) &&
               review.payment.paidBy === actorId &&
               current.paymentReviewVersion === dto.reviewVersion
             )
               return review;
             throw conflict(
               'ORDER_ALREADY_PAID',
-              'This order is already paid. Do not collect cash again.',
+              'This order is already paid. Do not collect or record another payment.',
             );
           }
           if (review.order.reviewVersion !== dto.reviewVersion)
             throw conflict(
               'ORDER_REVIEW_CHANGED',
-              'This order changed. Refresh and review the saved total before collecting cash.',
+              'This order changed. Refresh and review the saved total before recording payment.',
             );
-          const amount = new Prisma.Decimal(dto.amountReceived);
           const total = new Prisma.Decimal(review.order.totalPrice);
+          const amount =
+            method === 'CASH' ? new Prisma.Decimal(cashAmount!) : total;
           if (amount.lessThan(total))
             throw new BadRequestException({
               code: 'CASH_AMOUNT_INSUFFICIENT',
@@ -192,7 +237,8 @@ export class CashPaymentService {
             },
             data: {
               paymentStatus: 'PAID',
-              paymentMethod: 'CASH',
+              paymentMethod: method,
+              paymentReference: reference,
               paymentRequestId: dto.requestId,
               paymentReviewVersion: dto.reviewVersion,
               amountReceived: amount,

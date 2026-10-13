@@ -11,12 +11,14 @@ import { CashierCashPayment } from "./CashierCashPayment";
 import {
   reviewCashPayment,
   collectCashPayment,
+  recordManualGcashPayment,
 } from "../../features/cashier/cash-payment";
 import { cashierLine } from "../../test/cashier-fixtures";
 vi.mock("../../features/cashier/cash-payment", async (original) => ({
   ...(await original<typeof import("../../features/cashier/cash-payment")>()),
   reviewCashPayment: vi.fn(),
   collectCashPayment: vi.fn(),
+  recordManualGcashPayment: vi.fn(),
 }));
 const order = {
   id: "order-a",
@@ -132,7 +134,9 @@ it.each(["100", "-1", "200.001", "1e3"])(
       "aria-invalid",
       "true",
     );
-    expect(screen.getByLabelText("Amount received (PHP)")).toHaveAccessibleDescription(
+    expect(
+      screen.getByLabelText("Amount received (PHP)"),
+    ).toHaveAccessibleDescription(
       expect.stringContaining(
         value === "100"
           ? "The amount received is below the order total."
@@ -232,4 +236,144 @@ it("aborts pending review when leaving the flow", async () => {
   const signal = vi.mocked(reviewCashPayment).mock.calls[0][2];
   view.unmount();
   expect(signal.aborted).toBe(true);
+});
+const gcashPaid = {
+  ...paid,
+  payment: {
+    ...paid.payment,
+    method: "GCASH_MANUAL" as const,
+    amountReceived: "135.50",
+    changeDue: "0.00",
+  },
+};
+it("requires manual receipt verification and dialog confirmation before recording GCash", async () => {
+  const { user } = await setup();
+  await user.selectOptions(
+    screen.getByLabelText("Payment method"),
+    "GCASH_MANUAL",
+  );
+  expect(
+    screen.queryByLabelText("Amount received (PHP)"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Record GCash payment" }),
+  ).toBeDisabled();
+  await user.click(
+    screen.getByRole("checkbox", { name: /I verified the full payment/ }),
+  );
+  vi.mocked(recordManualGcashPayment).mockResolvedValue(gcashPaid);
+  await user.click(
+    screen.getByRole("button", { name: "Record GCash payment" }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  expect(recordManualGcashPayment).not.toHaveBeenCalled();
+  await user.click(
+    within(dialog).getByRole("button", { name: "Record GCash payment" }),
+  );
+  await screen.findByRole("heading", {
+    name: "GCash payment recorded manually",
+  });
+  expect(recordManualGcashPayment).toHaveBeenCalledWith(
+    order.shopId,
+    order.id,
+    {
+      requestId: expect.any(String),
+      reviewVersion: order.reviewVersion,
+      receivedConfirmed: true,
+    },
+    expect.any(AbortSignal),
+  );
+  expect(collectCashPayment).not.toHaveBeenCalled();
+  expect(
+    screen.queryByText("Return the change to the customer."),
+  ).not.toBeInTheDocument();
+});
+it("blocks uncertain GCash saves and recovers the saved method on refresh", async () => {
+  const { user } = await setup();
+  await user.selectOptions(
+    screen.getByLabelText("Payment method"),
+    "GCASH_MANUAL",
+  );
+  await user.click(screen.getByRole("checkbox"));
+  await user.click(
+    screen.getByRole("button", { name: "Record GCash payment" }),
+  );
+  vi.mocked(recordManualGcashPayment).mockRejectedValue(
+    new Error("Connection lost."),
+  );
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Record GCash payment",
+    }),
+  );
+  await screen.findByText(/payment result is unconfirmed/);
+  expect(screen.getByLabelText("Payment method")).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Record GCash payment" }),
+  ).toBeDisabled();
+  vi.mocked(reviewCashPayment).mockResolvedValue(gcashPaid);
+  await user.click(screen.getByRole("button", { name: "Refresh payment" }));
+  await screen.findByRole("heading", {
+    name: "GCash payment recorded manually",
+  });
+  expect(recordManualGcashPayment).toHaveBeenCalledTimes(1);
+});
+it("clears GCash attestation when refreshed order details change", async () => {
+  const { user } = await setup();
+  await user.selectOptions(
+    screen.getByLabelText("Payment method"),
+    "GCASH_MANUAL",
+  );
+  await user.click(screen.getByRole("checkbox"));
+  vi.mocked(reviewCashPayment).mockResolvedValue({
+    order: { ...order, reviewVersion: "b".repeat(64) },
+    payment: null,
+  });
+  await user.click(
+    screen.getByRole("button", { name: "Record GCash payment" }),
+  );
+  await screen.findByText(/The order changed/);
+  expect(screen.getByRole("checkbox")).not.toBeChecked();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(recordManualGcashPayment).not.toHaveBeenCalled();
+});
+it("saves and displays an optional reference without implying gateway verification", async () => {
+  const { user } = await setup();
+  await user.selectOptions(
+    screen.getByLabelText("Payment method"),
+    "GCASH_MANUAL",
+  );
+  await user.type(
+    screen.getByLabelText("Reference note / number (optional)"),
+    "001234567890 - checked",
+  );
+  expect(
+    screen.getByText(/No gateway verification is performed/),
+  ).toBeVisible();
+  await user.click(screen.getByRole("checkbox"));
+  vi.mocked(recordManualGcashPayment).mockResolvedValue({
+    ...gcashPaid,
+    payment: { ...gcashPaid.payment, reference: "001234567890 - checked" },
+  });
+  await user.click(
+    screen.getByRole("button", { name: "Record GCash payment" }),
+  );
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Record GCash payment",
+    }),
+  );
+  await screen.findByRole("heading", {
+    name: "GCash payment recorded manually",
+  });
+  expect(screen.getByText("001234567890 - checked")).toBeVisible();
+  expect(
+    screen.getByText(/No gateway verification was performed/),
+  ).toBeVisible();
+  expect(recordManualGcashPayment).toHaveBeenCalledWith(
+    order.shopId,
+    order.id,
+    expect.objectContaining({ reference: "001234567890 - checked" }),
+    expect.any(AbortSignal),
+  );
 });

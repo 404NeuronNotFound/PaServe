@@ -802,13 +802,21 @@ export interface CashPaymentRequest {
   reviewVersion: string;
   amountReceived: string;
 }
+export interface ManualGcashPaymentRequest {
+  requestId: string;
+  reviewVersion: string;
+  receivedConfirmed: true;
+  reference?: string | null;
+}
+export const PAYMENT_REFERENCE_PATTERN = /^[^\p{Cc}\p{Cf}<>]{0,200}$(?![\s\S])/u;
 export interface CashPaymentReceipt {
-  method: "CASH";
+  method: "CASH" | "GCASH_MANUAL";
   requestId: string;
   amountReceived: string;
   changeDue: string;
   paidAt: string;
   paidBy: string;
+  reference?: string | null;
 }
 export interface CashPaymentReviewResponse {
   order: VerifyOrderQrResponse["order"];
