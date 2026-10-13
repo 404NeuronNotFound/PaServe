@@ -1,17 +1,24 @@
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { isAxiosError } from "axios";
 import { currentUserKey, getCurrentUser } from "../api/session";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const cashierRequest = /^\/app\/shops\/[^/]+\/cashier(?:\/|$)/.test(
+    location.pathname,
+  );
   const session = useQuery({
     queryKey: currentUserKey,
     queryFn: getCurrentUser,
     retry: false,
     staleTime: 0,
+    networkMode: "always",
   });
-  if (session.isPending)
+  // Cashier tools fail closed during revalidation. Other workspaces preserve
+  // their existing draft behavior during a background session check.
+  if (session.isPending || (cashierRequest && session.isFetching))
     return (
       <main className="connection-page" role="status">
         Checking your session…
@@ -19,7 +26,9 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     );
   if (session.isError) {
     if (isAxiosError(session.error) && session.error.response?.status === 401)
-      return <Navigate to="/login" replace />;
+      return (
+        <Navigate to="/login" replace state={{ returnTo: location.pathname }} />
+      );
     return (
       <main className="connection-page">
         <h1>Unable to check your session</h1>

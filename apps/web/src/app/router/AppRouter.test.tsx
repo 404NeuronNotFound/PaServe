@@ -69,6 +69,7 @@ it.each([
   "/app/onboarding/create-shop",
   "/app/shops",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e",
+  "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/cashier",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/menu-preview",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/add-ons",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/products/example/customize",
@@ -118,6 +119,69 @@ it("keeps public registration accessible without authenticating", () => {
     screen.getByRole("heading", { name: "Public registration" }),
   ).toBeInTheDocument();
   expect(getCurrentUser).not.toHaveBeenCalled();
+});
+
+it("blocks a direct cashier URL using the live shop role despite a cached OWNER profile", async () => {
+  const shopId = "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e";
+  const membership = {
+    id: "member-a",
+    shopId,
+    role: "KITCHEN" as const,
+    shop: { id: shopId, name: "Cafe A", slug: "cafe-a", isActive: true },
+  };
+  vi.mocked(getCurrentUser).mockResolvedValue({
+    user: {
+      id: "user-a",
+      email: "staff@example.com",
+      createdAt: "2026-10-13T00:00:00Z",
+      firstName: null,
+      lastName: null,
+      memberships: [{ ...membership, role: "OWNER" }],
+    },
+  });
+  vi.mocked(api.get).mockResolvedValue({ data: { membership } });
+  renderAt(`/app/shops/${shopId}/cashier`);
+  expect(
+    await screen.findByRole("heading", { name: "Cashier access required" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Cashier workspace" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "Cashier", exact: true }),
+  ).not.toBeInTheDocument();
+  expect(api.get).toHaveBeenCalledWith(`/shops/${shopId}/membership`, {
+    signal: expect.any(AbortSignal),
+  });
+});
+
+it("blocks a direct cashier URL for a shop outside the authenticated user's memberships", async () => {
+  vi.mocked(getCurrentUser).mockResolvedValue({
+    user: {
+      id: "user-a",
+      email: "staff@example.com",
+      createdAt: "2026-10-13T00:00:00Z",
+      firstName: null,
+      lastName: null,
+      memberships: [],
+    },
+  });
+  const error = new AxiosError("Not accessible");
+  error.response = {
+    status: 404,
+    statusText: "Not Found",
+    headers: {},
+    config: { headers: new AxiosHeaders() },
+    data: {},
+  };
+  vi.mocked(api.get).mockRejectedValue(error);
+  renderAt("/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/cashier");
+  expect(
+    await screen.findByRole("heading", { name: "Shop unavailable" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Cashier workspace" }),
+  ).not.toBeInTheDocument();
 });
 
 const publicMenu = {

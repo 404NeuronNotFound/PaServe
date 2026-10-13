@@ -1,7 +1,13 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Link, Navigate, Outlet, useParams } from "react-router-dom";
+import {
+  Link,
+  Navigate,
+  Outlet,
+  useLocation,
+  useParams,
+} from "react-router-dom";
 import type { CurrentUserResponse } from "@paserve/contracts";
 import { currentUserKey } from "../auth/api/session";
 import { getShopMembership } from "./api/context";
@@ -15,6 +21,7 @@ import {
 
 export function ActiveShopRoute() {
   const { shopId = "" } = useParams();
+  const location = useLocation();
   const user =
     useQueryClient().getQueryData<CurrentUserResponse>(currentUserKey)!.user;
   const context = useQuery({
@@ -57,7 +64,10 @@ export function ActiveShopRoute() {
         </section>
       </DashboardFrame>
     );
-  if (status === 401) return <Navigate to="/login" replace />;
+  if (status === 401)
+    return (
+      <Navigate to="/login" replace state={{ returnTo: location.pathname }} />
+    );
   if (context.isError)
     return (
       <DashboardFrame membership={null}>

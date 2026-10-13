@@ -36,6 +36,7 @@ import { InlineMessage } from "../feedback/InlineMessage";
 import { feedback } from "../../app/stores/feedback";
 import "./dashboard-sidebar.css";
 import "./dashboard-header.css";
+import { canUseCashier } from "../../features/cashier/access";
 
 export function OwnerDashboardLayout() {
   const membership = useActiveShop();
@@ -287,6 +288,12 @@ export function DashboardFrame({
                     <FiGrid aria-hidden="true" />
                     <span>Overview</span>
                   </NavLink>
+                  {canUseCashier(membership.role) && (
+                    <NavLink to={`${shopPath(membership.shopId)}/cashier`} onClick={closeNavigation}>
+                      <FiShoppingBag aria-hidden="true" />
+                      <span>Cashier</span>
+                    </NavLink>
+                  )}
                   {membership.role === "OWNER" && (
                     <>
                       <NavLink

@@ -13,13 +13,13 @@ vi.mock("../api/session", () => ({
 beforeEach(() => {
   vi.resetAllMocks();
 });
-function renderRoute() {
+function renderRoute(client = new QueryClient(), path = "/app/account") {
   render(
-    <MemoryRouter initialEntries={["/app/account"]}>
-      <QueryClientProvider client={new QueryClient()}>
+    <MemoryRouter initialEntries={[path]}>
+      <QueryClientProvider client={client}>
         <Routes>
           <Route
-            path="/app/account"
+            path={path}
             element={
               <ProtectedRoute>
                 <h1>Private account</h1>
@@ -69,6 +69,20 @@ it("redirects unauthenticated visitors to sign in", async () => {
 it("shows a retry action for network failure instead of pretending the user signed out", async () => {
   vi.mocked(getCurrentUser).mockRejectedValue(new Error("network unavailable"));
   renderRoute();
+  expect(
+    await screen.findByRole("button", { name: "Try again" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("Private account")).not.toBeInTheDocument();
+});
+
+it("does not expose a private page from a cached profile while rechecking a revoked session", async () => {
+  const client = new QueryClient();
+  client.setQueryData(["auth", "me"], { user: { id: "previous-user" } });
+  vi.mocked(getCurrentUser).mockRejectedValue(
+    new Error("session check failed"),
+  );
+  renderRoute(client, "/app/shops/shop-a/cashier");
+  expect(screen.queryByText("Private account")).not.toBeInTheDocument();
   expect(
     await screen.findByRole("button", { name: "Try again" }),
   ).toBeInTheDocument();

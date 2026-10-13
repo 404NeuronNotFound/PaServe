@@ -27,6 +27,8 @@ import { AddOnsPage } from "../../pages/owner/AddOnsPage";
 import { ProductCustomizationPage } from "../../pages/owner/ProductCustomizationPage";
 import { MenuPreviewPage } from "../../pages/owner/MenuPreviewPage";
 import { OwnerDashboardLayout } from "../../components/layout/OwnerDashboardLayout";
+import { CashierRoute } from "../../features/cashier/CashierRoute";
+import { CashierPage } from "../../pages/cashier/CashierPage";
 
 export function AppRouter() {
   return (
@@ -54,6 +56,9 @@ export function AppRouter() {
           <Route path="shops/:shopId" element={<ActiveShopRoute />}>
             <Route element={<OwnerDashboardLayout />}>
               <Route index element={<ActiveShopPage />} />
+              <Route path="cashier" element={<CashierRoute />}>
+                <Route index element={<CashierPage />} />
+              </Route>
               <Route path="settings" element={<ShopSettingsPage />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="tables" element={<TablesPage />} />

@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AuthLayout } from "../../components/layout/AuthLayout";
@@ -10,6 +10,14 @@ export function LoginPage() {
     document.title = "Sign in · PaServe";
   }, []);
   const navigate = useNavigate();
+  const location = useLocation();
+  const requestedPath: unknown = location.state?.returnTo;
+  // Only resume a known cashier route; never accept arbitrary redirect URLs.
+  const returnTo =
+    typeof requestedPath === "string" &&
+    /^\/app\/shops\/[a-zA-Z0-9-]+\/cashier\/?$/.test(requestedPath)
+      ? requestedPath
+      : "/app";
   const queryClient = useQueryClient();
   return (
     <AuthLayout headingId="login-heading">
@@ -21,8 +29,8 @@ export function LoginPage() {
           feedback.clearTransient();
           feedback.toast("You are signed in.");
           queryClient.clear();
-          // Resolve from the complete, fresh /auth/me profile, including shops.
-          void navigate("/app", { replace: true });
+          // The destination verifies a fresh session and shop membership.
+          void navigate(returnTo, { replace: true });
         }}
       />
       <p className="account-note">

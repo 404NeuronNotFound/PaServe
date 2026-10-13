@@ -54,3 +54,36 @@ it("enters active-shop resolution after login with a clean private cache", async
   ).toBeInTheDocument();
   expect(client.getQueryCache().getAll()).toHaveLength(0);
 });
+
+it.each([
+  ["/app/shops/shop-a/cashier", "Cashier entry"],
+  ["https://example.com", "Resolve shop"],
+  ["//example.com", "Resolve shop"],
+  ["/app/shops/shop-a/settings", "Resolve shop"],
+])(
+  "handles the requested login destination %s safely",
+  async (returnTo, heading) => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter
+          initialEntries={[{ pathname: "/login", state: { returnTo } }]}
+        >
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/app" element={<h1>Resolve shop</h1>} />
+            <Route
+              path="/app/shops/shop-a/cashier"
+              element={<h1>Cashier entry</h1>}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Sign in" }));
+    expect(
+      await screen.findByRole("heading", { name: heading }),
+    ).toBeInTheDocument();
+  },
+);
