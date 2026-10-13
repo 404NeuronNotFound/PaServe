@@ -3,7 +3,13 @@ import { FiCopy } from "react-icons/fi";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { feedback } from "../../app/stores/feedback";
 
-export function OrderNumber({ value }: { value: string | null }) {
+export function OrderNumber({
+  value,
+  compact = false,
+}: {
+  value: string | null;
+  compact?: boolean;
+}) {
   const [copying, setCopying] = useState(false);
   const [error, setError] = useState("");
   const busy = useRef(false);
@@ -46,11 +52,13 @@ export function OrderNumber({ value }: { value: string | null }) {
           </button>
         )}
       </div>
-      <p className="order-receipt-number-hint">
-        {value
-          ? "Tell the counter staff this number if your QR cannot be scanned."
-          : "Ask the counter staff for help with your submitted order."}
-      </p>
+      {!compact && (
+        <p className="order-receipt-number-hint">
+          {value
+            ? "Tell the counter staff this number if your QR cannot be scanned."
+            : "Ask the counter staff for help with your submitted order."}
+        </p>
+      )}
       {error && <InlineMessage tone="error">{error}</InlineMessage>}
     </section>
   );

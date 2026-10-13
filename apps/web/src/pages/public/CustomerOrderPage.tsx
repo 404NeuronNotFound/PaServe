@@ -14,10 +14,9 @@ import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import { readOrderReceipt } from "../../features/cart/order-receipt";
 import { formatCartPrice } from "../../lib/money";
 import "./customer-order-page.css";
-import { OrderNumber } from "./OrderNumber";
 import { menuTheme } from "../../lib/menu-theme";
 import { readCustomerOrderQr } from "../../features/cart/customer-order-qr";
-import { CustomerOrderQr } from "./CustomerOrderQr";
+import { OrderReferenceCard } from "./OrderReferenceCard";
 
 export function CustomerOrderPage() {
   const { shopSlug = "", orderId = "" } = useParams();
@@ -73,15 +72,12 @@ export function CustomerOrderPage() {
           </header>
           <div className="order-receipt-layout">
             <div className="order-receipt-details">
-              <CustomerOrderQr
-                key={`qr:${shopSlug}:${orderId}`}
+              <OrderReferenceCard
+                key={`${shopSlug}:${orderId}`}
                 credential={
                   qr && qr.orderNumber === receipt.orderNumber ? qr : null
                 }
-              />
-              <OrderNumber
-                key={`${shopSlug}:${orderId}`}
-                value={receipt.orderNumber}
+                orderNumber={receipt.orderNumber}
               />
               <dl>
                 <div className="order-receipt-total">

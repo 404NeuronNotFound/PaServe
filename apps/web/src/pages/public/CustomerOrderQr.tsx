@@ -4,11 +4,14 @@ import {
   type CustomerOrderQr as QrCredential,
 } from "../../features/cart/customer-order-qr";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { FiCoffee } from "react-icons/fi";
 
 export function CustomerOrderQr({
   credential,
+  compact = false,
 }: {
   credential: QrCredential | null;
+  compact?: boolean;
 }) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<{
@@ -61,12 +64,17 @@ export function CustomerOrderQr({
   const unavailable = !credential || credential.qrToken === expiredToken;
   return (
     <section className="order-receipt-qr" aria-labelledby="customer-qr-title">
+      {compact && (
+        <span className="order-qr-brand" aria-hidden="true">
+          <FiCoffee /> PaServe <span>ORDER PASS</span>
+        </span>
+      )}
       <h2 id="customer-qr-title">Your order QR</h2>
       {unavailable ? (
         <InlineMessage tone="warning" role="note">
           {credential
             ? "This order QR has expired. Ask the counter staff to check your order."
-            : "Your order QR is unavailable in this session. Ask the counter staff for help using the order number below."}
+            : "Your order QR is unavailable in this session. Ask the counter staff for help using your order number."}
         </InlineMessage>
       ) : current?.error ? (
         <>
@@ -95,8 +103,9 @@ export function CustomerOrderQr({
             onError={() => setState({ token: credential.qrToken, error: true })}
           />
           <p>
-            Show this code to the cashier. Keep this page open until it is
-            scanned.
+            {compact
+              ? "Present this code at the counter."
+              : "Show this code to the cashier. Keep this page open until it is scanned."}
           </p>
         </>
       ) : (

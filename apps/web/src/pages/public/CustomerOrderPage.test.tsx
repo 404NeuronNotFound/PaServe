@@ -428,11 +428,12 @@ it("copies only the saved readable number for communicating with counter staff",
   const toast = vi.spyOn(feedback, "toast").mockImplementation(() => "copied");
   saveOrderReceipt("cafe", "Cafe", order);
   setup();
+  await user.click(screen.getByRole("button", { name: "Show order number" }));
   expect(
-    screen.getByRole("region", { name: "Order number" }),
-  ).toHaveTextContent(
-    "Tell the counter staff this number if your QR cannot be scanned.",
-  );
+    screen.getByText(
+      "Tell the counter staff this number if your QR cannot be scanned.",
+    ),
+  ).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Copy order number" }));
   expect(write).toHaveBeenCalledExactlyOnceWith("ORD-000042");
   expect(toast).toHaveBeenCalledWith("Order number copied.");
@@ -448,6 +449,7 @@ it("preserves the number and supports retry when clipboard permission is denied"
   const toast = vi.spyOn(feedback, "toast").mockImplementation(() => "copied");
   saveOrderReceipt("cafe", "Cafe", order);
   setup();
+  await user.click(screen.getByRole("button", { name: "Show order number" }));
   await user.click(screen.getByRole("button", { name: "Copy order number" }));
   expect(screen.getByRole("alert")).toHaveTextContent("copy it manually");
   expect(screen.getByText("ORD-000042")).toBeInTheDocument();
