@@ -9,11 +9,14 @@ import { Prisma } from '../src/generated/prisma/client.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { OrderTokenService } from '../src/modules/orders/order-token.service.js';
 import { CashPaymentService } from '../src/modules/orders/cash-payment.service.js';
+import { OrderQrService } from '../src/modules/orders/order-qr.service.js';
 
 describe('Cash collection', () => {
   let app: INestApplication<App>,
     tokens: OrderTokenService,
     cash: CashPaymentService;
+  let qr: OrderQrService;
+  let pendingToken: string;
   const userId = '75992537-5d60-4d22-8e1e-60a114644681',
     shopId = '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e',
     orderId = 'e47f6994-a303-4a7b-87b0-2386d5198828';
@@ -84,6 +87,7 @@ describe('Cash collection', () => {
       .compile();
     tokens = module.get(OrderTokenService);
     cash = module.get(CashPaymentService);
+    qr = module.get(OrderQrService);
     app = module.createNestApplication();
     app.setGlobalPrefix('api/v1');
     await app.init();
@@ -160,6 +164,140 @@ describe('Cash collection', () => {
       .get(`/api/v1/shops/${shopId}/orders/${orderId}/cash-payment`)
       .set('Authorization', 'Bearer session');
   }
+  async function preparePending() {
+    saved.status = 'PENDING_CONFIRMATION';
+    saved.qrTokenRevokedAt = null as unknown as Date;
+    pendingToken = tokens.issue(saved);
+    version = (await qr.verify(userId, shopId, orderId, pendingToken)).order
+      .reviewVersion;
+  }
+  function atomic(
+    method = 'CASH',
+    body: Record<string, unknown> = {},
+    byNumber = false,
+    targetShop = shopId,
+    authenticated = true,
+  ) {
+    const req = request(app.getHttpServer()).post(
+      `/api/v1/shops/${targetShop}/orders/${orderId}/create-payment`,
+    );
+    if (authenticated) req.set('Authorization', 'Bearer session');
+    return req.send({
+      requestId,
+      reviewVersion: version,
+      method,
+      ...(byNumber
+        ? { orderNumber: saved.orderNumber }
+        : { qrToken: pendingToken }),
+      ...(method === 'CASH'
+        ? { amountReceived: '200.00' }
+        : { receivedConfirmed: true }),
+      ...(method === 'OTHER' ? { description: 'Shop voucher' } : {}),
+      ...body,
+    });
+  }
+  it.each(
+    ['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'].flatMap((method) =>
+      [false, true].map((byNumber) => ({ method, byNumber })),
+    ),
+  )(
+    'atomically confirms and pays $method byNumber=$byNumber',
+    async ({ method, byNumber }) => {
+      await preparePending();
+      const result = await atomic(method, {}, byNumber).expect(200);
+      expect(result.body.order).toMatchObject({
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+      });
+      expect(result.body.payment).toMatchObject({ method, paidBy: userId });
+      expect(saved).toMatchObject({
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        decidedBy: userId,
+        paidBy: userId,
+      });
+      expect(saved.qrTokenRevokedAt).toBeInstanceOf(Date);
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+      expect(updateOrder.mock.calls[0][0].where).toMatchObject({
+        status: 'PENDING_CONFIRMATION',
+        paymentStatus: 'UNPAID',
+        shopId,
+      });
+      expect(updateOrder.mock.calls[0][0].data).toMatchObject({
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+      });
+      expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+        isolationLevel: 'Serializable',
+        timeout: 15000,
+      });
+      expect((await atomic(method, {}, byNumber).expect(200)).body).toEqual(
+        result.body,
+      );
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+    },
+  );
+  it('keeps confirmation pending when cash is insufficient or input is forged', async () => {
+    await preparePending();
+    await atomic('CASH', { amountReceived: '135.49' }).expect(400);
+    await atomic('CASH', { paidBy: 'owner', paymentStatus: 'PAID' }).expect(
+      400,
+    );
+    expect(saved.status).toBe('PENDING_CONFIRMATION');
+    expect(saved.paymentStatus).toBe('UNPAID');
+    expect(saved.qrTokenRevokedAt).toBeNull();
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('requires manual attestation and appropriate fields for combined payment', async () => {
+    await preparePending();
+    await atomic('GCASH_MANUAL', { receivedConfirmed: false }).expect(400);
+    await atomic('CARD_MANUAL', { amountReceived: '1.00' }).expect(400);
+    await atomic('OTHER', { description: '' }).expect(400);
+    await atomic('CASH', { receivedConfirmed: true }).expect(400);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rejects mixed/missing references and stale confirmation review', async () => {
+    await preparePending();
+    await atomic('CASH', { orderNumber: saved.orderNumber }).expect(400);
+    await atomic('CASH', { qrToken: undefined }).expect(400);
+    await atomic('CASH', { reviewVersion: 'b'.repeat(64) }).expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('validates signed QR but permits explicit number fallback after expiry', async () => {
+    await preparePending();
+    saved.qrTokenExpiresAt = new Date(0);
+    await atomic().expect(403);
+    await atomic('CASH', {}, true).expect(200);
+  });
+  it('enforces authentication, tenant and live access for combined payment', async () => {
+    await preparePending();
+    await atomic('CASH', {}, false, shopId, false).expect(401);
+    await atomic(
+      'CASH',
+      {},
+      false,
+      '55b18d73-f2fb-4fe6-bb1c-30cf385c3b24',
+    ).expect(404);
+    role = 'KITCHEN';
+    await atomic().expect(403);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rechecks combined-payment access inside the transaction', async () => {
+    await preparePending();
+    raw.mockImplementationOnce(async () => {
+      role = 'KITCHEN';
+      return [];
+    });
+    await atomic().expect(404);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('cannot reuse a combined request with changed payment details', async () => {
+    await preparePending();
+    await atomic().expect(200);
+    await atomic('CASH', { amountReceived: '300.00' }).expect(409);
+    await atomic('GCASH_MANUAL').expect(409);
+    expect(updateOrder).toHaveBeenCalledTimes(1);
+  });
   function other(
     body: Record<string, unknown> = {},
     targetShop = shopId,

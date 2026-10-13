@@ -41,12 +41,9 @@ export function CashierOrderDecision({
     order.status !== "PENDING_CONFIRMATION" || order.paymentStatus !== "UNPAID",
   );
   const [message, setMessage] = useState("");
-  const [action, setAction] = useState<"confirm" | "reject" | null>(null);
+  const [action, setAction] = useState<"reject" | null>(null);
   const [reason, setReason] = useState("");
   const [collectingCash, setCollectingCash] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<
-    "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER"
-  >("CASH");
   const [decision, setDecision] = useState<
     OrderDecisionResponse["order"] | null
   >(null);
@@ -101,7 +98,8 @@ export function CashierOrderDecision({
         setMessage(
           "This order changed. Review the updated details before choosing Confirm or Reject again.",
         );
-      } else if (nextAction) setAction(nextAction);
+      } else if (nextAction === "confirm") setCollectingCash(true);
+      else if (nextAction) setAction(nextAction);
       else
         setMessage(
           "Order refreshed. Review these details before confirming or rejecting.",
@@ -118,7 +116,7 @@ export function CashierOrderDecision({
   }
 
   async function submit() {
-    if (!action || running.current || blocked) return;
+    if (action !== "reject" || running.current || blocked) return;
     running.current = true;
     setBusy(true);
     const controller = new AbortController();
@@ -151,10 +149,11 @@ export function CashierOrderDecision({
     }
   }
 
-  if (collectingCash && decision?.status === "CONFIRMED")
+  if (collectingCash)
     return (
       <CashierCashPayment
-        initialMethod={paymentMethod}
+        pendingOrder={review}
+        qrToken={qrToken}
         shopId={order.shopId}
         orderId={order.id}
         onNext={onNext}
@@ -167,7 +166,7 @@ export function CashierOrderDecision({
         aria-labelledby="cashier-decision-title"
       >
         <h2 id="cashier-decision-title" ref={resultHeading} tabIndex={-1}>
-          Order {decision.status === "CONFIRMED" ? "confirmed" : "rejected"}
+          Order rejected
         </h2>
         <p role="status">
           {decision.orderNumber} has been {decision.status.toLowerCase()}.
@@ -177,46 +176,6 @@ export function CashierOrderDecision({
           <p className="cashier-item-note">
             Reason: {decision.rejectionReason}
           </p>
-        )}
-        {decision.status === "CONFIRMED" && (
-          <div className="scanner-controls">
-            <button
-              className="primary-button"
-              onClick={() => {
-                setPaymentMethod("CASH");
-                setCollectingCash(true);
-              }}
-            >
-              Collect cash
-            </button>
-            <button
-              className="secondary-button"
-              onClick={() => {
-                setPaymentMethod("GCASH_MANUAL");
-                setCollectingCash(true);
-              }}
-            >
-              Record GCash payment
-            </button>
-            <button
-              className="secondary-button"
-              onClick={() => {
-                setPaymentMethod("CARD_MANUAL");
-                setCollectingCash(true);
-              }}
-            >
-              Record card payment
-            </button>
-            <button
-              className="secondary-button"
-              onClick={() => {
-                setPaymentMethod("OTHER");
-                setCollectingCash(true);
-              }}
-            >
-              Record other payment
-            </button>
-          </div>
         )}
         <button className="secondary-button" onClick={onNext}>
           Scan another order
@@ -231,7 +190,7 @@ export function CashierOrderDecision({
       busy={busy || Boolean(action)}
     >
       <div className="cashier-decision-controls">
-        <p>Confirmation approves this order. Payment is a separate step.</p>
+        <p>Confirmation and payment must succeed together.</p>
         <button
           className="secondary-button"
           disabled={busy || Boolean(action)}
@@ -265,7 +224,7 @@ export function CashierOrderDecision({
               void refresh("confirm");
             }}
           >
-            Confirm order
+            Confirm and pay
           </button>
           <button
             className="secondary-button"
@@ -288,15 +247,9 @@ export function CashierOrderDecision({
       </div>
       <DecisionDialog
         open={Boolean(action)}
-        title={
-          action === "confirm" ? "Confirm this order?" : "Reject this order?"
-        }
-        description={
-          action === "confirm"
-            ? `Approve ${review.orderNumber}? Payment remains unpaid and must be handled separately.`
-            : `Reject ${review.orderNumber}? This closes the pending order. No payment will be recorded.`
-        }
-        confirmLabel={action === "confirm" ? "Confirm order" : "Reject order"}
+        title="Reject this order?"
+        description={`Reject ${review.orderNumber}? This closes the pending order. No payment will be recorded.`}
+        confirmLabel="Reject order"
         cancelLabel="Keep reviewing"
         destructive={action === "reject"}
         onConfirm={submit}

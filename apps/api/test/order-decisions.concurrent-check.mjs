@@ -142,7 +142,7 @@ try {
   const { reviewVersion } = (await qr.scan(users[0].id, shop.id, token)).order;
   const dto = { qrToken: token, reviewVersion };
   const results = await Promise.allSettled([
-    decisions.decide(users[0].id, shop.id, order.id, 'CONFIRMED', dto),
+    decisions.decide(users[0].id, shop.id, order.id, 'REJECTED', dto),
     decisions.decide(users[1].id, shop.id, order.id, 'REJECTED', {
       orderNumber: order.orderNumber,
       reviewVersion,
@@ -167,18 +167,18 @@ try {
     saved.decidedAt instanceof Date && saved.qrTokenRevokedAt instanceof Date,
   );
   await assert.rejects(
-    decisions.decide(users[0].id, shop.id, order.id, 'CONFIRMED', dto),
+    decisions.decide(users[0].id, shop.id, order.id, 'REJECTED', dto),
     { status: 403 },
   );
   await assert.rejects(
-    decisions.decide(users[0].id, shop.id, order.id, 'CONFIRMED', {
+    decisions.decide(users[0].id, shop.id, order.id, 'REJECTED', {
       orderNumber: order.orderNumber,
       reviewVersion,
     }),
     { status: 409 },
   );
   console.log(
-    'Passed: competing QR/manual decisions commit exactly once, preserve unpaid payment and reject both replay paths.',
+    'Passed: competing QR/manual rejections commit exactly once, preserve unpaid payment and reject both replay paths.',
   );
 } finally {
   if (prisma) await prisma.$disconnect();

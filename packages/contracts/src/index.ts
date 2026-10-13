@@ -803,6 +803,17 @@ export interface CashPaymentRequest {
   reviewVersion: string;
   amountReceived: string;
 }
+export interface CreatePaymentRequest {
+  requestId: string;
+  reviewVersion: string;
+  method: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER";
+  qrToken?: string;
+  orderNumber?: string;
+  amountReceived?: string;
+  receivedConfirmed?: true;
+  reference?: string | null;
+  description?: string;
+}
 export interface ManualGcashPaymentRequest {
   requestId: string;
   reviewVersion: string;

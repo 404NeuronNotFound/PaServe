@@ -7,6 +7,7 @@ import {
   type ManualGcashPaymentRequest,
   type ManualCardPaymentRequest,
   type OtherPaymentRequest,
+  type CreatePaymentRequest,
 } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import { parseReview } from "./order-qr";
@@ -177,6 +178,33 @@ export async function recordOtherPayment(
   signal: AbortSignal,
 ) {
   return recordManualPayment(shopId, orderId, dto, signal, "OTHER");
+}
+
+export async function createPayment(
+  shopId: string,
+  orderId: string,
+  dto: CreatePaymentRequest,
+  signal: AbortSignal,
+) {
+  const { data } = await api.post<CashPaymentReviewResponse>(
+    `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}/create-payment`,
+    dto,
+    { signal, timeout: AUTH_REQUEST_TIMEOUT_MS },
+  );
+  const saved = parseCash(data, shopId, orderId);
+  if (
+    !saved.payment ||
+    saved.payment.requestId !== dto.requestId ||
+    saved.payment.method !== dto.method ||
+    (dto.method === "CASH" &&
+      saved.payment.amountReceived !== dto.amountReceived) ||
+    (saved.payment.reference ?? null) !== (dto.reference?.trim() || null) ||
+    (saved.payment.description ?? null) !== (dto.description?.trim() || null)
+  )
+    throw new Error(
+      "The confirmation/payment result could not be verified. Refresh the saved state before processing again.",
+    );
+  return saved;
 }
 
 async function recordManualPayment(

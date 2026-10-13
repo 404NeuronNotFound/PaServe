@@ -22,11 +22,15 @@ import type { CashPaymentDto } from './cash-payment.dto.js';
 import type { ManualGcashPaymentDto } from './manual-gcash-payment.dto.js';
 import type { ManualCardPaymentDto } from './manual-card-payment.dto.js';
 import type { OtherPaymentDto } from './other-payment.dto.js';
+import type { CreatePaymentDto } from './create-payment.dto.js';
 
 export const CASH_PAYMENT_ROLES = SHOP_ROLES.filter(
   (role) =>
     hasShopPermission(role, 'shop.payments.record') &&
     hasShopPermission(role, 'shop.orders.read'),
+);
+export const CREATE_PAYMENT_ROLES = CASH_PAYMENT_ROLES.filter((role) =>
+  hasShopPermission(role, 'shop.orders.confirm'),
 );
 const conflict = (
   code = 'CASH_PAYMENT_CONFLICT',
@@ -175,12 +179,59 @@ export class CashPaymentService {
     return this.settle(actorId, shopId, orderId, dto, 'OTHER');
   }
 
+  async create(
+    actorId: string,
+    shopId: string,
+    orderId: string,
+    dto: CreatePaymentDto,
+  ): Promise<CashPaymentReviewResponse> {
+    if (
+      !['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'].includes(dto.method) ||
+      (dto.qrToken === undefined) === (dto.orderNumber === undefined) ||
+      (dto.orderNumber !== undefined && !isValidOrderNumber(dto.orderNumber)) ||
+      (dto.qrToken !== undefined &&
+        (typeof dto.qrToken !== 'string' ||
+          !dto.qrToken ||
+          dto.qrToken.length > 1024)) ||
+      (dto.method === 'CASH'
+        ? dto.receivedConfirmed !== undefined ||
+          dto.reference !== undefined ||
+          dto.description !== undefined
+        : dto.amountReceived !== undefined) ||
+      (dto.method !== 'OTHER' && dto.description !== undefined)
+    )
+      throw new BadRequestException({
+        code: 'INVALID_CREATE_PAYMENT',
+        message: 'Choose one order reference and a valid payment method.',
+      });
+    const payment =
+      dto.method === 'CASH'
+        ? {
+            requestId: dto.requestId,
+            reviewVersion: dto.reviewVersion,
+            amountReceived: dto.amountReceived!,
+          }
+        : {
+            requestId: dto.requestId,
+            reviewVersion: dto.reviewVersion,
+            receivedConfirmed: dto.receivedConfirmed!,
+            ...(dto.reference !== undefined
+              ? { reference: dto.reference }
+              : {}),
+            ...(dto.method === 'OTHER'
+              ? { description: dto.description! }
+              : {}),
+          };
+    return this.settle(actorId, shopId, orderId, payment, dto.method, dto);
+  }
+
   private async settle(
     actorId: string,
     shopId: string,
     orderId: string,
     dto: CashPaymentDto | ManualGcashPaymentDto | OtherPaymentDto,
     method: 'CASH' | 'GCASH_MANUAL' | 'CARD_MANUAL' | 'OTHER',
+    confirmation?: CreatePaymentDto,
   ): Promise<CashPaymentReviewResponse> {
     const cashAmount = 'amountReceived' in dto ? dto.amountReceived : null;
     const rawReference = 'reference' in dto ? dto.reference : null;
@@ -227,7 +278,8 @@ export class CashPaymentService {
         message:
           'A valid reviewed order and payment confirmation are required.',
       });
-    const access = shopAccessWhere(actorId, shopId, CASH_PAYMENT_ROLES);
+    const roles = confirmation ? CREATE_PAYMENT_ROLES : CASH_PAYMENT_ROLES;
+    const access = shopAccessWhere(actorId, shopId, roles);
     try {
       return await this.prisma.$transaction(
         async (tx) => {
@@ -239,12 +291,41 @@ export class CashPaymentService {
               id: true,
               paymentRequestId: true,
               paymentReviewVersion: true,
+              status: true,
             },
           });
           if (!current) throw this.unavailable();
           await tx.$queryRaw`SELECT id FROM orders WHERE id = ${orderId} AND "shopId" = ${shopId} FOR UPDATE`;
           await tx.$queryRaw`SELECT id FROM order_items WHERE "orderId" = ${orderId} AND "shopId" = ${shopId} ORDER BY "lineNumber" FOR UPDATE`;
-          const review = await this.review(actorId, shopId, orderId, tx);
+          const confirming =
+            confirmation && current.status === 'PENDING_CONFIRMATION';
+          const review = confirming
+            ? {
+                ...(confirmation.qrToken !== undefined
+                  ? await this.qr.verify(
+                      actorId,
+                      shopId,
+                      orderId,
+                      confirmation.qrToken,
+                      tx,
+                      roles,
+                    )
+                  : await this.qr.reviewNumber(
+                      actorId,
+                      shopId,
+                      orderId,
+                      confirmation.orderNumber!,
+                      tx,
+                      roles,
+                    )),
+                payment: null,
+              }
+            : await this.review(actorId, shopId, orderId, tx);
+          if (
+            confirmation?.orderNumber !== undefined &&
+            confirmation.orderNumber !== review.order.orderNumber
+          )
+            throw this.unavailable();
           if (review.payment) {
             if (
               review.payment.requestId === dto.requestId &&
@@ -281,11 +362,23 @@ export class CashPaymentService {
               id: orderId,
               shopId,
               shop: access,
-              status: 'CONFIRMED',
+              status: confirming ? 'PENDING_CONFIRMATION' : 'CONFIRMED',
               paymentStatus: 'UNPAID',
               totalPrice: total,
+              ...(confirming && confirmation.qrToken !== undefined
+                ? { qrTokenRevokedAt: null, qrTokenExpiresAt: { gt: now } }
+                : {}),
             },
             data: {
+              ...(confirming
+                ? {
+                    status: 'CONFIRMED',
+                    decidedAt: now,
+                    decidedBy: actorId,
+                    rejectionReason: null,
+                    qrTokenRevokedAt: now,
+                  }
+                : {}),
               paymentStatus: 'PAID',
               paymentMethod: method,
               paymentReference: reference,

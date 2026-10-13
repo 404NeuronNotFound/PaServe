@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import { FiCheckCircle } from "react-icons/fi";
 import type {
   ApiErrorResponse,
   CashPaymentReviewResponse,
+  VerifyOrderQrResponse,
 } from "@paserve/contracts";
 import {
   PAYMENT_REFERENCE_PATTERN,
@@ -16,6 +17,7 @@ import {
   recordManualGcashPayment,
   recordManualCardPayment,
   recordOtherPayment,
+  createPayment,
   normalizeCashAmount,
   cashChange,
 } from "../../features/cashier/cash-payment";
@@ -23,6 +25,10 @@ import { CashierOrderReview } from "./CashierOrderReview";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { formatCartPrice } from "../../lib/money";
+import {
+  verifyScannedOrder,
+  lookupOrderNumber,
+} from "../../features/cashier/order-qr";
 
 function failureMessage(error: unknown) {
   if (
@@ -39,13 +45,19 @@ export function CashierCashPayment({
   orderId,
   onNext,
   initialMethod = "CASH",
+  pendingOrder,
+  qrToken = "",
 }: {
   shopId: string;
   orderId: string;
   onNext: () => void;
   initialMethod?: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER";
+  pendingOrder?: VerifyOrderQrResponse["order"];
+  qrToken?: string;
 }) {
-  const [review, setReview] = useState<CashPaymentReviewResponse | null>(null);
+  const [review, setReview] = useState<CashPaymentReviewResponse | null>(
+    pendingOrder ? { order: pendingOrder, payment: null } : null,
+  );
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState(initialMethod);
   const [receivedConfirmed, setReceivedConfirmed] = useState(false);
@@ -71,13 +83,14 @@ export function CashierCashPayment({
   const card = method === "CARD_MANUAL";
   const other = method === "OTHER";
   const manual = method !== "CASH";
-  const recordLabel = other
+  const paymentLabel = other
     ? "Record other payment"
     : card
       ? "Record card payment"
       : gcash
         ? "Record GCash payment"
         : "Record cash payment";
+  const recordLabel = pendingOrder ? "Confirm and pay" : paymentLabel;
   const invalidReference =
     !PAYMENT_REFERENCE_PATTERN.test(reference) ||
     (other && !isSafeOtherPaymentText(reference));
@@ -86,11 +99,33 @@ export function CashierCashPayment({
   const eligible = manual
     ? receivedConfirmed && !invalidReference && !invalidDescription
     : normalized !== null && change !== null;
+  const loadReview = useCallback(
+    async (signal: AbortSignal): Promise<CashPaymentReviewResponse> => {
+      if (!pendingOrder) return reviewCashPayment(shopId, orderId, signal);
+      try {
+        const order = qrToken
+          ? await verifyScannedOrder(shopId, qrToken, signal)
+          : await lookupOrderNumber(shopId, pendingOrder.orderNumber, signal);
+        return { order, payment: null };
+      } catch (error) {
+        if (signal.aborted) throw error;
+        // A consumed QR after an uncertain save can only recover a saved paid receipt.
+        try {
+          const saved = await reviewCashPayment(shopId, orderId, signal);
+          if (saved.payment) return saved;
+        } catch {
+          /* keep the reference failure */
+        }
+        throw error;
+      }
+    },
+    [pendingOrder, qrToken, shopId, orderId],
+  );
   useEffect(() => {
     active.current = true;
     const request = new AbortController();
     controller.current = request;
-    void reviewCashPayment(shopId, orderId, request.signal)
+    void loadReview(request.signal)
       .then((saved) => {
         if (active.current && !request.signal.aborted) {
           setReview(saved);
@@ -108,7 +143,7 @@ export function CashierCashPayment({
       active.current = false;
       controller.current?.abort();
     };
-  }, [shopId, orderId]);
+  }, [loadReview]);
   useEffect(() => {
     if (review?.payment) resultHeading.current?.focus();
   }, [review?.payment]);
@@ -120,7 +155,7 @@ export function CashierCashPayment({
     const request = new AbortController();
     controller.current = request;
     try {
-      const saved = await reviewCashPayment(shopId, orderId, request.signal);
+      const saved = await loadReview(request.signal);
       if (!active.current || request.signal.aborted) return;
       setReview(saved);
       setBlocked(false);
@@ -167,35 +202,58 @@ export function CashierCashPayment({
         receivedConfirmed: true as const,
         ...(reference.trim() ? { reference: reference.trim() } : {}),
       };
-      const saved = other
-        ? await recordOtherPayment(
+      const saved = pendingOrder
+        ? await createPayment(
             shopId,
             orderId,
-            { ...manualDto, description: description.trim() },
+            {
+              requestId: attempt.current,
+              reviewVersion: review.order.reviewVersion,
+              method,
+              ...(qrToken
+                ? { qrToken }
+                : { orderNumber: review.order.orderNumber }),
+              ...(method === "CASH"
+                ? { amountReceived: normalized! }
+                : {
+                    receivedConfirmed: true as const,
+                    ...(reference.trim()
+                      ? { reference: reference.trim() }
+                      : {}),
+                    ...(other ? { description: description.trim() } : {}),
+                  }),
+            },
             request.signal,
           )
-        : manual
-          ? await recordManual(
+        : other
+          ? await recordOtherPayment(
               shopId,
               orderId,
-              {
-                requestId: attempt.current,
-                reviewVersion: review.order.reviewVersion,
-                receivedConfirmed: true,
-                ...(reference.trim() ? { reference: reference.trim() } : {}),
-              },
+              { ...manualDto, description: description.trim() },
               request.signal,
             )
-          : await collectCashPayment(
-              shopId,
-              orderId,
-              {
-                requestId: attempt.current,
-                reviewVersion: review.order.reviewVersion,
-                amountReceived: normalized!,
-              },
-              request.signal,
-            );
+          : manual
+            ? await recordManual(
+                shopId,
+                orderId,
+                {
+                  requestId: attempt.current,
+                  reviewVersion: review.order.reviewVersion,
+                  receivedConfirmed: true,
+                  ...(reference.trim() ? { reference: reference.trim() } : {}),
+                },
+                request.signal,
+              )
+            : await collectCashPayment(
+                shopId,
+                orderId,
+                {
+                  requestId: attempt.current,
+                  reviewVersion: review.order.reviewVersion,
+                  amountReceived: normalized!,
+                },
+                request.signal,
+              );
       if (active.current && !request.signal.aborted) {
         setReview(saved);
         setConfirm(false);
@@ -479,16 +537,21 @@ export function CashierCashPayment({
       <DecisionDialog
         open={confirm}
         title={
-          other
-            ? "Record other payment?"
-            : card
-              ? "Record manual card payment?"
-              : gcash
-                ? "Record manual GCash payment?"
-                : "Record cash payment?"
+          pendingOrder
+            ? "Confirm and pay?"
+            : other
+              ? "Record other payment?"
+              : card
+                ? "Record manual card payment?"
+                : gcash
+                  ? "Record manual GCash payment?"
+                  : "Record cash payment?"
         }
         description={
-          other && review
+          (pendingOrder
+            ? "Confirm this order and record payment together. "
+            : "") +
+          (other && review
             ? `Record ${formatCartPrice(review.order.totalPrice)} received using ${description.trim()} for ${review.order.orderNumber}? Only continue after verifying the full payment.`
             : card && review
               ? `Record ${formatCartPrice(review.order.totalPrice)} paid by card for ${review.order.orderNumber}? Only continue after checking successful completion on the external terminal/manual process.`
@@ -496,7 +559,7 @@ export function CashierCashPayment({
                 ? `Record ${formatCartPrice(review.order.totalPrice)} received via GCash for ${review.order.orderNumber}? Only continue after verifying receipt in the shop’s GCash account.`
                 : review && normalized && change !== null
                   ? `Record ${formatCartPrice(normalized)} received for ${review.order.orderNumber}, with ${formatCartPrice(change)} change due? Only continue once the cash is in hand.`
-                  : "Check the cash before recording payment."
+                  : "Check the cash before recording payment.")
         }
         confirmLabel={recordLabel}
         cancelLabel="Keep reviewing"
@@ -512,6 +575,7 @@ export function CashierCashPayment({
       busy={busy || confirm}
       purpose="payment"
       paymentMethod={method}
+      confirming={!!pendingOrder}
     >
       {controls}
     </CashierOrderReview>

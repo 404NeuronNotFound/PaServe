@@ -9,6 +9,7 @@ import {
   recordManualGcashPayment,
   recordManualCardPayment,
   recordOtherPayment,
+  createPayment,
 } from "./cash-payment";
 import { cashierLine } from "../../test/cashier-fixtures";
 vi.mock("../../lib/api/client", () => ({
@@ -42,6 +43,14 @@ const payment = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+});
+it("creates confirmed payment from a pending review and rejects a mismatched saved result", async () => {
+  const dto = { requestId, reviewVersion: order.reviewVersion, method: "CASH" as const, orderNumber: order.orderNumber, amountReceived: "200.00" };
+  const signal = new AbortController().signal;
+  vi.mocked(api.post).mockResolvedValue({ data: { order: { ...order, paymentStatus: "PAID" }, payment } });
+  expect((await createPayment(shopId, orderId, dto, signal)).payment?.changeDue).toBe("64.50");
+  expect(api.post).toHaveBeenCalledWith(`/shops/${shopId}/orders/${orderId}/create-payment`, dto, { signal, timeout: 15000 });
+  await expect(createPayment(shopId, orderId, { ...dto, amountReceived: "300.00" }, signal)).rejects.toThrow();
 });
 it("records OTHER description and verifies the saved metadata", async () => {
   const receipt = {

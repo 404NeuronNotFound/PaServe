@@ -471,7 +471,7 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
             <br />
             Then make the call.
           </p>
-          <span>Payment is handled separately.</span>
+          <span>Confirmation and payment are recorded together.</span>
         </div>
       </section>
     </div>

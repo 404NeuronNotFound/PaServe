@@ -137,7 +137,7 @@ describe('Cashier order decisions', () => {
     findOrder.mockClear();
   });
   function decide(
-    action = 'confirm',
+    action = 'reject',
     body: Record<string, unknown> = {},
     targetShop = shopId,
     authenticated = true,
@@ -166,7 +166,7 @@ describe('Cashier order decisions', () => {
     });
   }
   it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
-    'allows live %s to find a number and confirms using current saved details',
+    'allows live %s to find a number and rejects using current saved details',
     async (currentRole) => {
       role = currentRole;
       const review = await numberRequest().expect(200);
@@ -175,9 +175,9 @@ describe('Cashier order decisions', () => {
       expect(review.body.order.orderNumber).toBe(saved.orderNumber);
       expect(review.body.order.qrToken).toBeUndefined();
       expect(review.body.order.reviewVersion).toBe(version);
-      const result = await numberRequest('confirm-number').expect(200);
+      const result = await numberRequest('reject-number').expect(200);
       expect(result.body.order).toMatchObject({
-        status: 'CONFIRMED',
+        status: 'REJECTED',
         paymentStatus: 'UNPAID',
         decidedBy: userId,
       });
@@ -193,14 +193,14 @@ describe('Cashier order decisions', () => {
       rejectionReason: 'Customer cancelled.',
     });
     await numberRequest('reject-number').expect(409);
-    await numberRequest('confirm-number').expect(409);
+    await numberRequest('reject-number').expect(409);
     expect(updateOrder).toHaveBeenCalledTimes(1);
   });
   it('allows authorized manual fallback for an expired QR without making QR verification accept it', async () => {
     saved.qrTokenExpiresAt = new Date(0);
     await decide().expect(403);
     await numberRequest().expect(200);
-    await numberRequest('confirm-number').expect(200);
+    await numberRequest('reject-number').expect(200);
     expect(saved.paymentStatus).toBe('UNPAID');
   });
   it.each(['lookup-number', 'confirm-number', 'reject-number'])(
@@ -224,7 +224,7 @@ describe('Cashier order decisions', () => {
     async (status) => {
       saved.status = status;
       await numberRequest().expect(409);
-      await numberRequest('confirm-number').expect(409);
+      await numberRequest('reject-number').expect(409);
       expect(updateOrder).not.toHaveBeenCalled();
     },
   );
@@ -233,10 +233,10 @@ describe('Cashier order decisions', () => {
     await numberRequest().expect(404);
   });
   it('rejects a manual number/ID mismatch and a stale reviewed version', async () => {
-    await numberRequest('confirm-number', { orderNumber: 'ORD-000999' }).expect(
+    await numberRequest('reject-number', { orderNumber: 'ORD-000999' }).expect(
       404,
     );
-    await numberRequest('confirm-number', {
+    await numberRequest('reject-number', {
       reviewVersion: 'b'.repeat(64),
     }).expect(409);
     expect(updateOrder).not.toHaveBeenCalled();
@@ -253,15 +253,13 @@ describe('Cashier order decisions', () => {
       await numberRequest('lookup-number', { orderNumber }).expect(400);
   });
   it('rejects mixed credentials or client-supplied statuses on manual routes', async () => {
-    await numberRequest('confirm-number', { qrToken: token }).expect(400);
-    await numberRequest('confirm-number', { paymentStatus: 'PAID' }).expect(
-      400,
-    );
+    await numberRequest('reject-number', { qrToken: token }).expect(400);
+    await numberRequest('reject-number', { paymentStatus: 'PAID' }).expect(400);
     await numberRequest('lookup-number', { shopId: otherShop }).expect(400);
     expect(updateOrder).not.toHaveBeenCalled();
   });
   it('retains pending/unpaid/shop/number predicates in manual writes', async () => {
-    await numberRequest('confirm-number').expect(200);
+    await numberRequest('reject-number').expect(200);
     expect(updateOrder).toHaveBeenCalledWith({
       where: expect.objectContaining({
         id: orderId,
@@ -271,13 +269,13 @@ describe('Cashier order decisions', () => {
         paymentStatus: 'UNPAID',
       }),
       data: expect.objectContaining({
-        status: 'CONFIRMED',
+        status: 'REJECTED',
         qrTokenRevokedAt: expect.any(Date),
       }),
     });
   });
   it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
-    'allows live %s confirmation with unpaid payment and recorded actor',
+    'allows live %s rejection with unpaid payment and recorded actor',
     async (currentRole) => {
       role = currentRole;
       const response = await decide().expect(200);
@@ -286,7 +284,7 @@ describe('Cashier order decisions', () => {
         id: orderId,
         shopId,
         orderNumber: 'ORD-000042',
-        status: 'CONFIRMED',
+        status: 'REJECTED',
         paymentStatus: 'UNPAID',
         decidedBy: userId,
         rejectionReason: null,
@@ -415,7 +413,7 @@ describe('Cashier order decisions', () => {
         }),
       }),
       data: expect.objectContaining({
-        status: 'CONFIRMED',
+        status: 'REJECTED',
         decidedBy: userId,
         qrTokenRevokedAt: expect.any(Date),
       }),
@@ -430,7 +428,7 @@ describe('Cashier order decisions', () => {
     await decide().expect(403);
     await decide('reject').expect(403);
     expect(updateOrder).toHaveBeenCalledTimes(1);
-    expect(saved.status).toBe('CONFIRMED');
+    expect(saved.status).toBe('REJECTED');
     expect(saved.paymentStatus).toBe('UNPAID');
   });
   it('turns serialization conflict into a review conflict without automatic mutation retry', async () => {
@@ -458,6 +456,19 @@ describe('Cashier order decisions', () => {
     'rejects invalid rejection reason',
     async (rejectionReason) => {
       await decide('reject', { rejectionReason }).expect(400);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['confirm', 'confirm-number'])(
+    'requires payment rather than standalone %s',
+    async (action) => {
+      const result = await (
+        action === 'confirm' ? decide(action) : numberRequest(action)
+      ).expect(409);
+      expect(result.body.code).toBe('PAYMENT_REQUIRED');
+      expect(saved.status).toBe('PENDING_CONFIRMATION');
+      expect(saved.paymentStatus).toBe('UNPAID');
+      expect(saved.qrTokenRevokedAt).toBeNull();
       expect(updateOrder).not.toHaveBeenCalled();
     },
   );

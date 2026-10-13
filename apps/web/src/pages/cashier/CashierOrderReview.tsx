@@ -11,6 +11,7 @@ export function CashierOrderReview({
   source = "qr",
   purpose = "review",
   paymentMethod = "CASH",
+  confirming = false,
 }: {
   order: VerifyOrderQrResponse["order"];
   onNext: () => void;
@@ -19,6 +20,7 @@ export function CashierOrderReview({
   source?: "qr" | "number";
   purpose?: "review" | "payment";
   paymentMethod?: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER";
+  confirming?: boolean;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const quantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -35,20 +37,24 @@ export function CashierOrderReview({
           <p className="section-label">CUSTOMER ORDER / REVIEW</p>
           <h2 id="verified-order-title" ref={heading} tabIndex={-1}>
             {purpose === "payment"
-              ? paymentMethod === "OTHER"
-                ? "Record other payment"
-                : paymentMethod === "CARD_MANUAL"
-                  ? "Record card payment"
-                  : paymentMethod === "GCASH_MANUAL"
-                    ? "Record GCash payment"
-                    : "Collect cash"
+              ? confirming
+                ? "Confirm and pay"
+                : paymentMethod === "OTHER"
+                  ? "Record other payment"
+                  : paymentMethod === "CARD_MANUAL"
+                    ? "Record card payment"
+                    : paymentMethod === "GCASH_MANUAL"
+                      ? "Record GCash payment"
+                      : "Collect cash"
               : "Review order"}
           </h2>
         </div>
         <p className="cashier-review-verified" role="status">
           <FiCheckCircle aria-hidden="true" />{" "}
           {purpose === "payment"
-            ? "Confirmed order"
+            ? confirming
+              ? "Awaiting confirmation and payment"
+              : "Confirmed order"
             : source === "qr"
               ? "Order QR verified"
               : "Order loaded by number"}

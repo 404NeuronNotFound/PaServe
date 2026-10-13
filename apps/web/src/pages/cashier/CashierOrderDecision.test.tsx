@@ -17,10 +17,14 @@ import {
 } from "../../features/cashier/order-qr";
 import { decideOrder } from "../../features/cashier/order-decision";
 import { cashierLine } from "../../test/cashier-fixtures";
-import { reviewCashPayment } from "../../features/cashier/cash-payment";
+import {
+  reviewCashPayment,
+  createPayment,
+} from "../../features/cashier/cash-payment";
 vi.mock("../../features/cashier/cash-payment", async (original) => ({
   ...(await original<typeof import("../../features/cashier/cash-payment")>()),
   reviewCashPayment: vi.fn(),
+  createPayment: vi.fn(),
 }));
 
 vi.mock("../../features/cashier/order-qr", () => ({
@@ -47,7 +51,7 @@ const decision = {
   id: order.id,
   shopId: order.shopId,
   orderNumber: order.orderNumber,
-  status: "CONFIRMED" as const,
+  status: "REJECTED" as const,
   paymentStatus: "UNPAID" as const,
   decidedBy: "cashier",
   decidedAt: "2026-10-13T00:00:00.000Z",
@@ -112,116 +116,113 @@ async function open(
   await user.click(screen.getByRole("button", { name: action }));
   return await screen.findByRole("dialog");
 }
-it("revalidates before asking for a decision and keeps Cancel focused", async () => {
-  const { user } = setup();
-  const dialog = await open("Confirm order", user);
-  expect(verifyScannedOrder).toHaveBeenCalledWith(
-    order.shopId,
-    "secret-token",
-    expect.any(AbortSignal),
-  );
-  expect(
-    within(dialog).getByRole("button", { name: "Keep reviewing" }),
-  ).toHaveFocus();
-  expect(decideOrder).not.toHaveBeenCalled();
-  await user.click(
-    within(dialog).getByRole("button", { name: "Keep reviewing" }),
-  );
-  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Confirm order" })).toHaveFocus();
-});
-it("opens OTHER recording after confirmation", async () => {
-  const { user } = setup();
-  const dialog = await open("Confirm order", user);
-  await user.click(
-    within(dialog).getByRole("button", { name: "Confirm order" }),
-  );
-  await screen.findByRole("heading", { name: "Order confirmed" });
-  await user.click(
-    screen.getByRole("button", { name: "Record other payment" }),
-  );
-  expect(await screen.findByLabelText("Payment method")).toHaveValue("OTHER");
-  expect(screen.getByLabelText("Payment method description")).toHaveValue("");
-});
-it("opens manual card recording after confirmation", async () => {
-  const { user } = setup();
-  const dialog = await open("Confirm order", user);
-  await user.click(
-    within(dialog).getByRole("button", { name: "Confirm order" }),
-  );
-  await screen.findByRole("heading", { name: "Order confirmed" });
-  await user.click(screen.getByRole("button", { name: "Record card payment" }));
-  expect(await screen.findByLabelText("Payment method")).toHaveValue(
-    "CARD_MANUAL",
-  );
-  expect(
-    screen.getByRole("checkbox", { name: /full card payment completed/ }),
-  ).not.toBeChecked();
-});
-it("refreshes and confirms a manually found order without pretending its QR was scanned", async () => {
+it.each(["CASH", "GCASH_MANUAL", "CARD_MANUAL", "OTHER"])(
+  "confirms and pays %s together after reviewing payment",
+  async (method) => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Confirm and pay" }));
+    await screen.findByLabelText("Payment method");
+    await user.selectOptions(screen.getByLabelText("Payment method"), method);
+    if (method === "CASH")
+      await user.type(screen.getByLabelText("Amount received (PHP)"), "200");
+    else {
+      if (method === "OTHER")
+        await user.type(
+          screen.getByLabelText("Payment method description"),
+          "Shop voucher",
+        );
+      await user.click(screen.getByRole("checkbox"));
+    }
+    vi.mocked(createPayment).mockResolvedValue({
+      order: { ...order, status: "CONFIRMED", paymentStatus: "PAID" },
+      payment: {
+        method: method as "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER",
+        requestId: "58bb31e6-9c13-4c07-9e04-fbb29b0584ab",
+        amountReceived: method === "CASH" ? "200.00" : "135.50",
+        changeDue: method === "CASH" ? "64.50" : "0.00",
+        paidBy: "cashier",
+        paidAt: decision.decidedAt,
+        ...(method === "OTHER" ? { description: "Shop voucher" } : {}),
+      },
+    });
+    await user.click(screen.getByRole("button", { name: "Confirm and pay" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(createPayment).not.toHaveBeenCalled();
+    expect(decideOrder).not.toHaveBeenCalled();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Confirm and pay" }),
+    );
+    await screen.findByText("ORD-000042 is paid.");
+    expect(createPayment).toHaveBeenCalledWith(
+      order.shopId,
+      order.id,
+      expect.objectContaining({
+        method,
+        qrToken: "secret-token",
+        reviewVersion: order.reviewVersion,
+      }),
+      expect.any(AbortSignal),
+    );
+    expect(decideOrder).not.toHaveBeenCalled();
+  },
+);
+it("uses the explicit number reference for confirm-and-pay fallback", async () => {
   const user = userEvent.setup();
   render(<CashierOrderDecision order={order} qrToken="" onNext={vi.fn()} />);
-  expect(screen.getByText("Order loaded by number")).toBeInTheDocument();
-  const dialog = await open("Confirm order", user);
-  expect(lookupOrderNumber).toHaveBeenCalledWith(
-    order.shopId,
-    order.orderNumber,
-    expect.any(AbortSignal),
-  );
-  expect(verifyScannedOrder).not.toHaveBeenCalled();
-  await user.click(
-    within(dialog).getByRole("button", { name: "Confirm order" }),
-  );
-  expect(
-    await screen.findByRole("heading", { name: "Order confirmed" }),
-  ).toBeInTheDocument();
-  expect(decideOrder).toHaveBeenCalledWith(
-    order,
-    "",
-    "confirm",
-    "",
-    expect.any(AbortSignal),
-  );
-});
-it("opens a fresh cash review only after confirmation and explicit Collect cash", async () => {
-  const { user } = setup();
-  const dialog = await open("Confirm order", user);
-  await user.click(
-    within(dialog).getByRole("button", { name: "Confirm order" }),
-  );
-  await screen.findByRole("heading", { name: "Order confirmed" });
-  expect(reviewCashPayment).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "Collect cash" }));
+  await user.click(screen.getByRole("button", { name: "Confirm and pay" }));
   await screen.findByLabelText("Amount received (PHP)");
-  expect(reviewCashPayment).toHaveBeenCalledWith(
-    order.shopId,
-    order.id,
-    expect.any(AbortSignal),
-  );
+  expect(lookupOrderNumber).toHaveBeenCalled();
+  expect(verifyScannedOrder).not.toHaveBeenCalled();
+  expect(decideOrder).not.toHaveBeenCalled();
 });
-it("confirms only after explicit dialog approval and shows unpaid server outcome", async () => {
+it("requires a new review after changed details before opening payment", async () => {
+  const updated = {
+    ...order,
+    reviewVersion: "b".repeat(64),
+    items: [{ ...cashierLine, notes: "Updated note" }],
+  };
+  vi.mocked(verifyScannedOrder).mockResolvedValue(updated);
   const { user } = setup();
-  const dialog = await open("Confirm order", user);
+  await user.click(screen.getByRole("button", { name: "Confirm and pay" }));
+  await screen.findByText(/This order changed/);
+  expect(screen.queryByLabelText("Payment method")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Confirm and pay" }));
+  await screen.findByLabelText("Payment method");
+  expect(createPayment).not.toHaveBeenCalled();
+});
+it("locks uncertain combined saves until refresh reveals the paid receipt", async () => {
+  const { user } = setup();
+  await user.click(screen.getByRole("button", { name: "Confirm and pay" }));
+  await screen.findByLabelText("Amount received (PHP)");
+  await user.type(screen.getByLabelText("Amount received (PHP)"), "200");
+  await user.click(screen.getByRole("button", { name: "Confirm and pay" }));
+  vi.mocked(createPayment).mockRejectedValue(new Error("Connection lost."));
   await user.click(
-    within(dialog).getByRole("button", { name: "Confirm order" }),
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Confirm and pay",
+    }),
   );
+  await screen.findByText(/payment result is unconfirmed/);
   expect(
-    await screen.findByRole("heading", { name: "Order confirmed" }),
-  ).toHaveFocus();
-  expect(decideOrder).toHaveBeenCalledWith(
-    order,
-    "secret-token",
-    "confirm",
-    "",
-    expect.any(AbortSignal),
-  );
+    screen.getByRole("button", { name: "Confirm and pay" }),
+  ).toBeDisabled();
+  vi.mocked(verifyScannedOrder).mockRejectedValue(new Error("Processed QR."));
+  vi.mocked(reviewCashPayment).mockResolvedValue({
+    order: { ...order, status: "CONFIRMED", paymentStatus: "PAID" },
+    payment: {
+      method: "CASH",
+      requestId: "58bb31e6-9c13-4c07-9e04-fbb29b0584ab",
+      amountReceived: "200.00",
+      changeDue: "64.50",
+      paidBy: "cashier",
+      paidAt: decision.decidedAt,
+    },
+  });
+  await user.click(screen.getByRole("button", { name: "Refresh payment" }));
+  await screen.findByRole("heading", { name: "Cash payment recorded" });
+  expect(createPayment).toHaveBeenCalledTimes(1);
   expect(
-    screen.getByText(
-      "Payment status: unpaid. This decision did not record payment.",
-    ),
-  ).toBeInTheDocument();
-  expect(
-    screen.queryByRole("button", { name: "Confirm order" }),
+    screen.queryByText("Return the change to the customer."),
   ).not.toBeInTheDocument();
 });
 it("rejects with the entered reason and shows the saved reason as text", async () => {
@@ -249,6 +250,17 @@ it("rejects with the entered reason and shows the saved reason as text", async (
   );
   expect(container.querySelector("b")).toBeNull();
 });
+it("aborts an outstanding review check when leaving", async () => {
+  vi.mocked(verifyScannedOrder).mockImplementation(
+    () => new Promise(() => undefined),
+  );
+  const { user, unmount } = setup();
+  await user.click(screen.getByRole("button", { name: "Refresh order" }));
+  const signal = vi.mocked(verifyScannedOrder).mock.calls[0][2];
+  unmount();
+  expect(signal.aborted).toBe(true);
+});
+
 it("displays changed saved details and requires another review before approval", async () => {
   const updated = {
     ...order,
@@ -257,23 +269,24 @@ it("displays changed saved details and requires another review before approval",
   };
   vi.mocked(verifyScannedOrder).mockResolvedValue(updated);
   const { user } = setup();
-  await user.click(screen.getByRole("button", { name: "Confirm order" }));
+  await user.click(screen.getByRole("button", { name: "Reject order" }));
   expect(await screen.findByText("Updated note")).toBeInTheDocument();
   expect(screen.getByText(/This order changed/)).toBeInTheDocument();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(decideOrder).not.toHaveBeenCalled();
-  const dialog = await open("Confirm order", user);
+  const dialog = await open("Reject order", user);
   await user.click(
-    within(dialog).getByRole("button", { name: "Confirm order" }),
+    within(dialog).getByRole("button", { name: "Reject order" }),
   );
   expect(decideOrder).toHaveBeenCalledWith(
     updated,
     "secret-token",
-    "confirm",
+    "reject",
     "",
     expect.any(AbortSignal),
   );
 });
+
 it.each([401, 403, 409])(
   "blocks decisions when revalidation fails (%s), then recovers after refresh",
   async (status) => {
@@ -287,38 +300,38 @@ it.each([401, 403, 409])(
     };
     vi.mocked(verifyScannedOrder).mockRejectedValueOnce(error);
     const { user } = setup();
-    await user.click(screen.getByRole("button", { name: "Confirm order" }));
+    await user.click(screen.getByRole("button", { name: "Reject order" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "This order is unavailable.",
     );
-    expect(
-      screen.getByRole("button", { name: "Confirm order" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reject order" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Reject order" })).toBeDisabled();
     expect(decideOrder).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Refresh order" }));
-    expect(screen.getByRole("button", { name: "Confirm order" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Reject order" })).toBeEnabled();
   },
 );
+
 it("locks decisions on an uncertain save rather than automatically retrying", async () => {
   vi.mocked(decideOrder).mockRejectedValueOnce(new Error("Network lost"));
   const { user } = setup();
-  const dialog = await open("Confirm order", user);
+  const dialog = await open("Reject order", user);
   await user.click(
-    within(dialog).getByRole("button", { name: "Confirm order" }),
+    within(dialog).getByRole("button", { name: "Reject order" }),
   );
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "The decision result could not be confirmed.",
   );
-  expect(screen.getByRole("button", { name: "Confirm order" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Reject order" })).toBeDisabled();
   expect(decideOrder).toHaveBeenCalledTimes(1);
 });
+
 it("blocks conflicting controls and duplicate approval while saving", async () => {
   vi.mocked(decideOrder).mockImplementation(() => new Promise(() => undefined));
   const { user } = setup();
-  const dialog = await open("Confirm order", user);
+  const dialog = await open("Reject order", user);
   await user.click(
-    within(dialog).getByRole("button", { name: "Confirm order" }),
+    within(dialog).getByRole("button", { name: "Reject order" }),
   );
   expect(
     within(dialog).getByRole("button", { name: "Keep reviewing" }),
@@ -329,6 +342,7 @@ it("blocks conflicting controls and duplicate approval while saving", async () =
   expect(screen.getByRole("button", { name: "Refresh order" })).toBeDisabled();
   expect(decideOrder).toHaveBeenCalledTimes(1);
 });
+
 it("aborts an outstanding review check when leaving", async () => {
   vi.mocked(verifyScannedOrder).mockImplementation(
     () => new Promise(() => undefined),
@@ -339,18 +353,20 @@ it("aborts an outstanding review check when leaving", async () => {
   unmount();
   expect(signal.aborted).toBe(true);
 });
+
 it("keeps actions blocked if a refreshed order has an ineligible state", async () => {
   vi.mocked(verifyScannedOrder).mockResolvedValue({
     ...order,
     status: "CONFIRMED",
   });
   const { user } = setup();
-  await user.click(screen.getByRole("button", { name: "Confirm order" }));
+  await user.click(screen.getByRole("button", { name: "Reject order" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "no longer eligible",
   );
   expect(decideOrder).not.toHaveBeenCalled();
 });
+
 it("fails closed with a useful message for a refresh error without a JSON body", async () => {
   const error = new AxiosError("Proxy failed");
   error.response = {
@@ -366,8 +382,9 @@ it("fails closed with a useful message for a refresh error without a JSON body",
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Unable to check the current order",
   );
-  expect(screen.getByRole("button", { name: "Confirm order" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Reject order" })).toBeDisabled();
 });
+
 it("ignores a late successful decision after unmount", async () => {
   let resolve!: (saved: typeof decision) => void;
   vi.mocked(decideOrder).mockImplementation(
@@ -377,9 +394,9 @@ it("ignores a late successful decision after unmount", async () => {
       }),
   );
   const { user, unmount } = setup();
-  const dialog = await open("Confirm order", user);
+  const dialog = await open("Reject order", user);
   await user.click(
-    within(dialog).getByRole("button", { name: "Confirm order" }),
+    within(dialog).getByRole("button", { name: "Reject order" }),
   );
   const signal = vi.mocked(decideOrder).mock.calls[0][4];
   unmount();
@@ -388,26 +405,6 @@ it("ignores a late successful decision after unmount", async () => {
     resolve(decision);
   });
   await waitFor(() =>
-    expect(screen.queryByText(/has been confirmed/)).not.toBeInTheDocument(),
+    expect(screen.queryByText(/has been rejected/)).not.toBeInTheDocument(),
   );
-});
-it("opens manual GCash recording after confirmation", async () => {
-  const { user } = setup();
-  const dialog = await open("Confirm order", user);
-  await user.click(
-    within(dialog).getByRole("button", { name: "Confirm order" }),
-  );
-  await screen.findByRole("heading", { name: "Order confirmed" });
-  await user.click(
-    screen.getByRole("button", { name: "Record GCash payment" }),
-  );
-  expect(await screen.findByLabelText("Payment method")).toHaveValue(
-    "GCASH_MANUAL",
-  );
-  expect(
-    screen.getByRole("checkbox", { name: /I verified the full payment/ }),
-  ).not.toBeChecked();
-  expect(
-    screen.queryByLabelText("Amount received (PHP)"),
-  ).not.toBeInTheDocument();
 });

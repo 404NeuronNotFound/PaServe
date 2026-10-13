@@ -189,30 +189,30 @@ try {
           reviewVersion: initial.order.reviewVersion,
         };
         await assert.rejects(
-          decisions.decide(user.id, other.id, order.id, 'CONFIRMED', dto),
+          decisions.decide(user.id, other.id, order.id, 'REJECTED', dto),
           { status: 404 },
         );
         await assert.rejects(
-          decisions.decide(user.id, shop.id, order.id, 'CONFIRMED', {
+          decisions.decide(user.id, shop.id, order.id, 'REJECTED', {
             ...dto,
             reviewVersion: 'b'.repeat(64),
           }),
           { status: 409 },
         );
-        const confirmed = await decisions.decide(
+        const decided = await decisions.decide(
           user.id,
           shop.id,
           order.id,
-          'CONFIRMED',
+          'REJECTED',
           dto,
         );
-        assert.equal(confirmed.order.status, 'CONFIRMED');
-        assert.equal(confirmed.order.paymentStatus, 'UNPAID');
-        assert.equal(confirmed.order.decidedBy, user.id);
+        assert.equal(decided.order.status, 'REJECTED');
+        assert.equal(decided.order.paymentStatus, 'UNPAID');
+        assert.equal(decided.order.decidedBy, user.id);
         const saved = await tx.order.findFirst({
           where: { id: order.id, shopId: shop.id },
         });
-        assert.equal(saved.status, 'CONFIRMED');
+        assert.equal(saved.status, 'REJECTED');
         assert.equal(saved.paymentStatus, 'UNPAID');
         const checkout = new OrdersService(
           { $transaction: (work) => work(tx) },
@@ -232,7 +232,7 @@ try {
           status: 403,
         });
         await assert.rejects(
-          decisions.decide(user.id, shop.id, order.id, 'CONFIRMED', dto),
+          decisions.decide(user.id, shop.id, order.id, 'REJECTED', dto),
           { status: 403 },
         );
         assert.deepEqual(
@@ -302,7 +302,7 @@ try {
         assert.equal(rejection.order.paymentStatus, 'UNPAID');
         assert.equal(rejection.order.rejectionReason, 'Customer cancelled.');
         await assert.rejects(
-          decisions.decide(user.id, shop.id, rejectedOrder.id, 'CONFIRMED', {
+          decisions.decide(user.id, shop.id, rejectedOrder.id, 'REJECTED', {
             orderNumber: rejectedOrder.orderNumber,
             reviewVersion: rejectedReview.order.reviewVersion,
           }),

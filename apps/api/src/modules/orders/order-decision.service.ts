@@ -116,6 +116,12 @@ export class OrderDecisionService {
           )
             throw changed();
           const now = new Date();
+          if (action === 'CONFIRMED')
+            throw new ConflictException({
+              code: 'PAYMENT_REQUIRED',
+              message:
+                'Confirm and pay together. Choose a payment method before confirming this order.',
+            });
           const rejectionReason =
             action === 'REJECTED'
               ? (dto as RejectOrderDto).rejectionReason?.trim() || null

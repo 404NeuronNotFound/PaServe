@@ -52,6 +52,9 @@ try {
     `ALTER TABLE "${schema}".orders ALTER COLUMN mode DROP DEFAULT, ALTER COLUMN mode TYPE "${schema}"."OrderMode" USING mode::text::"${schema}"."OrderMode", ALTER COLUMN mode SET DEFAULT 'DINE_IN'::"${schema}"."OrderMode"`,
   );
   await setup.query(`SET LOCAL search_path TO "${schema}", public`);
+  await setup.query(
+    'ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_confirmation_requires_payment',
+  );
   const columns = await setup.query(
     `SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = 'orders' AND column_name = 'decidedAt'`,
     [schema],
@@ -191,7 +194,20 @@ try {
   await assert.rejects(cash.review(users[0].id, shop.id, order.id), {
     status: 409,
   });
-  await decisions.decide(users[0].id, shop.id, order.id, 'CONFIRMED', dto);
+  await assert.rejects(
+    decisions.decide(users[0].id, shop.id, order.id, 'CONFIRMED', dto),
+    { status: 409 },
+  );
+  // Historical confirmed/unpaid fixture, created before the new confirmation policy.
+  await prisma.order.updateMany({
+    where: { id: order.id, shopId: shop.id },
+    data: {
+      status: 'CONFIRMED',
+      decidedAt: new Date(),
+      decidedBy: users[0].id,
+      qrTokenRevokedAt: new Date(),
+    },
+  });
   const review = await cash.review(users[0].id, shop.id, order.id);
   await assert.rejects(
     cash.collect(users[0].id, shop.id, order.id, {
@@ -287,7 +303,7 @@ try {
     await cash.review(users[winnerIndex].id, shop.id, order.id),
     winner,
   );
-  async function confirmedOrder(number, total = '10.00') {
+  async function confirmedOrder(number, total = '10.00', pending = false) {
     const savedQuote = {
       ...quote,
       basePrice: total,
@@ -304,10 +320,10 @@ try {
         totalPrice: total,
         items: [savedQuote],
         ...tokens.metadata(),
-        status: 'CONFIRMED',
-        decidedAt: new Date(),
-        decidedBy: users[0].id,
-        qrTokenRevokedAt: new Date(),
+        status: pending ? 'PENDING_CONFIRMATION' : 'CONFIRMED',
+        decidedAt: pending ? null : new Date(),
+        decidedBy: pending ? null : users[0].id,
+        qrTokenRevokedAt: pending ? null : new Date(),
         orderItems: {
           create: {
             lineNumber: 1,
@@ -641,6 +657,151 @@ try {
   );
   console.log(
     'Passed: manual GCash migration preserves CASH, exact full settlement, zero change, saved actor, replay, immutable method and competing cash/GCash recording commits once.',
+  );
+  const policySql = await readFile(
+    new URL(
+      '../prisma/migrations/20261014000000_confirmation_requires_payment/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await setup.query('BEGIN');
+  await setup.query(`SET LOCAL search_path TO "${schema}", public`);
+  await setup.query(policySql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
+  await setup.query('COMMIT');
+  for (const [index, method] of [
+    'CASH',
+    'GCASH_MANUAL',
+    'CARD_MANUAL',
+    'OTHER',
+  ].entries()) {
+    const pending = await confirmedOrder(`ORD-00002${index}`, '10.00', true);
+    const pendingQr = tokens.issue(pending);
+    const pendingReview = (await qr.scan(users[0].id, shop.id, pendingQr)).order
+      .reviewVersion;
+    const createRequest = {
+      requestId: randomUUID(),
+      reviewVersion: pendingReview,
+      method,
+      qrToken: pendingQr,
+      ...(method === 'CASH'
+        ? { amountReceived: '20.00' }
+        : { receivedConfirmed: true }),
+      ...(method === 'OTHER' ? { description: 'Shop voucher' } : {}),
+    };
+    await assert.rejects(
+      prisma.order.updateMany({
+        where: { id: pending.id, shopId: shop.id },
+        data: {
+          status: 'CONFIRMED',
+          decidedAt: new Date(),
+          decidedBy: users[0].id,
+          qrTokenRevokedAt: new Date(),
+        },
+      }),
+    );
+    if (method === 'CASH') {
+      await assert.rejects(
+        cash.create(users[0].id, shop.id, pending.id, {
+          ...createRequest,
+          amountReceived: '9.99',
+        }),
+        { status: 400 },
+      );
+      const untouched = await prisma.order.findFirst({
+        where: { id: pending.id, shopId: shop.id },
+      });
+      assert.equal(untouched.status, 'PENDING_CONFIRMATION');
+      assert.equal(untouched.paymentStatus, 'UNPAID');
+      assert.equal(untouched.qrTokenRevokedAt, null);
+    }
+    const result = await cash.create(
+      users[0].id,
+      shop.id,
+      pending.id,
+      createRequest,
+    );
+    const record = await prisma.order.findFirst({
+      where: { id: pending.id, shopId: shop.id },
+    });
+    assert.equal(record.status, 'CONFIRMED');
+    assert.equal(record.paymentStatus, 'PAID');
+    assert.equal(record.decidedBy, users[0].id);
+    assert.equal(record.paidBy, users[0].id);
+    assert.equal(record.paidAt.getTime(), record.decidedAt.getTime());
+    assert.equal(record.qrTokenRevokedAt.getTime(), record.paidAt.getTime());
+    assert.deepEqual(
+      await cash.create(users[0].id, shop.id, pending.id, createRequest),
+      result,
+    );
+  }
+  const rollbackOrder = await confirmedOrder('ORD-000030', '10.00', true);
+  const rollbackQr = tokens.issue(rollbackOrder);
+  const rollbackVersion = (await qr.scan(users[0].id, shop.id, rollbackQr))
+    .order.reviewVersion;
+  const rollbackDto = {
+    requestId: randomUUID(),
+    reviewVersion: rollbackVersion,
+    method: 'CASH',
+    qrToken: rollbackQr,
+    amountReceived: '20.00',
+  };
+  await setup.query(
+    `CREATE FUNCTION "${schema}".fail_atomic_payment() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.id = '${rollbackOrder.id}' AND NEW."paymentStatus" = 'PAID' THEN RAISE EXCEPTION 'Injected failure after payment write'; END IF; RETURN NEW; END $$`,
+  );
+  await setup.query(
+    `CREATE TRIGGER fail_atomic_payment AFTER UPDATE ON "${schema}".orders FOR EACH ROW EXECUTE FUNCTION "${schema}".fail_atomic_payment()`,
+  );
+  await assert.rejects(
+    cash.create(users[0].id, shop.id, rollbackOrder.id, rollbackDto),
+  );
+  const rolledBack = await prisma.order.findFirst({
+    where: { id: rollbackOrder.id, shopId: shop.id },
+  });
+  assert.equal(rolledBack.status, 'PENDING_CONFIRMATION');
+  assert.equal(rolledBack.paymentStatus, 'UNPAID');
+  for (const field of [
+    'paidAt',
+    'paidBy',
+    'decidedAt',
+    'decidedBy',
+    'qrTokenRevokedAt',
+    'amountReceived',
+    'changeDue',
+    'paymentRequestId',
+  ])
+    assert.equal(rolledBack[field], null);
+  await setup.query(`DROP TRIGGER fail_atomic_payment ON "${schema}".orders`);
+  const pendingRace = await confirmedOrder('ORD-000031', '10.00', true);
+  const raceQr = tokens.issue(pendingRace);
+  const pendingRaceVersion = (await qr.scan(users[0].id, shop.id, raceQr)).order
+    .reviewVersion;
+  const pendingCompetitors = await Promise.allSettled([
+    cash.create(users[0].id, shop.id, pendingRace.id, {
+      requestId: randomUUID(),
+      reviewVersion: pendingRaceVersion,
+      method: 'CASH',
+      qrToken: raceQr,
+      amountReceived: '20.00',
+    }),
+    decisions.decide(users[1].id, shop.id, pendingRace.id, 'REJECTED', {
+      qrToken: raceQr,
+      reviewVersion: pendingRaceVersion,
+    }),
+  ]);
+  assert.equal(
+    pendingCompetitors.filter((result) => result.status === 'fulfilled').length,
+    1,
+  );
+  const raceState = await prisma.order.findFirst({
+    where: { id: pendingRace.id, shopId: shop.id },
+  });
+  assert.ok(
+    (raceState.status === 'CONFIRMED' && raceState.paymentStatus === 'PAID') ||
+      (raceState.status === 'REJECTED' && raceState.paymentStatus === 'UNPAID'),
+  );
+  console.log(
+    'Passed: mandatory atomic confirmation/payment for all methods, standalone confirmation blocked, injected post-write failure rolls back approval/payment/QR/audit fields, exact replay and confirmation-versus-rejection race.',
   );
   await prisma.shopMember.update({
     where: { userId_shopId: { userId: users[0].id, shopId: shop.id } },
