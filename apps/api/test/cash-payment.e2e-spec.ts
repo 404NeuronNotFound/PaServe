@@ -49,6 +49,7 @@ describe('Cash collection', () => {
       paymentRequestId: null,
       paymentReviewVersion: null,
       paymentReference: null,
+      paymentDescription: null,
       amountReceived: null,
       changeDue: null,
       paidAt: null,
@@ -159,6 +160,134 @@ describe('Cash collection', () => {
       .get(`/api/v1/shops/${shopId}/orders/${orderId}/cash-payment`)
       .set('Authorization', 'Bearer session');
   }
+  function other(
+    body: Record<string, unknown> = {},
+    targetShop = shopId,
+    authenticated = true,
+  ) {
+    const req = request(app.getHttpServer()).post(
+      `/api/v1/shops/${targetShop}/orders/${orderId}/other-payment`,
+    );
+    if (authenticated) req.set('Authorization', 'Bearer session');
+    return req.send({
+      requestId,
+      reviewVersion: version,
+      receivedConfirmed: true,
+      description: 'Bank transfer',
+      ...body,
+    });
+  }
+  it.each(['CASHIER', 'OWNER', 'ADMIN', 'MANAGER'] as const)(
+    'records controlled OTHER payment for live %s',
+    async (currentRole) => {
+      role = currentRole;
+      const result = await other({
+        description: '  Bank transfer  ',
+        reference: '  00001234 bank receipt  ',
+      }).expect(200);
+      expect(result.body.payment).toMatchObject({
+        method: 'OTHER',
+        description: 'Bank transfer',
+        reference: '00001234 bank receipt',
+        amountReceived: '135.50',
+        changeDue: '0.00',
+        paidBy: userId,
+      });
+      expect(saved.paymentDescription).toBe('Bank transfer');
+      expect(saved.paymentMethod).toBe('OTHER');
+      expect(saved.paymentStatus).toBe('PAID');
+      expect((await read().expect(200)).body).toEqual(result.body);
+      expect(
+        (await other({ reference: '00001234 bank receipt' }).expect(200)).body,
+      ).toEqual(result.body);
+      await other({
+        description: 'Shop voucher',
+        reference: '00001234 bank receipt',
+      }).expect(409);
+      await collect().expect(409);
+      await gcash().expect(409);
+      await card().expect(409);
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+    },
+  );
+  it.each([
+    undefined,
+    null,
+    '',
+    '   ',
+    123,
+    'a'.repeat(81),
+    'line\nnext',
+    '<script>',
+    '4111 1111 1111 1111',
+    'CVV: 123',
+  ])('rejects invalid OTHER description %j', async (description) => {
+    await other({ description }).expect(400);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it.each([
+    '4111111111111111',
+    '4111-1111-1111-1111',
+    'CVV: 123',
+    '１２３４５６７８９０１２３４５６',
+  ])('rejects card details in OTHER reference %s', async (reference) => {
+    await other({ reference }).expect(400);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('allows an omitted OTHER reference', async () => {
+    expect((await other().expect(200)).body.payment.reference).toBeNull();
+  });
+  it.each([false, null, undefined, 'true'])(
+    'requires OTHER full-payment confirmation %j',
+    async (receivedConfirmed) => {
+      await other({ receivedConfirmed }).expect(400);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['PENDING_CONFIRMATION', 'REJECTED'])(
+    'rejects OTHER for %s orders',
+    async (status) => {
+      saved.status = status;
+      await other().expect(409);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('rejects forged settlement hints and stale OTHER details', async () => {
+    await other({
+      amountReceived: '1.00',
+      changeDue: '1.00',
+      paidBy: 'owner',
+      method: 'CASH',
+    }).expect(400);
+    saved.orderItems[0].productNameSnapshot = 'Changed';
+    await other().expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('enforces OTHER authentication, live role and tenant scope', async () => {
+    await other({}, shopId, false).expect(401);
+    await other({}, '55b18d73-f2fb-4fe6-bb1c-30cf385c3b24').expect(404);
+    role = 'KITCHEN';
+    await other().expect(403);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rechecks OTHER permission inside transaction', async () => {
+    raw.mockImplementationOnce(async () => {
+      role = 'KITCHEN';
+      return [];
+    });
+    await other().expect(404);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it.each(['cash', 'gcash', 'card'])(
+    'cannot record OTHER after %s',
+    async (method) => {
+      await (
+        method === 'cash' ? collect() : method === 'card' ? card() : gcash()
+      ).expect(200);
+      await other().expect(409);
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+    },
+  );
   function card(
     body: Record<string, unknown> = {},
     targetShop = shopId,

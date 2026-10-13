@@ -1,10 +1,12 @@
 import {
   cashAmountCents,
   PAYMENT_REFERENCE_PATTERN,
+  isSafeOtherPaymentText,
   type CashPaymentRequest,
   type CashPaymentReviewResponse,
   type ManualGcashPaymentRequest,
   type ManualCardPaymentRequest,
+  type OtherPaymentRequest,
 } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import { parseReview } from "./order-qr";
@@ -44,7 +46,9 @@ function parseCash(
   }
   if (
     !payment ||
-    !["CASH", "GCASH_MANUAL", "CARD_MANUAL"].includes(payment.method) ||
+    !["CASH", "GCASH_MANUAL", "CARD_MANUAL", "OTHER"].includes(
+      payment.method,
+    ) ||
     typeof payment.requestId !== "string" ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       payment.requestId,
@@ -61,7 +65,13 @@ function parseCash(
       (payment.method === "CASH" ||
         typeof payment.reference !== "string" ||
         !payment.reference.trim() ||
-        !PAYMENT_REFERENCE_PATTERN.test(payment.reference)))
+        !PAYMENT_REFERENCE_PATTERN.test(payment.reference))) ||
+    (payment.method === "OTHER"
+      ? !isSafeOtherPaymentText(payment.description, 80) ||
+        !payment.description.trim() ||
+        (payment.reference != null &&
+          !isSafeOtherPaymentText(payment.reference))
+      : payment.description != null)
   )
     throw new Error(
       "The saved payment receipt could not be verified. Ask the shop owner for help.",
@@ -76,6 +86,7 @@ function parseCash(
       paidAt: payment.paidAt,
       paidBy: payment.paidBy,
       reference: payment.reference ?? null,
+      description: payment.description ?? null,
     },
   };
 }
@@ -159,15 +170,28 @@ export async function recordManualCardPayment(
   return recordManualPayment(shopId, orderId, dto, signal, "CARD_MANUAL");
 }
 
+export async function recordOtherPayment(
+  shopId: string,
+  orderId: string,
+  dto: OtherPaymentRequest,
+  signal: AbortSignal,
+) {
+  return recordManualPayment(shopId, orderId, dto, signal, "OTHER");
+}
+
 async function recordManualPayment(
   shopId: string,
   orderId: string,
-  dto: ManualGcashPaymentRequest,
+  dto: ManualGcashPaymentRequest | OtherPaymentRequest,
   signal: AbortSignal,
-  method: "GCASH_MANUAL" | "CARD_MANUAL",
+  method: "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER",
 ) {
   const route =
-    method === "CARD_MANUAL" ? "card-manual-payment" : "gcash-manual-payment";
+    method === "OTHER"
+      ? "other-payment"
+      : method === "CARD_MANUAL"
+        ? "card-manual-payment"
+        : "gcash-manual-payment";
   const { data } = await api.post<CashPaymentReviewResponse>(
     `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}/${route}`,
     {
@@ -175,6 +199,7 @@ async function recordManualPayment(
       reviewVersion: dto.reviewVersion,
       receivedConfirmed: dto.receivedConfirmed,
       ...(dto.reference !== undefined ? { reference: dto.reference } : {}),
+      ...("description" in dto ? { description: dto.description } : {}),
     },
     { signal, timeout: AUTH_REQUEST_TIMEOUT_MS },
   );
@@ -183,7 +208,10 @@ async function recordManualPayment(
     !saved.payment ||
     saved.payment.method !== method ||
     saved.payment.requestId !== dto.requestId ||
-    (saved.payment.reference ?? null) !== (dto.reference?.trim() || null)
+    (saved.payment.reference ?? null) !== (dto.reference?.trim() || null) ||
+    (method === "OTHER" &&
+      saved.payment.description !==
+        ("description" in dto ? dto.description.trim() : null))
   )
     throw new Error(
       "The payment result could not be confirmed. Refresh before recording payment again.",

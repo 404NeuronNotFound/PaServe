@@ -5,12 +5,16 @@ import type {
   ApiErrorResponse,
   CashPaymentReviewResponse,
 } from "@paserve/contracts";
-import { PAYMENT_REFERENCE_PATTERN } from "@paserve/contracts";
+import {
+  PAYMENT_REFERENCE_PATTERN,
+  isSafeOtherPaymentText,
+} from "@paserve/contracts";
 import {
   reviewCashPayment,
   collectCashPayment,
   recordManualGcashPayment,
   recordManualCardPayment,
+  recordOtherPayment,
   normalizeCashAmount,
   cashChange,
 } from "../../features/cashier/cash-payment";
@@ -38,13 +42,14 @@ export function CashierCashPayment({
   shopId: string;
   orderId: string;
   onNext: () => void;
-  initialMethod?: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL";
+  initialMethod?: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER";
 }) {
   const [review, setReview] = useState<CashPaymentReviewResponse | null>(null);
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState(initialMethod);
   const [receivedConfirmed, setReceivedConfirmed] = useState(false);
   const [reference, setReference] = useState("");
+  const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(true);
   const [blocked, setBlocked] = useState(true);
   const [error, setError] = useState("");
@@ -63,15 +68,22 @@ export function CashierCashPayment({
   const invalidAmount = amount.length > 0 && change === null;
   const gcash = method === "GCASH_MANUAL";
   const card = method === "CARD_MANUAL";
+  const other = method === "OTHER";
   const manual = method !== "CASH";
-  const recordLabel = card
-    ? "Record card payment"
-    : gcash
-      ? "Record GCash payment"
-      : "Record cash payment";
-  const invalidReference = !PAYMENT_REFERENCE_PATTERN.test(reference);
+  const recordLabel = other
+    ? "Record other payment"
+    : card
+      ? "Record card payment"
+      : gcash
+        ? "Record GCash payment"
+        : "Record cash payment";
+  const invalidReference =
+    !PAYMENT_REFERENCE_PATTERN.test(reference) ||
+    (other && !isSafeOtherPaymentText(reference));
+  const invalidDescription =
+    other && (!description.trim() || !isSafeOtherPaymentText(description, 80));
   const eligible = manual
-    ? receivedConfirmed && !invalidReference
+    ? receivedConfirmed && !invalidReference && !invalidDescription
     : normalized !== null && change !== null;
   useEffect(() => {
     active.current = true;
@@ -117,11 +129,13 @@ export function CashierCashPayment({
         attempt.current = null;
         if (!saved.payment)
           setError(
-            card
-              ? "The order changed. Review the saved total and verify external card completion again."
-              : gcash
-                ? "The order changed. Review the saved total and verify GCash receipt again."
-                : "The order changed. Review the saved total and enter the amount received again.",
+            other
+              ? "The order changed. Review the saved total and verify the shop-specific payment again."
+              : card
+                ? "The order changed. Review the saved total and verify external card completion again."
+                : gcash
+                  ? "The order changed. Review the saved total and verify GCash receipt again."
+                  : "The order changed. Review the saved total and enter the amount received again.",
           );
       } else if (open && !saved.payment && eligible) setConfirm(true);
     } catch (error) {
@@ -146,28 +160,41 @@ export function CashierCashPayment({
       const recordManual = card
         ? recordManualCardPayment
         : recordManualGcashPayment;
-      const saved = manual
-        ? await recordManual(
+      const manualDto = {
+        requestId: attempt.current,
+        reviewVersion: review.order.reviewVersion,
+        receivedConfirmed: true as const,
+        ...(reference.trim() ? { reference: reference.trim() } : {}),
+      };
+      const saved = other
+        ? await recordOtherPayment(
             shopId,
             orderId,
-            {
-              requestId: attempt.current,
-              reviewVersion: review.order.reviewVersion,
-              receivedConfirmed: true,
-              ...(reference.trim() ? { reference: reference.trim() } : {}),
-            },
+            { ...manualDto, description: description.trim() },
             request.signal,
           )
-        : await collectCashPayment(
-            shopId,
-            orderId,
-            {
-              requestId: attempt.current,
-              reviewVersion: review.order.reviewVersion,
-              amountReceived: normalized!,
-            },
-            request.signal,
-          );
+        : manual
+          ? await recordManual(
+              shopId,
+              orderId,
+              {
+                requestId: attempt.current,
+                reviewVersion: review.order.reviewVersion,
+                receivedConfirmed: true,
+                ...(reference.trim() ? { reference: reference.trim() } : {}),
+              },
+              request.signal,
+            )
+          : await collectCashPayment(
+              shopId,
+              orderId,
+              {
+                requestId: attempt.current,
+                reviewVersion: review.order.reviewVersion,
+                amountReceived: normalized!,
+              },
+              request.signal,
+            );
       if (active.current && !request.signal.aborted) {
         setReview(saved);
         setConfirm(false);
@@ -197,21 +224,31 @@ export function CashierCashPayment({
         </span>
         <p className="section-label">
           PAYMENT COMPLETE /{" "}
-          {review.payment.method === "CASH"
-            ? "CASH"
-            : review.payment.method === "CARD_MANUAL"
-              ? "CARD MANUAL"
-              : "GCASH MANUAL"}
+          {review.payment.method === "OTHER"
+            ? "OTHER"
+            : review.payment.method === "CASH"
+              ? "CASH"
+              : review.payment.method === "CARD_MANUAL"
+                ? "CARD MANUAL"
+                : "GCASH MANUAL"}
         </p>
         <h2 id="cash-paid-title" ref={resultHeading} tabIndex={-1}>
-          {review.payment.method === "CASH"
-            ? "Cash payment recorded"
-            : review.payment.method === "CARD_MANUAL"
-              ? "Card payment recorded manually"
-              : "GCash payment recorded manually"}
+          {review.payment.method === "OTHER"
+            ? "Other payment recorded manually"
+            : review.payment.method === "CASH"
+              ? "Cash payment recorded"
+              : review.payment.method === "CARD_MANUAL"
+                ? "Card payment recorded manually"
+                : "GCash payment recorded manually"}
         </h2>
         <p role="status">{review.order.orderNumber} is paid.</p>
         <dl>
+          {review.payment.description && (
+            <div>
+              <dt>Payment method description</dt>
+              <dd>{review.payment.description}</dd>
+            </div>
+          )}
           <div>
             <dt>Order total</dt>
             <dd>{formatCartPrice(review.order.totalPrice)}</dd>
@@ -234,13 +271,15 @@ export function CashierCashPayment({
           )}
         </dl>
         <p>
-          {review.payment.method === "CARD_MANUAL"
-            ? "The cashier recorded this payment after checking completion on the external terminal. No gateway verification was performed."
-            : review.payment.method === "GCASH_MANUAL"
-              ? "The cashier recorded this payment after checking GCash receipt. No gateway verification was performed."
-              : recordedHere
-                ? "Return the change to the customer."
-                : "This order already has a saved cash payment. Check with the cashier before handling any cash or change."}
+          {review.payment.method === "OTHER"
+            ? "The cashier recorded full payment using the shop-specific method shown above. No gateway verification was performed."
+            : review.payment.method === "CARD_MANUAL"
+              ? "The cashier recorded this payment after checking completion on the external terminal. No gateway verification was performed."
+              : review.payment.method === "GCASH_MANUAL"
+                ? "The cashier recorded this payment after checking GCash receipt. No gateway verification was performed."
+                : recordedHere
+                  ? "Return the change to the customer."
+                  : "This order already has a saved cash payment. Check with the cashier before handling any cash or change."}
         </p>
         <button className="primary-button" onClick={onNext}>
           Scan another order
@@ -258,24 +297,56 @@ export function CashierCashPayment({
             disabled={busy || blocked || confirm}
             onChange={(event) => {
               setMethod(
-                event.target.value as "CASH" | "GCASH_MANUAL" | "CARD_MANUAL",
+                event.target.value as
+                  "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER",
               );
               setAmount("");
               setReceivedConfirmed(false);
               setReference("");
+              setDescription("");
               attempt.current = null;
             }}
           >
             <option value="CASH">Cash</option>
             <option value="GCASH_MANUAL">GCash (manual)</option>
             <option value="CARD_MANUAL">Card (manual)</option>
+            <option value="OTHER">Other (manual)</option>
           </select>
           {manual ? (
             <>
+              {other && (
+                <>
+                  <label htmlFor="other-payment-description">
+                    Payment method description
+                  </label>
+                  <input
+                    id="other-payment-description"
+                    value={description}
+                    maxLength={80}
+                    required
+                    disabled={busy || blocked || confirm}
+                    aria-invalid={description.length > 0 && invalidDescription}
+                    aria-describedby={description.length > 0 && invalidDescription ? "other-payment-description-hint other-payment-description-error" : "other-payment-description-hint"}
+                    onChange={(event) => {
+                      setDescription(event.target.value);
+                      setReceivedConfirmed(false);
+                      attempt.current = null;
+                    }}
+                  />
+                  <p id="other-payment-description-hint">
+                    Required. Up to 80 characters, such as Bank transfer or Shop
+                    voucher. Use Cash, GCash or Card for those methods. Do not
+                    enter card details.
+                  </p>
+                  {description.length > 0 && invalidDescription && <InlineMessage id="other-payment-description-error">Enter a plain-text method description of up to 80 characters without card details.</InlineMessage>}
+                </>
+              )}
               <p>
-                {card
-                  ? `Check that ${formatCartPrice(review.order.totalPrice)} was successfully paid through the external terminal or manual card process before recording payment.`
-                  : `Check that ${formatCartPrice(review.order.totalPrice)} was received in the shop’s GCash account before recording payment.`}
+                {other
+                  ? `Check that the full ${formatCartPrice(review.order.totalPrice)} was received using the described shop-specific method before recording payment.`
+                  : card
+                    ? `Check that ${formatCartPrice(review.order.totalPrice)} was successfully paid through the external terminal or manual card process before recording payment.`
+                    : `Check that ${formatCartPrice(review.order.totalPrice)} was received in the shop’s GCash account before recording payment.`}
               </p>
               <p>
                 This records the cashier’s confirmation. No gateway verification
@@ -308,7 +379,9 @@ export function CashierCashPayment({
               </p>
               {invalidReference && (
                 <InlineMessage id="gcash-reference-error">
-                  Enter a plain-text reference of up to 200 characters.
+                  {other
+                    ? "Use a receipt reference of up to 200 characters without card details."
+                    : "Enter a plain-text reference of up to 200 characters."}
                 </InlineMessage>
               )}
               <label className="cashier-gcash-confirm">
@@ -321,9 +394,11 @@ export function CashierCashPayment({
                     attempt.current = null;
                   }}
                 />
-                {card
-                  ? "I verified the full card payment completed through the external terminal/manual process."
-                  : "I verified the full payment was received via GCash."}
+                {other
+                  ? "I verified the full payment was received using this shop-specific method."
+                  : card
+                    ? "I verified the full card payment completed through the external terminal/manual process."
+                    : "I verified the full payment was received via GCash."}
               </label>
             </>
           ) : (
@@ -392,20 +467,24 @@ export function CashierCashPayment({
       <DecisionDialog
         open={confirm}
         title={
-          card
-            ? "Record manual card payment?"
-            : gcash
-              ? "Record manual GCash payment?"
-              : "Record cash payment?"
+          other
+            ? "Record other payment?"
+            : card
+              ? "Record manual card payment?"
+              : gcash
+                ? "Record manual GCash payment?"
+                : "Record cash payment?"
         }
         description={
-          card && review
-            ? `Record ${formatCartPrice(review.order.totalPrice)} paid by card for ${review.order.orderNumber}? Only continue after checking successful completion on the external terminal/manual process.`
-            : gcash && review
-              ? `Record ${formatCartPrice(review.order.totalPrice)} received via GCash for ${review.order.orderNumber}? Only continue after verifying receipt in the shop’s GCash account.`
-              : review && normalized && change !== null
-                ? `Record ${formatCartPrice(normalized)} received for ${review.order.orderNumber}, with ${formatCartPrice(change)} change due? Only continue once the cash is in hand.`
-                : "Check the cash before recording payment."
+          other && review
+            ? `Record ${formatCartPrice(review.order.totalPrice)} received using ${description.trim()} for ${review.order.orderNumber}? Only continue after verifying the full payment.`
+            : card && review
+              ? `Record ${formatCartPrice(review.order.totalPrice)} paid by card for ${review.order.orderNumber}? Only continue after checking successful completion on the external terminal/manual process.`
+              : gcash && review
+                ? `Record ${formatCartPrice(review.order.totalPrice)} received via GCash for ${review.order.orderNumber}? Only continue after verifying receipt in the shop’s GCash account.`
+                : review && normalized && change !== null
+                  ? `Record ${formatCartPrice(normalized)} received for ${review.order.orderNumber}, with ${formatCartPrice(change)} change due? Only continue once the cash is in hand.`
+                  : "Check the cash before recording payment."
         }
         confirmLabel={recordLabel}
         cancelLabel="Keep reviewing"

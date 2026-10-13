@@ -8,6 +8,7 @@ import {
   lookupCashPayment,
   recordManualGcashPayment,
   recordManualCardPayment,
+  recordOtherPayment,
 } from "./cash-payment";
 import { cashierLine } from "../../test/cashier-fixtures";
 vi.mock("../../lib/api/client", () => ({
@@ -41,6 +42,47 @@ const payment = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+});
+it("records OTHER description and verifies the saved metadata", async () => {
+  const receipt = {
+    ...payment,
+    method: "OTHER",
+    amountReceived: "135.50",
+    changeDue: "0.00",
+    reference: "00001234 receipt",
+    description: "Bank transfer",
+  };
+  vi.mocked(api.post).mockResolvedValue({
+    data: { order: { ...order, paymentStatus: "PAID" }, payment: receipt },
+  });
+  const dto = {
+    requestId,
+    reviewVersion: order.reviewVersion,
+    receivedConfirmed: true as const,
+    reference: receipt.reference,
+    description: receipt.description,
+  };
+  const signal = new AbortController().signal;
+  expect(
+    (await recordOtherPayment(shopId, orderId, dto, signal)).payment
+      ?.description,
+  ).toBe("Bank transfer");
+  expect(api.post).toHaveBeenCalledWith(
+    `/shops/${shopId}/orders/${orderId}/other-payment`,
+    dto,
+    { signal, timeout: 15000 },
+  );
+  for (const description of [null, "", "Shop voucher", "CVV: 123"]) {
+    vi.mocked(api.post).mockResolvedValue({
+      data: {
+        order: { ...order, paymentStatus: "PAID" },
+        payment: { ...receipt, description },
+      },
+    });
+    await expect(
+      recordOtherPayment(shopId, orderId, dto, signal),
+    ).rejects.toThrow();
+  }
 });
 it("records external card completion and retains its reference without accepting another method", async () => {
   const receipt = {

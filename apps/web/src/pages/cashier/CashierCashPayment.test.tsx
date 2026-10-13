@@ -13,6 +13,7 @@ import {
   collectCashPayment,
   recordManualGcashPayment,
   recordManualCardPayment,
+  recordOtherPayment,
 } from "../../features/cashier/cash-payment";
 import { cashierLine } from "../../test/cashier-fixtures";
 vi.mock("../../features/cashier/cash-payment", async (original) => ({
@@ -21,6 +22,7 @@ vi.mock("../../features/cashier/cash-payment", async (original) => ({
   collectCashPayment: vi.fn(),
   recordManualGcashPayment: vi.fn(),
   recordManualCardPayment: vi.fn(),
+  recordOtherPayment: vi.fn(),
 }));
 const order = {
   id: "order-a",
@@ -98,6 +100,107 @@ async function setup() {
   await screen.findByLabelText("Amount received (PHP)");
   return { user, next };
 }
+const otherPaid = {
+  ...paid,
+  payment: {
+    ...paid.payment,
+    method: "OTHER" as const,
+    amountReceived: "135.50",
+    changeDue: "0.00",
+    description: "Bank transfer",
+    reference: "00001234 receipt",
+  },
+};
+it("requires a description and attestation for OTHER and displays the saved method details", async () => {
+  const { user } = await setup();
+  await user.selectOptions(screen.getByLabelText("Payment method"), "OTHER");
+  expect(
+    screen.getByRole("button", { name: "Record other payment" }),
+  ).toBeDisabled();
+  await user.click(
+    screen.getByRole("checkbox", {
+      name: /full payment was received using this shop-specific method/,
+    }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Record other payment" }),
+  ).toBeDisabled();
+  await user.type(
+    screen.getByLabelText("Payment method description"),
+    "Bank transfer",
+  );
+  expect(screen.getByRole("checkbox")).not.toBeChecked();
+  await user.type(
+    screen.getByLabelText("Reference note / number (optional)"),
+    otherPaid.payment.reference,
+  );
+  await user.click(screen.getByRole("checkbox"));
+  vi.mocked(recordOtherPayment).mockResolvedValue(otherPaid);
+  await user.click(
+    screen.getByRole("button", { name: "Record other payment" }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  expect(recordOtherPayment).not.toHaveBeenCalled();
+  await user.click(
+    within(dialog).getByRole("button", { name: "Record other payment" }),
+  );
+  await screen.findByRole("heading", {
+    name: "Other payment recorded manually",
+  });
+  expect(screen.getByText("Bank transfer")).toBeVisible();
+  expect(screen.getByText(otherPaid.payment.reference)).toBeVisible();
+  expect(
+    screen.queryByText("Return the change to the customer."),
+  ).not.toBeInTheDocument();
+  expect(recordOtherPayment).toHaveBeenCalledWith(
+    order.shopId,
+    order.id,
+    expect.objectContaining({
+      description: "Bank transfer",
+      reference: otherPaid.payment.reference,
+      receivedConfirmed: true,
+    }),
+    expect.any(AbortSignal),
+  );
+});
+it("rejects common card details in OTHER and recovers uncertain saves", async () => {
+  const { user } = await setup();
+  await user.selectOptions(screen.getByLabelText("Payment method"), "OTHER");
+  await user.type(
+    screen.getByLabelText("Payment method description"),
+    "Bank transfer",
+  );
+  await user.type(
+    screen.getByLabelText("Reference note / number (optional)"),
+    "4111111111111111",
+  );
+  await user.click(screen.getByRole("checkbox"));
+  expect(
+    screen.getByRole("button", { name: "Record other payment" }),
+  ).toBeDisabled();
+  await user.clear(screen.getByLabelText("Reference note / number (optional)"));
+  await user.click(
+    screen.getByRole("button", { name: "Record other payment" }),
+  );
+  vi.mocked(recordOtherPayment).mockRejectedValue(
+    new Error("Connection lost."),
+  );
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Record other payment",
+    }),
+  );
+  await screen.findByText(/payment result is unconfirmed/);
+  expect(
+    screen.getByRole("button", { name: "Record other payment" }),
+  ).toBeDisabled();
+  vi.mocked(reviewCashPayment).mockResolvedValue(otherPaid);
+  await user.click(screen.getByRole("button", { name: "Refresh payment" }));
+  await screen.findByRole("heading", {
+    name: "Other payment recorded manually",
+  });
+  expect(recordOtherPayment).toHaveBeenCalledTimes(1);
+});
 const cardPaid = {
   ...paid,
   payment: {

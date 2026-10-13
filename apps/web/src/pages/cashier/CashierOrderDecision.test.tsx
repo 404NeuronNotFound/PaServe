@@ -130,6 +130,19 @@ it("revalidates before asking for a decision and keeps Cancel focused", async ()
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Confirm order" })).toHaveFocus();
 });
+it("opens OTHER recording after confirmation", async () => {
+  const { user } = setup();
+  const dialog = await open("Confirm order", user);
+  await user.click(
+    within(dialog).getByRole("button", { name: "Confirm order" }),
+  );
+  await screen.findByRole("heading", { name: "Order confirmed" });
+  await user.click(
+    screen.getByRole("button", { name: "Record other payment" }),
+  );
+  expect(await screen.findByLabelText("Payment method")).toHaveValue("OTHER");
+  expect(screen.getByLabelText("Payment method description")).toHaveValue("");
+});
 it("opens manual card recording after confirmation", async () => {
   const { user } = setup();
   const dialog = await open("Confirm order", user);

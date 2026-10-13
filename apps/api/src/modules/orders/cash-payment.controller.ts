@@ -18,11 +18,29 @@ import {
 import { CashPaymentDto } from './cash-payment.dto.js';
 import { ManualGcashPaymentDto } from './manual-gcash-payment.dto.js';
 import { ManualCardPaymentDto } from './manual-card-payment.dto.js';
+import { OtherPaymentDto } from './other-payment.dto.js';
 import { LookupOrderNumberDto } from './order-number-lookup.dto.js';
 
 @Controller('shops/:shopId/orders')
 export class CashPaymentController {
   constructor(private readonly cash: CashPaymentService) {}
+  @Post(':orderId/other-payment')
+  @HttpCode(200)
+  @Roles(...CASH_PAYMENT_ROLES)
+  recordOther(
+    @Param('orderId') orderId: string,
+    @Body() dto: OtherPaymentDto,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.cash.recordOther(
+      request.user.id,
+      request.shopMembership.shopId,
+      orderId,
+      dto,
+    );
+  }
   @Post(':orderId/card-manual-payment')
   @HttpCode(200)
   @Roles(...CASH_PAYMENT_ROLES)

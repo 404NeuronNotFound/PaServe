@@ -121,6 +121,7 @@ model Order {
   paymentRequestId String?
   paymentReviewVersion String?
   paymentReference String? @db.VarChar(200)
+  paymentDescription String? @db.VarChar(80)
   amountReceived Decimal? @db.Decimal(12, 2)
   changeDue Decimal? @db.Decimal(12, 2)
   paidAt DateTime?

@@ -45,7 +45,7 @@ export function CashierOrderDecision({
   const [reason, setReason] = useState("");
   const [collectingCash, setCollectingCash] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<
-    "CASH" | "GCASH_MANUAL" | "CARD_MANUAL"
+    "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER"
   >("CASH");
   const [decision, setDecision] = useState<
     OrderDecisionResponse["order"] | null
@@ -206,6 +206,15 @@ export function CashierOrderDecision({
               }}
             >
               Record card payment
+            </button>
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setPaymentMethod("OTHER");
+                setCollectingCash(true);
+              }}
+            >
+              Record other payment
             </button>
           </div>
         )}

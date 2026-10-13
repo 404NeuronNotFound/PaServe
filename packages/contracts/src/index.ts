@@ -809,15 +809,26 @@ export interface ManualGcashPaymentRequest {
   reference?: string | null;
 }
 export type ManualCardPaymentRequest = ManualGcashPaymentRequest;
+export interface OtherPaymentRequest extends ManualGcashPaymentRequest {
+  description: string;
+}
+/** OTHER accepts method/reference notes, not raw payment-card details. */
+export function isSafeOtherPaymentText(value: unknown, maxLength = 200): value is string {
+  if (typeof value !== "string" || value.length > maxLength || !PAYMENT_REFERENCE_PATTERN.test(value)) return false;
+  const normalized = value.normalize("NFKC");
+  return !/\d(?:[ -]*\d){12}/.test(normalized) &&
+    !/\b(?:cvv|cvc|pan|pin|expiry|expiration|security[ -]*code)\b/i.test(normalized);
+}
 export const PAYMENT_REFERENCE_PATTERN = /^[^\p{Cc}\p{Cf}<>]{0,200}$(?![\s\S])/u;
 export interface CashPaymentReceipt {
-  method: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL";
+  method: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER";
   requestId: string;
   amountReceived: string;
   changeDue: string;
   paidAt: string;
   paidBy: string;
   reference?: string | null;
+  description?: string | null;
 }
 export interface CashPaymentReviewResponse {
   order: VerifyOrderQrResponse["order"];

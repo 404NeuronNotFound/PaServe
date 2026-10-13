@@ -69,6 +69,7 @@ try {
   // Rebuild the pre-cash shape in our private schema, even after deployment,
   // then exercise the complete migration (including its trigger definition).
   for (const column of [
+    'paymentDescription',
     'paymentReference',
     'paymentMethod',
     'paymentRequestId',
@@ -106,6 +107,10 @@ try {
     'utf8',
   );
   await setup.query(referenceSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
+  // Nullable placeholder supports generated reads while exercising pre-OTHER migrations.
+  await setup.query(
+    'ALTER TABLE orders ADD COLUMN "paymentDescription" VARCHAR(80)',
+  );
   await setup.query('COMMIT');
   created = true;
   prisma = new PrismaClient({
@@ -439,11 +444,108 @@ try {
       data: { paymentReference: 'changed' },
     }),
   );
+  const otherSql = await readFile(
+    new URL(
+      '../prisma/migrations/20261013230000_other_payments/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await setup.query('BEGIN');
+  await setup.query(`SET LOCAL search_path TO "${schema}", public`);
+  await setup.query('ALTER TABLE orders DROP COLUMN "paymentDescription"');
+  await setup.query(otherSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
+  await setup.query('COMMIT');
+  assert.deepEqual(
+    await cash.review(users[winnerIndex].id, shop.id, order.id),
+    winner,
+  );
+  assert.deepEqual(
+    await cash.review(users[0].id, shop.id, gcashOrder.id),
+    gcashResult,
+  );
+  assert.deepEqual(
+    await cash.review(users[0].id, shop.id, cardOrder.id),
+    cardResult,
+  );
+  const otherOrder = await confirmedOrder('ORD-000005');
+  const otherVersion = (await cash.review(users[0].id, shop.id, otherOrder.id))
+    .order.reviewVersion;
+  const otherRequest = {
+    requestId: randomUUID(),
+    reviewVersion: otherVersion,
+    receivedConfirmed: true,
+    description: 'Bank transfer',
+    reference: '00001234 receipt',
+  };
+  await assert.rejects(
+    cash.recordOther(users[0].id, shop.id, otherOrder.id, {
+      ...otherRequest,
+      description: ' ',
+    }),
+    { status: 400 },
+  );
+  await assert.rejects(
+    cash.recordOther(users[0].id, shop.id, otherOrder.id, {
+      ...otherRequest,
+      reference: '4111111111111111',
+    }),
+    { status: 400 },
+  );
+  const otherResult = await cash.recordOther(
+    users[0].id,
+    shop.id,
+    otherOrder.id,
+    otherRequest,
+  );
+  const savedOther = await prisma.order.findFirst({
+    where: { id: otherOrder.id, shopId: shop.id },
+  });
+  assert.equal(savedOther.paymentMethod, 'OTHER');
+  assert.equal(savedOther.paymentDescription, 'Bank transfer');
+  assert.equal(savedOther.paymentReference, otherRequest.reference);
+  assert.equal(savedOther.amountReceived.toFixed(2), '10.00');
+  assert.equal(savedOther.changeDue.toFixed(2), '0.00');
+  assert.equal(savedOther.paidBy, users[0].id);
+  assert.equal(savedOther.shopId, shop.id);
+  assert.equal(savedOther.id, otherOrder.id);
+  assert.equal(savedOther.paymentRequestId, otherRequest.requestId);
+  assert.ok(savedOther.paidAt instanceof Date);
+  assert.deepEqual(
+    await cash.lookup(users[0].id, shop.id, otherOrder.orderNumber),
+    otherResult,
+  );
+  assert.deepEqual(
+    await cash.recordOther(users[0].id, shop.id, otherOrder.id, otherRequest),
+    otherResult,
+  );
+  await assert.rejects(
+    cash.recordOther(users[0].id, shop.id, otherOrder.id, {
+      ...otherRequest,
+      description: 'Voucher',
+    }),
+    { status: 409 },
+  );
+  await assert.rejects(
+    prisma.order.updateMany({
+      where: { id: otherOrder.id, shopId: shop.id },
+      data: { paymentDescription: 'Voucher' },
+    }),
+  );
+  console.log(
+    'Passed: OTHER requires a saved description and full-payment attestation, stores method/reference/actor with zero change, rejects common card details, preserves existing receipts and rejects altered retries.',
+  );
   const raceOrder = await confirmedOrder('ORD-000003');
   const raceVersion = (await cash.review(users[0].id, shop.id, raceOrder.id))
     .order.reviewVersion;
   // GCash/cash share the same order lock and UNPAID predicate.
   const competing = await Promise.allSettled([
+    cash.recordOther(users[0].id, shop.id, raceOrder.id, {
+      requestId: randomUUID(),
+      reviewVersion: raceVersion,
+      receivedConfirmed: true,
+      description: 'Shop voucher',
+    }),
     cash.recordCard(users[0].id, shop.id, raceOrder.id, {
       requestId: randomUUID(),
       reviewVersion: raceVersion,
@@ -472,7 +574,9 @@ try {
     where: { id: raceOrder.id, shopId: shop.id },
   });
   assert.ok(
-    ['CASH', 'GCASH_MANUAL', 'CARD_MANUAL'].includes(raceSaved.paymentMethod),
+    ['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'].includes(
+      raceSaved.paymentMethod,
+    ),
   );
   console.log(
     'Passed: manual card migration preserves cash/GCash receipts, method/reference/actor persistence, full settlement, zero change, exact replay and competing card/cash/GCash commits once.',
@@ -485,6 +589,12 @@ try {
     data: { role: 'KITCHEN' },
   });
   await assert.rejects(cash.review(users[0].id, shop.id, order.id), {
+    status: 404,
+  });
+  await assert.rejects(cash.review(users[0].id, shop.id, otherOrder.id), {
+    status: 404,
+  });
+  await assert.rejects(cash.recordOther(users[0].id, shop.id, otherOrder.id, otherRequest), {
     status: 404,
   });
   console.log(

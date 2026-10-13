@@ -11,6 +11,7 @@ import {
   cashAmountCents,
   isValidOrderNumber,
   PAYMENT_REFERENCE_PATTERN,
+  isSafeOtherPaymentText,
   type CashPaymentReviewResponse,
 } from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
@@ -20,6 +21,7 @@ import { OrderQrService } from './order-qr.service.js';
 import type { CashPaymentDto } from './cash-payment.dto.js';
 import type { ManualGcashPaymentDto } from './manual-gcash-payment.dto.js';
 import type { ManualCardPaymentDto } from './manual-card-payment.dto.js';
+import type { OtherPaymentDto } from './other-payment.dto.js';
 
 export const CASH_PAYMENT_ROLES = SHOP_ROLES.filter(
   (role) =>
@@ -81,6 +83,7 @@ export class CashPaymentService {
         paymentRequestId: true,
         paymentReviewVersion: true,
         paymentReference: true,
+        paymentDescription: true,
         amountReceived: true,
         changeDue: true,
         paidAt: true,
@@ -101,7 +104,7 @@ export class CashPaymentService {
     let payment: CashPaymentReviewResponse['payment'] = null;
     if (saved.paymentStatus === 'PAID') {
       if (
-        !['CASH', 'GCASH_MANUAL', 'CARD_MANUAL'].includes(
+        !['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'].includes(
           saved.paymentMethod ?? '',
         ) ||
         !saved.paymentRequestId ||
@@ -110,20 +113,27 @@ export class CashPaymentService {
         !saved.amountReceived ||
         !saved.changeDue ||
         !saved.amountReceived.minus(saved.changeDue).equals(order.totalPrice) ||
-        (saved.paymentMethod !== 'CASH' && !saved.changeDue.isZero())
+        (saved.paymentMethod !== 'CASH' && !saved.changeDue.isZero()) ||
+        (saved.paymentMethod === 'OTHER' &&
+          (!saved.paymentDescription?.trim() ||
+            !isSafeOtherPaymentText(saved.paymentDescription, 80) ||
+            (saved.paymentReference != null &&
+              !isSafeOtherPaymentText(saved.paymentReference))))
       )
         throw conflict(
           'CASH_PAYMENT_DETAILS_UNAVAILABLE',
           'The saved payment receipt could not be loaded. Ask the shop owner for help.',
         );
       payment = {
-        method: saved.paymentMethod as 'CASH' | 'GCASH_MANUAL' | 'CARD_MANUAL',
+        method: saved.paymentMethod as
+          'CASH' | 'GCASH_MANUAL' | 'CARD_MANUAL' | 'OTHER',
         requestId: saved.paymentRequestId,
         amountReceived: saved.amountReceived.toFixed(2),
         changeDue: saved.changeDue.toFixed(2),
         paidAt: saved.paidAt.toISOString(),
         paidBy: saved.paidBy,
         reference: saved.paymentReference ?? null,
+        description: saved.paymentDescription ?? null,
       };
     }
     return { order, payment };
@@ -156,15 +166,37 @@ export class CashPaymentService {
     return this.settle(actorId, shopId, orderId, dto, 'CARD_MANUAL');
   }
 
+  async recordOther(
+    actorId: string,
+    shopId: string,
+    orderId: string,
+    dto: OtherPaymentDto,
+  ): Promise<CashPaymentReviewResponse> {
+    return this.settle(actorId, shopId, orderId, dto, 'OTHER');
+  }
+
   private async settle(
     actorId: string,
     shopId: string,
     orderId: string,
-    dto: CashPaymentDto | ManualGcashPaymentDto,
-    method: 'CASH' | 'GCASH_MANUAL' | 'CARD_MANUAL',
+    dto: CashPaymentDto | ManualGcashPaymentDto | OtherPaymentDto,
+    method: 'CASH' | 'GCASH_MANUAL' | 'CARD_MANUAL' | 'OTHER',
   ): Promise<CashPaymentReviewResponse> {
     const cashAmount = 'amountReceived' in dto ? dto.amountReceived : null;
     const rawReference = 'reference' in dto ? dto.reference : null;
+    const rawDescription = 'description' in dto ? dto.description : null;
+    if (
+      method === 'OTHER' &&
+      (!isSafeOtherPaymentText(rawDescription, 80) ||
+        !rawDescription.trim() ||
+        (rawReference != null && !isSafeOtherPaymentText(rawReference)))
+    )
+      throw new BadRequestException({
+        code: 'INVALID_OTHER_PAYMENT_DETAILS',
+        message:
+          'Describe the payment method in up to 80 plain-text characters. Use a receipt reference, not card details.',
+      });
+    const description = method === 'OTHER' ? rawDescription!.trim() : null;
     if (
       rawReference != null &&
       (typeof rawReference !== 'string' ||
@@ -187,9 +219,11 @@ export class CashPaymentService {
         code:
           method === 'CASH'
             ? 'INVALID_CASH_PAYMENT'
-            : method === 'CARD_MANUAL'
-              ? 'INVALID_CARD_PAYMENT'
-              : 'INVALID_GCASH_PAYMENT',
+            : method === 'OTHER'
+              ? 'INVALID_OTHER_PAYMENT'
+              : method === 'CARD_MANUAL'
+                ? 'INVALID_CARD_PAYMENT'
+                : 'INVALID_GCASH_PAYMENT',
         message:
           'A valid reviewed order and payment confirmation are required.',
       });
@@ -216,6 +250,7 @@ export class CashPaymentService {
               review.payment.requestId === dto.requestId &&
               review.payment.method === method &&
               (review.payment.reference ?? null) === reference &&
+              (review.payment.description ?? null) === description &&
               (method !== 'CASH' ||
                 review.payment.amountReceived === cashAmount) &&
               review.payment.paidBy === actorId &&
@@ -254,6 +289,7 @@ export class CashPaymentService {
               paymentStatus: 'PAID',
               paymentMethod: method,
               paymentReference: reference,
+              paymentDescription: description,
               paymentRequestId: dto.requestId,
               paymentReviewVersion: dto.reviewVersion,
               amountReceived: amount,
