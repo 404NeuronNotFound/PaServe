@@ -148,6 +148,10 @@ try {
         });
         const token = tokens.issue(order);
         const initial = await cashier.scan(user.id, shop.id, token);
+        assert.deepEqual(
+          await cashier.lookupNumber(user.id, shop.id, order.orderNumber),
+          initial,
+        );
         assert.deepEqual(initial.order.items, [quote]);
         assert.equal(initial.order.totalPrice, '135.50');
         await tx.product.update({
@@ -271,10 +275,17 @@ try {
           },
         });
         const rejectedToken = tokens.issue(rejectedOrder);
-        const rejectedReview = await cashier.scan(
+        await tx.order.updateMany({
+          where: { id: rejectedOrder.id, shopId: shop.id },
+          data: { qrTokenExpiresAt: new Date(0) },
+        });
+        await assert.rejects(cashier.scan(user.id, shop.id, rejectedToken), {
+          status: 403,
+        });
+        const rejectedReview = await cashier.lookupNumber(
           user.id,
           shop.id,
-          rejectedToken,
+          rejectedOrder.orderNumber,
         );
         const rejection = await decisions.decide(
           user.id,
@@ -282,7 +293,7 @@ try {
           rejectedOrder.id,
           'REJECTED',
           {
-            qrToken: rejectedToken,
+            orderNumber: rejectedOrder.orderNumber,
             reviewVersion: rejectedReview.order.reviewVersion,
             rejectionReason: 'Customer cancelled.',
           },
@@ -290,6 +301,13 @@ try {
         assert.equal(rejection.order.status, 'REJECTED');
         assert.equal(rejection.order.paymentStatus, 'UNPAID');
         assert.equal(rejection.order.rejectionReason, 'Customer cancelled.');
+        await assert.rejects(
+          decisions.decide(user.id, shop.id, rejectedOrder.id, 'CONFIRMED', {
+            orderNumber: rejectedOrder.orderNumber,
+            reviewVersion: rejectedReview.order.reviewVersion,
+          }),
+          { status: 409 },
+        );
         await tx.shopMember.update({
           where: { userId_shopId: { userId: user.id, shopId: shop.id } },
           data: { role: 'KITCHEN' },
@@ -312,7 +330,7 @@ try {
     0,
   );
   console.log(
-    'Passed: migration, real confirm/reject persistence, unchanged payment, decision metadata, token consumption, stale review and shop isolation; DDL and fixtures rolled back.',
+    'Passed: QR/manual lookup and decisions, expired-QR fallback, unchanged payment, metadata, token consumption, stale review and shop isolation; fixtures rolled back.',
   );
 } finally {
   await prisma.$disconnect();

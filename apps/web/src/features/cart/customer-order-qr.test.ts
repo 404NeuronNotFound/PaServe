@@ -55,7 +55,7 @@ it("renders a real QR that decodes to exactly the supplied token and routes to t
   expect(decoded).toBe(order.qrToken);
   expect(parseOrderQr(decoded!)).toMatchObject({ shopId, orderId });
 });
-it("captures the server token only in memory and leaves receipt storage free of credentials", () => {
+it("restores the QR after memory loss while keeping the display receipt separate", () => {
   saveOrderReceipt("cafe", "Cafe", order);
   expect(readCustomerOrderQr("cafe", orderId)).toEqual({
     qrToken: order.qrToken,
@@ -68,7 +68,7 @@ it("captures the server token only in memory and leaves receipt storage free of 
   expect(stored).not.toContain(order.qrToken);
   expect(stored).not.toContain("qrToken");
   clearCustomerOrderQrs();
-  expect(readCustomerOrderQr("cafe", orderId)).toBeNull();
+  expect(readCustomerOrderQr("cafe", orderId)?.qrToken).toBe(order.qrToken);
   expect(stored).toContain(order.orderNumber);
 });
 it("does not recover credentials from tampered storage or expose them under another route", () => {
@@ -76,11 +76,35 @@ it("does not recover credentials from tampered storage or expose them under anot
   expect(readCustomerOrderQr("other", orderId)).toBeNull();
   expect(readCustomerOrderQr("cafe", shopId)).toBeNull();
   clearCustomerOrderQrs();
+  sessionStorage.removeItem(`paserve-customer-qr:v1:cafe:${orderId}`);
   sessionStorage.setItem(
     `paserve-order-receipt:v1:cafe:${orderId}`,
     JSON.stringify(order),
   );
   expect(readCustomerOrderQr("cafe", orderId)).toBeNull();
+});
+it.each([
+  { version: 2 },
+  { shopSlug: "other" },
+  { orderId: shopId },
+  { qrToken: "ORD-000042" },
+  { expiresAt: expiry + 1 },
+  { qrToken: token({ orderId: shopId }) },
+])("rejects corrupt or mismatched saved QR metadata %j", (changes) => {
+  captureCustomerOrderQr("cafe", order);
+  const storedKey = `paserve-customer-qr:v1:cafe:${orderId}`;
+  const saved = JSON.parse(sessionStorage.getItem(storedKey)!);
+  clearCustomerOrderQrs();
+  sessionStorage.setItem(storedKey, JSON.stringify({ ...saved, ...changes }));
+  expect(readCustomerOrderQr("cafe", orderId)).toBeNull();
+  expect(sessionStorage.getItem(storedKey)).toBeNull();
+});
+it("retains the QR in memory if session storage is blocked", () => {
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new Error("Blocked");
+  });
+  captureCustomerOrderQr("cafe", order);
+  expect(readCustomerOrderQr("cafe", orderId)?.qrToken).toBe(order.qrToken);
 });
 it.each([
   { qrToken: undefined },

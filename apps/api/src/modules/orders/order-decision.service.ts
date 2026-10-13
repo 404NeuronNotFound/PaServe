@@ -8,6 +8,7 @@ import { isUUID } from 'class-validator';
 import {
   SHOP_ROLES,
   hasShopPermission,
+  isValidOrderNumber,
   type OrderDecisionResponse,
 } from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
@@ -15,6 +16,10 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import { OrderQrService } from './order-qr.service.js';
 import type { OrderDecisionDto, RejectOrderDto } from './order-decision.dto.js';
+import type {
+  OrderNumberDecisionDto,
+  RejectOrderNumberDto,
+} from './order-number-lookup.dto.js';
 
 export const ORDER_CONFIRM_ROLES = SHOP_ROLES.filter(
   (role) =>
@@ -45,9 +50,18 @@ export class OrderDecisionService {
     shopId: string,
     orderId: string,
     action: 'CONFIRMED' | 'REJECTED',
-    dto: OrderDecisionDto | RejectOrderDto,
+    dto:
+      | OrderDecisionDto
+      | RejectOrderDto
+      | OrderNumberDecisionDto
+      | RejectOrderNumberDto,
   ): Promise<OrderDecisionResponse> {
-    if (!isUUID(orderId) || !['CONFIRMED', 'REJECTED'].includes(action))
+    const byNumber = 'orderNumber' in dto;
+    if (
+      !isUUID(orderId) ||
+      !['CONFIRMED', 'REJECTED'].includes(action) ||
+      (byNumber && ('qrToken' in dto || !isValidOrderNumber(dto.orderNumber)))
+    )
       throw new BadRequestException({
         code: 'INVALID_ORDER_DECISION',
         message: 'A valid order and decision are required.',
@@ -64,7 +78,12 @@ export class OrderDecisionService {
           await tx.$queryRaw`SELECT m.id FROM shop_members m JOIN users u ON u.id = m."userId"
           WHERE m."shopId" = ${shopId} AND m."userId" = ${actorId} FOR UPDATE OF m, u`;
           const current = await tx.order.findFirst({
-            where: { id: orderId, shopId, shop: access },
+            where: {
+              id: orderId,
+              shopId,
+              shop: access,
+              ...(byNumber ? { orderNumber: dto.orderNumber } : {}),
+            },
             select: { id: true },
           });
           if (!current)
@@ -74,14 +93,23 @@ export class OrderDecisionService {
             });
           await tx.$queryRaw`SELECT id FROM orders WHERE id = ${orderId} AND "shopId" = ${shopId} FOR UPDATE`;
           await tx.$queryRaw`SELECT id FROM order_items WHERE "orderId" = ${orderId} AND "shopId" = ${shopId} ORDER BY "lineNumber" FOR UPDATE`;
-          const { order } = await this.qr.verify(
-            actorId,
-            shopId,
-            orderId,
-            dto.qrToken,
-            tx,
-            roles,
-          );
+          const { order } = byNumber
+            ? await this.qr.reviewNumber(
+                actorId,
+                shopId,
+                orderId,
+                dto.orderNumber,
+                tx,
+                roles,
+              )
+            : await this.qr.verify(
+                actorId,
+                shopId,
+                orderId,
+                dto.qrToken,
+                tx,
+                roles,
+              );
           if (
             order.reviewVersion !== dto.reviewVersion ||
             order.paymentStatus !== 'UNPAID'
@@ -99,8 +127,9 @@ export class OrderDecisionService {
               shop: access,
               status: 'PENDING_CONFIRMATION',
               paymentStatus: 'UNPAID',
-              qrTokenRevokedAt: null,
-              qrTokenExpiresAt: { gt: now },
+              ...(byNumber
+                ? { orderNumber: dto.orderNumber }
+                : { qrTokenRevokedAt: null, qrTokenExpiresAt: { gt: now } }),
             },
             data: {
               status: action,

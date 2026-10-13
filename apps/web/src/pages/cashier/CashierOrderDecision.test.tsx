@@ -11,12 +11,16 @@ import userEvent from "@testing-library/user-event";
 import { AxiosError, AxiosHeaders } from "axios";
 import type { VerifyOrderQrResponse } from "@paserve/contracts";
 import { CashierOrderDecision } from "./CashierOrderDecision";
-import { verifyScannedOrder } from "../../features/cashier/order-qr";
+import {
+  verifyScannedOrder,
+  lookupOrderNumber,
+} from "../../features/cashier/order-qr";
 import { decideOrder } from "../../features/cashier/order-decision";
 import { cashierLine } from "../../test/cashier-fixtures";
 
 vi.mock("../../features/cashier/order-qr", () => ({
   verifyScannedOrder: vi.fn(),
+  lookupOrderNumber: vi.fn(),
 }));
 vi.mock("../../features/cashier/order-decision", () => ({
   decideOrder: vi.fn(),
@@ -55,6 +59,7 @@ const close = Object.getOwnPropertyDescriptor(
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(verifyScannedOrder).mockResolvedValue(order);
+  vi.mocked(lookupOrderNumber).mockResolvedValue(order);
   vi.mocked(decideOrder).mockResolvedValue(decision);
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
     configurable: true,
@@ -115,6 +120,31 @@ it("revalidates before asking for a decision and keeps Cancel focused", async ()
   );
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Confirm order" })).toHaveFocus();
+});
+it("refreshes and confirms a manually found order without pretending its QR was scanned", async () => {
+  const user = userEvent.setup();
+  render(<CashierOrderDecision order={order} qrToken="" onNext={vi.fn()} />);
+  expect(screen.getByText("Order loaded by number")).toBeInTheDocument();
+  const dialog = await open("Confirm order", user);
+  expect(lookupOrderNumber).toHaveBeenCalledWith(
+    order.shopId,
+    order.orderNumber,
+    expect.any(AbortSignal),
+  );
+  expect(verifyScannedOrder).not.toHaveBeenCalled();
+  await user.click(
+    within(dialog).getByRole("button", { name: "Confirm order" }),
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Order confirmed" }),
+  ).toBeInTheDocument();
+  expect(decideOrder).toHaveBeenCalledWith(
+    order,
+    "",
+    "confirm",
+    "",
+    expect.any(AbortSignal),
+  );
 });
 it("confirms only after explicit dialog approval and shows unpaid server outcome", async () => {
   const { user } = setup();

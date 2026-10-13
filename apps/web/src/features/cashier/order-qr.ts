@@ -24,10 +24,42 @@ export async function verifyScannedOrder(
     { qrToken: reference.qrToken },
     { signal, timeout: AUTH_REQUEST_TIMEOUT_MS },
   );
+  return parseReview(data, shopId, reference.orderId);
+}
+export async function lookupOrderNumber(
+  shopId: string,
+  rawNumber: string,
+  signal: AbortSignal,
+) {
+  const orderNumber = rawNumber.trim().toUpperCase();
+  if (!isOrderNumber(orderNumber))
+    throw new Error("Enter a valid order number, such as ORD-000006.");
+  const { data } = await api.post<VerifyOrderQrResponse>(
+    `/shops/${encodeURIComponent(shopId)}/orders/lookup-number`,
+    { orderNumber },
+    { signal, timeout: AUTH_REQUEST_TIMEOUT_MS },
+  );
+  if (
+    data?.order?.orderNumber !== orderNumber ||
+    typeof data.order.id !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      data.order.id,
+    )
+  )
+    throw new Error(
+      "The order lookup response could not be verified. Please try again.",
+    );
+  return parseReview(data, shopId, data.order.id);
+}
+function parseReview(
+  data: VerifyOrderQrResponse,
+  shopId: string,
+  orderId: string,
+) {
   if (
     !data ||
     data.verified !== true ||
-    data.order?.id !== reference.orderId ||
+    data.order?.id !== orderId ||
     data.order.shopId !== shopId ||
     !isOrderNumber(data.order.orderNumber) ||
     !["DINE_IN", "TAKEOUT"].includes(data.order.mode) ||

@@ -65,6 +65,18 @@ it("sends a trimmed rejection reason without order details or payment fields", a
     { signal, timeout: 15000 },
   );
 });
+it("uses the manual decision endpoint and number only when no QR was scanned", async () => {
+  const post = vi
+    .spyOn(api, "post")
+    .mockResolvedValue({ data: { order: result } });
+  const signal = new AbortController().signal;
+  await decideOrder(order, "", "confirm", "", signal);
+  expect(post).toHaveBeenCalledWith(
+    "/shops/shop-a/orders/order-a/confirm-number",
+    { orderNumber: order.orderNumber, reviewVersion: order.reviewVersion },
+    { signal, timeout: 15000 },
+  );
+});
 it.each([
   undefined,
   { ...result, id: "another-order" },

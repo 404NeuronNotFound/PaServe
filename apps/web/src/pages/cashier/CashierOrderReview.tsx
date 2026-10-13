@@ -8,11 +8,13 @@ export function CashierOrderReview({
   onNext,
   children,
   busy = false,
+  source = "qr",
 }: {
   order: VerifyOrderQrResponse["order"];
   onNext: () => void;
   children?: ReactNode;
   busy?: boolean;
+  source?: "qr" | "number";
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const quantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -28,7 +30,8 @@ export function CashierOrderReview({
         Review order
       </h2>
       <p className="cashier-review-verified" role="status">
-        <FiCheckCircle aria-hidden="true" /> Order QR verified
+        <FiCheckCircle aria-hidden="true" />{" "}
+        {source === "qr" ? "Order QR verified" : "Order loaded by number"}
       </p>
       <p>
         Check the items, options, customer notes and total with the customer

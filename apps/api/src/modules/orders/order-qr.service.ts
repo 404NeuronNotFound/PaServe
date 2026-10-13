@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   hasShopPermission,
+  isValidOrderNumber,
   SHOP_ROLES,
   type VerifyOrderQrResponse,
 } from '@paserve/contracts';
@@ -47,6 +48,67 @@ export class OrderQrService {
     database: Pick<Prisma.TransactionClient, 'order'> = this.prisma,
     roles = ORDER_QR_ROLES,
   ): Promise<VerifyOrderQrResponse> {
+    return this.load(
+      userId,
+      shopId,
+      orderId,
+      { qrToken: token },
+      database,
+      roles,
+    );
+  }
+
+  async lookupNumber(
+    userId: string,
+    shopId: string,
+    orderNumber: string,
+  ): Promise<VerifyOrderQrResponse> {
+    this.number(orderNumber);
+    const order = await this.prisma.order.findFirst({
+      where: {
+        orderNumber,
+        shopId,
+        shop: shopAccessWhere(userId, shopId, ORDER_QR_ROLES),
+      },
+      select: { id: true },
+    });
+    if (!order)
+      throw new NotFoundException({
+        code: 'ORDER_NOT_ACCESSIBLE',
+        message:
+          'No pending order with this number is available in the active shop.',
+      });
+    return this.reviewNumber(userId, shopId, order.id, orderNumber);
+  }
+
+  async reviewNumber(
+    userId: string,
+    shopId: string,
+    orderId: string,
+    orderNumber: string,
+    database: Pick<Prisma.TransactionClient, 'order'> = this.prisma,
+    roles = ORDER_QR_ROLES,
+  ): Promise<VerifyOrderQrResponse> {
+    this.number(orderNumber);
+    return this.load(userId, shopId, orderId, { orderNumber }, database, roles);
+  }
+
+  private number(orderNumber: string) {
+    if (!isValidOrderNumber(orderNumber))
+      throw new BadRequestException({
+        code: 'INVALID_ORDER_NUMBER',
+        message: 'Enter a valid order number, such as ORD-000006.',
+      });
+  }
+
+  private async load(
+    userId: string,
+    shopId: string,
+    orderId: string,
+    reference: { qrToken: string } | { orderNumber: string },
+    database: Pick<Prisma.TransactionClient, 'order'>,
+    roles: typeof ORDER_QR_ROLES,
+  ): Promise<VerifyOrderQrResponse> {
     if (!isUUID(orderId))
       throw new BadRequestException({
         code: 'INVALID_ORDER_ID',
@@ -56,6 +118,9 @@ export class OrderQrService {
     const order = await database.order.findFirst({
       where: {
         id: orderId,
+        ...('orderNumber' in reference
+          ? { orderNumber: reference.orderNumber }
+          : {}),
         shopId,
         shop: shopAccessWhere(userId, shopId, roles),
       },
@@ -104,9 +169,12 @@ export class OrderQrService {
         code: 'ORDER_NOT_ACCESSIBLE',
         message: 'This order is unavailable in this shop.',
       });
-    this.tokens.verify(token, order);
+    if ('qrToken' in reference) this.tokens.verify(reference.qrToken, order);
     // Invalid credentials must not reveal that the order has been processed.
-    if (order.status !== 'PENDING_CONFIRMATION')
+    if (
+      order.status !== 'PENDING_CONFIRMATION' ||
+      order.paymentStatus !== 'UNPAID'
+    )
       throw new ConflictException({
         code: 'ORDER_NOT_PENDING_CONFIRMATION',
         message:

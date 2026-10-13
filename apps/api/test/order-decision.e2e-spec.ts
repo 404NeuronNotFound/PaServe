@@ -105,8 +105,11 @@ describe('Cashier order decisions', () => {
       },
     }));
     findOrder.mockImplementation(async ({ where }) =>
-      where.id === orderId &&
+      (where.id === orderId ||
+        (where.id === undefined && where.orderNumber === saved.orderNumber)) &&
       where.shopId === shopId &&
+      (where.orderNumber === undefined ||
+        where.orderNumber === saved.orderNumber) &&
       active &&
       where.shop.members.some.role.in.includes(role)
         ? saved
@@ -118,8 +121,10 @@ describe('Cashier order decisions', () => {
       if (
         saved.status !== where.status ||
         saved.paymentStatus !== where.paymentStatus ||
-        saved.qrTokenRevokedAt ||
-        saved.qrTokenExpiresAt <= where.qrTokenExpiresAt.gt ||
+        (where.qrTokenRevokedAt !== undefined && saved.qrTokenRevokedAt) ||
+        (where.qrTokenExpiresAt &&
+          saved.qrTokenExpiresAt <= where.qrTokenExpiresAt.gt) ||
+        (where.orderNumber && saved.orderNumber !== where.orderNumber) ||
         !active ||
         !where.shop.members.some.role.in.includes(role)
       )
@@ -143,6 +148,134 @@ describe('Cashier order decisions', () => {
     if (authenticated) req.set('Authorization', 'Bearer staff-session');
     return req.send({ qrToken: token, reviewVersion: version, ...body });
   }
+  function numberRequest(
+    action = 'lookup-number',
+    body: Record<string, unknown> = {},
+    targetShop = shopId,
+    authenticated = true,
+  ) {
+    const path = action === 'lookup-number' ? action : `${orderId}/${action}`;
+    const req = request(app.getHttpServer()).post(
+      `/api/v1/shops/${targetShop}/orders/${path}`,
+    );
+    if (authenticated) req.set('Authorization', 'Bearer staff-session');
+    return req.send({
+      orderNumber: saved.orderNumber,
+      ...(action === 'lookup-number' ? {} : { reviewVersion: version }),
+      ...body,
+    });
+  }
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
+    'allows live %s to find a number and confirms using current saved details',
+    async (currentRole) => {
+      role = currentRole;
+      const review = await numberRequest().expect(200);
+      expect(review.headers['cache-control']).toBe('no-store');
+      expect(review.body.order.id).toBe(orderId);
+      expect(review.body.order.orderNumber).toBe(saved.orderNumber);
+      expect(review.body.order.qrToken).toBeUndefined();
+      expect(review.body.order.reviewVersion).toBe(version);
+      const result = await numberRequest('confirm-number').expect(200);
+      expect(result.body.order).toMatchObject({
+        status: 'CONFIRMED',
+        paymentStatus: 'UNPAID',
+        decidedBy: userId,
+      });
+    },
+  );
+  it('rejects by number with a saved reason and rejects repeated decisions', async () => {
+    const result = await numberRequest('reject-number', {
+      rejectionReason: 'Customer cancelled.',
+    }).expect(200);
+    expect(result.body.order).toMatchObject({
+      status: 'REJECTED',
+      paymentStatus: 'UNPAID',
+      rejectionReason: 'Customer cancelled.',
+    });
+    await numberRequest('reject-number').expect(409);
+    await numberRequest('confirm-number').expect(409);
+    expect(updateOrder).toHaveBeenCalledTimes(1);
+  });
+  it('allows authorized manual fallback for an expired QR without making QR verification accept it', async () => {
+    saved.qrTokenExpiresAt = new Date(0);
+    await decide().expect(403);
+    await numberRequest().expect(200);
+    await numberRequest('confirm-number').expect(200);
+    expect(saved.paymentStatus).toBe('UNPAID');
+  });
+  it.each(['lookup-number', 'confirm-number', 'reject-number'])(
+    'denies guests and kitchen staff for %s',
+    async (action) => {
+      await numberRequest(action, {}, shopId, false).expect(401);
+      role = 'KITCHEN';
+      await numberRequest(action).expect(403);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['lookup-number', 'confirm-number', 'reject-number'])(
+    'does not read/process another shop number through %s',
+    async (action) => {
+      await numberRequest(action, {}, otherShop).expect(404);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['CONFIRMED', 'REJECTED', 'UNKNOWN'])(
+    'rejects a manual lookup of state %s',
+    async (status) => {
+      saved.status = status;
+      await numberRequest().expect(409);
+      await numberRequest('confirm-number').expect(409);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('rechecks manual lookup access in the resource read', async () => {
+    findOrder.mockResolvedValueOnce(null);
+    await numberRequest().expect(404);
+  });
+  it('rejects a manual number/ID mismatch and a stale reviewed version', async () => {
+    await numberRequest('confirm-number', { orderNumber: 'ORD-000999' }).expect(
+      404,
+    );
+    await numberRequest('confirm-number', {
+      reviewVersion: 'b'.repeat(64),
+    }).expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('normalizes pasted numbers and rejects values outside the server numbering range', async () => {
+    await numberRequest('lookup-number', {
+      orderNumber: ' ord-000042 ',
+    }).expect(200);
+    for (const orderNumber of [
+      'ORD-000000',
+      'ORD-9223372036854775808',
+      orderId,
+    ])
+      await numberRequest('lookup-number', { orderNumber }).expect(400);
+  });
+  it('rejects mixed credentials or client-supplied statuses on manual routes', async () => {
+    await numberRequest('confirm-number', { qrToken: token }).expect(400);
+    await numberRequest('confirm-number', { paymentStatus: 'PAID' }).expect(
+      400,
+    );
+    await numberRequest('lookup-number', { shopId: otherShop }).expect(400);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('retains pending/unpaid/shop/number predicates in manual writes', async () => {
+    await numberRequest('confirm-number').expect(200);
+    expect(updateOrder).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: orderId,
+        shopId,
+        orderNumber: 'ORD-000042',
+        status: 'PENDING_CONFIRMATION',
+        paymentStatus: 'UNPAID',
+      }),
+      data: expect.objectContaining({
+        status: 'CONFIRMED',
+        qrTokenRevokedAt: expect.any(Date),
+      }),
+    });
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
     'allows live %s confirmation with unpaid payment and recorded actor',
     async (currentRole) => {
@@ -208,7 +341,11 @@ describe('Cashier order decisions', () => {
     await decide().expect(404);
     expect(updateOrder).not.toHaveBeenCalled();
   });
-  it.each(['CONFIRMED', 'REJECTED', 'COMPLETED', 'UNKNOWN'].flatMap(status => ['confirm', 'reject'].map(action => ({ status, action }))))(
+  it.each(
+    ['CONFIRMED', 'REJECTED', 'COMPLETED', 'UNKNOWN'].flatMap((status) =>
+      ['confirm', 'reject'].map((action) => ({ status, action })),
+    ),
+  )(
     'rejects $action from disallowed state $status',
     async ({ status, action }) => {
       saved.status = status;

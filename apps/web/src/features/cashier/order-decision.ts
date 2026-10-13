@@ -12,9 +12,9 @@ export async function decideOrder(
   signal: AbortSignal,
 ) {
   const { data } = await api.post<OrderDecisionResponse>(
-    `/shops/${encodeURIComponent(order.shopId)}/orders/${encodeURIComponent(order.id)}/${action}`,
+    `/shops/${encodeURIComponent(order.shopId)}/orders/${encodeURIComponent(order.id)}/${action}${qrToken ? "" : "-number"}`,
     {
-      qrToken,
+      ...(qrToken ? { qrToken } : { orderNumber: order.orderNumber }),
       reviewVersion: order.reviewVersion,
       ...(action === "reject" && rejectionReason.trim()
         ? { rejectionReason: rejectionReason.trim() }

@@ -12,10 +12,26 @@ import { Roles } from '../shop-members/decorators/roles.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { ORDER_QR_ROLES, OrderQrService } from './order-qr.service.js';
 import { VerifyOrderQrDto } from './verify-order-qr.dto.js';
+import { LookupOrderNumberDto } from './order-number-lookup.dto.js';
 
 @Controller('shops/:shopId/orders')
 export class OrderQrController {
   constructor(private readonly qr: OrderQrService) {}
+  @Post('lookup-number')
+  @HttpCode(200)
+  @Roles(...ORDER_QR_ROLES)
+  lookup(
+    @Body() dto: LookupOrderNumberDto,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.qr.lookupNumber(
+      request.user.id,
+      request.shopMembership.shopId,
+      dto.orderNumber,
+    );
+  }
 
   @Post('scan-qr')
   @HttpCode(200)

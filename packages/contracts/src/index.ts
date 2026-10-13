@@ -767,6 +767,15 @@ export interface VerifyOrderQrResponse {
 export interface OrderDecisionRequest extends VerifyOrderQrRequest {
   reviewVersion: string;
 }
+/** Authenticated staff fallback; numbers are scoped to the active shop. */
+export interface LookupOrderNumberRequest { orderNumber: string; }
+export interface OrderNumberDecisionRequest extends LookupOrderNumberRequest { reviewVersion: string; }
+export interface RejectOrderNumberRequest extends OrderNumberDecisionRequest { rejectionReason?: string; }
+export function isValidOrderNumber(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^ORD-\d{6,19}$(?![\s\S])/.test(value)) return false;
+  const sequence = BigInt(value.slice(4));
+  return sequence > 0n && sequence <= 9223372036854775807n;
+}
 export interface RejectOrderRequest extends OrderDecisionRequest {
   rejectionReason?: string;
 }

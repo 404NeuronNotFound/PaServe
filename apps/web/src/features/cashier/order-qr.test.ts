@@ -1,7 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
 import QRCode from "qrcode";
 import sharp from "sharp";
-import { parseOrderQr, verifyScannedOrder } from "./order-qr";
+import {
+  parseOrderQr,
+  verifyScannedOrder,
+  lookupOrderNumber,
+} from "./order-qr";
 import { loadQrDecoder, readQrImage } from "./qr-decoder";
 import { api } from "../../lib/api/client";
 import { cashierLine } from "../../test/cashier-fixtures";
@@ -76,6 +80,46 @@ it("never sends a foreign-shop scan to an API", async () => {
     ),
   ).rejects.toThrow("another shop");
   expect(post).not.toHaveBeenCalled();
+});
+it("looks up a normalized order number only in the active shop", async () => {
+  const post = vi
+    .spyOn(api, "post")
+    .mockResolvedValue({ data: { verified: true, order } });
+  const signal = new AbortController().signal;
+  expect(await lookupOrderNumber(shopId, " ord-000001 ", signal)).toEqual(
+    order,
+  );
+  expect(post).toHaveBeenCalledWith(
+    `/shops/${shopId}/orders/lookup-number`,
+    { orderNumber: "ORD-000001" },
+    { signal, timeout: 15000 },
+  );
+});
+it.each(["ORD-000000", "ORD-9223372036854775808", orderId, "T12"])(
+  "rejects invalid manual number %s without an API call",
+  async (raw) => {
+    const post = vi.spyOn(api, "post");
+    await expect(
+      lookupOrderNumber(shopId, raw, new AbortController().signal),
+    ).rejects.toThrow("valid order number");
+    expect(post).not.toHaveBeenCalled();
+  },
+);
+it("rejects a manual lookup response for another order number or shop", async () => {
+  const post = vi
+    .spyOn(api, "post")
+    .mockResolvedValue({
+      data: { verified: true, order: { ...order, orderNumber: "ORD-000002" } },
+    });
+  await expect(
+    lookupOrderNumber(shopId, order.orderNumber, new AbortController().signal),
+  ).rejects.toThrow("could not be verified");
+  post.mockResolvedValue({
+    data: { verified: true, order: { ...order, shopId: orderId } },
+  });
+  await expect(
+    lookupOrderNumber(shopId, order.orderNumber, new AbortController().signal),
+  ).rejects.toThrow("could not be verified");
 });
 it("sends the token to the fixed active-shop endpoint and ignores embedded order details and URLs", async () => {
   const raw = encode({

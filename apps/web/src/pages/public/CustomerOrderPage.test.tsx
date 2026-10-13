@@ -117,7 +117,7 @@ function setup(path = "/menu/cafe/orders/order-a") {
   );
 }
 
-it("shows the server-token QR with the order number underneath, and preserves only the number after a full reload", async () => {
+it("keeps the QR and order number after memory loss and a full reload", async () => {
   const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828";
   const expiry = Date.parse("2030-01-01T00:00:00Z");
   const qrToken = `${Buffer.from(JSON.stringify({ v: 1, purpose: "order-receipt", shopId: "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e", orderId, nonce: "75992537-5d60-4d22-8e1e-60a114644681", exp: expiry })).toString("base64url")}.${"a".repeat(43)}`;
@@ -149,8 +149,12 @@ it("shows the server-token QR with the order number underneath, and preserves on
   orderReceipts.clearMemory();
   setup(path);
   expect(screen.getByText("ORD-000042")).toBeInTheDocument();
-  expect(screen.queryByRole("img")).not.toBeInTheDocument();
-  expect(screen.getByText(/unavailable in this session/)).toBeInTheDocument();
+  expect(
+    await screen.findByRole("img", { name: "Order QR for ORD-000042" }),
+  ).toHaveAttribute("src", image.getAttribute("src"));
+  expect(
+    screen.queryByText(/unavailable in this session/),
+  ).not.toBeInTheDocument();
 });
 
 it.each(["TAKEOUT", "DINE_IN"] as const)(

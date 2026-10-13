@@ -6,7 +6,10 @@ import type {
   VerifyOrderQrResponse,
 } from "@paserve/contracts";
 import { CUSTOMER_NOTE_PATTERN } from "@paserve/contracts";
-import { verifyScannedOrder } from "../../features/cashier/order-qr";
+import {
+  verifyScannedOrder,
+  lookupOrderNumber,
+} from "../../features/cashier/order-qr";
 import { decideOrder } from "../../features/cashier/order-decision";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
@@ -71,11 +74,13 @@ export function CashierOrderDecision({
     const controller = new AbortController();
     request.current = controller;
     try {
-      const saved = await verifyScannedOrder(
-        review.shopId,
-        qrToken,
-        controller.signal,
-      );
+      const saved = qrToken
+        ? await verifyScannedOrder(review.shopId, qrToken, controller.signal)
+        : await lookupOrderNumber(
+            review.shopId,
+            review.orderNumber,
+            controller.signal,
+          );
       if (!active.current || controller.signal.aborted) return;
       setReview(saved);
       const eligible =
@@ -168,6 +173,7 @@ export function CashierOrderDecision({
     <CashierOrderReview
       order={review}
       onNext={onNext}
+      source={qrToken ? "qr" : "number"}
       busy={busy || Boolean(action)}
     >
       <div className="cashier-decision-controls">

@@ -9,6 +9,7 @@ import type {
 import {
   parseOrderQr,
   verifyScannedOrder,
+  lookupOrderNumber,
 } from "../../features/cashier/order-qr";
 import { readQrImage } from "../../features/cashier/qr-decoder";
 import {
@@ -31,6 +32,7 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [pasted, setPasted] = useState("");
+  const [number, setNumber] = useState("");
   const [lostAccess, setLostAccess] = useState(false);
   const [expiredSession, setExpiredSession] = useState(false);
   const [order, setOrder] = useState<VerifyOrderQrResponse["order"] | null>(
@@ -78,12 +80,26 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
     setOrder(null);
     setPasted("");
     lastCode.current = "";
+    load(
+      (controller) =>
+        verifyScannedOrder(shopId, reference.qrToken, controller.signal),
+      reference.qrToken,
+    );
+    return true;
+  }
+  function load(
+    fetchOrder: (
+      controller: AbortController,
+    ) => Promise<VerifyOrderQrResponse["order"]>,
+    token: string,
+  ) {
     const controller = new AbortController();
     request.current = controller;
-    void verifyScannedOrder(shopId, reference.qrToken, controller.signal)
+    void fetchOrder(controller)
       .then((saved) => {
         if (mounted.current && !controller.signal.aborted) {
-          setReviewToken(reference.qrToken);
+          setReviewToken(token);
+          setNumber("");
           setOrder(saved);
         }
       })
@@ -123,7 +139,19 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
           setBusy(false);
         }
       });
-    return true;
+  }
+  function findNumber(event: FormEvent) {
+    event.preventDefault();
+    if (processing.current || lostAccess || order) return;
+    processing.current = true;
+    stopCamera();
+    setBusy(true);
+    setError("");
+    setPasted("");
+    load(
+      (controller) => lookupOrderNumber(shopId, number, controller.signal),
+      "",
+    );
   }
   function start(selected = "") {
     if (processing.current || lostAccess) return;
@@ -270,6 +298,30 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
         aria-labelledby="scanner-fallback-title"
       >
         <h2 id="scanner-fallback-title">Other scanning options</h2>
+        <form onSubmit={findNumber}>
+          <div className="field">
+            <label htmlFor="scanner-order-number">Find by order number</label>
+            <input
+              id="scanner-order-number"
+              value={number}
+              onChange={(event) => setNumber(event.target.value)}
+              placeholder="ORD-000006"
+              maxLength={23}
+              autoComplete="off"
+              disabled={busy || lostAccess}
+            />
+            <p>
+              Use the number on the customer's receipt. Searches only the active
+              shop.
+            </p>
+          </div>
+          <button
+            className="secondary-button"
+            disabled={busy || lostAccess || !number.trim()}
+          >
+            Find order
+          </button>
+        </form>
         <div className="field">
           <label htmlFor="scanner-image">
             <FiUpload aria-hidden="true" /> Choose an order QR image
@@ -304,8 +356,8 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
               disabled={busy || lostAccess}
             />
             <p>
-              Paste the text encoded in the customer's order QR. An order number
-              cannot replace it.
+              Paste the text encoded in the customer's order QR. For an order
+              number, use Find by order number above.
             </p>
           </div>
           <button

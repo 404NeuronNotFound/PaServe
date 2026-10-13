@@ -4,13 +4,17 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { AxiosError, AxiosHeaders } from "axios";
 import { OrderQrScanner } from "./OrderQrScanner";
-import { verifyScannedOrder } from "../../features/cashier/order-qr";
+import {
+  verifyScannedOrder,
+  lookupOrderNumber,
+} from "../../features/cashier/order-qr";
 import { readQrImage } from "../../features/cashier/qr-decoder";
 import { cashierLine } from "../../test/cashier-fixtures";
 
 vi.mock("../../features/cashier/order-qr", async (original) => ({
   ...(await original<typeof import("../../features/cashier/order-qr")>()),
   verifyScannedOrder: vi.fn(),
+  lookupOrderNumber: vi.fn(),
 }));
 vi.mock("../../features/cashier/qr-decoder", () => ({ readQrImage: vi.fn() }));
 const stop = vi.fn();
@@ -52,6 +56,7 @@ const order = {
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(verifyScannedOrder).mockResolvedValue(order);
+  vi.mocked(lookupOrderNumber).mockResolvedValue(order);
 });
 afterEach(() => vi.restoreAllMocks());
 function setup() {
@@ -233,6 +238,21 @@ it("allows another order after a successful scan", async () => {
     scan(token());
   });
   await waitFor(() => expect(verifyScannedOrder).toHaveBeenCalledTimes(2));
+});
+it("loads a receipt by number through a separate fallback, without calling QR verification", async () => {
+  const { user } = setup();
+  await user.type(screen.getByLabelText("Find by order number"), "ORD-000042");
+  await user.click(screen.getByRole("button", { name: "Find order" }));
+  expect(await screen.findByText("Order loaded by number")).toBeInTheDocument();
+  expect(lookupOrderNumber).toHaveBeenCalledWith(
+    shopId,
+    "ORD-000042",
+    expect.any(AbortSignal),
+  );
+  expect(verifyScannedOrder).not.toHaveBeenCalled();
+  expect(stop).toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Scan another order" }));
+  expect(screen.getByLabelText("Find by order number")).toHaveValue("");
 });
 it.each([401, 403, 500])(
   "handles a response without a JSON error body (%s)",

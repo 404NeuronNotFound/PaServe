@@ -12,6 +12,10 @@ import { Roles } from '../shop-members/decorators/roles.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { OrderDecisionDto, RejectOrderDto } from './order-decision.dto.js';
 import {
+  OrderNumberDecisionDto,
+  RejectOrderNumberDto,
+} from './order-number-lookup.dto.js';
+import {
   ORDER_CONFIRM_ROLES,
   ORDER_REJECT_ROLES,
   OrderDecisionService,
@@ -20,6 +24,42 @@ import {
 @Controller('shops/:shopId/orders')
 export class OrderDecisionController {
   constructor(private readonly decisions: OrderDecisionService) {}
+  @Post(':orderId/confirm-number')
+  @HttpCode(200)
+  @Roles(...ORDER_CONFIRM_ROLES)
+  confirmNumber(
+    @Param('orderId') orderId: string,
+    @Body() dto: OrderNumberDecisionDto,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.decisions.decide(
+      request.user.id,
+      request.shopMembership.shopId,
+      orderId,
+      'CONFIRMED',
+      dto,
+    );
+  }
+  @Post(':orderId/reject-number')
+  @HttpCode(200)
+  @Roles(...ORDER_REJECT_ROLES)
+  rejectNumber(
+    @Param('orderId') orderId: string,
+    @Body() dto: RejectOrderNumberDto,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.decisions.decide(
+      request.user.id,
+      request.shopMembership.shopId,
+      orderId,
+      'REJECTED',
+      dto,
+    );
+  }
   @Post(':orderId/confirm')
   @HttpCode(200)
   @Roles(...ORDER_CONFIRM_ROLES)
