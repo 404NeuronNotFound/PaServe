@@ -10,6 +10,8 @@ export const TENANT_RESOURCE_KINDS = [
   'table',
   'order',
   'orderItem',
+  'staffInvitation',
+  'staffAuditEvent',
 ] as const;
 export type TenantResourceKind = (typeof TENANT_RESOURCE_KINDS)[number];
 
@@ -34,6 +36,15 @@ export class TenantResourcesRepository {
       shop: shopAccessWhere(userId, shopId),
     };
     const select = { id: true, shopId: true } as const;
+    if (kind === 'staffInvitation' || kind === 'staffAuditEvent') {
+      const staffWhere = {
+        ...where,
+        shop: shopAccessWhere(userId, shopId, ['OWNER']),
+      };
+      return kind === 'staffInvitation'
+        ? this.prisma.staffInvitation.findFirst({ where: staffWhere, select })
+        : this.prisma.staffAuditEvent.findFirst({ where: staffWhere, select });
+    }
     if (kind === 'orderItem')
       return this.prisma.orderItem.findFirst({
         where: { id: resourceId, shopId, order: { shopId, shop: where.shop } },

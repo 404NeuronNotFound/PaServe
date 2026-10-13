@@ -40,6 +40,46 @@ export const SHOP_ROLES = [
 ] as const;
 export type ShopRole = (typeof SHOP_ROLES)[number];
 
+export const STAFF_ROLES = ["ADMIN", "MANAGER", "CASHIER", "KITCHEN"] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
+export interface StaffMember {
+  id: string;
+  userId: string;
+  email: string;
+  role: ShopRole;
+  isActive: boolean;
+}
+export interface StaffInvitation {
+  id: string;
+  email: string;
+  role: StaffRole;
+  expiresAt: string;
+  status: "PENDING" | "EXPIRED" | "REVOKED" | "ACCEPTED";
+}
+export interface ShopStaffResponse {
+  shopId: string;
+  members: StaffMember[];
+  invitations: StaffInvitation[];
+}
+export interface CreateStaffInvitationRequest { email: string; role: StaffRole }
+export interface CreateStaffInvitationResponse {
+  shopId: string;
+  invitation: StaffInvitation;
+  /** Returned once. Keep out of persistent storage and logs. */
+  token: string;
+}
+export interface AcceptStaffInvitationResponse {
+  shopId: string;
+  role: StaffRole;
+}
+export interface StaffInvitationPreview {
+  shopId: string;
+  shopName: string;
+  email: string;
+  role: StaffRole;
+  expiresAt: string;
+}
+
 /** Explicit daily operations; these grants do not include role or billing changes. */
 export const SHOP_OPERATIONAL_PERMISSIONS = [
   "shop.menu.manage",
@@ -681,7 +721,7 @@ export interface DineInOrderResponse {
     id: string;
     mode: "DINE_IN";
     /** Awaiting staff confirmation; implements the roadmap's PENDING_CONFIRMATION state. */
-    status: "PENDING";
+    status: "PENDING_CONFIRMATION";
     table: PublicTableContext;
     /** Parent metadata emitted by current API; optional for older confirmations. */
     orderNumber?: string;

@@ -1,0 +1,448 @@
+import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
+import type { ShopRole } from '@paserve/contracts';
+import { createHash } from 'node:crypto';
+import request from 'supertest';
+import type { App } from 'supertest/types.js';
+import { AppModule } from '../src/app.module.js';
+import { PrismaService } from '../src/database/prisma.service.js';
+import { AuthService } from '../src/modules/auth/auth.service.js';
+import { Prisma } from '../src/generated/prisma/client.js';
+
+describe('Owner staff invitations through HTTP', () => {
+  const ownerId = '75992537-5d60-4d22-8e1e-60a114644681';
+  const userId = '85992537-5d60-4d22-8e1e-60a114644681';
+  const shopId = '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e';
+  const foreignShop = '55b18d73-f2fb-4fe6-bb1c-30cf385c3b24';
+  const resourceId = 'e47f6994-a303-4a7b-87b0-2386d5198828';
+  const token = 'a'.repeat(64);
+  const currentUser = vi.fn();
+  const membership = vi.fn();
+  const tx = {
+    $queryRaw: vi.fn(),
+    shop: { findFirst: vi.fn() },
+    user: { findFirst: vi.fn() },
+    shopMember: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      updateMany: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+    staffInvitation: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    staffAuditEvent: { create: vi.fn() },
+  };
+  const transaction = vi.fn();
+  let app: INestApplication<App>;
+  let role: ShopRole;
+  let invite: {
+    id: string;
+    shopId: string;
+    email: string;
+    role: ShopRole;
+    tokenHash: string;
+    invitedBy: string;
+    expiresAt: Date;
+    revokedAt: Date | null;
+    acceptedAt: Date | null;
+    acceptedBy: string | null;
+    createdAt: Date;
+  };
+  beforeAll(async () => {
+    const module = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(PrismaService)
+      .useValue({
+        shopMember: { findUnique: membership },
+        $transaction: transaction,
+      })
+      .overrideProvider(AuthService)
+      .useValue({ currentUser })
+      .compile();
+    app = module.createNestApplication();
+    app.setGlobalPrefix('api/v1');
+    await app.init();
+  });
+  afterAll(async () => {
+    await app.close();
+  });
+  beforeEach(() => {
+    vi.resetAllMocks();
+    role = 'OWNER';
+    invite = {
+      id: resourceId,
+      shopId,
+      email: 'cashier@example.com',
+      role: 'CASHIER',
+      tokenHash: createHash('sha256').update(token).digest('hex'),
+      invitedBy: ownerId,
+      expiresAt: new Date(Date.now() + 86400000),
+      revokedAt: null,
+      acceptedAt: null,
+      acceptedBy: null,
+      createdAt: new Date(),
+    };
+    currentUser.mockImplementation(async (credential: string) => ({
+      id: credential === 'invitee' ? userId : ownerId,
+      memberships: [{ shopId, role: 'OWNER' }],
+    }));
+    membership.mockImplementation(async ({ where }) =>
+      where.userId_shopId.shopId === shopId
+        ? {
+            id: resourceId,
+            shopId,
+            role,
+            user: { isActive: true },
+            shop: { id: shopId, name: 'Cafe', slug: 'cafe', isActive: true },
+          }
+        : null,
+    );
+    transaction.mockImplementation(async (callback) => callback(tx));
+    tx.$queryRaw.mockResolvedValue([{ id: shopId }]);
+    tx.shop.findFirst.mockResolvedValue({ id: shopId, name: 'Cafe A' });
+    tx.user.findFirst.mockResolvedValue({ email: 'cashier@example.com' });
+    tx.shopMember.findFirst.mockResolvedValue(null);
+    tx.shopMember.findMany.mockResolvedValue([]);
+    tx.staffInvitation.findMany.mockResolvedValue([]);
+    tx.staffInvitation.findFirst.mockImplementation(async ({ where }) =>
+      where.shopId === shopId &&
+      (!where.tokenHash || where.tokenHash === invite.tokenHash)
+        ? invite
+        : null,
+    );
+    tx.staffInvitation.create.mockImplementation(async ({ data }) => ({
+      ...invite,
+      ...data,
+    }));
+    tx.staffInvitation.updateMany.mockResolvedValue({ count: 1 });
+    tx.shopMember.updateMany.mockResolvedValue({ count: 1 });
+    tx.shopMember.deleteMany.mockResolvedValue({ count: 1 });
+  });
+  const owner = () => request(app.getHttpServer());
+  const accept = (targetShop = shopId, credential = token) =>
+    owner()
+      .post(`/api/v1/staff-invitations/${targetShop}/accept`)
+      .set('Authorization', 'Bearer invitee')
+      .send({ token: credential });
+  const actions = [
+    ['get', ''],
+    ['post', '/invitations'],
+    ['delete', `/invitations/${resourceId}`],
+    ['patch', `/members/${resourceId}`],
+    ['delete', `/members/${resourceId}`],
+  ] as const;
+  it.each(['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'] as const)(
+    'denies %s every owner staff action despite cached OWNER claims',
+    async (deniedRole) => {
+      role = deniedRole;
+      for (const [method, suffix] of actions)
+        await owner()
+          [method](`/api/v1/shops/${shopId}/staff${suffix}`)
+          .set('Authorization', 'Bearer owner')
+          .send({ email: 'cashier@example.com', role: 'CASHIER' })
+          .expect(403);
+      expect(transaction).not.toHaveBeenCalled();
+    },
+  );
+  it('requires authentication for every staff action and acceptance', async () => {
+    for (const [method, suffix] of actions)
+      await owner()
+        [method](`/api/v1/shops/${shopId}/staff${suffix}`)
+        .send({})
+        .expect(401);
+    await owner()
+      .post(`/api/v1/staff-invitations/${shopId}/accept`)
+      .send({ token })
+      .expect(401);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it('hides foreign shops from an owner of another shop', async () => {
+    await owner()
+      .get(`/api/v1/shops/${foreignShop}/staff`)
+      .set('Authorization', 'Bearer owner')
+      .expect(404);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it('rechecks live owner access after the guard', async () => {
+    tx.shop.findFirst.mockResolvedValue(null);
+    await owner()
+      .post(`/api/v1/shops/${shopId}/staff/invitations`)
+      .set('Authorization', 'Bearer owner')
+      .send({ email: 'cashier@example.com', role: 'CASHIER' })
+      .expect(403);
+    expect(tx.staffInvitation.create).not.toHaveBeenCalled();
+  });
+  it.each([
+    { code: '40001' },
+    { driverAdapterError: { cause: { originalCode: '40P01' } } },
+  ])(
+    'retries a rolled-back raw lock conflict %j without duplicate writes',
+    async (meta) => {
+      transaction.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('Lock conflict', {
+          code: 'P2010',
+          clientVersion: 'test',
+          meta,
+        }),
+      );
+      await owner()
+        .post(`/api/v1/shops/${shopId}/staff/invitations`)
+        .set('Authorization', 'Bearer owner')
+        .send({ email: 'cashier@example.com', role: 'CASHIER' })
+        .expect(201);
+      expect(transaction).toHaveBeenCalledTimes(2);
+      expect(tx.staffInvitation.create).toHaveBeenCalledTimes(1);
+    },
+  );
+  it('returns a retryable conflict after repeated serialization failures', async () => {
+    transaction.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Serialization conflict', {
+        code: 'P2034',
+        clientVersion: 'test',
+      }),
+    );
+    await owner()
+      .post(`/api/v1/shops/${shopId}/staff/invitations`)
+      .set('Authorization', 'Bearer owner')
+      .send({ email: 'cashier@example.com', role: 'CASHIER' })
+      .expect(409);
+    expect(transaction).toHaveBeenCalledTimes(3);
+    expect(tx.staffInvitation.create).not.toHaveBeenCalled();
+  });
+  it('creates a normalized invitation, stores only its digest, and audits it', async () => {
+    const result = await owner()
+      .post(`/api/v1/shops/${shopId}/staff/invitations`)
+      .set('Authorization', 'Bearer owner')
+      .send({ email: ' Cashier@EXAMPLE.com ', role: 'CASHIER' })
+      .expect(201);
+    expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.body.token).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.body.invitation.email).toBe('cashier@example.com');
+    expect(result.body.invitation.tokenHash).toBeUndefined();
+    expect(tx.staffInvitation.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        shopId,
+        email: 'cashier@example.com',
+        invitedBy: ownerId,
+        tokenHash: createHash('sha256').update(result.body.token).digest('hex'),
+      }),
+    });
+    expect(tx.staffAuditEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorId: ownerId,
+        action: 'INVITED',
+        shopId,
+      }),
+    });
+  });
+  it.each([
+    { email: 'bad', role: 'CASHIER' },
+    { email: 'cashier@example.com', role: 'OWNER' },
+    { email: 'cashier@example.com', role: 'CASHIER', shopId: foreignShop },
+  ])(
+    'rejects invalid or privilege-changing invitation payload %j',
+    async (body) => {
+      await owner()
+        .post(`/api/v1/shops/${shopId}/staff/invitations`)
+        .set('Authorization', 'Bearer owner')
+        .send(body)
+        .expect(400);
+      expect(tx.staffInvitation.create).not.toHaveBeenCalled();
+    },
+  );
+  it('does not invite an existing member or silently overwrite their role', async () => {
+    tx.shopMember.findFirst.mockResolvedValue({
+      id: resourceId,
+      role: 'KITCHEN',
+    });
+    await owner()
+      .post(`/api/v1/shops/${shopId}/staff/invitations`)
+      .set('Authorization', 'Bearer owner')
+      .send({ email: 'cashier@example.com', role: 'CASHIER' })
+      .expect(409);
+    expect(tx.staffInvitation.create).not.toHaveBeenCalled();
+  });
+  it('does not expose credential hashes in the staff list', async () => {
+    tx.staffInvitation.findMany.mockResolvedValue([invite]);
+    const result = await owner()
+      .get(`/api/v1/shops/${shopId}/staff`)
+      .set('Authorization', 'Bearer owner')
+      .expect(200);
+    expect(result.body.invitations[0].status).toBe('PENDING');
+    expect(JSON.stringify(result.body)).not.toContain(invite.tokenHash);
+    expect(result.body.invitations[0].invitedBy).toBeUndefined();
+  });
+  it('accepts the stored role atomically for the invited account', async () => {
+    const result = await accept().expect(200);
+    expect(result.body).toEqual({ shopId, role: 'CASHIER' });
+    expect(tx.shopMember.create).toHaveBeenCalledWith({
+      data: { shopId, userId, role: 'CASHIER' },
+    });
+    expect(tx.staffInvitation.updateMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        shopId,
+        tokenHash: invite.tokenHash,
+        acceptedAt: null,
+        revokedAt: null,
+      }),
+      data: expect.objectContaining({ acceptedBy: userId }),
+    });
+    expect(tx.staffAuditEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'ACCEPTED',
+        actorId: userId,
+        shopId,
+      }),
+    });
+  });
+  it('previews the verified shop and role without consuming the invitation', async () => {
+    const result = await owner()
+      .post(`/api/v1/staff-invitations/${shopId}/preview`)
+      .set('Authorization', 'Bearer invitee')
+      .send({ token })
+      .expect(200);
+    expect(result.body).toMatchObject({
+      shopId,
+      shopName: 'Cafe A',
+      email: invite.email,
+      role: 'CASHIER',
+    });
+    expect(tx.shopMember.create).not.toHaveBeenCalled();
+    expect(tx.staffInvitation.updateMany).not.toHaveBeenCalled();
+    tx.user.findFirst.mockResolvedValue({ email: 'wrong@example.com' });
+    await owner()
+      .post(`/api/v1/staff-invitations/${shopId}/preview`)
+      .set('Authorization', 'Bearer invitee')
+      .send({ token })
+      .expect(403);
+  });
+  it.each([
+    'email',
+    'expired',
+    'revoked',
+    'foreignShop',
+    'altered',
+    'issuer',
+    'existing',
+  ])('blocks %s acceptance without creating membership', async (kind) => {
+    if (kind === 'email')
+      tx.user.findFirst.mockResolvedValue({ email: 'wrong@example.com' });
+    if (kind === 'expired') invite.expiresAt = new Date(0);
+    if (kind === 'revoked') invite.revokedAt = new Date();
+    if (kind === 'issuer') tx.shop.findFirst.mockResolvedValue(null);
+    if (kind === 'existing')
+      tx.shopMember.findFirst.mockResolvedValue({ role: 'KITCHEN' });
+    await accept(
+      kind === 'foreignShop' ? foreignShop : shopId,
+      kind === 'altered' ? 'b'.repeat(64) : token,
+    ).expect(kind === 'email' ? 403 : kind === 'existing' ? 409 : 404);
+    expect(tx.shopMember.create).not.toHaveBeenCalled();
+  });
+  it('acknowledges acceptance retry without a second membership or audit', async () => {
+    invite.acceptedAt = new Date();
+    invite.acceptedBy = userId;
+    tx.shopMember.findFirst.mockResolvedValue({ role: 'CASHIER' });
+    await accept().expect(200);
+    expect(tx.shopMember.create).not.toHaveBeenCalled();
+    expect(tx.staffAuditEvent.create).not.toHaveBeenCalled();
+  });
+  it.each([null, { role: 'KITCHEN' }])(
+    'does not replay acceptance to restore removed or changed membership %j',
+    async (existing) => {
+      invite.acceptedAt = new Date();
+      invite.acceptedBy = userId;
+      tx.shopMember.findFirst.mockResolvedValue(existing);
+      await accept().expect(404);
+      expect(tx.shopMember.create).not.toHaveBeenCalled();
+    },
+  );
+  it('blocks a consumed-token race before inserting a membership', async () => {
+    tx.staffInvitation.updateMany.mockResolvedValue({ count: 0 });
+    await accept().expect(404);
+    expect(tx.shopMember.create).not.toHaveBeenCalled();
+  });
+  it.each(['patch', 'delete'] as const)(
+    'protects owner membership from %s',
+    async (method) => {
+      tx.shopMember.findFirst.mockResolvedValue({
+        userId: ownerId,
+        role: 'OWNER',
+        user: { email: 'owner@example.com' },
+      });
+      await owner()
+        [method](`/api/v1/shops/${shopId}/staff/members/${resourceId}`)
+        .set('Authorization', 'Bearer owner')
+        .send({ role: 'CASHIER' })
+        .expect(403);
+      expect(tx.shopMember.updateMany).not.toHaveBeenCalled();
+      expect(tx.shopMember.deleteMany).not.toHaveBeenCalled();
+    },
+  );
+  it('changes a nonowner role with shop and old-role predicates and an audit', async () => {
+    tx.shopMember.findFirst.mockResolvedValue({
+      userId,
+      role: 'KITCHEN',
+      user: { email: invite.email },
+    });
+    await owner()
+      .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}`)
+      .set('Authorization', 'Bearer owner')
+      .send({ role: 'CASHIER' })
+      .expect(204);
+    expect(tx.shopMember.updateMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: resourceId,
+        shopId,
+        role: 'KITCHEN',
+      }),
+      data: { role: 'CASHIER' },
+    });
+    expect(tx.staffAuditEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'ROLE_CHANGED',
+        previousRole: 'KITCHEN',
+        role: 'CASHIER',
+        shopId,
+      }),
+    });
+  });
+  it('removes only the selected shop membership and audits the removal', async () => {
+    tx.shopMember.findFirst.mockResolvedValue({
+      userId,
+      role: 'CASHIER',
+      user: { email: invite.email },
+    });
+    await owner()
+      .delete(`/api/v1/shops/${shopId}/staff/members/${resourceId}`)
+      .set('Authorization', 'Bearer owner')
+      .expect(204);
+    expect(tx.shopMember.deleteMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: resourceId,
+        shopId,
+        role: 'CASHIER',
+      }),
+    });
+    expect(tx.staffAuditEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'REMOVED',
+        shopId,
+        targetUserId: userId,
+      }),
+    });
+  });
+  it('revokes an unaccepted invitation', async () => {
+    await owner()
+      .delete(`/api/v1/shops/${shopId}/staff/invitations/${resourceId}`)
+      .set('Authorization', 'Bearer owner')
+      .expect(204);
+    expect(tx.staffInvitation.updateMany).toHaveBeenCalledWith({
+      where: { id: resourceId, shopId, acceptedAt: null, revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+  });
+});

@@ -78,6 +78,8 @@ model Shop {
   addOns     AddOn[]
   tables     RestaurantTable[]
   orders     Order[]
+  staffInvitations StaffInvitation[]
+  staffAuditEvents StaffAuditEvent[]
 
   @@map("shops")
 }
@@ -177,6 +179,46 @@ model ShopMember {
   @@unique([userId, shopId])
   @@index([shopId])
   @@map("shop_members")
+}
+
+model StaffInvitation {
+  // Preserve SQL-maintained pending-email uniqueness, role/token/state checks,
+  // RLS and revoked browser privileges in future migrations.
+  id String @id @default(uuid())
+  shopId String
+  email String @db.VarChar(254)
+  role ShopRole
+  tokenHash String @unique @db.VarChar(64)
+  invitedBy String
+  expiresAt DateTime
+  revokedAt DateTime?
+  acceptedAt DateTime?
+  acceptedBy String?
+  createdAt DateTime @default(now())
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([id, shopId])
+  @@index([shopId, email])
+  @@map("staff_invitations")
+}
+
+model StaffAuditEvent {
+  // Staff business writes and their audit events must commit atomically.
+  id String @id @default(uuid())
+  shopId String
+  actorId String
+  action String @db.VarChar(32)
+  targetEmail String @db.VarChar(254)
+  targetUserId String?
+  invitationId String?
+  previousRole ShopRole?
+  role ShopRole?
+  createdAt DateTime @default(now())
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([id, shopId])
+  @@index([shopId, createdAt])
+  @@map("staff_audit_events")
 }
 
 model Category {

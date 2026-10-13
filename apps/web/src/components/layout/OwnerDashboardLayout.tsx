@@ -22,6 +22,7 @@ import {
   FiPackage,
   FiShoppingBag,
   FiSliders,
+  FiUsers,
 } from "react-icons/fi";
 import type { CurrentUserResponse, UserMembership } from "@paserve/contracts";
 import { hasShopPermission } from "@paserve/contracts";
@@ -296,6 +297,9 @@ export function DashboardFrame({
                   )}
                   {membership.role === "OWNER" && (
                     <>
+                      <NavLink to={`${shopPath(membership.shopId)}/staff`} onClick={closeNavigation}>
+                        <FiUsers aria-hidden="true" /><span>Staff & invitations</span>
+                      </NavLink>
                       <NavLink
                         to={`${shopPath(membership.shopId)}/menu-preview`}
                         onClick={closeNavigation}

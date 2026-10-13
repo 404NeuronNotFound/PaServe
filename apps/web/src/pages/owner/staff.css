@@ -1,0 +1,88 @@
+.phase-two .staff-workspace {
+  display: grid;
+  gap: 24px;
+}
+.phase-two .staff-heading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.phase-two .staff-heading > svg {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+.phase-two .staff-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+  gap: 24px;
+}
+.phase-two .staff-panel {
+  padding: clamp(18px, 3vw, 28px);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 20px;
+  min-width: 0;
+}
+.phase-two .staff-panel h2 {
+  margin-top: 0;
+}
+.phase-two .staff-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.phase-two .staff-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.phase-two .staff-list li:last-child {
+  border-bottom: 0;
+}
+.phase-two .staff-list li > div:first-child {
+  display: grid;
+  gap: 6px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.phase-two .staff-actions {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.phase-two .staff-actions .field {
+  min-width: 160px;
+  margin: 0;
+}
+.phase-two .staff-hint {
+  font-size: 0.88rem;
+}
+.phase-two .staff-link {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+.phase-two .staff-link input {
+  width: 100%;
+  min-width: 0;
+}
+@media (max-width: 1000px) {
+  .phase-two .staff-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 620px) {
+  .phase-two .staff-list li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .phase-two .staff-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

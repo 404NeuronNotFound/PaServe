@@ -20,6 +20,28 @@ describe('tenant resource isolation', () => {
     memberships.requireMembership.mockResolvedValue({ shopId, role: 'OWNER' });
   });
 
+  it.each(['staffInvitation', 'staffAuditEvent'] as const)(
+    'restricts %s resource queries to the target shop and live owner',
+    async (kind) => {
+      const prisma = {
+        staffInvitation: { findFirst: vi.fn() },
+        staffAuditEvent: { findFirst: vi.fn() },
+      };
+      const repo = new TenantResourcesRepository(
+        prisma as unknown as PrismaService,
+      );
+      await repo.findResource(userId, shopId, kind, resourceId);
+      expect(prisma[kind].findFirst).toHaveBeenCalledWith({
+        where: {
+          id: resourceId,
+          shopId,
+          shop: shopAccessWhere(userId, shopId, ['OWNER']),
+        },
+        select: { id: true, shopId: true },
+      });
+    },
+  );
+
   it.each(['product', 'category', 'table', 'order', 'orderItem'] as const)(
     'resolves a %s only using user, shop and resource IDs',
     async (kind) => {

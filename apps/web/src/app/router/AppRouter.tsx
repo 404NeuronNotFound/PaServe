@@ -29,6 +29,8 @@ import { MenuPreviewPage } from "../../pages/owner/MenuPreviewPage";
 import { OwnerDashboardLayout } from "../../components/layout/OwnerDashboardLayout";
 import { CashierRoute } from "../../features/cashier/CashierRoute";
 import { CashierPage } from "../../pages/cashier/CashierPage";
+import { StaffPage } from "../../pages/owner/StaffPage";
+import { JoinShopPage } from "../../pages/public/JoinShopPage";
 
 export function AppRouter() {
   return (
@@ -43,6 +45,7 @@ export function AppRouter() {
         <Route path="/" element={<Navigate to="/register" replace />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/join/:shopId" element={<JoinShopPage />} />
         <Route
           path="/app"
           element={
@@ -60,6 +63,7 @@ export function AppRouter() {
                 <Route index element={<CashierPage />} />
               </Route>
               <Route path="settings" element={<ShopSettingsPage />} />
+              <Route path="staff" element={<StaffPage />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="tables" element={<TablesPage />} />
               <Route path="products" element={<ProductsPage />} />

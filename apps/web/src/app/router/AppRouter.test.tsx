@@ -148,7 +148,7 @@ it("blocks a direct cashier URL using the live shop role despite a cached OWNER 
     screen.queryByRole("heading", { name: "Cashier workspace" }),
   ).not.toBeInTheDocument();
   expect(
-    screen.queryByRole("link", { name: "Cashier", exact: true }),
+      screen.queryByRole("link", { name: "Cashier" }),
   ).not.toBeInTheDocument();
   expect(api.get).toHaveBeenCalledWith(`/shops/${shopId}/membership`, {
     signal: expect.any(AbortSignal),

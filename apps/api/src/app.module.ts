@@ -14,6 +14,7 @@ import { ProductsModule } from './modules/products/products.module.js';
 import { AddOnsModule } from './modules/add-ons/add-ons.module.js';
 import { TablesModule } from './modules/tables/tables.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
+import { StaffModule } from './modules/staff/staff.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { OrdersModule } from './modules/orders/orders.module.js';
     AddOnsModule,
     TablesModule,
     OrdersModule,
+    StaffModule,
   ],
   controllers: [AppController],
   providers: [
