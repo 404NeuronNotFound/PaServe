@@ -760,6 +760,26 @@ export interface VerifyOrderQrResponse {
     tableNumber: string | null;
     /** Saved receipt lines in submission order, never current menu data. */
     items: ProductSelectionQuoteResponse[];
+    /** Opaque digest of the authoritative review, required for decisions. */
+    reviewVersion: string;
+  };
+}
+export interface OrderDecisionRequest extends VerifyOrderQrRequest {
+  reviewVersion: string;
+}
+export interface RejectOrderRequest extends OrderDecisionRequest {
+  rejectionReason?: string;
+}
+export interface OrderDecisionResponse {
+  order: {
+    id: string;
+    shopId: string;
+    orderNumber: string;
+    status: "CONFIRMED" | "REJECTED";
+    paymentStatus: "UNPAID";
+    decidedAt: string;
+    decidedBy: string;
+    rejectionReason: string | null;
   };
 }
 export interface RestaurantTable {

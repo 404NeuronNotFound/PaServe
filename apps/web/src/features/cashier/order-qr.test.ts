@@ -26,6 +26,7 @@ const order = {
   mode: "TAKEOUT",
   status: "PENDING_CONFIRMATION",
   paymentStatus: "UNPAID",
+  reviewVersion: "a".repeat(64),
   currency: "PHP",
   totalPrice: "135.50",
   tableNumber: null,

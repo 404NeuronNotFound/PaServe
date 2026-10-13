@@ -120,6 +120,10 @@ model Order {
   qrTokenNonce String
   qrTokenExpiresAt DateTime
   qrTokenRevokedAt DateTime?
+  // Decision metadata and status CHECK constraints are maintained by SQL.
+  decidedAt DateTime?
+  decidedBy String?
+  rejectionReason String? @db.VarChar(300)
   tableCode   String?
   tableNumber String?   @db.VarChar(40)
   currency    String    @default("PHP")

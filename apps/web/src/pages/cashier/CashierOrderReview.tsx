@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { FiCheckCircle } from "react-icons/fi";
 import type { VerifyOrderQrResponse } from "@paserve/contracts";
 import { formatCartPrice } from "../../lib/money";
@@ -6,9 +6,13 @@ import { formatCartPrice } from "../../lib/money";
 export function CashierOrderReview({
   order,
   onNext,
+  children,
+  busy = false,
 }: {
   order: VerifyOrderQrResponse["order"];
   onNext: () => void;
+  children?: ReactNode;
+  busy?: boolean;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const quantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -16,14 +20,20 @@ export function CashierOrderReview({
     heading.current?.focus();
   }, []);
   return (
-    <section className="scanner-panel scanner-result cashier-review" aria-labelledby="verified-order-title">
+    <section
+      className="scanner-panel scanner-result cashier-review"
+      aria-labelledby="verified-order-title"
+    >
       <h2 id="verified-order-title" ref={heading} tabIndex={-1}>
         Review order
       </h2>
       <p className="cashier-review-verified" role="status">
         <FiCheckCircle aria-hidden="true" /> Order QR verified
       </p>
-      <p>Check the items, options, customer notes and total with the customer before taking payment or confirming the order.</p>
+      <p>
+        Check the items, options, customer notes and total with the customer
+        before taking payment or confirming the order.
+      </p>
       <div className="cashier-review-order-number">
         <span>Order number</span>
         <strong>{order.orderNumber}</strong>
@@ -46,7 +56,9 @@ export function CashierOrderReview({
           <dd>{order.paymentStatus.toLowerCase().replaceAll("_", " ")}</dd>
         </div>
       </dl>
-      <h3>Order items ({quantity} {quantity === 1 ? "item" : "items"})</h3>
+      <h3>
+        Order items ({quantity} {quantity === 1 ? "item" : "items"})
+      </h3>
       <ol className="cashier-order-items">
         {order.items.map((item, index) => (
           <li key={index}>
@@ -119,7 +131,8 @@ export function CashierOrderReview({
         These are the saved details for the submitted order. Verification does
         not confirm this order or record payment.
       </p>
-      <button className="secondary-button" onClick={onNext}>
+      {children}
+      <button className="secondary-button" onClick={onNext} disabled={busy}>
         Scan another order
       </button>
     </section>

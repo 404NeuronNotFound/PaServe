@@ -418,6 +418,7 @@ describe('Cashier order QR verification', () => {
           currency: 'PHP',
           totalPrice: '135.50',
           tableNumber: null,
+          reviewVersion: expect.stringMatching(/^[a-f0-9]{64}$/),
           items: [
             {
               productId: 'saved-product',

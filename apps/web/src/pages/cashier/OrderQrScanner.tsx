@@ -17,7 +17,7 @@ import {
 } from "../../features/cashier/useQrCamera";
 import { SelectField } from "../../components/forms/SelectField";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
-import { CashierOrderReview } from "./CashierOrderReview";
+import { CashierOrderDecision } from "./CashierOrderDecision";
 import "./scanner.css";
 
 export function OrderQrScanner({ shopId }: { shopId: string }) {
@@ -25,6 +25,7 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
   const processing = useRef(false);
   const request = useRef<AbortController | null>(null);
   const lastCode = useRef("");
+  const [reviewToken, setReviewToken] = useState("");
   const scannerHeading = useRef<HTMLHeadingElement>(null);
   const wasReviewing = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -81,7 +82,10 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
     request.current = controller;
     void verifyScannedOrder(shopId, reference.qrToken, controller.signal)
       .then((saved) => {
-        if (mounted.current && !controller.signal.aborted) setOrder(saved);
+        if (mounted.current && !controller.signal.aborted) {
+          setReviewToken(reference.qrToken);
+          setOrder(saved);
+        }
       })
       .catch((failure: unknown) => {
         if (!mounted.current || controller.signal.aborted) return;
@@ -161,9 +165,11 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
   if (order) {
     return (
       <div className="cashier-review-screen">
-        <CashierOrderReview
+        <CashierOrderDecision
           order={order}
+          qrToken={reviewToken}
           onNext={() => {
+            setReviewToken("");
             setOrder(null);
             setError("");
             lastCode.current = "";

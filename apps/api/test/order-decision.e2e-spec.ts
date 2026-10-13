@@ -1,0 +1,313 @@
+import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
+import type { ShopRole } from '@paserve/contracts';
+import request from 'supertest';
+import type { App } from 'supertest/types.js';
+import { AppModule } from '../src/app.module.js';
+import { PrismaService } from '../src/database/prisma.service.js';
+import { Prisma } from '../src/generated/prisma/client.js';
+import { AuthService } from '../src/modules/auth/auth.service.js';
+import { OrderTokenService } from '../src/modules/orders/order-token.service.js';
+import { OrderQrService } from '../src/modules/orders/order-qr.service.js';
+
+describe('Cashier order decisions', () => {
+  let app: INestApplication<App>;
+  let tokens: OrderTokenService;
+  let qr: OrderQrService;
+  const userId = '75992537-5d60-4d22-8e1e-60a114644681';
+  const shopId = '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e';
+  const otherShop = '55b18d73-f2fb-4fe6-bb1c-30cf385c3b24';
+  const orderId = 'e47f6994-a303-4a7b-87b0-2386d5198828';
+  const auth = vi.fn();
+  const membership = vi.fn();
+  const findOrder = vi.fn();
+  const updateOrder = vi.fn();
+  const raw = vi.fn();
+  const transaction = vi.fn();
+  const database = {
+    order: { findFirst: findOrder, updateMany: updateOrder },
+    $queryRaw: raw,
+  };
+  let role: ShopRole;
+  let active: boolean;
+  let saved: ReturnType<typeof fixture>;
+  let token: string;
+  let version: string;
+  function fixture() {
+    return {
+      id: orderId,
+      shopId,
+      orderNumber: 'ORD-000042',
+      mode: 'TAKEOUT' as const,
+      status: 'PENDING_CONFIRMATION',
+      paymentStatus: 'UNPAID',
+      currency: 'PHP',
+      totalPrice: new Prisma.Decimal('10.00'),
+      tableNumber: null,
+      ...tokens.metadata(),
+      qrTokenRevokedAt: null as Date | null,
+      orderItems: [
+        {
+          lineNumber: 1,
+          productSnapshotId: 'product',
+          productNameSnapshot: 'Saved coffee',
+          currency: 'PHP',
+          quantity: 1,
+          notes: null,
+          basePriceSnapshot: new Prisma.Decimal(10),
+          unitPriceSnapshot: new Prisma.Decimal(10),
+          lineTotalSnapshot: new Prisma.Decimal(10),
+          variantsSnapshot: [],
+          addOnsSnapshot: [],
+        },
+      ],
+    };
+  }
+  beforeAll(async () => {
+    const module = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(PrismaService)
+      .useValue({
+        ...database,
+        shopMember: { findUnique: membership },
+        $transaction: transaction,
+      })
+      .overrideProvider(AuthService)
+      .useValue({ currentUser: auth })
+      .compile();
+    tokens = module.get(OrderTokenService);
+    qr = module.get(OrderQrService);
+    app = module.createNestApplication();
+    app.setGlobalPrefix('api/v1');
+    await app.init();
+  });
+  afterAll(async () => {
+    await app.close();
+  });
+  beforeEach(async () => {
+    vi.resetAllMocks();
+    role = 'CASHIER';
+    active = true;
+    saved = fixture();
+    token = tokens.issue(saved);
+    auth.mockResolvedValue({
+      id: userId,
+      memberships: [{ shopId, role: 'OWNER' }],
+    });
+    membership.mockImplementation(async ({ where }) => ({
+      shopId: where.userId_shopId.shopId,
+      role,
+      user: { isActive: active },
+      shop: {
+        id: where.userId_shopId.shopId,
+        name: 'Cafe',
+        slug: 'cafe',
+        isActive: active,
+      },
+    }));
+    findOrder.mockImplementation(async ({ where }) =>
+      where.id === orderId &&
+      where.shopId === shopId &&
+      active &&
+      where.shop.members.some.role.in.includes(role)
+        ? saved
+        : null,
+    );
+    raw.mockResolvedValue([{ id: orderId }]);
+    transaction.mockImplementation(async (work) => work(database));
+    updateOrder.mockImplementation(async ({ where, data }) => {
+      if (
+        saved.status !== where.status ||
+        saved.paymentStatus !== where.paymentStatus ||
+        saved.qrTokenRevokedAt ||
+        saved.qrTokenExpiresAt <= where.qrTokenExpiresAt.gt ||
+        !active ||
+        !where.shop.members.some.role.in.includes(role)
+      )
+        return { count: 0 };
+      Object.assign(saved, data);
+      return { count: 1 };
+    });
+    version = (await qr.verify(userId, shopId, orderId, token)).order
+      .reviewVersion;
+    findOrder.mockClear();
+  });
+  function decide(
+    action = 'confirm',
+    body: Record<string, unknown> = {},
+    targetShop = shopId,
+    authenticated = true,
+  ) {
+    const req = request(app.getHttpServer()).post(
+      `/api/v1/shops/${targetShop}/orders/${orderId}/${action}`,
+    );
+    if (authenticated) req.set('Authorization', 'Bearer staff-session');
+    return req.send({ qrToken: token, reviewVersion: version, ...body });
+  }
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
+    'allows live %s confirmation with unpaid payment and recorded actor',
+    async (currentRole) => {
+      role = currentRole;
+      const response = await decide().expect(200);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.body.order).toMatchObject({
+        id: orderId,
+        shopId,
+        orderNumber: 'ORD-000042',
+        status: 'CONFIRMED',
+        paymentStatus: 'UNPAID',
+        decidedBy: userId,
+        rejectionReason: null,
+      });
+      expect(saved.qrTokenRevokedAt).toBeInstanceOf(Date);
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+      expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+        isolationLevel: 'Serializable',
+        timeout: 15000,
+      });
+    },
+  );
+  it('rejects with a trimmed reason and preserves saved order amounts', async () => {
+    const result = await decide('reject', {
+      rejectionReason: '  Customer changed their mind.  ',
+    }).expect(200);
+    expect(result.body.order).toMatchObject({
+      status: 'REJECTED',
+      paymentStatus: 'UNPAID',
+      rejectionReason: 'Customer changed their mind.',
+    });
+    expect(saved.totalPrice.toFixed(2)).toBe('10.00');
+  });
+  it('allows rejection without a reason', async () => {
+    const result = await decide('reject').expect(200);
+    expect(result.body.order.rejectionReason).toBeNull();
+  });
+  it.each(['confirm', 'reject'])(
+    'denies unauthenticated %s',
+    async (action) => {
+      await decide(action, {}, shopId, false).expect(401);
+      expect(transaction).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['confirm', 'reject'])(
+    'denies kitchen %s even with cached OWNER claims',
+    async (action) => {
+      role = 'KITCHEN';
+      await decide(action).expect(403);
+      expect(transaction).not.toHaveBeenCalled();
+    },
+  );
+  it('denies cross-shop access without a mutation', async () => {
+    await decide('confirm', {}, otherShop).expect(404);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rechecks revoked live access after the guard', async () => {
+    raw.mockImplementationOnce(async () => {
+      role = 'KITCHEN';
+      return [];
+    });
+    await decide().expect(404);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it.each(['CONFIRMED', 'REJECTED', 'COMPLETED', 'UNKNOWN'].flatMap(status => ['confirm', 'reject'].map(action => ({ status, action }))))(
+    'rejects $action from disallowed state $status',
+    async ({ status, action }) => {
+      saved.status = status;
+      await decide(action).expect(409);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['signature', 'expiry', 'revocation', 'nonce'])(
+    'rejects %s token failure before mutation',
+    async (failure) => {
+      if (failure === 'signature') token = `${token.slice(0, -1)}!`;
+      if (failure === 'expiry') saved.qrTokenExpiresAt = new Date(0);
+      if (failure === 'revocation') saved.qrTokenRevokedAt = new Date();
+      if (failure === 'nonce') saved.qrTokenNonce = otherShop;
+      await decide().expect(403);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('rejects changed saved details since review', async () => {
+    saved.orderItems[0].productNameSnapshot = 'Changed receipt';
+    const result = await decide().expect(409);
+    expect(result.body.code).toBe('ORDER_REVIEW_CHANGED');
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rejects missing receipt lines', async () => {
+    saved.orderItems = [];
+    await decide().expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rejects changed payment state', async () => {
+    saved.paymentStatus = 'PAID';
+    await decide().expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('repeats state, expiry, shop and live role predicates in the conditional write', async () => {
+    await decide().expect(200);
+    expect(updateOrder).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: orderId,
+        shopId,
+        status: 'PENDING_CONFIRMATION',
+        paymentStatus: 'UNPAID',
+        qrTokenRevokedAt: null,
+        qrTokenExpiresAt: { gt: expect.any(Date) },
+        shop: expect.objectContaining({
+          members: {
+            some: {
+              userId,
+              role: { in: ['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] },
+              user: { isActive: true },
+            },
+          },
+        }),
+      }),
+      data: expect.objectContaining({
+        status: 'CONFIRMED',
+        decidedBy: userId,
+        qrTokenRevokedAt: expect.any(Date),
+      }),
+    });
+  });
+  it('returns conflict when the final conditional write loses eligibility', async () => {
+    updateOrder.mockResolvedValueOnce({ count: 0 });
+    await decide().expect(409);
+  });
+  it('does not replay a completed decision or a consumed token', async () => {
+    await decide().expect(200);
+    await decide().expect(403);
+    await decide('reject').expect(403);
+    expect(updateOrder).toHaveBeenCalledTimes(1);
+    expect(saved.status).toBe('CONFIRMED');
+    expect(saved.paymentStatus).toBe('UNPAID');
+  });
+  it('turns serialization conflict into a review conflict without automatic mutation retry', async () => {
+    transaction.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('Write conflict', {
+        code: 'P2034',
+        clientVersion: '7.10.0',
+      }),
+    );
+    await decide().expect(409);
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+  it.each([
+    { status: 'CONFIRMED' },
+    { paymentStatus: 'PAID' },
+    { decidedBy: otherShop },
+    { reviewVersion: '' },
+    { reviewVersion: 'z'.repeat(64) },
+    { rejectionReason: 'Not allowed on confirm' },
+  ])('rejects invalid or untrusted confirm fields %j', async (body) => {
+    await decide('confirm', body).expect(400);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it.each(['a'.repeat(301), '\u0000', '\u202e'])(
+    'rejects invalid rejection reason',
+    async (rejectionReason) => {
+      await decide('reject', { rejectionReason }).expect(400);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+});

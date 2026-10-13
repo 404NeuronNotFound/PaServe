@@ -15,6 +15,7 @@ const order: VerifyOrderQrResponse["order"] = {
   totalPrice: "135.50",
   status: "PENDING_CONFIRMATION",
   paymentStatus: "UNPAID",
+  reviewVersion: "a".repeat(64),
   items: [cashierLine],
 };
 it("displays saved items, modifiers, notes, type/table, total and statuses", () => {

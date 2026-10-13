@@ -15,6 +15,7 @@ import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import { OrderTokenService } from './order-token.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { readPriceSnapshot } from './order-price-snapshots.js';
+import { createHash } from 'node:crypto';
 
 export const ORDER_QR_ROLES = SHOP_ROLES.filter(
   (role) =>
@@ -43,6 +44,8 @@ export class OrderQrService {
     shopId: string,
     orderId: string,
     token: string,
+    database: Pick<Prisma.TransactionClient, 'order'> = this.prisma,
+    roles = ORDER_QR_ROLES,
   ): Promise<VerifyOrderQrResponse> {
     if (!isUUID(orderId))
       throw new BadRequestException({
@@ -50,11 +53,11 @@ export class OrderQrService {
         message: 'A valid order ID is required.',
       });
     // Repeat live authorization in the read; the guard can race a role change.
-    const order = await this.prisma.order.findFirst({
+    const order = await database.order.findFirst({
       where: {
         id: orderId,
         shopId,
-        shop: shopAccessWhere(userId, shopId, ORDER_QR_ROLES),
+        shop: shopAccessWhere(userId, shopId, roles),
       },
       select: {
         id: true,
@@ -76,7 +79,7 @@ export class OrderQrService {
             order: {
               shopId,
               status: 'PENDING_CONFIRMATION',
-              shop: shopAccessWhere(userId, shopId, ORDER_QR_ROLES),
+              shop: shopAccessWhere(userId, shopId, roles),
             },
           },
           orderBy: { lineNumber: 'asc' },
@@ -137,19 +140,25 @@ export class OrderQrService {
       });
     }
     // Return saved cashier details without exposing the bearer credential.
+    const review = {
+      id: order.id,
+      shopId: order.shopId,
+      orderNumber: order.orderNumber,
+      mode: order.mode,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      currency: order.currency,
+      totalPrice: order.totalPrice.toFixed(2),
+      tableNumber: order.tableNumber,
+      items,
+    };
     return {
       verified: true as const,
       order: {
-        id: order.id,
-        shopId: order.shopId,
-        orderNumber: order.orderNumber,
-        mode: order.mode,
-        status: order.status,
-        paymentStatus: order.paymentStatus,
-        currency: order.currency,
-        totalPrice: order.totalPrice.toFixed(2),
-        tableNumber: order.tableNumber,
-        items,
+        ...review,
+        reviewVersion: createHash('sha256')
+          .update(JSON.stringify(review))
+          .digest('hex'),
       },
     };
   }

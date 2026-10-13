@@ -1,0 +1,59 @@
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Param,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
+import type { Response } from 'express';
+import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
+import { OrderDecisionDto, RejectOrderDto } from './order-decision.dto.js';
+import {
+  ORDER_CONFIRM_ROLES,
+  ORDER_REJECT_ROLES,
+  OrderDecisionService,
+} from './order-decision.service.js';
+
+@Controller('shops/:shopId/orders')
+export class OrderDecisionController {
+  constructor(private readonly decisions: OrderDecisionService) {}
+  @Post(':orderId/confirm')
+  @HttpCode(200)
+  @Roles(...ORDER_CONFIRM_ROLES)
+  confirm(
+    @Param('orderId') orderId: string,
+    @Body() dto: OrderDecisionDto,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.decisions.decide(
+      request.user.id,
+      request.shopMembership.shopId,
+      orderId,
+      'CONFIRMED',
+      dto,
+    );
+  }
+  @Post(':orderId/reject')
+  @HttpCode(200)
+  @Roles(...ORDER_REJECT_ROLES)
+  reject(
+    @Param('orderId') orderId: string,
+    @Body() dto: RejectOrderDto,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.decisions.decide(
+      request.user.id,
+      request.shopMembership.shopId,
+      orderId,
+      'REJECTED',
+      dto,
+    );
+  }
+}

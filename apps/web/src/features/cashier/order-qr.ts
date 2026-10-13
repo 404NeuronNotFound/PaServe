@@ -81,6 +81,8 @@ export async function verifyScannedOrder(
     !data.order.status ||
     typeof data.order.paymentStatus !== "string" ||
     !data.order.paymentStatus ||
+    typeof data.order.reviewVersion !== "string" ||
+    !/^[a-f0-9]{64}$/.test(data.order.reviewVersion) ||
     !(
       data.order.tableNumber === null ||
       typeof data.order.tableNumber === "string"

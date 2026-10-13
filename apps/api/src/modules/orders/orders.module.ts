@@ -10,6 +10,8 @@ import { OrderTokenService } from './order-token.service.js';
 import { ShopMembersModule } from '../shop-members/shop-members.module.js';
 import { OrderQrController } from './order-qr.controller.js';
 import { OrderQrService } from './order-qr.service.js';
+import { OrderDecisionService } from './order-decision.service.js';
+import { OrderDecisionController } from './order-decision.controller.js';
 
 @Controller('menu/:shopSlug/orders')
 export class OrdersController {
@@ -26,7 +28,7 @@ export class OrdersController {
 }
 @Module({
   imports: [ShopMembersModule],
-  controllers: [OrdersController, OrderQrController],
+  controllers: [OrdersController, OrderQrController, OrderDecisionController],
   providers: [
     OrdersService,
     PublicProductService,
@@ -34,6 +36,7 @@ export class OrdersController {
     TableContextService,
     OrderTokenService,
     OrderQrService,
+    OrderDecisionService,
   ],
 })
 export class OrdersModule {}
