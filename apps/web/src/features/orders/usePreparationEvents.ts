@@ -12,7 +12,7 @@ export function usePreparationEvents(shopId: string, refresh: () => void) {
       subscribeOrderStream(
         `/shops/${encodeURIComponent(shopId)}/orders/preparation-events`,
         { shopId },
-        "order_preparing",
+        ["order_preparing", "order_ready"],
         () => useSessionStore.getState().accessToken,
         () => callback.current(),
         () => {},

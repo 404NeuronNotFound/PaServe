@@ -10,7 +10,8 @@ import { AuthService } from '../auth/auth.service.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 
 export type OrderWorkflow = 'cashier' | 'kitchen';
-type OrderEvent = 'new_order' | 'order_confirmed' | 'order_preparing';
+type OrderEvent =
+  'new_order' | 'order_confirmed' | 'order_preparing' | 'order_ready';
 type RelayEvent = OrderEvent | 'resync' | 'unavailable';
 type Listener = (event: RelayEvent, data?: Record<string, string>) => void;
 type Subscription = {
@@ -82,7 +83,8 @@ export class NewOrderEventsService implements OnModuleDestroy {
           if (
             event !== 'new_order' &&
             event !== 'order_confirmed' &&
-            event !== 'order_preparing'
+            event !== 'order_preparing' &&
+            event !== 'order_ready'
           )
             return;
           const data = payload as Record<string, unknown> | null;
@@ -177,7 +179,9 @@ export class NewOrderEventsService implements OnModuleDestroy {
         // Coalesce bursts; the client fetches authoritative state, not deltas.
         if (event !== 'heartbeat')
           pending =
-            event === 'order_confirmed' || event === 'order_preparing'
+            event === 'order_confirmed' ||
+            event === 'order_preparing' ||
+            event === 'order_ready'
               ? { event: 'resync', data: scope }
               : { event, data };
         return;

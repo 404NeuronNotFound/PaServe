@@ -168,7 +168,7 @@ it("removes a started order from the queue on a preparation event without manual
   expect(subscribeOrderStream).toHaveBeenCalledWith(
     "/shops/shop-a/orders/preparation-events",
     { shopId: "shop-a" },
-    "order_preparing",
+    ["order_preparing", "order_ready"],
     expect.any(Function),
     expect.any(Function),
     expect.any(Function),
@@ -376,12 +376,10 @@ it("adds the remotely started order to an open Preparing view without a local ac
     data: { orders: [prepared], nextCursor: null },
   });
   act(() =>
-    vi
-      .mocked(subscribeOrderStream)
-      .mock.calls[0][4]("order_preparing", {
-        shopId: "shop-a",
-        orderId: "first",
-      }),
+    vi.mocked(subscribeOrderStream).mock.calls[0][4]("order_preparing", {
+      shopId: "shop-a",
+      orderId: "first",
+    }),
   );
   const article = await screen.findByRole("article", {
     name: "Order ORD-000001",
@@ -562,6 +560,68 @@ it.each(["DINE_IN", "TAKEOUT"] as const)(
     );
   },
 );
+it.each(["Preparing", "Ready"])(
+  "refreshes an open %s view when another staff member marks an order ready",
+  async (view) => {
+    setup("KITCHEN", []);
+    await screen.findByRole("button", { name: view });
+    const preparing = {
+      ...ticket(),
+      preparationStatus: "PREPARING",
+      preparationStartedAt: "2026-10-15T01:05:00.000Z",
+      preparationStartedBy: "user-a",
+    };
+    const ready = {
+      ...preparing,
+      preparationStatus: "READY",
+      preparationReadyAt: "2026-10-15T01:15:00.000Z",
+      preparationReadyBy: "remote-staff",
+    };
+    let isReady = false;
+    vi.mocked(api.get).mockImplementation(async (url) => ({
+      data: {
+        orders: String(url).endsWith("/preparing")
+          ? isReady
+            ? []
+            : [preparing]
+          : String(url).endsWith("/ready")
+            ? isReady
+              ? [ready]
+              : []
+            : [],
+        nextCursor: null,
+      },
+    }));
+    await userEvent.click(screen.getByRole("button", { name: view }));
+    if (view === "Preparing")
+      await screen.findByRole("article", { name: "Order ORD-000001" });
+    else await screen.findByText("The finishing touches come next.");
+    isReady = true;
+    act(() =>
+      vi
+        .mocked(subscribeOrderStream)
+        .mock.calls[0][4]("order_ready", {
+          shopId: "shop-a",
+          orderId: "first",
+        }),
+    );
+    if (view === "Preparing")
+      await waitFor(() =>
+        expect(screen.queryByRole("article")).not.toBeInTheDocument(),
+      );
+    else {
+      const card = await screen.findByRole("article", {
+        name: "Order ORD-000001",
+      });
+      expect(
+        card.querySelector('time[datetime="2026-10-15T01:15:00.000Z"]'),
+      ).toBeInTheDocument();
+      expect(screen.getAllByRole("article")).toHaveLength(1);
+    }
+    expect(api.post).not.toHaveBeenCalled();
+  },
+);
+
 it("keeps preparing work recoverable after a failed ready action", async () => {
   setup();
   await screen.findByRole("article");

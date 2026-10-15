@@ -33,6 +33,7 @@ describe('Customer receipt status access', () => {
     updatedAt: new Date(),
     preparationStatus: null as string | null,
     preparationStartedAt: null as Date | null,
+    preparationReadyAt: null as Date | null,
     queuedAt: null as Date | null,
     paidBy: 'private-actor',
     paymentReference: 'private-reference',
@@ -57,6 +58,7 @@ describe('Customer receipt status access', () => {
       'id',
       'orderNumber',
       'paymentStatus',
+      'preparationReadyAt',
       'preparationStartedAt',
       'preparationStatus',
       'shopId',
@@ -92,6 +94,25 @@ describe('Customer receipt status access', () => {
     });
     expect(result.order).not.toHaveProperty('preparationStartedBy');
     order.preparationStartedAt = null;
+    await expect(
+      service.read('cafe', id, tokens.issue(order)),
+    ).rejects.toMatchObject({ response: { code: 'INVALID_ORDER_STATE' } });
+  });
+  it('returns saved readiness and rejects an invalid readiness timeline', async () => {
+    order.status = 'CONFIRMED';
+    order.paymentStatus = 'PAID';
+    order.decidedAt = new Date();
+    order.queuedAt = order.decidedAt;
+    order.preparationStatus = 'READY';
+    order.preparationStartedAt = new Date(order.decidedAt.getTime() + 1000);
+    order.preparationReadyAt = new Date(order.decidedAt.getTime() + 2000);
+    const result = await service.read('cafe', id, tokens.issue(order));
+    expect(result.order).toMatchObject({
+      preparationStatus: 'READY',
+      preparationReadyAt: order.preparationReadyAt.toISOString(),
+    });
+    expect(result.order).not.toHaveProperty('preparationReadyBy');
+    order.preparationReadyAt = order.decidedAt;
     await expect(
       service.read('cafe', id, tokens.issue(order)),
     ).rejects.toMatchObject({ response: { code: 'INVALID_ORDER_STATE' } });

@@ -123,3 +123,36 @@ it("updates preparation immediately and does not regress after duplicates or an 
   await flush();
   expect(result.current).toEqual(preparing);
 });
+
+it("updates READY on the event without polling and ignores duplicates and older preparation data", async () => {
+  const preparing = {
+    ...confirmed,
+    preparationStatus: "PREPARING",
+    preparationStartedAt: "2026-10-15T01:02:00Z",
+    updatedAt: "2026-10-15T01:02:00Z",
+  };
+  fetchStatus.mockResolvedValue(response(preparing));
+  const started = Date.now();
+  const { result } = renderHook(() =>
+    useCustomerConfirmation("cafe", orderId, token),
+  );
+  await flush();
+  const ready = {
+    ...preparing,
+    preparationStatus: "READY",
+    preparationReadyAt: "2026-10-15T01:03:00Z",
+    updatedAt: "2026-10-15T01:03:00Z",
+  };
+  fetchStatus.mockResolvedValue(response(ready));
+  const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
+  act(() => {
+    for (let i = 0; i < 3; i++) notify("order_ready", { shopId, orderId });
+  });
+  await flush();
+  expect(result.current).toEqual(ready);
+  expect(Date.now()).toBe(started);
+  fetchStatus.mockResolvedValue(response(preparing));
+  act(() => notify("resync", { shopId, orderId }));
+  await flush();
+  expect(result.current).toEqual(ready);
+});

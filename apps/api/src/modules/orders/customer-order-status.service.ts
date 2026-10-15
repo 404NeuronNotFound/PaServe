@@ -61,6 +61,7 @@ export class CustomerOrderStatusService {
         receiptAccessRevokedAt: true,
         preparationStatus: true,
         preparationStartedAt: true,
+        preparationReadyAt: true,
         queuedAt: true,
       },
     });
@@ -74,6 +75,7 @@ export class CustomerOrderStatusService {
     this.tokens.verifyReceipt(credential, order);
     const preparationStatus = order.preparationStatus ?? null;
     const startedAt = order.preparationStartedAt ?? null;
+    const readyAt = order.preparationReadyAt ?? null;
     if (
       !['PENDING_CONFIRMATION', 'CONFIRMED', 'REJECTED'].includes(
         order.status,
@@ -89,7 +91,9 @@ export class CustomerOrderStatusService {
           order.paymentStatus !== 'PAID')) ||
       (preparationStatus !== null &&
         preparationStatus !== 'QUEUED' &&
-        (!startedAt || !order.queuedAt || startedAt < order.queuedAt))
+        (!startedAt || !order.queuedAt || startedAt < order.queuedAt)) ||
+      ((preparationStatus === 'READY' || preparationStatus === 'COMPLETED') &&
+        (!readyAt || !startedAt || readyAt < startedAt))
     )
       throw new BadRequestException({
         code: 'INVALID_ORDER_STATE',
@@ -109,6 +113,7 @@ export class CustomerOrderStatusService {
         preparationStatus:
           preparationStatus as CustomerOrderStatusResponse['order']['preparationStatus'],
         preparationStartedAt: startedAt?.toISOString() ?? null,
+        preparationReadyAt: readyAt?.toISOString() ?? null,
       },
     };
   }

@@ -31,6 +31,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
     receiptAccessRevokedAt: Date | null;
     preparationStatus: string | null;
     preparationStartedAt: Date | null;
+    preparationReadyAt: Date | null;
     queuedAt: Date | null;
   };
   beforeAll(async () => {
@@ -80,6 +81,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
       receiptAccessRevokedAt: null,
       preparationStatus: null,
       preparationStartedAt: null,
+      preparationReadyAt: null,
       queuedAt: null,
     };
     findShop.mockImplementation(async ({ where }) =>
@@ -131,7 +133,22 @@ describe('Confirmed order customer/staff HTTP access', () => {
     });
     expect(result.body.order).not.toHaveProperty('preparationStartedBy');
   });
+  it('returns READY and its saved timestamp without staff actor or fulfillment metadata', async () => {
+    order.preparationStatus = 'READY';
+    order.queuedAt = new Date();
+    order.preparationStartedAt = new Date(order.queuedAt.getTime() + 1000);
+    order.preparationReadyAt = new Date(order.queuedAt.getTime() + 2000);
+    const result = await customer('status').expect(200);
+    expect(result.body.order).toMatchObject({
+      preparationStatus: 'READY',
+      preparationReadyAt: order.preparationReadyAt.toISOString(),
+      paymentStatus: 'PAID',
+    });
+    expect(result.body.order).not.toHaveProperty('preparationReadyBy');
+    expect(result.body.order).not.toHaveProperty('completedAt');
+  });
   it.each(['OWNER', 'KITCHEN'] as const)(
+    // Both preparation-start and ready events use this live permission boundary.
     'permits the preparation dashboard stream for %s',
     async (value) => {
       role = value;
@@ -141,7 +158,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
         .expect(200);
       expect(relay).toHaveBeenCalledWith(
         `staff:preparation:${shopId}`,
-        'order_preparing',
+        ['order_preparing', 'order_ready'],
         { shopId },
         expect.any(Function),
         expect.anything(),
@@ -188,7 +205,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
     await customer('events').expect(200);
     expect(relay).toHaveBeenCalledWith(
       `customer:confirmed:${shopId}:${id}`,
-      ['order_confirmed', 'order_preparing'],
+      ['order_confirmed', 'order_preparing', 'order_ready'],
       { shopId, orderId: id },
       expect.any(Function),
       expect.anything(),
@@ -204,7 +221,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
         .expect(200);
       expect(relay).toHaveBeenCalledWith(
         `staff:confirmed:${shopId}`,
-        ['order_confirmed', 'order_preparing'],
+        ['order_confirmed', 'order_preparing', 'order_ready'],
         { shopId },
         expect.any(Function),
         expect.anything(),

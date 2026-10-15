@@ -46,7 +46,9 @@ export function CustomerOrderPage() {
             heading: "Order ready",
             title: "Your order is ready",
             message:
-              "Preparation is complete. Check with staff for pickup or service.",
+              receipt?.mode === "DINE_IN"
+                ? "Your order is ready for table service."
+                : "Your order is ready for pickup. Please collect it at the counter.",
             step: "Preparation complete.",
           }
         : preparation === "COMPLETED"

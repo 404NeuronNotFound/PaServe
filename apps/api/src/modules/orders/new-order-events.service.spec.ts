@@ -166,6 +166,43 @@ describe('New order staff subscriptions', () => {
     expect(stream.end).toHaveBeenCalledOnce();
     expect(client.removeChannel).toHaveBeenCalledWith(channel);
   });
+  it('relays readiness only for the correct scope and rechecks access before each delivery', async () => {
+    const stream = new Stream();
+    const authorize = vi.fn().mockResolvedValue(undefined);
+    await service.relay(
+      'staff:preparation:shop-a',
+      ['order_preparing', 'order_ready'],
+      { shopId: 'shop-a' },
+      authorize,
+      stream as unknown as Response,
+    );
+    broadcast({
+      event: 'order_ready',
+      payload: { shopId: 'shop-b', orderId: 'other' },
+    });
+    await flush();
+    expect(stream.write).not.toHaveBeenCalled();
+    broadcast({
+      event: 'order_ready',
+      payload: {
+        shopId: 'shop-a',
+        orderId: 'order-a',
+        preparationReadyBy: 'private-actor',
+      },
+    });
+    await flush();
+    expect(stream.write).toHaveBeenCalledExactlyOnceWith(
+      'event: order_ready\ndata: {"shopId":"shop-a","orderId":"order-a"}\n\n',
+    );
+    authorize.mockRejectedValue(new Error('access removed'));
+    broadcast({
+      event: 'order_ready',
+      payload: { shopId: 'shop-a', orderId: 'order-a' },
+    });
+    await flush();
+    expect(stream.write).toHaveBeenCalledOnce();
+    expect(stream.end).toHaveBeenCalledOnce();
+  });
 
   it('resynchronizes on upstream reconnect and shares/cleans up local subscribers', async () => {
     const first = await open();

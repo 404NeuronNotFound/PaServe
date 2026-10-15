@@ -67,6 +67,12 @@ export function useCustomerConfirmation(
                   !Number.isFinite(
                     Date.parse(order.preparationStartedAt),
                   ))))) ||
+          ((order.preparationStatus === "READY" ||
+            order.preparationStatus === "COMPLETED") &&
+            (!order.preparationReadyAt ||
+              !Number.isFinite(Date.parse(order.preparationReadyAt)) ||
+              Date.parse(order.preparationReadyAt) <
+                Date.parse(order.preparationStartedAt!))) ||
           (order.status === "CONFIRMED" &&
             (order.paymentStatus !== "PAID" ||
               !order.confirmedAt ||
@@ -95,7 +101,7 @@ export function useCustomerConfirmation(
     const unsubscribe = subscribeOrderStream(
       `${path}/events`,
       { shopId: reference.shopId, orderId },
-      ["order_confirmed", "order_preparing"],
+      ["order_confirmed", "order_preparing", "order_ready"],
       () => token,
       () => {
         void refresh();
