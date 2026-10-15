@@ -25,6 +25,11 @@ const count = async () =>
 try {
   await client.connect();
   await client.query('BEGIN');
+  // Replace the deployed policy only inside this rollback-only transaction so
+  // the exact migration can be checked both before and after deployment.
+  await client.query(
+    'DROP POLICY IF EXISTS confirmed_order_backend_only ON realtime.messages',
+  );
   await client.query(`CREATE TEMP TABLE orders (id text PRIMARY KEY, "shopId" text, status text, "paymentStatus" text,
     "decidedAt" timestamp(3), "paidAt" timestamp(3), "qrTokenRevokedAt" timestamp(3), "preparationStatus" text)`);
   const migration = await readFile(
@@ -40,6 +45,12 @@ try {
     [shopId, consumedAt],
   );
   await client.query(
+    `INSERT INTO pg_temp.orders VALUES ('legacy-unpaid',$1,'CONFIRMED','UNPAID',$2,NULL,$2,NULL)`,
+    [shopId, consumedAt],
+  );
+  await client.query(`ALTER TABLE pg_temp.orders ADD CONSTRAINT orders_confirmation_requires_payment
+    CHECK (status <> 'CONFIRMED' OR "paymentStatus" = 'PAID') NOT VALID`);
+  await client.query(
     migration
       .replaceAll('public.orders', 'pg_temp.orders')
       .replaceAll(
@@ -54,6 +65,19 @@ try {
   ).rows;
   assert.equal(legacy[0].receiptAccessRevokedAt, null);
   assert.ok(legacy[1].receiptAccessRevokedAt instanceof Date);
+  assert.ok(legacy[2].receiptAccessRevokedAt instanceof Date);
+  const paymentConstraint = await client.query(`SELECT convalidated,
+    pg_get_constraintdef(oid) AS definition FROM pg_constraint
+    WHERE conrelid = 'pg_temp.orders'::regclass AND conname = 'orders_confirmation_requires_payment'`);
+  assert.equal(paymentConstraint.rows[0].convalidated, false);
+  assert.match(paymentConstraint.rows[0].definition, /NOT VALID/);
+  const historical = await client.query(
+    `SELECT status,"paymentStatus" FROM pg_temp.orders WHERE id='legacy-unpaid'`,
+  );
+  assert.deepEqual(historical.rows[0], {
+    status: 'CONFIRMED',
+    paymentStatus: 'UNPAID',
+  });
   await client.query(
     `INSERT INTO pg_temp.orders (id,"shopId",status,"paymentStatus") VALUES ($1,$2,'PENDING_CONFIRMATION','UNPAID')`,
     [orderId, shopId],
@@ -69,10 +93,15 @@ try {
   assert.equal(await count(), 2);
   await client.query('ROLLBACK TO SAVEPOINT confirmation');
   assert.equal(await count(), 0);
-  await client.query(
-    `UPDATE pg_temp.orders SET status='CONFIRMED', "decidedAt"=now() WHERE id=$1`,
-    [orderId],
+  await client.query('SAVEPOINT unpaid_confirmation');
+  await assert.rejects(
+    client.query(
+      `UPDATE pg_temp.orders SET status='CONFIRMED', "decidedAt"=now() WHERE id=$1`,
+      [orderId],
+    ),
+    (error) => error.code === '23514',
   );
+  await client.query('ROLLBACK TO SAVEPOINT unpaid_confirmation');
   assert.equal(await count(), 0, 'Unpaid confirmation must not publish');
   await confirm();
   assert.equal(await count(), 2);

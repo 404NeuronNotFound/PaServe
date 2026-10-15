@@ -27,9 +27,12 @@ try {
         const [constraint] = await tx.$queryRaw`
           SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint
           WHERE conrelid = 'orders'::regclass AND conname = 'orders_status_check'`;
-        assert.match(
-          constraint.definition,
-          /status = 'PENDING_CONFIRMATION'::text/,
+        // Staff decisions added two legal states after this check was introduced.
+        assert.deepEqual(
+          [...constraint.definition.matchAll(/'([A-Z_]+)'::text/g)]
+            .map((match) => match[1])
+            .sort((a, b) => a.localeCompare(b)),
+          ['CONFIRMED', 'PENDING_CONFIRMATION', 'REJECTED'],
         );
         for (const name of ['orders', 'order_items']) {
           const [security] = await tx.$queryRaw`
