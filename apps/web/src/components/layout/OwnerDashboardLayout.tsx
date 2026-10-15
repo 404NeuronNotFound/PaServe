@@ -295,6 +295,12 @@ export function DashboardFrame({
                       <span>Cashier</span>
                     </NavLink>
                   )}
+                  {hasShopPermission(membership.role, "shop.preparation.queue.read") && (
+                    <NavLink to={`${shopPath(membership.shopId)}/kitchen`} onClick={closeNavigation}>
+                      <FiCoffee aria-hidden="true" />
+                      <span>Kitchen / Barista</span>
+                    </NavLink>
+                  )}
                   {membership.role === "OWNER" && (
                     <>
                       <NavLink to={`${shopPath(membership.shopId)}/staff`} onClick={closeNavigation}>

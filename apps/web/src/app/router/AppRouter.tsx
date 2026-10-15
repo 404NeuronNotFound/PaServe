@@ -31,6 +31,8 @@ import { CashierRoute } from "../../features/cashier/CashierRoute";
 import { CashierPage } from "../../pages/cashier/CashierPage";
 import { StaffPage } from "../../pages/owner/StaffPage";
 import { JoinShopPage } from "../../pages/public/JoinShopPage";
+import { KitchenRoute } from "../../features/kitchen/KitchenRoute";
+import { KitchenPage } from "../../pages/kitchen/KitchenPage";
 
 export function AppRouter() {
   return (
@@ -61,6 +63,9 @@ export function AppRouter() {
               <Route index element={<ActiveShopPage />} />
               <Route path="cashier" element={<CashierRoute />}>
                 <Route index element={<CashierPage />} />
+              </Route>
+              <Route path="kitchen" element={<KitchenRoute />}>
+                <Route index element={<KitchenPage />} />
               </Route>
               <Route path="settings" element={<ShopSettingsPage />} />
               <Route path="staff" element={<StaffPage />} />
