@@ -794,6 +794,37 @@ describe('Cash collection', () => {
       expect(aggregateOrders).not.toHaveBeenCalled();
     },
   );
+  it('denies anonymous, missing-membership and revoked sales-report access before aggregation', async () => {
+    role = 'OWNER';
+    await request(app.getHttpServer())
+      .get(`/api/v1/shops/${shopId}/reports/completed-sales`)
+      .query({ from: '2026-10-15T00:00:00Z', to: '2026-10-16T00:00:00Z' })
+      .expect(401);
+    membership.mockResolvedValueOnce(null);
+    await sales().expect(404);
+    active = false;
+    await sales().expect(404);
+    expect(aggregateOrders).not.toHaveBeenCalled();
+  });
+  it.each([
+    {},
+    { from: '2026-10-15T00:00:00Z' },
+    {
+      from: ['2026-10-15T00:00:00Z', '2026-10-16T00:00:00Z'],
+      to: '2026-10-17T00:00:00Z',
+    },
+    { from: '2026-02-30T00:00:00Z', to: '2026-03-02T00:00:00Z' },
+    { from: '2026-10-15T00:00:00Z\n', to: '2026-10-16T00:00:00Z' },
+    { from: '2026-10-15T00:00:00+08:00', to: '2026-10-16T00:00:00Z' },
+  ])('fails closed for malformed report parameters %j', async (query) => {
+    role = 'OWNER';
+    await request(app.getHttpServer())
+      .get(`/api/v1/shops/${shopId}/reports/completed-sales`)
+      .query(query)
+      .set('Authorization', 'Bearer session')
+      .expect(400);
+    expect(aggregateOrders).not.toHaveBeenCalled();
+  });
   it.each([
     ['bad', '2026-01-02T00:00:00Z'],
     ['2026-01-02T00:00:00Z', '2026-01-01T00:00:00Z'],

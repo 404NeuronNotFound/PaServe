@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
+  useIsMutating,
   useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query";
@@ -21,6 +22,9 @@ import type {
   CurrentUserResponse,
   PreparationQueueResponse,
   PreparationStatus,
+  StartPreparationResponse,
+  ReadyPreparationResponse,
+  CompletePreparationResponse,
 } from "@paserve/contracts";
 import { hasShopPermission } from "@paserve/contracts";
 import { currentUserKey } from "../../features/auth/api/session";
@@ -93,6 +97,18 @@ const views = {
     list: "Completed orders, newest first",
   },
 } as const;
+type TransitionRequest = {
+  source: "QUEUED" | "PREPARING" | "READY";
+  actorId: string;
+  shopId: string;
+  orderId: string;
+  orderNumber: string;
+  mode: "DINE_IN" | "TAKEOUT";
+};
+type TransitionResult =
+  | StartPreparationResponse
+  | ReadyPreparationResponse
+  | CompletePreparationResponse;
 export function KitchenPage() {
   const membership = useActiveShop();
   return <NewOrders key={membership.shopId} />;
@@ -346,20 +362,27 @@ function Ticket({
   const completed = order.preparationStatus === "COMPLETED";
   const readyLabel =
     order.mode === "TAKEOUT" ? "Ready for pickup" : "Ready to serve";
+  const mutationKey = ["kitchen", "transition", user.id, shopId, order.id];
+  const pending = useIsMutating({ mutationKey }) > 0;
+  const sameActor = (request: TransitionRequest) =>
+    client.getQueryData<CurrentUserResponse>(currentUserKey)?.user.id ===
+    request.actorId;
   const finishTransition = async (
-    source: PreparationStatus,
+    request: TransitionRequest,
     message: string,
   ) => {
-    const prefix = ["kitchen", "queue", user.id, shopId];
+    if (!sameActor(request)) return;
+    const prefix = ["kitchen", "queue", request.actorId, request.shopId];
     await client.cancelQueries({ queryKey: prefix });
+    if (!sameActor(request)) return;
     client.setQueryData<InfiniteData<PreparationQueueResponse>>(
-      [...prefix, source],
+      [...prefix, request.source],
       (data) =>
         data && {
           ...data,
           pages: data.pages.map((page) => ({
             ...page,
-            orders: page.orders.filter((item) => item.id !== order.id),
+            orders: page.orders.filter((item) => item.id !== request.orderId),
           })),
         },
     );
@@ -367,55 +390,48 @@ function Ticket({
     onStarted();
     await client.invalidateQueries({ queryKey: prefix });
   };
-  const start = useMutation({
-    mutationFn: () => startPreparing(shopId, order.id),
+  const transition = useMutation<TransitionResult, Error, TransitionRequest>({
+    mutationKey,
+    mutationFn: async (request) =>
+      request.source === "QUEUED"
+        ? startPreparing(request.shopId, request.orderId)
+        : request.source === "PREPARING"
+          ? markReady(request.shopId, request.orderId)
+          : completeOrder(request.shopId, request.orderId),
     retry: false,
-    onSuccess: async (result) => {
-      await finishTransition(
-        "QUEUED",
-        result.alreadyStarted
-          ? "This order is already preparing."
-          : `Preparation started for ${order.orderNumber}.`,
-      );
-    },
-    onError: () => {
-      void client.invalidateQueries({
-        queryKey: ["kitchen", "queue", user.id, shopId],
-      });
-    },
-  });
-  const mark = useMutation({
-    mutationFn: () => markReady(shopId, order.id),
-    retry: false,
-    onSuccess: (result) =>
+    onSuccess: (result, request) =>
       finishTransition(
-        "PREPARING",
-        result.alreadyReady
-          ? "This order is already ready."
-          : `${order.orderNumber}: ${readyLabel.toLowerCase()}.`,
+        request,
+        "alreadyStarted" in result
+          ? result.alreadyStarted
+            ? "This order is already preparing."
+            : `Preparation started for ${request.orderNumber}.`
+          : "alreadyReady" in result
+            ? result.alreadyReady
+              ? "This order is already ready."
+              : `${request.orderNumber}: ${request.mode === "TAKEOUT" ? "ready for pickup" : "ready to serve"}.`
+            : result.alreadyCompleted
+              ? "This order is already completed."
+              : `${request.orderNumber} completed.`,
       ),
-    onError: () => {
+    onError: (_error, request) => {
+      if (!sameActor(request)) return;
       void client.invalidateQueries({
-        queryKey: ["kitchen", "queue", user.id, shopId],
+        queryKey: ["kitchen", "queue", request.actorId, request.shopId],
       });
     },
   });
-  const complete = useMutation({
-    mutationFn: () => completeOrder(shopId, order.id),
-    retry: false,
-    onSuccess: (result) =>
-      finishTransition(
-        "READY",
-        result.alreadyCompleted
-          ? "This order is already completed."
-          : `${order.orderNumber} completed.`,
-      ),
-    onError: () => {
-      void client.invalidateQueries({
-        queryKey: ["kitchen", "queue", user.id, shopId],
-      });
-    },
-  });
+  const submit = (source: TransitionRequest["source"]) => {
+    if (client.isMutating({ mutationKey })) return;
+    transition.mutate({
+      source,
+      actorId: user.id,
+      shopId,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      mode: order.mode,
+    });
+  };
   const minutes = Math.max(
     0,
     Math.floor((now - Date.parse(order.queuedAt)) / 60_000),
@@ -437,7 +453,9 @@ function Ticket({
                   ? "READY · PREPARATION COMPLETE"
                   : "QUEUED · NOT STARTED"}
           </span>
-          {first && <span>{completed ? "Latest completion" : "Oldest ticket"}</span>}
+          {first && (
+            <span>{completed ? "Latest completion" : "Oldest ticket"}</span>
+          )}
         </div>
         <header className="kitchen-ticket-header">
           <h3>{order.orderNumber}</h3>
@@ -595,20 +613,21 @@ function Ticket({
             <div className="kitchen-ticket-action">
               <button
                 className="primary-button"
-                disabled={start.isPending}
-                onClick={() => start.mutate()}
+                disabled={pending}
+                onClick={() => submit("QUEUED")}
                 aria-label={`Start preparing ${order.orderNumber}`}
               >
                 <FiPlay aria-hidden="true" />
-                {start.isPending ? "Starting…" : "Start preparing"}
+                {pending ? "Action pending…" : "Start preparing"}
               </button>
-              {start.isError && (
-                <InlineMessage>
-                  Couldn’t confirm preparation start. {start.error.message}{" "}
-                  Refresh to check its saved status; retrying preserves any
-                  recorded start.
-                </InlineMessage>
-              )}
+              {transition.isError &&
+                transition.variables.source === "QUEUED" && (
+                  <InlineMessage>
+                    Couldn’t confirm preparation start.{" "}
+                    {transition.error.message} Refresh to check its saved
+                    status; retrying preserves any recorded start.
+                  </InlineMessage>
+                )}
             </div>
           )}
         {preparing &&
@@ -616,20 +635,21 @@ function Ticket({
             <div className="kitchen-ticket-action">
               <button
                 className="primary-button"
-                disabled={mark.isPending}
-                onClick={() => mark.mutate()}
+                disabled={pending}
+                onClick={() => submit("PREPARING")}
                 aria-label={`Mark ready ${order.orderNumber}`}
               >
                 <FiCheck aria-hidden="true" />
-                {mark.isPending ? "Marking ready…" : "Mark ready"}
+                {pending ? "Action pending…" : "Mark ready"}
               </button>
-              {mark.isError && (
-                <InlineMessage>
-                  Couldn’t confirm readiness. {mark.error.message} Refresh to
-                  check its saved status; retrying preserves any recorded ready
-                  time.
-                </InlineMessage>
-              )}
+              {transition.isError &&
+                transition.variables.source === "PREPARING" && (
+                  <InlineMessage>
+                    Couldn’t confirm readiness. {transition.error.message}{" "}
+                    Refresh to check its saved status; retrying preserves any
+                    recorded ready time.
+                  </InlineMessage>
+                )}
             </div>
           )}
         {ready && hasShopPermission(role, "shop.preparation.status.update") && (
@@ -639,21 +659,21 @@ function Ticket({
             </p>
             <button
               className="primary-button"
-              disabled={complete.isPending}
-              onClick={() => complete.mutate()}
+              disabled={pending}
+              onClick={() => submit("READY")}
               aria-label={`Mark completed ${order.orderNumber}`}
             >
               <FiCheck aria-hidden="true" />
-              {complete.isPending
-                ? "Completing…"
+              {pending
+                ? "Action pending…"
                 : order.mode === "TAKEOUT"
                   ? "Mark collected"
                   : "Mark served"}
             </button>
-            {complete.isError && (
+            {transition.isError && transition.variables.source === "READY" && (
               <InlineMessage>
-                Couldn’t confirm completion. {complete.error.message} Refresh to
-                check its saved status; retrying preserves any recorded
+                Couldn’t confirm completion. {transition.error.message} Refresh
+                to check its saved status; retrying preserves any recorded
                 completion.
               </InlineMessage>
             )}

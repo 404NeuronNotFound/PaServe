@@ -13,6 +13,7 @@ import { getShopMembership } from "../../features/shops/api/context";
 import { api } from "../../lib/api/client";
 import { KitchenRoute } from "../../features/kitchen/KitchenRoute";
 import { KitchenPage } from "./KitchenPage";
+import { feedback } from "../../app/stores/feedback";
 
 vi.mock("../../features/shops/api/context", () => ({
   getShopMembership: vi.fn(),
@@ -277,6 +278,83 @@ it("keeps a ticket and exposes recovery when preparation start fails", async () 
     "Couldn’t confirm preparation start",
   );
   expect(screen.getByRole("article")).toBeInTheDocument();
+});
+it("keeps a pending action locked when its ticket unmounts and remounts", async () => {
+  setup();
+  const prepared = {
+    ...ticket(),
+    preparationStatus: "PREPARING",
+    preparationStartedAt: "2026-10-15T01:05:00.000Z",
+    preparationStartedBy: "user-a",
+  };
+  let finish!: (value: unknown) => void;
+  vi.mocked(api.post).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  vi.mocked(api.get).mockImplementation(async (url) => ({
+    data: {
+      orders: String(url).endsWith("/queue") ? [ticket()] : [],
+      nextCursor: null,
+    },
+  }));
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Start preparing ORD-000001" }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Preparing" }));
+  await screen.findByText("Nothing preparing just yet.");
+  await userEvent.click(screen.getByRole("button", { name: "Queued" }));
+  const remounted = await screen.findByRole("button", {
+    name: "Start preparing ORD-000001",
+  });
+  try {
+    expect(remounted).toBeDisabled();
+    expect(api.post).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { orders: [], nextCursor: null },
+    });
+    await act(async () =>
+      finish({ data: { order: prepared, alreadyStarted: false } }),
+    );
+  }
+});
+it("does not publish an old account action result into a replacement session", async () => {
+  const client = setup();
+  const prepared = {
+    ...ticket(),
+    preparationStatus: "PREPARING",
+    preparationStartedAt: "2026-10-15T01:05:00.000Z",
+    preparationStartedBy: "user-a",
+  };
+  let finish!: (value: unknown) => void;
+  vi.mocked(api.post).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Start preparing ORD-000001" }),
+  );
+  vi.mocked(api.get).mockResolvedValue({
+    data: { orders: [], nextCursor: null },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Preparing" }));
+  await screen.findByText("Nothing preparing just yet.");
+  client.setQueryData(["auth", "me"], { user: { id: "user-b" } });
+  const toast = vi.spyOn(feedback, "toast");
+  try {
+    await act(async () =>
+      finish({ data: { order: prepared, alreadyStarted: false } }),
+    );
+    await waitFor(() => expect(client.isMutating()).toBe(0));
+    expect(toast).not.toHaveBeenCalled();
+  } finally {
+    toast.mockRestore();
+  }
 });
 it.each(["DINE_IN", "TAKEOUT"] as const)(
   "moves %s work to Ready with pickup/service guidance",

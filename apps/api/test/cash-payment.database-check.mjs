@@ -159,6 +159,14 @@ try {
     'utf8',
   );
   await setup.query(completeSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
+  const entrySql = await readFile(
+    new URL(
+      '../prisma/migrations/20261015110000_preparation_entry_guard/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await setup.query(entrySql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
   await setup.query('COMMIT');
   created = true;
   prisma = new PrismaClient({
@@ -1582,6 +1590,84 @@ try {
   );
   console.log(
     'Passed: cash migration, confirmed-only collection, underpayment, exact change, competing collectors commit once, idempotent replay, immutable receipts and revoked access.',
+  );
+  // Reconstruct a paid receipt from before queue metadata existed, privately.
+  const legacy = await confirmedOrder('ORD-000060', '10.00', true);
+  const legacyQr = tokens.issue(legacy);
+  const legacyVersion = (await qr.scan(users[0].id, shop.id, legacyQr)).order
+    .reviewVersion;
+  await cash.create(users[0].id, shop.id, legacy.id, {
+    requestId: randomUUID(),
+    reviewVersion: legacyVersion,
+    method: 'CASH',
+    qrToken: legacyQr,
+    amountReceived: '10.00',
+  });
+  await setup.query(
+    `ALTER TABLE "${schema}".orders DISABLE TRIGGER orders_queue_guard`,
+  );
+  try {
+    await prisma.order.updateMany({
+      where: { id: legacy.id, shopId: shop.id },
+      data: { preparationStatus: null, queuedAt: null },
+    });
+  } finally {
+    await setup.query(
+      `ALTER TABLE "${schema}".orders ENABLE TRIGGER orders_queue_guard`,
+    );
+  }
+  const legacyBefore = await prisma.order.findFirst({
+    where: { id: legacy.id, shopId: shop.id },
+  });
+  for (const preparationStatus of ['PREPARING', 'READY']) {
+    await assert.rejects(
+      prisma.order.updateMany({
+        where: { id: legacy.id, shopId: shop.id },
+        data: { preparationStatus, queuedAt: new Date() },
+      }),
+    );
+    assert.deepEqual(
+      await prisma.order.findFirst({
+        where: { id: legacy.id, shopId: shop.id },
+      }),
+      legacyBefore,
+    );
+  }
+  console.log(
+    'Passed: historical paid receipts cannot skip QUEUED when first entering preparation through direct SQL.',
+  );
+  await prisma.order.updateMany({
+    where: { id: legacy.id, shopId: shop.id },
+    data: { preparationStatus: 'QUEUED', queuedAt: new Date() },
+  });
+  await prisma.shopMember.update({
+    where: { userId_shopId: { userId: users[0].id, shopId: shop.id } },
+    data: { role: 'KITCHEN' },
+  });
+  const revokeRace = await Promise.allSettled([
+    preparation.start(users[0].id, shop.id, legacy.id),
+    prisma.shopMember.update({
+      where: { userId_shopId: { userId: users[0].id, shopId: shop.id } },
+      data: { role: 'CASHIER' },
+    }),
+  ]);
+  assert.equal(revokeRace[1].status, 'fulfilled');
+  const afterRevocation = await prisma.order.findFirst({
+    where: { id: legacy.id, shopId: shop.id },
+  });
+  if (revokeRace[0].status === 'fulfilled') {
+    assert.equal(afterRevocation.preparationStatus, 'PREPARING');
+    assert.ok(afterRevocation.preparationStartedAt);
+  } else {
+    assert.equal(revokeRace[0].reason.status, 404);
+    assert.equal(afterRevocation.preparationStatus, 'QUEUED');
+    assert.equal(afterRevocation.preparationStartedAt, null);
+  }
+  await assert.rejects(preparation.start(users[0].id, shop.id, legacy.id), {
+    status: 404,
+  });
+  console.log(
+    'Passed: concurrent membership revocation either follows an authorized committed start or blocks it without partial preparation; later starts are denied.',
   );
 } finally {
   if (prisma) await prisma.$disconnect();

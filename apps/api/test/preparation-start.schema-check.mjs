@@ -21,6 +21,12 @@ try {
     WHERE tgrelid = 'public.orders'::regclass AND tgname IN ('orders_queue_guard', 'orders_preparation_start_guard', 'orders_preparation_ready_guard', 'orders_completion_guard')`);
   assert.equal(triggers.length, 4);
   assert.ok(triggers.every((item) => item.tgenabled === 'O'));
+  const {
+    rows: [guard],
+  } = await client.query(
+    `SELECT pg_get_functiondef('public.protect_order_queue()'::regprocedure) AS definition`,
+  );
+  assert.ok(guard.definition.includes('Preparation must enter QUEUED first'));
   const index = await client.query(
     `SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'orders' AND indexname = 'orders_shopId_preparationStatus_completedAt_id_idx'`,
   );
@@ -34,9 +40,25 @@ try {
   assert.equal(security.relrowsecurity, true);
   assert.equal(security.anon_read, false);
   assert.equal(security.browser_read, false);
+  const {
+    rows: [timeline],
+  } =
+    await client.query(`SELECT count(*)::int AS invalid_count FROM public.orders
+    WHERE "preparationStatus" IS NOT NULL AND (
+      status <> 'CONFIRMED' OR "paymentStatus" <> 'PAID' OR "queuedAt" IS NULL OR "paidAt" IS NULL OR "queuedAt" < "paidAt"
+      OR ("preparationStatus" = 'QUEUED' AND ("preparationStartedAt" IS NOT NULL OR "preparationStartedBy" IS NOT NULL))
+      OR ("preparationStatus" IN ('PREPARING', 'READY', 'COMPLETED') AND ("preparationStartedAt" IS NULL OR "preparationStartedBy" IS NULL OR "preparationStartedAt" < "queuedAt"))
+      OR ("preparationStatus" IN ('READY', 'COMPLETED') AND ("preparationReadyAt" IS NULL OR "preparationReadyBy" IS NULL OR "preparationReadyAt" < "preparationStartedAt"))
+      OR ("preparationStatus" = 'COMPLETED' AND ("completedAt" IS NULL OR "completedBy" IS NULL OR "completedAt" < "preparationReadyAt"))
+    )`);
+  assert.equal(
+    timeline.invalid_count,
+    0,
+    'Saved preparation records must have a valid paid/queue/start/ready/completion timeline.',
+  );
   await client.query('COMMIT');
   console.log(
-    'Passed: deployed preparation/completion fields and index, validated constraints, enabled guards, and preserved orders RLS/browser read restrictions. Read-only verification.',
+    'Passed: deployed preparation/completion fields and index, validated constraints, enabled first-entry/lifecycle guards, consistent saved timelines, and preserved orders RLS/browser read restrictions. Read-only verification.',
   );
 } finally {
   await client.end();
