@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { subscribeNewOrders } from "./new-order-events";
+import { subscribeNewOrders, subscribeOrderStream } from "./new-order-events";
 import { useSessionStore } from "../auth/stores/session";
 import { refreshSession } from "../auth/api/session";
 
@@ -69,6 +69,36 @@ it("uses bearer headers and parses fragmented frames, filtering other shops/work
   await flush();
   expect(refresh.mock.calls).toEqual([[false], [true]]);
   expect(status).toHaveBeenLastCalledWith("live");
+});
+
+it("delivers confirmation only for the subscribed customer shop and exact order", async () => {
+  const events = vi.fn();
+  stop = subscribeOrderStream(
+    "/menu/cafe/orders/order-a/events",
+    { shopId: "shop-a", orderId: "order-a" },
+    "order_confirmed",
+    () => "receipt-token",
+    events,
+    status,
+  );
+  await flush();
+  const message = (shopId: string, orderId: string) =>
+    `event: order_confirmed\ndata: ${JSON.stringify({ shopId, orderId })}\n\n`;
+  push.enqueue(
+    new TextEncoder().encode(
+      message("shop-b", "order-a") +
+        message("shop-a", "order-b") +
+        message("shop-a", "order-a"),
+    ),
+  );
+  await flush();
+  expect(events).toHaveBeenCalledExactlyOnceWith("order_confirmed", {
+    shopId: "shop-a",
+    orderId: "order-a",
+  });
+  expect(fetchMock.mock.lastCall?.[1].headers.Authorization).toBe(
+    "Bearer receipt-token",
+  );
 });
 
 it("reconnects and resynchronizes after a closed stream without inventing arrivals", async () => {

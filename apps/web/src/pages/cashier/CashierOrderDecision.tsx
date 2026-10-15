@@ -15,6 +15,8 @@ import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { CashierOrderReview } from "./CashierOrderReview";
 import { CashierCashPayment } from "./CashierCashPayment";
+import { useConfirmedOrderEvents } from "../../features/orders/useConfirmedOrderEvents";
+import { reviewCashPayment } from "../../features/cashier/cash-payment";
 
 function failureMessage(error: unknown) {
   if (
@@ -51,6 +53,28 @@ export function CashierOrderDecision({
   const active = useRef(false);
   const request = useRef<AbortController | null>(null);
   const resultHeading = useRef<HTMLHeadingElement>(null);
+  useConfirmedOrderEvents(
+    order.shopId,
+    order.id,
+    () => {
+      if (running.current || collectingCash || decision) return;
+      const controller = new AbortController();
+      request.current?.abort();
+      request.current = controller;
+      void reviewCashPayment(order.shopId, order.id, controller.signal)
+        .then((saved) => {
+          if (active.current && !controller.signal.aborted && saved.payment) {
+            setBlocked(true);
+            setAction(null);
+            setCollectingCash(true);
+          }
+        })
+        .catch(() => {
+          /* Pending reviews remain protected by existing write guards. */
+        });
+    },
+    busy,
+  );
   useEffect(() => {
     active.current = true;
     return () => {

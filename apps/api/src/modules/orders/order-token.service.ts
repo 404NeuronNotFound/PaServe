@@ -88,6 +88,19 @@ export class OrderTokenService {
     }
   }
   // The caller must resolve this persisted order under the target shop first.
+  /** A consumed staff-scanning credential can still prove read-only receipt
+   * ownership. Receipt revocation is independent of the cashier scan lifecycle.
+   * This method must never authorize staff decisions or payment. */
+  verifyReceipt(
+    token: string,
+    order: TokenOrder & { receiptAccessRevokedAt: Date | null },
+  ): void {
+    this.verify(token, {
+      ...order,
+      qrTokenRevokedAt: order.receiptAccessRevokedAt,
+    });
+  }
+
   verify(token: string, order: TokenOrder): void {
     const expiresAt =
       order.qrTokenExpiresAt instanceof Date

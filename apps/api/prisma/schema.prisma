@@ -139,6 +139,8 @@ model Order {
   qrTokenNonce String
   qrTokenExpiresAt DateTime
   qrTokenRevokedAt DateTime?
+  // Independent read-only receipt access; scanning is consumed on payment.
+  receiptAccessRevokedAt DateTime?
   // Decision metadata and status CHECK constraints are maintained by SQL.
   decidedAt DateTime?
   decidedBy String?

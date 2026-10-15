@@ -1,5 +1,4 @@
 import { api } from "../../lib/api/client";
-import { refreshSession } from "../auth/api/session";
 import { useSessionStore } from "../auth/stores/session";
 
 export type OrderWorkflow = "cashier" | "kitchen";
@@ -12,17 +11,40 @@ export function subscribeNewOrders(
   onRefresh: (isNewOrder: boolean) => void,
   onStatus: (status: LiveOrderStatus) => void,
 ) {
+  return subscribeOrderStream(
+    `/shops/${encodeURIComponent(shopId)}/orders/events?workflow=${workflow}`,
+    { shopId, workflow },
+    "new_order",
+    () => useSessionStore.getState().accessToken,
+    (event) => onRefresh(event === "new_order"),
+    onStatus,
+    true,
+  );
+}
+
+/** Shared authenticated SSE transport; customer credentials never enter staff sessions. */
+export function subscribeOrderStream(
+  path: string,
+  scope: Record<string, string>,
+  eventName: "new_order" | "order_confirmed",
+  getToken: () => string | null,
+  onEvent: (event: string, data: Record<string, unknown>) => void,
+  onStatus: (status: LiveOrderStatus) => void,
+  staff = false,
+) {
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let controller: AbortController | undefined;
   let watchdog: ReturnType<typeof setTimeout> | undefined;
-  const unsubscribe = useSessionStore.subscribe((state, previous) => {
-    if (state.accessToken !== previous.accessToken) controller?.abort();
-  });
+  const unsubscribe = staff
+    ? useSessionStore.subscribe((state, previous) => {
+        if (state.accessToken !== previous.accessToken) controller?.abort();
+      })
+    : () => {};
 
   async function connect() {
     if (stopped) return;
-    const token = useSessionStore.getState().accessToken;
+    const token = getToken();
     if (!token) {
       onStatus("denied");
       return;
@@ -36,7 +58,7 @@ export function subscribeNewOrders(
     try {
       touch();
       const response = await fetch(
-        `${(api.defaults?.baseURL ?? "").replace(/\/$/, "")}/shops/${encodeURIComponent(shopId)}/orders/events?workflow=${workflow}`,
+        `${(api.defaults?.baseURL ?? "").replace(/\/$/, "")}${path}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -46,14 +68,20 @@ export function subscribeNewOrders(
           credentials: "include",
         },
       );
-      if (response.status === 401) {
+      if (stopped || signal.aborted) return;
+      if (response.status === 401 && staff) {
+        const { refreshSession } = await import("../auth/api/session");
         await refreshSession();
         return;
       }
-      if (response.status === 403 || response.status === 404) {
+      if (
+        response.status === 401 ||
+        response.status === 403 ||
+        response.status === 404
+      ) {
         stopped = true;
         onStatus("denied");
-        onRefresh(false); // Existing API/route error states hide unauthorized data.
+        if (staff) onEvent("resync", scope);
         return;
       }
       if (
@@ -68,7 +96,7 @@ export function subscribeNewOrders(
       try {
         while (!stopped) {
           const { value, done } = await reader.read();
-          if (done) break;
+          if (done || stopped || signal.aborted) break;
           touch();
           buffer += decoder.decode(value, { stream: true }).replace(/\r/g, "");
           if (buffer.length > 65_536) throw new Error("Invalid order stream");
@@ -89,16 +117,16 @@ export function subscribeNewOrders(
             if (
               !data ||
               typeof data !== "object" ||
-              !("shopId" in data) ||
-              !("workflow" in data) ||
-              data.shopId !== shopId ||
-              data.workflow !== workflow
+              !Object.entries(scope).every(
+                ([key, value]) =>
+                  (data as Record<string, unknown>)[key] === value,
+              )
             )
               continue;
             if (event === "unavailable") onStatus("retrying");
-            if (event === "new_order" || event === "resync") {
+            if (event === eventName || event === "resync") {
               onStatus("live");
-              onRefresh(event === "new_order");
+              onEvent(event, data as Record<string, unknown>);
             }
           }
         }

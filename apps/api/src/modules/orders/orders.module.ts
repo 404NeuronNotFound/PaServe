@@ -26,6 +26,11 @@ import { CompletedSalesController } from './completed-sales.controller.js';
 import { CompletedSalesService } from './completed-sales.service.js';
 import { NewOrderEventsController } from './new-order-events.controller.js';
 import { NewOrderEventsService } from './new-order-events.service.js';
+import { CustomerOrderStatusService } from './customer-order-status.service.js';
+import {
+  ConfirmedOrderEventsController,
+  CustomerOrderStatusController,
+} from './confirmed-order-events.controller.js';
 
 @Controller('menu/:shopSlug/orders')
 export class OrdersController {
@@ -45,6 +50,8 @@ export class OrdersController {
   controllers: [
     OrdersController,
     NewOrderEventsController,
+    ConfirmedOrderEventsController,
+    CustomerOrderStatusController,
     OrderQrController,
     OrderDecisionController,
     CashPaymentController,
@@ -57,6 +64,7 @@ export class OrdersController {
   providers: [
     OrdersService,
     NewOrderEventsService,
+    CustomerOrderStatusService,
     PublicProductService,
     PublicProductRepository,
     TableContextService,

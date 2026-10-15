@@ -30,6 +30,7 @@ import {
   verifyScannedOrder,
   lookupOrderNumber,
 } from "../../features/cashier/order-qr";
+import { useConfirmedOrderEvents } from "../../features/orders/useConfirmedOrderEvents";
 
 function failureMessage(error: unknown) {
   if (
@@ -132,6 +133,7 @@ export function CashierCashPayment({
         if (active.current && !request.signal.aborted) {
           setReview(saved);
           setBlocked(false);
+          if (saved.payment) setConfirm(false);
         }
       })
       .catch((error) => {
@@ -161,6 +163,7 @@ export function CashierCashPayment({
       if (!active.current || request.signal.aborted) return;
       setReview(saved);
       setBlocked(false);
+      if (saved.payment) setConfirm(false);
       if (review && saved.order.reviewVersion !== review.order.reviewVersion) {
         setAmount("");
         setReceivedConfirmed(false);
@@ -186,6 +189,14 @@ export function CashierCashPayment({
       if (active.current && !request.signal.aborted) setBusy(false);
     }
   }
+  useConfirmedOrderEvents(
+    shopId,
+    orderId,
+    () => {
+      void refresh();
+    },
+    busy,
+  );
   async function collect() {
     if (running.current || blocked || !review || !eligible) return;
     running.current = true;

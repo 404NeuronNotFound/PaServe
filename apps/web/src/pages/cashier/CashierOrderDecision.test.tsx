@@ -17,6 +17,10 @@ import {
 } from "../../features/cashier/order-qr";
 import { decideOrder } from "../../features/cashier/order-decision";
 import { cashierLine } from "../../test/cashier-fixtures";
+import { subscribeOrderStream } from "../../features/orders/new-order-events";
+vi.mock("../../features/orders/new-order-events", () => ({
+  subscribeOrderStream: vi.fn(() => vi.fn()),
+}));
 import {
   reviewCashPayment,
   createPayment,
@@ -57,6 +61,38 @@ const decision = {
   decidedAt: "2026-10-13T00:00:00.000Z",
   rejectionReason: null,
 };
+
+it("shows the paid receipt when another cashier confirms the open order", async () => {
+  const paid = {
+    order: { ...order, status: "CONFIRMED", paymentStatus: "PAID" },
+    payment: {
+      method: "CASH" as const,
+      requestId: "58bb31e6-9c13-4c07-9e04-fbb29b0584ab",
+      amountReceived: "200.00",
+      changeDue: "64.50",
+      paidAt: "2026-10-15T01:00:00Z",
+      paidBy: "other-cashier",
+    },
+  };
+  vi.mocked(reviewCashPayment).mockResolvedValue(paid);
+  render(<CashierOrderDecision order={order} qrToken="" onNext={vi.fn()} />);
+  vi.mocked(lookupOrderNumber).mockRejectedValue(
+    new Error("Already processed"),
+  );
+  act(() =>
+    vi
+      .mocked(subscribeOrderStream)
+      .mock.calls[0][4]("order_confirmed", {
+        shopId: order.shopId,
+        orderId: order.id,
+      }),
+  );
+  await screen.findByRole("heading", { name: "Cash payment recorded" });
+  expect(
+    screen.getByText(/already has a saved cash payment/),
+  ).toBeInTheDocument();
+  expect(createPayment).not.toHaveBeenCalled();
+});
 const modal = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   "showModal",

@@ -17,11 +17,24 @@ import "./customer-order-page.css";
 import { menuTheme } from "../../lib/menu-theme";
 import { readCustomerOrderQr } from "../../features/cart/customer-order-qr";
 import { OrderReferenceCard } from "./OrderReferenceCard";
+import { useCustomerConfirmation } from "../../features/orders/useCustomerConfirmation";
 
 export function CustomerOrderPage() {
   const { shopSlug = "", orderId = "" } = useParams();
   const receipt = readOrderReceipt(shopSlug, orderId);
   const qr = readCustomerOrderQr(shopSlug, orderId);
+  const savedStatus = useCustomerConfirmation(
+    shopSlug,
+    orderId,
+    receipt && qr?.orderNumber === receipt.orderNumber ? qr.qrToken : null,
+  );
+  const confirmed = savedStatus?.status === "CONFIRMED";
+  const rejected = savedStatus?.status === "REJECTED";
+  const statusLabel = confirmed
+    ? "Confirmed"
+    : rejected
+      ? "Rejected"
+      : "Pending";
   const heading = useRef<HTMLHeadingElement>(null);
   const menuUrl =
     receipt?.mode === "DINE_IN"
@@ -57,10 +70,18 @@ export function CustomerOrderPage() {
             <div>
               <p className="section-label">{receipt.shopName}</p>
               <h1 id="order-receipt-title" ref={heading} tabIndex={-1}>
-                Order submitted
+                {confirmed
+                  ? "Order confirmed"
+                  : rejected
+                    ? "Order rejected"
+                    : "Order submitted"}
               </h1>
               <p className="order-receipt-intro">
-                One more step before the kitchen.
+                {confirmed
+                  ? "Your payment is recorded. Your order has been sent to the kitchen."
+                  : rejected
+                    ? "Please ask the counter staff for help."
+                    : "One more step before the kitchen."}
               </p>
             </div>
             <p className="order-receipt-context">
@@ -93,8 +114,10 @@ export function CustomerOrderPage() {
                 This is the total saved for your submitted order.
               </p>
               <p className="order-receipt-note">
-                <FiLock aria-hidden="true" /> Submission does not confirm
-                payment.
+                <FiLock aria-hidden="true" />{" "}
+                {confirmed
+                  ? "Payment confirmed by the cashier."
+                  : "Submission does not confirm payment."}
               </p>
             </div>
             <section
@@ -106,18 +129,32 @@ export function CustomerOrderPage() {
                   <FiSmartphone />
                 </span>
                 <span className="order-receipt-status-label">
-                  <FiClock aria-hidden="true" /> Pending
+                  <FiClock aria-hidden="true" /> {statusLabel}
                 </span>
               </div>
-              <p className="section-label">At the counter</p>
+              <p className="section-label">
+                {confirmed ? "With your team" : "At the counter"}
+              </p>
               <h2 id="order-receipt-next-title">
-                Show your order QR at the counter
+                {confirmed
+                  ? "Your order is confirmed"
+                  : rejected
+                    ? "Please speak to the counter staff"
+                    : "Show your order QR at the counter"}
               </h2>
               <p>
-                Keep this screen open. If your QR is unavailable,{" "}
-                {receipt.orderNumber
-                  ? "give the staff your order number so they can assist you."
-                  : "ask the staff for help with your submitted order."}
+                {confirmed ? (
+                  "Keep your order number handy for pickup or table service."
+                ) : rejected ? (
+                  "Your order was not accepted. Ask staff before placing another order."
+                ) : (
+                  <>
+                    Keep this screen open. If your QR is unavailable,{" "}
+                    {receipt.orderNumber
+                      ? "give the staff your order number so they can assist you."
+                      : "ask the staff for help with your submitted order."}
+                  </>
+                )}
               </p>
               <ol
                 className="order-receipt-progress"
@@ -133,26 +170,43 @@ export function CustomerOrderPage() {
                   </div>
                   <FiCheckCircle aria-hidden="true" />
                 </li>
-                <li aria-current="step">
+                <li
+                  className={confirmed ? "is-complete" : undefined}
+                  aria-current={!confirmed && !rejected ? "step" : undefined}
+                >
                   <span aria-hidden="true">02</span>
                   <div>
                     <strong>Cashier confirmation &amp; payment</strong>
-                    <p>Confirm and pay at the counter.</p>
+                    <p>
+                      {confirmed
+                        ? "Confirmed and paid."
+                        : "Confirm and pay at the counter."}
+                    </p>
                   </div>
                 </li>
-                <li>
+                <li aria-current={confirmed ? "step" : undefined}>
                   <span aria-hidden="true">03</span>
                   <div>
                     <strong>Kitchen queue</strong>
-                    <p>Not queued yet.</p>
+                    <p>
+                      {confirmed ? "Sent to the kitchen." : "Not queued yet."}
+                    </p>
                   </div>
                 </li>
               </ol>
               <div className="order-receipt-status" role="status">
-                <span className="sr-only">Pending. </span>
-                Your order is not yet in the kitchen queue. The cashier must
-                confirm your order and payment before the kitchen starts
-                preparing it.
+                <span className="sr-only">{statusLabel}. </span>
+                {confirmed ? (
+                  "The cashier confirmed your order and payment. Your order has been sent to the kitchen."
+                ) : rejected ? (
+                  "This order was rejected. Ask the counter staff for assistance."
+                ) : (
+                  <>
+                    Your order is not yet in the kitchen queue. The cashier must
+                    confirm your order and payment before the kitchen starts
+                    preparing it.
+                  </>
+                )}
               </div>
             </section>
           </div>

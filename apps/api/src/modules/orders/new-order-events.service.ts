@@ -10,7 +10,8 @@ import { AuthService } from '../auth/auth.service.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 
 export type OrderWorkflow = 'cashier' | 'kitchen';
-type Listener = (event: 'new_order' | 'resync' | 'unavailable') => void;
+type RelayEvent = 'new_order' | 'order_confirmed' | 'resync' | 'unavailable';
+type Listener = (event: RelayEvent, data?: Record<string, string>) => void;
 type Subscription = {
   channel: RealtimeChannel;
   listeners: Set<Listener>;
@@ -46,11 +47,11 @@ export class NewOrderEventsService implements OnModuleDestroy {
 
   /** Reuse one private Supabase subscription per shop/workflow per API process. */
   private async listen(
-    shopId: string,
-    workflow: OrderWorkflow,
+    topic: string,
+    eventName: 'new_order' | 'order_confirmed',
+    scope: Record<string, string>,
     listener: Listener,
   ) {
-    const topic = `staff:new-order:${shopId}:${workflow}`;
     // A rapid reconnect must not reuse a channel that is still leaving.
     await this.removals.get(topic);
     if (!this.client) {
@@ -69,10 +70,25 @@ export class NewOrderEventsService implements OnModuleDestroy {
       this.subscriptions.set(topic, entry);
       listeners.add(listener);
       channel
-        .on('broadcast', { event: 'new_order' }, ({ payload }) => {
+        .on('broadcast', { event: eventName }, ({ payload }) => {
           const data = payload as Record<string, unknown> | null;
-          if (data?.shopId === shopId && data.workflow === workflow)
-            for (const notify of listeners) notify('new_order');
+          if (
+            !data ||
+            !Object.entries(scope).every(([key, value]) => data[key] === value)
+          )
+            return;
+          if (
+            eventName === 'order_confirmed' &&
+            typeof data.orderId !== 'string'
+          )
+            return;
+          const safe = {
+            ...scope,
+            ...(eventName === 'order_confirmed'
+              ? { orderId: data.orderId as string }
+              : {}),
+          };
+          for (const notify of listeners) notify(eventName, safe);
         })
         .subscribe((status) => {
           subscription.connected = status === 'SUBSCRIBED';
@@ -106,13 +122,33 @@ export class NewOrderEventsService implements OnModuleDestroy {
     workflow: OrderWorkflow,
     response: Response,
   ) {
-    const actor = await this.auth.currentUser(token);
-    await this.requireAccess(actor.id, shopId, workflow);
+    return this.relay(
+      `staff:new-order:${shopId}:${workflow}`,
+      'new_order',
+      { shopId, workflow },
+      async () => {
+        const actor = await this.auth.currentUser(token);
+        await this.requireAccess(actor.id, shopId, workflow);
+      },
+      response,
+    );
+  }
+
+  /** Internal relay only: callers construct topics and supply a live access check. */
+  async relay(
+    topic: string,
+    eventName: 'new_order' | 'order_confirmed',
+    scope: Record<string, string>,
+    authorize: () => Promise<unknown>,
+    response: Response,
+  ) {
+    await authorize();
     if (response.destroyed) return;
     let closed = false;
     let checking = false;
     let pending:
-      'new_order' | 'resync' | 'unavailable' | 'heartbeat' | undefined;
+      | { event: RelayEvent | 'heartbeat'; data: Record<string, string> }
+      | undefined;
     let unlisten: (() => void) | undefined;
     let heartbeat: ReturnType<typeof setInterval> | undefined;
     let expiry: ReturnType<typeof setTimeout> | undefined;
@@ -125,22 +161,23 @@ export class NewOrderEventsService implements OnModuleDestroy {
       this.streams.delete(close);
       response.end();
     };
-    const deliver = async (event: NonNullable<typeof pending>) => {
+    const deliver = async (event: RelayEvent | 'heartbeat', data = scope) => {
       if (closed) return;
       if (checking) {
         // Coalesce bursts; the client fetches authoritative state, not deltas.
-        if (event !== 'heartbeat') pending = event;
+        if (event !== 'heartbeat')
+          pending =
+            event === 'order_confirmed'
+              ? { event: 'resync', data: scope }
+              : { event, data };
         return;
       }
       checking = true;
       try {
-        const current = await this.auth.currentUser(token);
-        await this.requireAccess(current.id, shopId, workflow);
+        await authorize();
         if (
           !closed &&
-          !response.write(
-            `event: ${event}\ndata: ${JSON.stringify({ shopId, workflow })}\n\n`,
-          )
+          !response.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
         )
           close();
       } catch {
@@ -149,15 +186,15 @@ export class NewOrderEventsService implements OnModuleDestroy {
         checking = false;
         const next = pending;
         pending = undefined;
-        if (next) void deliver(next);
+        if (next) void deliver(next.event, next.data);
       }
     };
     response.on('close', close);
     this.streams.add(close);
     try {
       // Resolve configuration and subscribe before opening a successful stream.
-      unlisten = await this.listen(shopId, workflow, (event) => {
-        void deliver(event);
+      unlisten = await this.listen(topic, eventName, scope, (event, data) => {
+        void deliver(event, data);
       });
       if (closed) {
         unlisten();

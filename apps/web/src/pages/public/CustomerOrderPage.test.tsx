@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -17,6 +17,11 @@ import { useCustomerTables } from "../../features/shops/customer-table";
 import { api } from "../../lib/api/client";
 import { feedback } from "../../app/stores/feedback";
 import { clearCustomerOrderQrs } from "../../features/cart/customer-order-qr";
+import { subscribeOrderStream } from "../../features/orders/new-order-events";
+
+vi.mock("../../features/orders/new-order-events", () => ({
+  subscribeOrderStream: vi.fn(() => vi.fn()),
+}));
 
 vi.mock("../../lib/api/client", () => ({
   api: { get: vi.fn(), post: vi.fn() },
@@ -86,6 +91,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
   if (show)
     Object.defineProperty(HTMLDialogElement.prototype, "showModal", show);
@@ -116,6 +122,90 @@ function setup(path = "/menu/cafe/orders/order-a") {
     </QueryClientProvider>,
   );
 }
+
+it("updates a pending receipt to the server-confirmed paid state without manual refresh", async () => {
+  const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828",
+    shopId = "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e";
+  const expiresAt = Date.parse("2030-01-01T00:00:00Z");
+  const token = `${Buffer.from(JSON.stringify({ v: 1, purpose: "order-receipt", shopId, orderId, nonce: "75992537-5d60-4d22-8e1e-60a114644681", exp: expiresAt })).toString("base64url")}.${"a".repeat(43)}`;
+  saveOrderReceipt("cafe", "Cafe", {
+    ...order,
+    id: orderId,
+    qrToken: token,
+    qrTokenExpiresAt: new Date(expiresAt).toISOString(),
+  });
+  const pending = {
+    id: orderId,
+    shopId,
+    orderNumber: order.orderNumber,
+    status: "PENDING_CONFIRMATION",
+    paymentStatus: "UNPAID",
+    confirmedAt: null,
+    updatedAt: "2026-10-15T01:00:00Z",
+  };
+  const fetchStatus = vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ order: pending }),
+  });
+  vi.stubGlobal("fetch", fetchStatus);
+  setup(`/menu/cafe/orders/${orderId}`);
+  await waitFor(() => expect(fetchStatus).toHaveBeenCalledOnce());
+  expect(
+    screen.getByRole("heading", { name: "Order submitted" }),
+  ).toBeInTheDocument();
+  fetchStatus.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      order: {
+        ...pending,
+        status: "CONFIRMED",
+        paymentStatus: "PAID",
+        confirmedAt: "2026-10-15T01:01:00Z",
+        updatedAt: "2026-10-15T01:01:00Z",
+      },
+    }),
+  });
+  act(() =>
+    vi
+      .mocked(subscribeOrderStream)
+      .mock.calls[0][4]("order_confirmed", { shopId, orderId }),
+  );
+  await screen.findByRole("heading", { name: "Order confirmed" });
+  expect(screen.getByText("Confirmed and paid.")).toBeInTheDocument();
+  expect(
+    screen.queryByText(/Your order is not yet in the kitchen queue/),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText("ORD-000042")).toBeInTheDocument();
+  expect(fetchStatus.mock.lastCall?.[1].headers.Authorization).toBe(
+    `Bearer ${token}`,
+  );
+  // Repeated delivery must replace/refetch the same saved status, never append
+  // another receipt, progress step, notification, or state-changing request.
+  const callsBeforeDuplicates = fetchStatus.mock.calls.length;
+  act(() => {
+    for (let i = 0; i < 3; i++)
+      vi.mocked(subscribeOrderStream).mock.calls[0][4]("order_confirmed", {
+        shopId,
+        orderId,
+      });
+  });
+  await waitFor(() =>
+    expect(fetchStatus.mock.calls.length).toBeGreaterThan(
+      callsBeforeDuplicates,
+    ),
+  );
+  expect(
+    screen.getAllByRole("heading", { name: "Order confirmed" }),
+  ).toHaveLength(1);
+  expect(screen.getAllByText("Confirmed and paid.")).toHaveLength(1);
+  expect(screen.getAllByText("ORD-000042")).toHaveLength(1);
+  expect(screen.getAllByRole("list", { name: "Order progress" })).toHaveLength(
+    1,
+  );
+  expect(api.post).not.toHaveBeenCalled();
+});
 
 it("keeps the QR and order number after memory loss and a full reload", async () => {
   const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828";

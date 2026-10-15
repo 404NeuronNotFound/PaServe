@@ -765,6 +765,18 @@ export interface VerifyOrderQrResponse {
     reviewVersion: string;
   };
 }
+/** Minimal credential-protected customer read model, without staff/payment details. */
+export interface CustomerOrderStatusResponse {
+  order: {
+    id: string;
+    shopId: string;
+    orderNumber: string;
+    status: "PENDING_CONFIRMATION" | "CONFIRMED" | "REJECTED";
+    paymentStatus: "UNPAID" | "PAID";
+    confirmedAt: string | null;
+    updatedAt: string;
+  };
+}
 export interface OrderDecisionRequest extends VerifyOrderQrRequest {
   reviewVersion: string;
 }
