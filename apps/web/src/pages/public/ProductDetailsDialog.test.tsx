@@ -1036,3 +1036,34 @@ it("restores saved carts and displays only the active shop when switching away a
   expect(useCart.getState().shops).toEqual(saved);
   expect(api.post).not.toHaveBeenCalled();
 });
+
+it("blocks an already-open form after menu availability changes while preserving its draft", async () => {
+  vi.mocked(api.get).mockResolvedValue({data: details});
+  const view = setup();
+  const {user, dialog} = await openDetails();
+  const notes = within(dialog).getByRole("textbox");
+  await user.type(notes, "No ice");
+  const sold = {...product, status: "SOLD_OUT" as const, isOrderable: false};
+  view.rerender(<QueryClientProvider client={view.client}><PublicMenuView menu={{...menu, products: [sold]}} /></QueryClientProvider>);
+  expect(within(dialog).getByRole("button", {name: "Add to cart"})).toBeDisabled();
+  expect(notes).toHaveValue("No ice");
+  expect(within(dialog).getAllByRole("status")[0]).toHaveTextContent("Sold out");
+  fireEvent.submit(dialog.querySelector("form")!);
+  expect(api.post).not.toHaveBeenCalled();
+  expect(useCart.getState().shops).toEqual({});
+});
+
+it("does not add an in-flight quote after a sold-out menu update", async () => {
+  vi.mocked(api.get).mockResolvedValue({data: details});
+  let finish!: (value: unknown) => void;
+  vi.mocked(api.post).mockImplementationOnce(() => new Promise(resolve => {finish=resolve;}));
+  const view = setup();
+  const {user, dialog} = await openDetails();
+  await user.click(within(dialog).getByRole("button", {name: "Add to cart"}));
+  const sold = {...product, status: "SOLD_OUT" as const, isOrderable: false};
+  view.rerender(<QueryClientProvider client={view.client}><PublicMenuView menu={{...menu, products: [sold]}} /></QueryClientProvider>);
+  finish({data: {productId: product.id, productName: product.name, currency: "PHP", basePrice: "120.01", unitPrice: "120.01", totalPrice: "120.01", quantity: 1, variants: [details.variants[0]], addOns: []}});
+  await within(dialog).findByRole("alert");
+  expect(useCart.getState().shops).toEqual({});
+  expect(within(dialog).getByRole("button", {name: "Add to cart"})).toBeDisabled();
+});

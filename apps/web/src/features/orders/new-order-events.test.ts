@@ -197,3 +197,34 @@ it("recovers a silent broken connection and keeps upstream failures visibly degr
   await vi.advanceTimersByTimeAsync(38_000);
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
+
+it("opens public menu streams without auth or cookies and filters foreign slugs", async () => {
+  const events = vi.fn();
+  stop = subscribeOrderStream(
+    "/menu/cafe/availability-events",
+    { shopSlug: "cafe" },
+    "product_sold_out",
+    () => null,
+    events,
+    status,
+    false,
+    true,
+  );
+  await flush();
+  expect(fetchMock.mock.lastCall?.[1]).toMatchObject({
+    headers: { Accept: "text/event-stream" },
+    credentials: "omit",
+  });
+  expect(fetchMock.mock.lastCall?.[1].headers).not.toHaveProperty(
+    "Authorization",
+  );
+  push.enqueue(
+    new TextEncoder().encode(
+      'event: product_sold_out\ndata: {"shopSlug":"other"}\n\nevent: product_sold_out\ndata: {"shopSlug":"cafe"}\n\n',
+    ),
+  );
+  await flush();
+  expect(events).toHaveBeenCalledExactlyOnceWith("product_sold_out", {
+    shopSlug: "cafe",
+  });
+});

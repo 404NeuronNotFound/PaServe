@@ -11,10 +11,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, Link } from "react-router-dom";
 import { AxiosError, AxiosHeaders } from "axios";
 import { PublicMenuPage } from "./PublicMenuPage";
+import { subscribeOrderStream } from "../../features/orders/new-order-events";
 import { api } from "../../lib/api/client";
 import { useCustomerTables } from "../../features/shops/customer-table";
 import { useCart, cartCheckoutRequest } from "../../features/cart/cart";
 
+vi.mock("../../features/orders/new-order-events", () => ({subscribeOrderStream: vi.fn(() => vi.fn())}));
 vi.mock("../../lib/api/client", () => ({
   api: { get: vi.fn(), post: vi.fn() },
 }));
@@ -305,8 +307,8 @@ it("invalidates resolved context during refetch and keeps it blocked on network 
   const refresh = client.refetchQueries({
     queryKey: ["public-menu", "cafe", "table", "T12"],
   });
-  await screen.findByText(/Loading menu/);
-  expect(() => cartCheckoutRequest({}, "cafe")).toThrow();
+  await waitFor(() => expect(() => cartCheckoutRequest({}, "cafe")).toThrow());
+  expect(screen.getByRole("heading", {name: "Cafe", level: 1})).toBeInTheDocument();
   reject(new Error("offline"));
   await refresh;
   await screen.findByRole("heading", { name: "Table menu unavailable" });
@@ -326,3 +328,22 @@ it.each([
     expect(useCustomerTables.getState().resolved.cafe).toBeUndefined();
   },
 );
+
+it("refreshes table-menu availability without unmounting the menu or losing its table", async () => {
+  const product = {id: "coffee", categoryId: null, name: "Coffee", slug: "coffee", price: "20.00", description: null, imageUrl: null, status: "AVAILABLE", isOrderable: true, isFeatured: false, sortOrder: 0};
+  vi.mocked(api.get).mockResolvedValue({data: {...menu, products: [product]}});
+  setup();
+  const heading = await screen.findByRole("heading", {name: "Cafe", level: 1});
+  const search = screen.getByRole("searchbox");
+  fireEvent.change(search,{target: {value: "Coffee"}});
+  let finish!: (value: unknown) => void;
+  vi.mocked(api.get).mockImplementationOnce(() => new Promise(resolve => {finish=resolve;}));
+  vi.mocked(subscribeOrderStream).mock.calls[0][4]("product_sold_out",{shopSlug:"cafe"});
+  await waitFor(() => expect(finish).toBeDefined());
+  expect(screen.getByRole("heading", {name: "Cafe", level: 1})).toBe(heading);
+  finish({data: {...menu, products: [{...product,status: "SOLD_OUT",isOrderable:false}]}});
+  await screen.findByText("Sold out");
+  expect(search).toHaveValue("Coffee");
+  expect(useCustomerTables.getState().resolved.cafe).toMatchObject(table);
+  expect(api.get).toHaveBeenLastCalledWith("/menu/cafe/table/T12",expect.any(Object));
+});

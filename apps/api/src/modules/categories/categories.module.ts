@@ -8,9 +8,15 @@ import { PublicMenuController } from './public-menu.controller.js';
 import { PublicMenuRepository } from './public-menu.repository.js';
 import { PublicTablesRepository } from '../tables/public-tables.repository.js';
 import { TableContextService } from '../tables/table-context.service.js';
+import { RealtimeModule } from '../realtime/realtime.module.js';
+import { PublicMenuEventsController } from './public-menu-events.controller.js';
 @Module({
-  imports: [DatabaseModule, TenancyModule],
-  controllers: [CategoriesController, PublicMenuController],
+  imports: [DatabaseModule, TenancyModule, RealtimeModule],
+  controllers: [
+    CategoriesController,
+    PublicMenuController,
+    PublicMenuEventsController,
+  ],
   providers: [
     CategoriesRepository,
     CategoriesService,

@@ -6,6 +6,7 @@ import type { PublicMenuResponse } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import "./public-menu.css";
 import { PublicMenuView } from "./PublicMenuView";
+import { useMenuAvailability } from "../../features/products/useMenuAvailability";
 import { saveOrderReceipt } from "../../features/cart/order-receipt";
 import {
   useCustomerTables,
@@ -31,6 +32,7 @@ function PublicMenuSession({
   tableCode?: string;
 }) {
   const navigate = useNavigate();
+  useMenuAvailability(shopSlug);
   const [code, setCode] = useState(
     () =>
       tableCode ??
@@ -91,7 +93,7 @@ function PublicMenuSession({
       ? `${menu.data.shop.name} menu · PaServe`
       : "Menu · PaServe";
   }, [menu.data]);
-  if (menu.isPending || (code && menu.isFetching))
+  if (menu.isPending)
     return (
       <main className="public-menu" role="status">
         Loading menu…

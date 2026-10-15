@@ -8,7 +8,8 @@ type OrderEvent =
   | "order_confirmed"
   | "order_preparing"
   | "order_ready"
-  | "order_completed";
+  | "order_completed"
+  | "product_sold_out";
 
 /** Browser credentials stay in the Authorization header, never in a URL. */
 export function subscribeNewOrders(
@@ -28,7 +29,7 @@ export function subscribeNewOrders(
   );
 }
 
-/** Shared authenticated SSE transport; customer credentials never enter staff sessions. */
+/** Shared SSE transport; public menus omit credentials and customer proof stays separate from staff sessions. */
 export function subscribeOrderStream(
   path: string,
   scope: Record<string, string>,
@@ -37,6 +38,7 @@ export function subscribeOrderStream(
   onEvent: (event: string, data: Record<string, unknown>) => void,
   onStatus: (status: LiveOrderStatus) => void,
   staff = false,
+  publicStream = false,
 ) {
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -51,7 +53,7 @@ export function subscribeOrderStream(
   async function connect() {
     if (stopped) return;
     const token = getToken();
-    if (!token) {
+    if (!token && !publicStream) {
       onStatus("denied");
       return;
     }
@@ -67,11 +69,13 @@ export function subscribeOrderStream(
         `${(api.defaults?.baseURL ?? "").replace(/\/$/, "")}${path}`,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            ...(!publicStream && token
+              ? { Authorization: `Bearer ${token}` }
+              : {}),
             Accept: "text/event-stream",
           },
           signal,
-          credentials: "include",
+          credentials: publicStream ? "omit" : "include",
         },
       );
       if (stopped || signal.aborted) return;

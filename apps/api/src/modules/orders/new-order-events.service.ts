@@ -15,7 +15,8 @@ type OrderEvent =
   | 'order_confirmed'
   | 'order_preparing'
   | 'order_ready'
-  | 'order_completed';
+  | 'order_completed'
+  | 'product_sold_out';
 type RelayEvent = OrderEvent | 'resync' | 'unavailable';
 type Listener = (event: RelayEvent, data?: Record<string, string>) => void;
 type Subscription = {
@@ -51,7 +52,7 @@ export class NewOrderEventsService implements OnModuleDestroy {
     );
   }
 
-  /** Reuse one private Supabase subscription per shop/workflow per API process. */
+  /** Reuse one private Supabase subscription per topic per API process. */
   private async listen(
     topic: string,
     eventName: OrderEvent | readonly OrderEvent[],
@@ -89,7 +90,8 @@ export class NewOrderEventsService implements OnModuleDestroy {
             event !== 'order_confirmed' &&
             event !== 'order_preparing' &&
             event !== 'order_ready' &&
-            event !== 'order_completed'
+            event !== 'order_completed' &&
+            event !== 'product_sold_out'
           )
             return;
           const data = payload as Record<string, unknown> | null;
@@ -98,12 +100,12 @@ export class NewOrderEventsService implements OnModuleDestroy {
             !Object.entries(scope).every(([key, value]) => data[key] === value)
           )
             return;
-          if (event !== 'new_order' && typeof data.orderId !== 'string') return;
+          const orderEvent =
+            event !== 'new_order' && event !== 'product_sold_out';
+          if (orderEvent && typeof data.orderId !== 'string') return;
           const safe = {
             ...scope,
-            ...(event !== 'new_order'
-              ? { orderId: data.orderId as string }
-              : {}),
+            ...(orderEvent ? { orderId: data.orderId as string } : {}),
           };
           for (const notify of listeners) notify(event, safe);
         })
@@ -187,7 +189,8 @@ export class NewOrderEventsService implements OnModuleDestroy {
             event === 'order_confirmed' ||
             event === 'order_preparing' ||
             event === 'order_ready' ||
-            event === 'order_completed'
+            event === 'order_completed' ||
+            event === 'product_sold_out'
               ? { event: 'resync', data: scope }
               : { event, data };
         return;

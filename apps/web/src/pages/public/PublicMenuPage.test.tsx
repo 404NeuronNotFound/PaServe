@@ -3,8 +3,10 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { PublicMenuPage } from "./PublicMenuPage";
+import { subscribeOrderStream } from "../../features/orders/new-order-events";
 import { api } from "../../lib/api/client";
 
+vi.mock("../../features/orders/new-order-events", () => ({subscribeOrderStream: vi.fn(() => vi.fn())}));
 vi.mock("../../lib/api/client", () => ({ api: { get: vi.fn() } }));
 afterEach(() => {
   cleanup();
@@ -442,4 +444,22 @@ it("hides a broken banner while keeping the logo and menu available", async () =
   ).not.toBeInTheDocument();
   expect(screen.getByRole("img", { name: "Cafe logo" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Cafe" })).toBeInTheDocument();
+});
+
+it.each(["grid", "list", "compact"])("updates sold-out featured and ordinary cards on an event in %s without refresh", async (menuLayout) => {
+  const product = {id: "coffee", categoryId: null, name: "Coffee", slug: "coffee", price: "20.00", description: null, imageUrl: null, status: "AVAILABLE", isOrderable: true, isFeatured: true, sortOrder: 0};
+  const available = {...menu, shop: {...menu.shop, menuLayout}, products: [product], featuredProducts: [product]};
+  vi.mocked(api.get).mockResolvedValue({data: available});
+  setup();
+  await screen.findByRole("heading", {name: "Cafe"});
+  const search = screen.getByRole("searchbox");
+  fireEvent.change(search, {target: {value: "Coffee"}});
+  const sold = {...product, status: "SOLD_OUT", isOrderable: false};
+  vi.mocked(api.get).mockResolvedValue({data: {...available, products: [sold], featuredProducts: [sold]}});
+  const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
+  for(let i=0;i<3;i++) notify("product_sold_out", {shopSlug: "cafe"});
+  await vi.waitFor(() => expect(screen.getAllByText("Sold out")).toHaveLength(2));
+  expect(search).toHaveValue("Coffee");
+  expect(screen.getAllByRole("button", {name: "View details for Coffee"})).toHaveLength(2);
+  expect(vi.mocked(subscribeOrderStream).mock.calls[0].slice(0,3)).toEqual(["/menu/cafe/availability-events", {shopSlug: "cafe"}, "product_sold_out"]);
 });

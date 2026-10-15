@@ -25,7 +25,7 @@ import { PreparationCompleteService } from './preparation-complete.service.js';
 import { CompletedSalesController } from './completed-sales.controller.js';
 import { CompletedSalesService } from './completed-sales.service.js';
 import { NewOrderEventsController } from './new-order-events.controller.js';
-import { NewOrderEventsService } from './new-order-events.service.js';
+import { RealtimeModule } from '../realtime/realtime.module.js';
 import { CustomerOrderStatusService } from './customer-order-status.service.js';
 import {
   ConfirmedOrderEventsController,
@@ -46,7 +46,7 @@ export class OrdersController {
   }
 }
 @Module({
-  imports: [ShopMembersModule],
+  imports: [ShopMembersModule, RealtimeModule],
   controllers: [
     OrdersController,
     NewOrderEventsController,
@@ -63,7 +63,6 @@ export class OrdersController {
   ],
   providers: [
     OrdersService,
-    NewOrderEventsService,
     CustomerOrderStatusService,
     PublicProductService,
     PublicProductRepository,

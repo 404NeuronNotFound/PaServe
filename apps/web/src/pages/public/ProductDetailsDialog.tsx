@@ -12,7 +12,11 @@ import {
 } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import { formatCartPrice, formatProductPrice } from "../../lib/money";
-import { createCartPricePreview, PRICE_PREVIEW_NOTICE, useCart } from "../../features/cart/cart";
+import {
+  createCartPricePreview,
+  PRICE_PREVIEW_NOTICE,
+  useCart,
+} from "../../features/cart/cart";
 import { feedback } from "../../app/stores/feedback";
 import { CustomerDialog } from "./CustomerDialog";
 import {
@@ -85,6 +89,7 @@ export function ProductDetailsDialog({
         <ProductDetailsForm
           key={details.dataUpdatedAt}
           data={details.data}
+          menuSoldOut={product.status === "SOLD_OUT" || !product.isOrderable}
           shopSlug={shop.slug}
           preview={preview}
           onClose={onClose}
@@ -100,6 +105,7 @@ export function ProductDetailsDialog({
 
 function ProductDetailsForm({
   data,
+  menuSoldOut,
   shopSlug,
   preview,
   onClose,
@@ -107,6 +113,7 @@ function ProductDetailsForm({
   onRefresh,
 }: {
   data: PublicProductDetailsResponse;
+  menuSoldOut: boolean;
   shopSlug: string;
   preview: boolean;
   onClose: () => void;
@@ -114,7 +121,12 @@ function ProductDetailsForm({
   onRefresh: () => void;
 }) {
   const { product, optionGroups, variants, addOns } = data;
-  const isOrderable = product.status === "AVAILABLE" && product.isOrderable;
+  const isOrderable =
+    !menuSoldOut && product.status === "AVAILABLE" && product.isOrderable;
+  const orderable = useRef(isOrderable);
+  useEffect(() => {
+    orderable.current = isOrderable;
+  }, [isOrderable]);
   const [choices, setChoices] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       variants
@@ -195,14 +207,25 @@ function ProductDetailsForm({
         },
       );
       if (!mounted.current) return;
+      if (!orderable.current)
+        throw new Error("Product is no longer available.");
       const quote = response.data;
       const sameIds = (actual: string[], expected: string[]) =>
-        JSON.stringify([...actual].sort()) === JSON.stringify([...expected].sort());
+        JSON.stringify([...actual].sort()) ===
+        JSON.stringify([...expected].sort());
       if (
-        quote.productId !== product.id || quote.quantity !== count ||
-        normalizeCustomerNote(quote.notes ?? "") !== normalizeCustomerNote(notes) ||
-        !sameIds(quote.variants.map((variant) => variant.id), selectedVariants.map((variant) => variant.id)) ||
-        !sameIds(quote.addOns.map((option) => option.id), selectedAddOns) ||
+        quote.productId !== product.id ||
+        quote.quantity !== count ||
+        normalizeCustomerNote(quote.notes ?? "") !==
+          normalizeCustomerNote(notes) ||
+        !sameIds(
+          quote.variants.map((variant) => variant.id),
+          selectedVariants.map((variant) => variant.id),
+        ) ||
+        !sameIds(
+          quote.addOns.map((option) => option.id),
+          selectedAddOns,
+        ) ||
         !useCart.getState().add(shopSlug, quote, pricePreview)
       ) {
         throw new Error("The quote did not match this selection.");
@@ -263,9 +286,11 @@ function ProductDetailsForm({
         {!isOrderable && (
           <p role="status" className="product-stock-message">
             <FiSlash aria-hidden="true" />
-            {product.status === "SOLD_OUT" ? "Sold out" : "Unavailable"} — you
-            can explore this item, but it cannot be added to your cart right
-            now.
+            {menuSoldOut || product.status === "SOLD_OUT"
+              ? "Sold out"
+              : "Unavailable"}{" "}
+            — you can explore this item, but it cannot be added to your cart
+            right now.
           </p>
         )}
         <fieldset
