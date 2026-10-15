@@ -26,7 +26,7 @@ export class PublicMenuEventsController {
     if (!shop) throw unavailable();
     return this.events.relay(
       `menu:availability:${shop.id}:${slug}`,
-      'product_sold_out',
+      ['product_sold_out', 'product_available'],
       { shopSlug: slug },
       async () => {
         if (

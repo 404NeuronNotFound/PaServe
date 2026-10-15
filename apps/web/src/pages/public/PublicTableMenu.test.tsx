@@ -346,4 +346,11 @@ it("refreshes table-menu availability without unmounting the menu or losing its 
   expect(search).toHaveValue("Coffee");
   expect(useCustomerTables.getState().resolved.cafe).toMatchObject(table);
   expect(api.get).toHaveBeenLastCalledWith("/menu/cafe/table/T12",expect.any(Object));
+  vi.mocked(api.get).mockResolvedValue({data: {...menu, products: [product]}});
+  vi.mocked(subscribeOrderStream).mock.calls[0][4]("product_available",{shopSlug:"cafe"});
+  await waitFor(() => expect(screen.queryByText("Sold out")).not.toBeInTheDocument());
+  expect(screen.getByRole("heading", {name: "Cafe", level: 1})).toBe(heading);
+  expect(search).toHaveValue("Coffee");
+  expect(useCustomerTables.getState().resolved.cafe).toMatchObject(table);
+
 });

@@ -207,33 +207,36 @@ describe('New order staff subscriptions', () => {
     },
   );
 
-  it('relays only public menu invalidations and closes when the shop is no longer public', async () => {
-    const stream = new Stream();
-    const authorize = vi.fn().mockResolvedValue(undefined);
-    await service.relay(
-      'menu:availability:shop-a:cafe',
-      'product_sold_out',
-      { shopSlug: 'cafe' },
-      authorize,
-      stream as unknown as Response,
-    );
-    broadcast({ event: 'product_sold_out', payload: { shopSlug: 'other' } });
-    await flush();
-    expect(stream.write).not.toHaveBeenCalled();
-    broadcast({
-      event: 'product_sold_out',
-      payload: { shopSlug: 'cafe', productId: 'private', actorId: 'private' },
-    });
-    await flush();
-    expect(stream.write).toHaveBeenCalledExactlyOnceWith(
-      'event: product_sold_out\ndata: {"shopSlug":"cafe"}\n\n',
-    );
-    authorize.mockRejectedValue(new Error('shop disabled'));
-    broadcast({ event: 'product_sold_out', payload: { shopSlug: 'cafe' } });
-    await flush();
-    expect(stream.write).toHaveBeenCalledOnce();
-    expect(stream.end).toHaveBeenCalledOnce();
-  });
+  it.each(['product_sold_out', 'product_available'] as const)(
+    'relays %s only to its public menu and closes when the shop is no longer public',
+    async (event) => {
+      const stream = new Stream();
+      const authorize = vi.fn().mockResolvedValue(undefined);
+      await service.relay(
+        'menu:availability:shop-a:cafe',
+        event,
+        { shopSlug: 'cafe' },
+        authorize,
+        stream as unknown as Response,
+      );
+      broadcast({ event, payload: { shopSlug: 'other' } });
+      await flush();
+      expect(stream.write).not.toHaveBeenCalled();
+      broadcast({
+        event: event,
+        payload: { shopSlug: 'cafe', productId: 'private', actorId: 'private' },
+      });
+      await flush();
+      expect(stream.write).toHaveBeenCalledExactlyOnceWith(
+        `event: ${event}\ndata: {"shopSlug":"cafe"}\n\n`,
+      );
+      authorize.mockRejectedValue(new Error('shop disabled'));
+      broadcast({ event, payload: { shopSlug: 'cafe' } });
+      await flush();
+      expect(stream.write).toHaveBeenCalledOnce();
+      expect(stream.end).toHaveBeenCalledOnce();
+    },
+  );
   it('resynchronizes on upstream reconnect and shares/cleans up local subscribers', async () => {
     const first = await open();
     status('SUBSCRIBED');

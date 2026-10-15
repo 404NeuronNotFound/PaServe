@@ -1051,6 +1051,12 @@ it("blocks an already-open form after menu availability changes while preserving
   fireEvent.submit(dialog.querySelector("form")!);
   expect(api.post).not.toHaveBeenCalled();
   expect(useCart.getState().shops).toEqual({});
+  view.rerender(<QueryClientProvider client={view.client}><PublicMenuView menu={menu} /></QueryClientProvider>);
+  expect(within(dialog).getByRole("button", {name: "Add to cart"})).toBeEnabled();
+  expect(notes).toHaveValue("No ice");
+  expect(within(dialog).queryByText(/Sold out/)).not.toBeInTheDocument();
+  expect(api.post).not.toHaveBeenCalled();
+
 });
 
 it("does not add an in-flight quote after a sold-out menu update", async () => {
@@ -1066,4 +1072,24 @@ it("does not add an in-flight quote after a sold-out menu update", async () => {
   await within(dialog).findByRole("alert");
   expect(useCart.getState().shops).toEqual({});
   expect(within(dialog).getByRole("button", {name: "Add to cart"})).toBeDisabled();
+});
+
+it.each([true, false])("revalidates sold-out dialog details on restoration before enabling ordering (server available: %s)", async (restored) => {
+  const sold = {...product, status: "SOLD_OUT" as const, isOrderable: false};
+  vi.mocked(api.get).mockResolvedValue({data: {...details, product: sold}});
+  const view = setup({...menu, products: [sold]});
+  const {dialog} = await openDetails();
+  expect(within(dialog).getByRole("button", {name: "Add to cart"})).toBeDisabled();
+  let finish!: (value: unknown) => void;
+  vi.mocked(api.get).mockImplementationOnce(() => new Promise(resolve => {finish=resolve;}));
+  view.rerender(<QueryClientProvider client={view.client}><PublicMenuView menu={menu} /></QueryClientProvider>);
+  await within(dialog).findByRole("status");
+  await waitFor(() => expect(finish).toBeDefined());
+  expect(within(dialog).queryByRole("button", {name: "Add to cart"})).not.toBeInTheDocument();
+  finish({data: restored ? details : {...details, product: sold}});
+  const button = await within(dialog).findByRole("button", {name: "Add to cart"});
+  if(restored) expect(button).toBeEnabled(); else expect(button).toBeDisabled();
+  expect(api.get).toHaveBeenCalledTimes(2);
+  expect(api.post).not.toHaveBeenCalled();
+  expect(useCart.getState().shops).toEqual({});
 });

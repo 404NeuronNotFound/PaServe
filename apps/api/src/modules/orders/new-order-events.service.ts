@@ -16,7 +16,8 @@ type OrderEvent =
   | 'order_preparing'
   | 'order_ready'
   | 'order_completed'
-  | 'product_sold_out';
+  | 'product_sold_out'
+  | 'product_available';
 type RelayEvent = OrderEvent | 'resync' | 'unavailable';
 type Listener = (event: RelayEvent, data?: Record<string, string>) => void;
 type Subscription = {
@@ -91,7 +92,8 @@ export class NewOrderEventsService implements OnModuleDestroy {
             event !== 'order_preparing' &&
             event !== 'order_ready' &&
             event !== 'order_completed' &&
-            event !== 'product_sold_out'
+            event !== 'product_sold_out' &&
+            event !== 'product_available'
           )
             return;
           const data = payload as Record<string, unknown> | null;
@@ -101,7 +103,9 @@ export class NewOrderEventsService implements OnModuleDestroy {
           )
             return;
           const orderEvent =
-            event !== 'new_order' && event !== 'product_sold_out';
+            event !== 'new_order' &&
+            event !== 'product_sold_out' &&
+            event !== 'product_available';
           if (orderEvent && typeof data.orderId !== 'string') return;
           const safe = {
             ...scope,
@@ -190,7 +194,8 @@ export class NewOrderEventsService implements OnModuleDestroy {
             event === 'order_preparing' ||
             event === 'order_ready' ||
             event === 'order_completed' ||
-            event === 'product_sold_out'
+            event === 'product_sold_out' ||
+            event === 'product_available'
               ? { event: 'resync', data: scope }
               : { event, data };
         return;

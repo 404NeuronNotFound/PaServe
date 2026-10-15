@@ -9,7 +9,8 @@ type OrderEvent =
   | "order_preparing"
   | "order_ready"
   | "order_completed"
-  | "product_sold_out";
+  | "product_sold_out"
+  | "product_available";
 
 /** Browser credentials stay in the Authorization header, never in a URL. */
 export function subscribeNewOrders(

@@ -38,7 +38,7 @@ it("serializes duplicate invalidations and rereads after an event during an in-f
   await flush();
   act(() => {
     for (let i = 0; i < 5; i++)
-      notify("product_sold_out", { shopSlug: "cafe" });
+      notify("product_available", { shopSlug: "cafe" });
   });
   expect(cache.invalidateQueries).toHaveBeenCalledTimes(1);
   await act(async () => finish());

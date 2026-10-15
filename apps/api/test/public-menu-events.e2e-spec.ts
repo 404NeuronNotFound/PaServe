@@ -37,7 +37,7 @@ describe('Public menu availability stream', () => {
       .expect(200);
     expect(relay).toHaveBeenCalledWith(
       'menu:availability:shop-a:cafe',
-      'product_sold_out',
+      ['product_sold_out', 'product_available'],
       { shopSlug: 'cafe' },
       expect.any(Function),
       expect.anything(),

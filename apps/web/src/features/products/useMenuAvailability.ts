@@ -38,7 +38,7 @@ export function useMenuAvailability(shopSlug: string) {
     const stop = subscribeOrderStream(
       `/menu/${encodeURIComponent(shopSlug)}/availability-events`,
       { shopSlug },
-      "product_sold_out",
+      ["product_sold_out", "product_available"],
       () => null,
       recover,
       () => {},

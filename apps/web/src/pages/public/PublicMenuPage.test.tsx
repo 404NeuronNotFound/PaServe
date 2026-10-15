@@ -461,5 +461,11 @@ it.each(["grid", "list", "compact"])("updates sold-out featured and ordinary car
   await vi.waitFor(() => expect(screen.getAllByText("Sold out")).toHaveLength(2));
   expect(search).toHaveValue("Coffee");
   expect(screen.getAllByRole("button", {name: "View details for Coffee"})).toHaveLength(2);
-  expect(vi.mocked(subscribeOrderStream).mock.calls[0].slice(0,3)).toEqual(["/menu/cafe/availability-events", {shopSlug: "cafe"}, "product_sold_out"]);
+  expect(vi.mocked(subscribeOrderStream).mock.calls[0].slice(0,3)).toEqual(["/menu/cafe/availability-events", {shopSlug: "cafe"}, ["product_sold_out", "product_available"]]);
+  vi.mocked(api.get).mockResolvedValue({data: available});
+  for(let i=0;i<3;i++) notify("product_available", {shopSlug: "cafe"});
+  await vi.waitFor(() => expect(screen.queryByText("Sold out")).not.toBeInTheDocument());
+  expect(screen.getAllByRole("button", {name: "View details for Coffee"})).toHaveLength(2);
+  expect(search).toHaveValue("Coffee");
+
 });

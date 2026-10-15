@@ -56,6 +56,27 @@ export function ProductDetailsDialog({
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+  // Only a new menu snapshot can signal restoration. A details refresh that
+  // finds a newly sold-out product must not be undone by an older menu card.
+  const previousMenuProduct = useRef(product);
+  const restorationPending = useRef(false);
+  const menuOrderable = product.status === "AVAILABLE" && product.isOrderable;
+  const {
+    data: detailData,
+    isFetching: fetchingDetails,
+    refetch: refetchDetails,
+  } = details;
+  useEffect(() => {
+    if (previousMenuProduct.current !== product) {
+      previousMenuProduct.current = product;
+      restorationPending.current = menuOrderable;
+    }
+    if (!menuOrderable) restorationPending.current = false;
+    if (restorationPending.current && detailData && !fetchingDetails) {
+      restorationPending.current = false;
+      if (detailData.product.status === "SOLD_OUT") void refetchDetails();
+    }
+  }, [product, menuOrderable, detailData, fetchingDetails, refetchDetails]);
   const [pendingVersion, setPendingVersion] = useState<number | null>(null);
   return (
     <CustomerDialog
