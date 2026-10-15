@@ -133,6 +133,8 @@ model Order {
   preparationStartedBy String?
   preparationReadyAt DateTime?
   preparationReadyBy String?
+  completedAt DateTime?
+  completedBy String?
   orderNumber String @db.VarChar(32)
   qrTokenNonce String
   qrTokenExpiresAt DateTime
@@ -158,6 +160,7 @@ model Order {
   @@unique([shopId, orderNumber])
   @@index([shopId, tableId, createdAt])
   @@index([shopId, preparationStatus, queuedAt, id])
+  @@index([shopId, preparationStatus, completedAt, id])
   @@map("orders")
 }
 

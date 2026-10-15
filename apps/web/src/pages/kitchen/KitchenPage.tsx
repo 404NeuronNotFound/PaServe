@@ -29,6 +29,7 @@ import {
   getPreparationQueue,
   startPreparing,
   markReady,
+  completeOrder,
 } from "../../features/kitchen/queue";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
@@ -78,6 +79,18 @@ const views = {
     emptyTitle: "The finishing touches come next.",
     empty: "Mark a preparing order ready when every item is finished.",
     list: "Ready orders, oldest first",
+  },
+  COMPLETED: {
+    title: "Completed",
+    label: "Completed",
+    eyebrow: "FULFILLED ORDERS",
+    hero: "Made. Served. Remembered.",
+    intro: "Orders your customers have received, with every detail preserved.",
+    count: "orders completed",
+    description: "Fulfilled orders, most recently completed first.",
+    emptyTitle: "A good finish is worth keeping.",
+    empty: "Orders appear here after staff confirm service or collection.",
+    list: "Completed orders, newest first",
   },
 } as const;
 export function KitchenPage() {
@@ -139,10 +152,12 @@ function NewOrders() {
         .flatMap((page) => page.orders)
         .map((order) => [order.id, order]),
     ).values(),
-  ].sort(
-    (a, b) =>
-      Date.parse(a.queuedAt) - Date.parse(b.queuedAt) ||
-      a.id.localeCompare(b.id),
+  ].sort((a, b) =>
+    state === "COMPLETED"
+      ? Date.parse(b.completedAt!) - Date.parse(a.completedAt!) ||
+        b.id.localeCompare(a.id)
+      : Date.parse(a.queuedAt) - Date.parse(b.queuedAt) ||
+        a.id.localeCompare(b.id),
   );
   return (
     <section className="kitchen-workspace">
@@ -215,6 +230,13 @@ function NewOrders() {
           <FiCheck aria-hidden="true" />
           Ready
         </button>
+        <button
+          aria-pressed={state === "COMPLETED"}
+          onClick={() => setState("COMPLETED")}
+        >
+          <FiCheck aria-hidden="true" />
+          Completed
+        </button>
       </div>
       <div className="kitchen-queue-heading">
         <div>
@@ -229,7 +251,10 @@ function NewOrders() {
           </p>
         </div>
         <p>
-          <FiArrowDown aria-hidden="true" /> Oldest first · queue arrival time
+          <FiArrowDown aria-hidden="true" />{" "}
+          {state === "COMPLETED"
+            ? "Newest first · completion time"
+            : "Oldest first · queue arrival time"}
         </p>
       </div>
       {queue.isPending && (
@@ -291,7 +316,11 @@ function NewOrders() {
           >
             {queue.isFetchingNextPage ? "Loading more…" : "Load more orders"}
           </button>
-          <p>Earlier tickets always stay at the top.</p>
+          <p>
+            {state === "COMPLETED"
+              ? "Most recently completed orders stay at the top."
+              : "Earlier tickets always stay at the top."}
+          </p>
         </div>
       )}
     </section>
@@ -314,6 +343,7 @@ function Ticket({
   const user = client.getQueryData<CurrentUserResponse>(currentUserKey)!.user;
   const preparing = order.preparationStatus === "PREPARING";
   const ready = order.preparationStatus === "READY";
+  const completed = order.preparationStatus === "COMPLETED";
   const readyLabel =
     order.mode === "TAKEOUT" ? "Ready for pickup" : "Ready to serve";
   const finishTransition = async (
@@ -370,6 +400,22 @@ function Ticket({
       });
     },
   });
+  const complete = useMutation({
+    mutationFn: () => completeOrder(shopId, order.id),
+    retry: false,
+    onSuccess: (result) =>
+      finishTransition(
+        "READY",
+        result.alreadyCompleted
+          ? "This order is already completed."
+          : `${order.orderNumber} completed.`,
+      ),
+    onError: () => {
+      void client.invalidateQueries({
+        queryKey: ["kitchen", "queue", user.id, shopId],
+      });
+    },
+  });
   const minutes = Math.max(
     0,
     Math.floor((now - Date.parse(order.queuedAt)) / 60_000),
@@ -379,17 +425,19 @@ function Ticket({
     <li className={`kitchen-ticket${first ? " kitchen-ticket-first" : ""}`}>
       <article aria-label={`Order ${order.orderNumber}`}>
         <div
-          className={`kitchen-ticket-ribbon${preparing ? " kitchen-ribbon-preparing" : ready ? " kitchen-ribbon-ready" : ""}`}
+          className={`kitchen-ticket-ribbon${completed ? " kitchen-ribbon-completed" : preparing ? " kitchen-ribbon-preparing" : ready ? " kitchen-ribbon-ready" : ""}`}
         >
           <span>
             <span className="kitchen-status-dot" />
-            {preparing
-              ? "PREPARING · IN PROGRESS"
-              : ready
-                ? "READY · PREPARATION COMPLETE"
-                : "QUEUED · NOT STARTED"}
+            {completed
+              ? "COMPLETED · FULFILLED"
+              : preparing
+                ? "PREPARING · IN PROGRESS"
+                : ready
+                  ? "READY · PREPARATION COMPLETE"
+                  : "QUEUED · NOT STARTED"}
           </span>
-          {first && <span>Oldest ticket</span>}
+          {first && <span>{completed ? "Latest completion" : "Oldest ticket"}</span>}
         </div>
         <header className="kitchen-ticket-header">
           <h3>{order.orderNumber}</h3>
@@ -408,7 +456,7 @@ function Ticket({
           </div>
           <p className="kitchen-wait">
             <FiClock aria-hidden="true" />
-            {preparing || ready
+            {preparing || ready || completed
               ? "Queued"
               : minutes < 1
                 ? "Just queued"
@@ -422,6 +470,29 @@ function Ticket({
             </time>
           </p>
         </header>
+        {completed && order.completedAt && (
+          <div className="kitchen-completed-time">
+            <FiCheck aria-hidden="true" />
+            <div>
+              <strong>
+                {order.mode === "TAKEOUT"
+                  ? "Collected by customer"
+                  : "Served to customer"}
+              </strong>
+              <span>
+                Completed{" "}
+                <time dateTime={order.completedAt}>
+                  {new Date(order.completedAt).toLocaleString([], {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </time>
+              </span>
+            </div>
+          </div>
+        )}
         {ready && order.preparationReadyAt && (
           <div className="kitchen-ready-time">
             <FiCheck aria-hidden="true" />
@@ -561,6 +632,33 @@ function Ticket({
               )}
             </div>
           )}
+        {ready && hasShopPermission(role, "shop.preparation.status.update") && (
+          <div className="kitchen-ticket-action">
+            <p className="kitchen-completion-hint">
+              Only complete after the customer has received this order.
+            </p>
+            <button
+              className="primary-button"
+              disabled={complete.isPending}
+              onClick={() => complete.mutate()}
+              aria-label={`Mark completed ${order.orderNumber}`}
+            >
+              <FiCheck aria-hidden="true" />
+              {complete.isPending
+                ? "Completing…"
+                : order.mode === "TAKEOUT"
+                  ? "Mark collected"
+                  : "Mark served"}
+            </button>
+            {complete.isError && (
+              <InlineMessage>
+                Couldn’t confirm completion. {complete.error.message} Refresh to
+                check its saved status; retrying preserves any recorded
+                completion.
+              </InlineMessage>
+            )}
+          </div>
+        )}
       </article>
     </li>
   );

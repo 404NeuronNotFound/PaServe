@@ -85,6 +85,16 @@ it("preserves saved queue state and rejects queue state on an unpaid order", asy
     "preparation state",
   );
 });
+it("preserves completed fulfillment on a paid cashier receipt", async () => {
+  const queue = { status: "COMPLETED", queuedAt: payment.paidAt };
+  vi.mocked(api.get).mockResolvedValue({
+    data: { order: { ...order, paymentStatus: "PAID" }, payment, queue },
+  });
+  expect(
+    (await reviewCashPayment(shopId, orderId, new AbortController().signal))
+      .queue,
+  ).toEqual(queue);
+});
 it.each([
   { status: "CONFIRMED", queuedAt: payment.paidAt },
   { status: "QUEUED", queuedAt: "invalid" },

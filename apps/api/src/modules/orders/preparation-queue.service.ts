@@ -8,6 +8,7 @@ import {
   SHOP_ROLES,
   hasShopPermission,
   type PreparationQueueResponse,
+  type PreparationStatus,
 } from '@paserve/contracts';
 import { PrismaService } from '../../database/prisma.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
@@ -26,9 +27,10 @@ export class PreparationQueueService {
     actorId: string,
     shopId: string,
     cursor?: string,
-    preparationStatus: 'QUEUED' | 'PREPARING' | 'READY' = 'QUEUED',
+    preparationStatus: PreparationStatus = 'QUEUED',
   ): Promise<PreparationQueueResponse> {
     const access = shopAccessWhere(actorId, shopId, PREPARATION_QUEUE_ROLES);
+    const completed = preparationStatus === 'COMPLETED';
     let after: { queuedAt: Date; id: string } | undefined;
     if (cursor !== undefined) {
       try {
@@ -66,16 +68,24 @@ export class PreparationQueueService {
         paymentStatus: 'PAID',
         preparationStatus,
         queuedAt: { not: null },
+        ...(completed ? { completedAt: { not: null } } : {}),
         ...(after
           ? {
-              OR: [
-                { queuedAt: { gt: after.queuedAt } },
-                { queuedAt: after.queuedAt, id: { gt: after.id } },
-              ],
+              OR: completed
+                ? [
+                    { completedAt: { lt: after.queuedAt } },
+                    { completedAt: after.queuedAt, id: { lt: after.id } },
+                  ]
+                : [
+                    { queuedAt: { gt: after.queuedAt } },
+                    { queuedAt: after.queuedAt, id: { gt: after.id } },
+                  ],
             }
           : {}),
       },
-      orderBy: [{ queuedAt: 'asc' }, { id: 'asc' }],
+      orderBy: completed
+        ? [{ completedAt: 'desc' }, { id: 'desc' }]
+        : [{ queuedAt: 'asc' }, { id: 'asc' }],
       take: 51,
       select: {
         id: true,
@@ -90,6 +100,8 @@ export class PreparationQueueService {
         preparationStartedBy: true,
         preparationReadyAt: true,
         preparationReadyBy: true,
+        completedAt: true,
+        completedBy: true,
         orderItems: {
           where: {
             shopId,
@@ -135,10 +147,14 @@ export class PreparationQueueService {
             (!order.preparationStartedAt ||
               !order.preparationStartedBy ||
               order.preparationStartedAt < order.queuedAt)) ||
-          (preparationStatus === 'READY' &&
+          ((preparationStatus === 'READY' || completed) &&
             (!order.preparationReadyAt ||
               !order.preparationReadyBy ||
               order.preparationReadyAt < order.preparationStartedAt!)) ||
+          (completed &&
+            (!order.completedAt ||
+              !order.completedBy ||
+              order.completedAt < order.preparationReadyAt!)) ||
           order.currency !== 'PHP' ||
           !items.length ||
           !items
@@ -169,6 +185,8 @@ export class PreparationQueueService {
         preparationStartedBy: order.preparationStartedBy ?? null,
         preparationReadyAt: order.preparationReadyAt?.toISOString() ?? null,
         preparationReadyBy: order.preparationReadyBy ?? null,
+        completedAt: order.completedAt?.toISOString() ?? null,
+        completedBy: order.completedBy ?? null,
         items,
       };
     });
@@ -177,9 +195,12 @@ export class PreparationQueueService {
       orders,
       nextCursor:
         saved.length > 50 && last
-          ? Buffer.from(JSON.stringify([last.queuedAt, last.id])).toString(
-              'base64url',
-            )
+          ? Buffer.from(
+              JSON.stringify([
+                completed ? last.completedAt : last.queuedAt,
+                last.id,
+              ]),
+            ).toString('base64url')
           : null,
     };
   }

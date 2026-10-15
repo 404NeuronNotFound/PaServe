@@ -25,6 +25,7 @@ describe('Cash collection', () => {
     membership = vi.fn(),
     findOrder = vi.fn(),
     findQueue = vi.fn(),
+    aggregateOrders = vi.fn(),
     updateOrder = vi.fn(),
     raw = vi.fn(),
     transaction = vi.fn();
@@ -33,6 +34,7 @@ describe('Cash collection', () => {
       findFirst: findOrder,
       updateMany: updateOrder,
       findMany: findQueue,
+      aggregate: aggregateOrders,
     },
     $queryRaw: raw,
   };
@@ -68,6 +70,8 @@ describe('Cash collection', () => {
       preparationStartedBy: null as string | null,
       preparationReadyAt: null as Date | null,
       preparationReadyBy: null as string | null,
+      completedAt: null as Date | null,
+      completedBy: null as string | null,
       orderItems: [
         {
           lineNumber: 1,
@@ -152,6 +156,22 @@ describe('Cash collection', () => {
         : [],
     );
     transaction.mockImplementation(async (work) => work(database));
+    aggregateOrders.mockImplementation(async ({ where }) => {
+      const eligible =
+        active &&
+        where.shopId === shopId &&
+        where.shop.members.some.role.in.includes(role) &&
+        saved.status === where.status &&
+        saved.paymentStatus === where.paymentStatus &&
+        saved.preparationStatus === where.preparationStatus &&
+        saved.completedAt &&
+        saved.completedAt >= where.completedAt.gte &&
+        saved.completedAt < where.completedAt.lt;
+      return {
+        _count: { _all: eligible ? 1 : 0 },
+        _sum: { totalPrice: eligible ? saved.totalPrice : null },
+      };
+    });
     updateOrder.mockImplementation(async ({ where, data }) => {
       if (
         where.shopId !== shopId ||
@@ -592,6 +612,197 @@ describe('Cash collection', () => {
     await ready().expect(409);
     expect(saved.preparationStatus).toBe('PREPARING');
     expect(saved.preparationReadyAt).toBeNull();
+  });
+  const complete = (
+    body: Record<string, unknown> = {},
+    targetShop = shopId,
+    targetOrder = orderId,
+  ) =>
+    request(app.getHttpServer())
+      .post(`/api/v1/shops/${targetShop}/orders/${targetOrder}/complete`)
+      .set('Authorization', 'Bearer session')
+      .send(body);
+  async function readyOrder() {
+    await preparingOrder();
+    await ready().expect(200);
+    updateOrder.mockClear();
+  }
+  const sales = (
+    from = '2020-01-01T00:00:00.000Z',
+    to = '2020-01-02T00:00:00.000Z',
+    targetShop = shopId,
+  ) =>
+    request(app.getHttpServer())
+      .get(`/api/v1/shops/${targetShop}/reports/completed-sales`)
+      .query({ from, to })
+      .set('Authorization', 'Bearer session');
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'KITCHEN'] as const)(
+    'allows %s to complete a ready order once without changing paid or preparation records',
+    async (staffRole) => {
+      await readyOrder();
+      role = staffRole;
+      const before = JSON.stringify({
+        queuedAt: saved.queuedAt,
+        startAt: saved.preparationStartedAt,
+        startBy: saved.preparationStartedBy,
+        readyAt: saved.preparationReadyAt,
+        readyBy: saved.preparationReadyBy,
+        paidAt: saved.paidAt,
+        paidBy: saved.paidBy,
+        total: saved.totalPrice,
+      });
+      const first = await complete().expect(200);
+      expect(first.headers['cache-control']).toBe('no-store');
+      expect(first.body).toMatchObject({
+        alreadyCompleted: false,
+        order: {
+          id: orderId,
+          shopId,
+          preparationStatus: 'COMPLETED',
+          completedBy: userId,
+        },
+      });
+      expect(Date.parse(first.body.order.completedAt)).toBeGreaterThanOrEqual(
+        saved.preparationReadyAt!.getTime(),
+      );
+      expect((await complete().expect(200)).body).toEqual({
+        order: first.body.order,
+        alreadyCompleted: true,
+      });
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+      expect(
+        JSON.stringify({
+          queuedAt: saved.queuedAt,
+          startAt: saved.preparationStartedAt,
+          startBy: saved.preparationStartedBy,
+          readyAt: saved.preparationReadyAt,
+          readyBy: saved.preparationReadyBy,
+          paidAt: saved.paidAt,
+          paidBy: saved.paidBy,
+          total: saved.totalPrice,
+        }),
+      ).toBe(before);
+      const history = await request(app.getHttpServer())
+        .get(`/api/v1/shops/${shopId}/preparation/completed`)
+        .set('Authorization', 'Bearer session')
+        .expect(200);
+      expect(history.body.orders[0]).toMatchObject(first.body.order);
+      for (const state of ['queue', 'preparing', 'ready'])
+        expect(
+          (
+            await request(app.getHttpServer())
+              .get(`/api/v1/shops/${shopId}/preparation/${state}`)
+              .set('Authorization', 'Bearer session')
+              .expect(200)
+          ).body.orders,
+        ).toEqual([]);
+      await start().expect(409);
+      await ready().expect(409);
+    },
+  );
+  it.each([
+    'QUEUED',
+    'PREPARING',
+    'PENDING_CONFIRMATION',
+    'REJECTED',
+    'UNPAID',
+    'MISSING_READY',
+  ])('cannot complete ineligible work %s', async (state) => {
+    await readyOrder();
+    if (state === 'UNPAID') saved.paymentStatus = state;
+    else if (['QUEUED', 'PREPARING'].includes(state))
+      saved.preparationStatus = state;
+    else if (state === 'MISSING_READY') saved.preparationReadyAt = null;
+    else saved.status = state;
+    await complete().expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rejects unauthorized, revoked and foreign completion actions', async () => {
+    await readyOrder();
+    role = 'CASHIER';
+    await complete().expect(403);
+    await request(app.getHttpServer())
+      .post(`/api/v1/shops/${shopId}/orders/${orderId}/complete`)
+      .send({})
+      .expect(401);
+    role = 'KITCHEN';
+    await complete({}, shopId, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa').expect(
+      404,
+    );
+    await complete({}, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa').expect(404);
+    active = false;
+    await complete().expect(404);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it.each([
+    { completedAt: '2020-01-01' },
+    { completedBy: 'forged' },
+    { preparationStatus: 'COMPLETED' },
+  ])('rejects forged completion fields %j', async (body) => {
+    await readyOrder();
+    await complete(body).expect(400);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rejects a stale conditional completion write', async () => {
+    await readyOrder();
+    updateOrder.mockResolvedValueOnce({ count: 0 });
+    await complete().expect(409);
+    expect(saved.preparationStatus).toBe('READY');
+    expect(saved.completedAt).toBeNull();
+  });
+  it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)(
+    'allows %s final sales metrics with inclusive/exclusive completion boundaries',
+    async (reportRole) => {
+      await readyOrder();
+      const from = new Date(Date.now() - 60_000).toISOString();
+      const to = new Date(Date.now() + 86_400_000).toISOString();
+      role = reportRole;
+      expect((await sales(from, to).expect(200)).body).toMatchObject({
+        completedOrders: 0,
+        totalSales: '0.00',
+      });
+      await complete().expect(200);
+      const completedAt = saved.completedAt!.toISOString();
+      expect((await sales(completedAt, to).expect(200)).body).toMatchObject({
+        currency: 'PHP',
+        completedOrders: 1,
+        totalSales: '135.50',
+      });
+      await complete().expect(200);
+      expect((await sales(completedAt, to).expect(200)).body).toMatchObject({
+        completedOrders: 1,
+        totalSales: '135.50',
+      });
+      expect((await sales(from, completedAt).expect(200)).body).toMatchObject({
+        completedOrders: 0,
+        totalSales: '0.00',
+      });
+      expect(aggregateOrders.mock.calls.at(-1)![0].where).toMatchObject({
+        shopId,
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        preparationStatus: 'COMPLETED',
+        currency: 'PHP',
+      });
+    },
+  );
+  it.each(['CASHIER', 'KITCHEN'] as const)(
+    'denies %s sales metrics',
+    async (reportRole) => {
+      role = reportRole;
+      await sales().expect(403);
+      expect(aggregateOrders).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    ['bad', '2026-01-02T00:00:00Z'],
+    ['2026-01-02T00:00:00Z', '2026-01-01T00:00:00Z'],
+    ['2024-01-01T00:00:00Z', '2026-01-01T00:00:00Z'],
+    ['2026-01-01', '2026-01-02'],
+  ])('rejects invalid sales period %s / %s', async (from, to) => {
+    role = 'OWNER';
+    await sales(from, to).expect(400);
+    expect(aggregateOrders).not.toHaveBeenCalled();
   });
   it('requires manual attestation and appropriate fields for combined payment', async () => {
     await preparePending();

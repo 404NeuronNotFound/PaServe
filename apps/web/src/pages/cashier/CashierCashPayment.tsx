@@ -309,7 +309,9 @@ export function CashierCashPayment({
               ? "Queued for preparation."
               : review.queue.status === "PREPARING"
                 ? "Preparation is in progress."
-                : "Ready for collection."}
+                : review.queue.status === "COMPLETED"
+                  ? "Order fulfilled."
+                  : "Ready for collection."}
           </p>
         )}
         <dl>

@@ -13,6 +13,8 @@ import { CashPaymentService } from '../dist/modules/orders/cash-payment.service.
 import { PreparationQueueService } from '../dist/modules/orders/preparation-queue.service.js';
 import { PreparationStartService } from '../dist/modules/orders/preparation-start.service.js';
 import { PreparationReadyService } from '../dist/modules/orders/preparation-ready.service.js';
+import { PreparationCompleteService } from '../dist/modules/orders/preparation-complete.service.js';
+import { CompletedSalesService } from '../dist/modules/orders/completed-sales.service.js';
 
 // Real competing service transactions use only this disposable schema. Public
 // tables and migration history remain untouched; close sessions before removal.
@@ -75,6 +77,8 @@ try {
   // Rebuild the pre-cash shape in our private schema, even after deployment,
   // then exercise the complete migration (including its trigger definition).
   for (const column of [
+    'completedAt',
+    'completedBy',
     'preparationReadyAt',
     'preparationReadyBy',
     'preparationStartedAt',
@@ -147,6 +151,14 @@ try {
     'utf8',
   );
   await setup.query(readySql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
+  const completeSql = await readFile(
+    new URL(
+      '../prisma/migrations/20261015100000_order_completion/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await setup.query(completeSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
   await setup.query('COMMIT');
   created = true;
   prisma = new PrismaClient({
@@ -171,6 +183,8 @@ try {
   const queue = new PreparationQueueService(prisma);
   const preparation = new PreparationStartService(prisma);
   const preparationReady = new PreparationReadyService(prisma);
+  const completion = new PreparationCompleteService(prisma);
+  const sales = new CompletedSalesService(prisma);
   const users = await Promise.all(
     [1, 2].map((n) =>
       prisma.user.create({
@@ -1349,6 +1363,204 @@ try {
   console.log(
     'Passed: PREPARING to READY records server time and staff once under concurrent calls, preserves start/payment metadata, appears in Ready, rejects skipped/ineligible/foreign states, protects ready metadata and rolls back failed writes.',
   );
+  const from = new Date(Date.now() - 86_400_000).toISOString(),
+    to = new Date(Date.now() + 86_400_000).toISOString();
+  await prisma.shopMember.update({
+    where: { userId_shopId: { userId: users[1].id, shopId: shop.id } },
+    data: { role: 'MANAGER' },
+  });
+  assert.deepEqual(await sales.summary(users[1].id, shop.id, from, to), {
+    from,
+    to,
+    currency: 'PHP',
+    completedOrders: 0,
+    totalSales: '0.00',
+  });
+  for (const id of [...ineligibleQueueIds, failStart.id, skipReady.id])
+    await assert.rejects(completion.complete(users[0].id, shop.id, id), {
+      status: 409,
+    });
+  await assert.rejects(
+    completion.complete(users[0].id, randomUUID(), firstQueued.id),
+    { status: 404 },
+  );
+  const completions = await Promise.all(
+    users.map((user) => completion.complete(user.id, shop.id, firstQueued.id)),
+  );
+  assert.equal(
+    completions.filter((result) => !result.alreadyCompleted).length,
+    1,
+  );
+  assert.deepEqual(completions[0].order, completions[1].order);
+  const savedCompletion = await prisma.order.findFirst({
+    where: { id: firstQueued.id, shopId: shop.id },
+  });
+  assert.equal(savedCompletion.preparationStatus, 'COMPLETED');
+  assert.ok(savedCompletion.completedAt >= savedCompletion.preparationReadyAt);
+  for (const key of [
+    'paymentMethod',
+    'paymentRequestId',
+    'paidBy',
+    'paidAt',
+    'amountReceived',
+    'changeDue',
+    'totalPrice',
+    'queuedAt',
+    'status',
+    'paymentStatus',
+    'preparationStartedAt',
+    'preparationStartedBy',
+    'preparationReadyAt',
+    'preparationReadyBy',
+  ])
+    assert.deepEqual(savedCompletion[key], savedReady[key]);
+  const repeated = await completion.complete(
+    users[0].id,
+    shop.id,
+    firstQueued.id,
+  );
+  assert.equal(repeated.alreadyCompleted, true);
+  assert.deepEqual(repeated.order, completions[0].order);
+  assert.ok(
+    !(await queue.list(users[0].id, shop.id, undefined, 'READY')).orders.some(
+      (item) => item.id === firstQueued.id,
+    ),
+  );
+  assert.deepEqual(
+    (await queue.list(users[0].id, shop.id, undefined, 'COMPLETED')).orders.map(
+      (item) => item.id,
+    ),
+    [firstQueued.id],
+  );
+  const firstMetrics = await sales.summary(users[1].id, shop.id, from, to);
+  assert.equal(firstMetrics.completedOrders, 1);
+  assert.equal(firstMetrics.totalSales, savedCompletion.totalPrice.toFixed(2));
+  assert.equal(
+    (await sales.summary(users[0].id, shop.id, from, to)).completedOrders,
+    0,
+  );
+  assert.equal(
+    (await sales.summary(users[1].id, randomUUID(), from, to)).completedOrders,
+    0,
+  );
+  assert.equal(
+    (
+      await sales.summary(
+        users[1].id,
+        shop.id,
+        from,
+        savedCompletion.completedAt.toISOString(),
+      )
+    ).completedOrders,
+    0,
+  );
+  assert.equal(
+    (
+      await sales.summary(
+        users[1].id,
+        shop.id,
+        savedCompletion.completedAt.toISOString(),
+        to,
+      )
+    ).completedOrders,
+    1,
+  );
+  for (const data of [
+    { completedAt: new Date(0) },
+    {
+      completedBy: users.find((user) => user.id !== savedCompletion.completedBy)
+        .id,
+    },
+    { preparationStatus: 'READY' },
+  ])
+    await assert.rejects(
+      prisma.order.updateMany({
+        where: { id: firstQueued.id, shopId: shop.id },
+        data,
+      }),
+    );
+  await assert.rejects(
+    prisma.order.updateMany({
+      where: { id: skipReady.id, shopId: shop.id },
+      data: {
+        preparationStatus: 'COMPLETED',
+        preparationStartedAt: new Date(),
+        preparationStartedBy: users[0].id,
+        preparationReadyAt: new Date(),
+        preparationReadyBy: users[0].id,
+        completedAt: new Date(),
+        completedBy: users[0].id,
+      },
+    }),
+  );
+  await preparationReady.ready(users[0].id, shop.id, failStart.id);
+  const beforeCompletionFailure = await prisma.order.findFirst({
+    where: { id: failStart.id, shopId: shop.id },
+  });
+  await setup.query(
+    `CREATE FUNCTION "${schema}".fail_order_completion() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.id = '${failStart.id}' AND NEW."preparationStatus" = 'COMPLETED' THEN RAISE EXCEPTION 'Injected completion failure'; END IF; RETURN NEW; END $$`,
+  );
+  await setup.query(
+    `CREATE TRIGGER fail_order_completion AFTER UPDATE ON "${schema}".orders FOR EACH ROW EXECUTE FUNCTION "${schema}".fail_order_completion()`,
+  );
+  await assert.rejects(completion.complete(users[0].id, shop.id, failStart.id));
+  assert.deepEqual(
+    await prisma.order.findFirst({
+      where: { id: failStart.id, shopId: shop.id },
+    }),
+    beforeCompletionFailure,
+  );
+  assert.deepEqual(
+    await sales.summary(users[1].id, shop.id, from, to),
+    firstMetrics,
+  );
+  await setup.query(`DROP TRIGGER fail_order_completion ON "${schema}".orders`);
+  await assert.rejects(
+    prisma.order.updateMany({
+      where: { id: failStart.id, shopId: shop.id },
+      data: { preparationStatus: 'COMPLETED' },
+    }),
+  );
+  const secondCompletion = await completion.complete(
+    users[0].id,
+    shop.id,
+    failStart.id,
+  );
+  const metrics = await sales.summary(users[1].id, shop.id, from, to);
+  assert.equal(metrics.completedOrders, 2);
+  assert.equal(
+    metrics.totalSales,
+    savedCompletion.totalPrice
+      .plus(beforeCompletionFailure.totalPrice)
+      .toFixed(2),
+  );
+  const history = await queue.list(
+    users[0].id,
+    shop.id,
+    undefined,
+    'COMPLETED',
+  );
+  assert.deepEqual(
+    history.orders.map((item) => item.id),
+    [failStart.id, firstQueued.id],
+  );
+  const historyCursor = Buffer.from(
+    JSON.stringify([secondCompletion.order.completedAt, failStart.id]),
+  ).toString('base64url');
+  assert.deepEqual(
+    (
+      await queue.list(users[0].id, shop.id, historyCursor, 'COMPLETED')
+    ).orders.map((item) => item.id),
+    [firstQueued.id],
+  );
+  await completion.complete(users[0].id, shop.id, failStart.id);
+  assert.deepEqual(
+    await sales.summary(users[1].id, shop.id, from, to),
+    metrics,
+  );
+  console.log(
+    'Passed: READY to COMPLETED is final, server timestamp/staff saved once under concurrent calls, paid/preparation records preserved, completion history cursor is stable, report totals/counts are exact and deduplicated with UTC boundaries and tenant/role scope, failed completion rolls back without sales.',
+  );
   await prisma.shopMember.update({
     where: { userId_shopId: { userId: users[0].id, shopId: shop.id } },
     data: { role: 'CASHIER' },
@@ -1359,6 +1571,10 @@ try {
   );
   await assert.rejects(
     preparationReady.ready(users[0].id, shop.id, firstQueued.id),
+    { status: 404 },
+  );
+  await assert.rejects(
+    completion.complete(users[0].id, shop.id, firstQueued.id),
     { status: 404 },
   );
   console.log(

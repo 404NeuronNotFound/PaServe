@@ -20,6 +20,10 @@ import { PreparationStartController } from './preparation-start.controller.js';
 import { PreparationStartService } from './preparation-start.service.js';
 import { PreparationReadyController } from './preparation-ready.controller.js';
 import { PreparationReadyService } from './preparation-ready.service.js';
+import { PreparationCompleteController } from './preparation-complete.controller.js';
+import { PreparationCompleteService } from './preparation-complete.service.js';
+import { CompletedSalesController } from './completed-sales.controller.js';
+import { CompletedSalesService } from './completed-sales.service.js';
 
 @Controller('menu/:shopSlug/orders')
 export class OrdersController {
@@ -44,6 +48,8 @@ export class OrdersController {
     PreparationQueueController,
     PreparationStartController,
     PreparationReadyController,
+    PreparationCompleteController,
+    CompletedSalesController,
   ],
   providers: [
     OrdersService,
@@ -57,6 +63,8 @@ export class OrdersController {
     PreparationQueueService,
     PreparationStartService,
     PreparationReadyService,
+    PreparationCompleteService,
+    CompletedSalesService,
   ],
 })
 export class OrdersModule {}

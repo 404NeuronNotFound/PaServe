@@ -3,6 +3,7 @@ import type {
   StartPreparationResponse,
   ReadyPreparationResponse,
   PreparationStatus,
+  CompletePreparationResponse,
 } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import "../auth/api/session";
@@ -56,7 +57,7 @@ export function parseQueue(
     )
       throw invalid();
     if (
-      state === "READY"
+      state === "READY" || state === "COMPLETED"
         ? typeof order.preparationReadyAt !== "string" ||
           !Number.isFinite(Date.parse(order.preparationReadyAt)) ||
           Date.parse(order.preparationReadyAt) <
@@ -64,6 +65,17 @@ export function parseQueue(
           typeof order.preparationReadyBy !== "string" ||
           !order.preparationReadyBy
         : order.preparationReadyAt != null || order.preparationReadyBy != null
+    )
+      throw invalid();
+    if (
+      state === "COMPLETED"
+        ? typeof order.completedAt !== "string" ||
+          !Number.isFinite(Date.parse(order.completedAt)) ||
+          Date.parse(order.completedAt) <
+            Date.parse(order.preparationReadyAt!) ||
+          typeof order.completedBy !== "string" ||
+          !order.completedBy
+        : order.completedAt != null || order.completedBy != null
     )
       throw invalid();
     if (
@@ -86,7 +98,7 @@ export async function getPreparationQueue(
   state: PreparationStatus = "QUEUED",
 ) {
   const { data } = await api.get<PreparationQueueResponse>(
-    `/shops/${encodeURIComponent(shopId)}/preparation/${state === "QUEUED" ? "queue" : state === "PREPARING" ? "preparing" : "ready"}`,
+    `/shops/${encodeURIComponent(shopId)}/preparation/${state === "QUEUED" ? "queue" : state === "PREPARING" ? "preparing" : state === "READY" ? "ready" : "completed"}`,
     {
       params: cursor ? { cursor } : undefined,
       signal,
@@ -154,6 +166,43 @@ export async function markReady(shopId: string, orderId: string) {
   )
     throw new Error(
       "The ready status could not be verified. Refresh before trying again.",
+    );
+  return data;
+}
+export async function completeOrder(shopId: string, orderId: string) {
+  const { data } = await api.post<CompletePreparationResponse>(
+    `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}/complete`,
+    {},
+    { timeout: AUTH_REQUEST_TIMEOUT_MS },
+  );
+  const order = data?.order;
+  if (
+    !order ||
+    order.id !== orderId ||
+    order.shopId !== shopId ||
+    order.preparationStatus !== "COMPLETED" ||
+    typeof data.alreadyCompleted !== "boolean" ||
+    ![
+      order.preparationStartedBy,
+      order.preparationReadyBy,
+      order.completedBy,
+    ].every((value) => typeof value === "string" && value.length > 0) ||
+    ![
+      order.queuedAt,
+      order.preparationStartedAt,
+      order.preparationReadyAt,
+      order.completedAt,
+    ].every(
+      (value) =>
+        typeof value === "string" && Number.isFinite(Date.parse(value)),
+    ) ||
+    Date.parse(order.preparationStartedAt) < Date.parse(order.queuedAt) ||
+    Date.parse(order.preparationReadyAt) <
+      Date.parse(order.preparationStartedAt) ||
+    Date.parse(order.completedAt) < Date.parse(order.preparationReadyAt)
+  )
+    throw new Error(
+      "Completion could not be verified. Refresh before trying again.",
     );
   return data;
 }

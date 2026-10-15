@@ -158,7 +158,8 @@ describe('shop KITCHEN/barista authorization', () => {
   )('enforces preparation transition %s -> %s', async (from, to) => {
     const allowed =
       (from === 'QUEUED' && to === 'PREPARING') ||
-      (from === 'PREPARING' && to === 'READY');
+      (from === 'PREPARING' && to === 'READY') ||
+      (from === 'READY' && to === 'COMPLETED');
     expect(canTransitionPreparationStatus(from, to)).toBe(allowed);
     const check = service.requirePreparationTransition(
       'user-id',
@@ -180,7 +181,6 @@ describe('shop KITCHEN/barista authorization', () => {
     'REJECTED',
     'PAID',
     'CANCELLED',
-    'COMPLETED',
     'ready',
     null,
     undefined,

@@ -10,6 +10,21 @@ import {
 @Controller('shops/:shopId/preparation')
 export class PreparationQueueController {
   constructor(private readonly queue: PreparationQueueService) {}
+  @Get('completed')
+  @Roles(...PREPARATION_QUEUE_ROLES)
+  completed(
+    @Query('cursor') cursor: string | undefined,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.queue.list(
+      request.user.id,
+      request.shopMembership.shopId,
+      cursor,
+      'COMPLETED',
+    );
+  }
   @Get('ready')
   @Roles(...PREPARATION_QUEUE_ROLES)
   ready(

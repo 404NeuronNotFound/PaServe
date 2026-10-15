@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { api } from "../../lib/api/client";
-import { startPreparing, markReady } from "./queue";
+import { startPreparing, markReady, completeOrder } from "./queue";
 
 vi.mock("../../lib/api/client", () => ({
   api: {
@@ -52,6 +52,40 @@ const ready = {
   preparationReadyAt: "2026-10-15T01:15:00.000Z",
   preparationReadyBy: "staff-b",
 };
+const completed = {
+  ...ready,
+  preparationStatus: "COMPLETED",
+  completedAt: "2026-10-15T01:20:00.000Z",
+  completedBy: "staff-c",
+};
+it.each([false, true])(
+  "validates original completion (already completed: %s)",
+  async (alreadyCompleted) => {
+    vi.mocked(api.post).mockResolvedValue({
+      data: { order: completed, alreadyCompleted },
+    });
+    expect(await completeOrder("shop-a", "order-a")).toEqual({
+      order: completed,
+      alreadyCompleted,
+    });
+  },
+);
+it.each([
+  { shopId: "foreign" },
+  { id: "foreign" },
+  { preparationStatus: "READY" },
+  { completedAt: "invalid" },
+  { completedAt: "2020-01-01T00:00:00.000Z" },
+  { completedBy: null },
+  { preparationReadyAt: null },
+])("rejects unverified completion receipts %j", async (change) => {
+  vi.mocked(api.post).mockResolvedValue({
+    data: { order: { ...completed, ...change }, alreadyCompleted: false },
+  });
+  await expect(completeOrder("shop-a", "order-a")).rejects.toThrow(
+    "could not be verified",
+  );
+});
 it.each([false, true])(
   "validates saved readiness (already ready: %s)",
   async (alreadyReady) => {

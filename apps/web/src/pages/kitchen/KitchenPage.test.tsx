@@ -345,7 +345,11 @@ it.each(["DINE_IN", "TAKEOUT"] as const)(
     expect(
       card.querySelector('time[datetime="2026-10-15T01:15:00.000Z"]'),
     ).toBeInTheDocument();
-    expect(within(card).queryByRole("button")).not.toBeInTheDocument();
+    expect(
+      within(card).queryByRole("button", {
+        name: /Start preparing|Mark ready/,
+      }),
+    ).not.toBeInTheDocument();
     expect(api.post).toHaveBeenCalledTimes(1);
     expect(api.post).toHaveBeenCalledWith(
       "/shops/shop-a/orders/first/mark-ready",
@@ -384,6 +388,111 @@ it("shows a meaningful empty Ready view", async () => {
     await screen.findByText("The finishing touches come next."),
   ).toBeInTheDocument();
   expect(screen.queryByRole("article")).not.toBeInTheDocument();
+});
+it.each(["DINE_IN", "TAKEOUT"] as const)(
+  "completes %s only after service/collection and shows the saved completion",
+  async (mode) => {
+    setup();
+    await screen.findByRole("article");
+    let fulfilled = false;
+    const ready = {
+      ...ticket(),
+      mode,
+      tableNumber: mode === "DINE_IN" ? "Patio 2" : null,
+      preparationStatus: "READY",
+      preparationStartedAt: "2026-10-15T01:05:00.000Z",
+      preparationStartedBy: "user-a",
+      preparationReadyAt: "2026-10-15T01:15:00.000Z",
+      preparationReadyBy: "user-a",
+    };
+    const completed = {
+      ...ready,
+      preparationStatus: "COMPLETED",
+      completedAt: "2026-10-15T01:20:00.000Z",
+      completedBy: "user-a",
+    };
+    vi.mocked(api.get).mockImplementation(async (url) => ({
+      data: {
+        orders: String(url).endsWith("/ready")
+          ? fulfilled
+            ? []
+            : [ready]
+          : String(url).endsWith("/completed") && fulfilled
+            ? [completed]
+            : [],
+        nextCursor: null,
+      },
+    }));
+    await userEvent.click(screen.getByRole("button", { name: "Ready" }));
+    const button = await screen.findByRole("button", {
+      name: "Mark completed ORD-000001",
+    });
+    expect(button).toHaveTextContent(
+      mode === "TAKEOUT" ? "Mark collected" : "Mark served",
+    );
+    expect(
+      screen.getByText(
+        "Only complete after the customer has received this order.",
+      ),
+    ).toBeInTheDocument();
+    let finish!: (value: unknown) => void;
+    vi.mocked(api.post).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    await userEvent.click(button);
+    expect(button).toBeDisabled();
+    fulfilled = true;
+    await act(async () =>
+      finish({ data: { order: completed, alreadyCompleted: false } }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("article")).not.toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Completed" }));
+    const card = await screen.findByRole("article");
+    expect(
+      within(card).getByText(
+        mode === "TAKEOUT" ? "Collected by customer" : "Served to customer",
+      ),
+    ).toBeInTheDocument();
+    expect(within(card).getByText("COMPLETED · FULFILLED")).toBeInTheDocument();
+    expect(
+      card.querySelector('time[datetime="2026-10-15T01:20:00.000Z"]'),
+    ).toBeInTheDocument();
+    expect(within(card).queryByRole("button")).not.toBeInTheDocument();
+    expect(api.post).toHaveBeenCalledTimes(1);
+  },
+);
+it("keeps Ready work recoverable when completion fails", async () => {
+  setup();
+  await screen.findByRole("article");
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      orders: [
+        {
+          ...ticket(),
+          preparationStatus: "READY",
+          preparationStartedAt: "2026-10-15T01:05:00.000Z",
+          preparationStartedBy: "user-a",
+          preparationReadyAt: "2026-10-15T01:15:00.000Z",
+          preparationReadyBy: "user-a",
+        },
+      ],
+      nextCursor: null,
+    },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Ready" }));
+  vi.mocked(api.post).mockRejectedValueOnce(new Error("Connection lost"));
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Mark completed ORD-000001" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Couldn’t confirm completion",
+  );
+  expect(screen.getByRole("article")).toBeInTheDocument();
 });
 it("keeps tickets with a visible warning after a failed refresh and recovers", async () => {
   setup();

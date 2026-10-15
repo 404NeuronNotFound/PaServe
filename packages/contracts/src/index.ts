@@ -104,8 +104,8 @@ export const SHOP_KITCHEN_PERMISSIONS = [
   "shop.preparation.status.update",
 ] as const;
 
-/** Preparation-only states; these are not payment or order-approval states. */
-export const PREPARATION_STATUSES = ["QUEUED", "PREPARING", "READY"] as const;
+/** Preparation/fulfillment states, separate from payment and order approval. */
+export const PREPARATION_STATUSES = ["QUEUED", "PREPARING", "READY", "COMPLETED"] as const;
 export type PreparationStatus = (typeof PREPARATION_STATUSES)[number];
 
 export function canTransitionPreparationStatus(
@@ -114,7 +114,8 @@ export function canTransitionPreparationStatus(
 ): boolean {
   return (
     (from === "QUEUED" && to === "PREPARING") ||
-    (from === "PREPARING" && to === "READY")
+    (from === "PREPARING" && to === "READY") ||
+    (from === "READY" && to === "COMPLETED")
   );
 }
 
@@ -871,6 +872,8 @@ export interface PreparationQueueResponse {
     preparationStartedBy?: string | null;
     preparationReadyAt?: string | null;
     preparationReadyBy?: string | null;
+    completedAt?: string | null;
+    completedBy?: string | null;
     items: ProductSelectionQuoteResponse[];
   }>;
   nextCursor: string | null;
@@ -893,6 +896,21 @@ export interface ReadyPreparationResponse {
     preparationReadyBy: string;
   };
   alreadyReady: boolean;
+}
+export interface CompletePreparationResponse {
+  order: Omit<ReadyPreparationResponse["order"], "preparationStatus"> & {
+    preparationStatus: "COMPLETED";
+    completedAt: string;
+    completedBy: string;
+  };
+  alreadyCompleted: boolean;
+}
+export interface CompletedSalesResponse {
+  from: string;
+  to: string;
+  currency: "PHP";
+  completedOrders: number;
+  totalSales: string;
 }
 export interface RestaurantTable {
   id: string;

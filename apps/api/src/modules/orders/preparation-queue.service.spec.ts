@@ -90,6 +90,41 @@ describe('Preparation queue pages', () => {
       status: 409,
     });
   });
+  it('pages completed history by completion time descending with ID tie breaking', async () => {
+    const completedAt = new Date('2026-10-15T01:00:00.000Z');
+    const rows = Array.from({ length: 51 }, () => ({
+      ...row(),
+      preparationStartedAt: new Date('2026-10-14T00:00:00.000Z'),
+      preparationStartedBy: actorId,
+      preparationReadyAt: new Date('2026-10-14T01:00:00.000Z'),
+      preparationReadyBy: actorId,
+      completedAt,
+      completedBy: actorId,
+    })).sort((a, b) => b.id.localeCompare(a.id));
+    findMany.mockResolvedValueOnce(rows).mockResolvedValueOnce([rows[50]]);
+    const first = await service.list(actorId, shopId, undefined, 'COMPLETED');
+    const second = await service.list(
+      actorId,
+      shopId,
+      first.nextCursor!,
+      'COMPLETED',
+    );
+    expect(
+      new Set([...first.orders, ...second.orders].map((order) => order.id))
+        .size,
+    ).toBe(51);
+    expect(findMany.mock.calls[1][0]).toMatchObject({
+      where: {
+        shopId,
+        preparationStatus: 'COMPLETED',
+        OR: [
+          { completedAt: { lt: completedAt } },
+          { completedAt, id: { lt: rows[49].id } },
+        ],
+      },
+      orderBy: [{ completedAt: 'desc' }, { id: 'desc' }],
+    });
+  });
   it.each([
     'line-gap',
     'corrupt-options',
