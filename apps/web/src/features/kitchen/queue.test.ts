@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { api } from "../../lib/api/client";
-import { startPreparing } from "./queue";
+import { startPreparing, markReady } from "./queue";
 
 vi.mock("../../lib/api/client", () => ({
   api: {
@@ -43,6 +43,40 @@ it.each([
     data: { order: { ...saved, ...change }, alreadyStarted: false },
   });
   await expect(startPreparing("shop-a", "order-a")).rejects.toThrow(
+    "could not be verified",
+  );
+});
+const ready = {
+  ...saved,
+  preparationStatus: "READY",
+  preparationReadyAt: "2026-10-15T01:15:00.000Z",
+  preparationReadyBy: "staff-b",
+};
+it.each([false, true])(
+  "validates saved readiness (already ready: %s)",
+  async (alreadyReady) => {
+    vi.mocked(api.post).mockResolvedValue({
+      data: { order: ready, alreadyReady },
+    });
+    expect(await markReady("shop-a", "order-a")).toEqual({
+      order: ready,
+      alreadyReady,
+    });
+  },
+);
+it.each([
+  { id: "foreign" },
+  { shopId: "foreign" },
+  { preparationStatus: "PREPARING" },
+  { preparationReadyAt: "invalid" },
+  { preparationReadyAt: "2020-01-01T00:00:00.000Z" },
+  { preparationStartedAt: null },
+  { preparationReadyBy: "" },
+])("rejects unverified ready receipts %j", async (change) => {
+  vi.mocked(api.post).mockResolvedValue({
+    data: { order: { ...ready, ...change }, alreadyReady: false },
+  });
+  await expect(markReady("shop-a", "order-a")).rejects.toThrow(
     "could not be verified",
   );
 });

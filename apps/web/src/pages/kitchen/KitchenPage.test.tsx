@@ -278,6 +278,113 @@ it("keeps a ticket and exposes recovery when preparation start fails", async () 
   );
   expect(screen.getByRole("article")).toBeInTheDocument();
 });
+it.each(["DINE_IN", "TAKEOUT"] as const)(
+  "moves %s work to Ready with pickup/service guidance",
+  async (mode) => {
+    setup();
+    await screen.findByRole("article");
+    let isReady = false;
+    const preparing = {
+      ...ticket(),
+      mode,
+      tableNumber: mode === "DINE_IN" ? "Patio 2" : null,
+      preparationStatus: "PREPARING",
+      preparationStartedAt: "2026-10-15T01:05:00.000Z",
+      preparationStartedBy: "user-a",
+    };
+    const ready = {
+      ...preparing,
+      preparationStatus: "READY",
+      preparationReadyAt: "2026-10-15T01:15:00.000Z",
+      preparationReadyBy: "user-a",
+    };
+    vi.mocked(api.get).mockImplementation(async (url) => ({
+      data: {
+        orders: String(url).endsWith("/preparing")
+          ? isReady
+            ? []
+            : [preparing]
+          : String(url).endsWith("/ready") && isReady
+            ? [ready]
+            : [],
+        nextCursor: null,
+      },
+    }));
+    await userEvent.click(screen.getByRole("button", { name: "Preparing" }));
+    const button = await screen.findByRole("button", {
+      name: "Mark ready ORD-000001",
+    });
+    let finish!: (value: unknown) => void;
+    vi.mocked(api.post).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    await userEvent.click(button);
+    expect(button).toBeDisabled();
+    isReady = true;
+    await act(async () =>
+      finish({ data: { order: ready, alreadyReady: false } }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("article")).not.toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Ready" }));
+    const card = await screen.findByRole("article", {
+      name: "Order ORD-000001",
+    });
+    expect(
+      within(card).getByText(
+        mode === "TAKEOUT" ? "Ready for pickup" : "Ready to serve",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(card).getByText("READY · PREPARATION COMPLETE"),
+    ).toBeInTheDocument();
+    expect(
+      card.querySelector('time[datetime="2026-10-15T01:15:00.000Z"]'),
+    ).toBeInTheDocument();
+    expect(within(card).queryByRole("button")).not.toBeInTheDocument();
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(api.post).toHaveBeenCalledWith(
+      "/shops/shop-a/orders/first/mark-ready",
+      {},
+      expect.any(Object),
+    );
+  },
+);
+it("keeps preparing work recoverable after a failed ready action", async () => {
+  setup();
+  await screen.findByRole("article");
+  const preparing = {
+    ...ticket(),
+    preparationStatus: "PREPARING",
+    preparationStartedAt: "2026-10-15T01:05:00.000Z",
+    preparationStartedBy: "user-a",
+  };
+  vi.mocked(api.get).mockResolvedValue({
+    data: { orders: [preparing], nextCursor: null },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Preparing" }));
+  vi.mocked(api.post).mockRejectedValueOnce(new Error("Connection lost"));
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Mark ready ORD-000001" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Couldn’t confirm readiness",
+  );
+  expect(screen.getByRole("article")).toBeInTheDocument();
+});
+it("shows a meaningful empty Ready view", async () => {
+  setup("KITCHEN", []);
+  await screen.findByText("A little room to breathe.");
+  await userEvent.click(screen.getByRole("button", { name: "Ready" }));
+  expect(
+    await screen.findByText("The finishing touches come next."),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("article")).not.toBeInTheDocument();
+});
 it("keeps tickets with a visible warning after a failed refresh and recovers", async () => {
   setup();
   await screen.findByRole("article");

@@ -66,6 +66,8 @@ describe('Cash collection', () => {
       queuedAt: null as Date | null,
       preparationStartedAt: null as Date | null,
       preparationStartedBy: null as string | null,
+      preparationReadyAt: null as Date | null,
+      preparationReadyBy: null as string | null,
       orderItems: [
         {
           lineNumber: 1,
@@ -469,6 +471,127 @@ describe('Cash collection', () => {
       .query({ cursor: 'invalid' })
       .set('Authorization', 'Bearer session')
       .expect(400);
+  });
+  const ready = (
+    body: Record<string, unknown> = {},
+    targetShop = shopId,
+    targetOrder = orderId,
+  ) =>
+    request(app.getHttpServer())
+      .post(`/api/v1/shops/${targetShop}/orders/${targetOrder}/mark-ready`)
+      .set('Authorization', 'Bearer session')
+      .send(body);
+  async function preparingOrder() {
+    await preparePending();
+    await atomic().expect(200);
+    role = 'KITCHEN';
+    await start().expect(200);
+    updateOrder.mockClear();
+  }
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'KITCHEN'] as const)(
+    'allows %s to mark preparing orders ready exactly once',
+    async (staffRole) => {
+      await preparingOrder();
+      role = staffRole;
+      const before = JSON.stringify({
+        queuedAt: saved.queuedAt,
+        preparationStartedAt: saved.preparationStartedAt,
+        preparationStartedBy: saved.preparationStartedBy,
+        paidAt: saved.paidAt,
+        paidBy: saved.paidBy,
+        amountReceived: saved.amountReceived,
+      });
+      const first = await ready().expect(200);
+      expect(first.headers['cache-control']).toBe('no-store');
+      expect(first.body).toMatchObject({
+        alreadyReady: false,
+        order: {
+          id: orderId,
+          shopId,
+          preparationStatus: 'READY',
+          preparationReadyBy: userId,
+        },
+      });
+      expect(
+        Date.parse(first.body.order.preparationReadyAt),
+      ).toBeGreaterThanOrEqual(saved.preparationStartedAt!.getTime());
+      expect((await ready().expect(200)).body).toEqual({
+        order: first.body.order,
+        alreadyReady: true,
+      });
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+      expect(
+        JSON.stringify({
+          queuedAt: saved.queuedAt,
+          preparationStartedAt: saved.preparationStartedAt,
+          preparationStartedBy: saved.preparationStartedBy,
+          paidAt: saved.paidAt,
+          paidBy: saved.paidBy,
+          amountReceived: saved.amountReceived,
+        }),
+      ).toBe(before);
+      const readyList = await request(app.getHttpServer())
+        .get(`/api/v1/shops/${shopId}/preparation/ready`)
+        .set('Authorization', 'Bearer session')
+        .expect(200);
+      expect(readyList.body.orders).toHaveLength(1);
+      expect(readyList.body.orders[0]).toMatchObject(first.body.order);
+      expect(readyList.body.orders[0]).not.toHaveProperty('paymentReference');
+      const preparing = await request(app.getHttpServer())
+        .get(`/api/v1/shops/${shopId}/preparation/preparing`)
+        .set('Authorization', 'Bearer session')
+        .expect(200);
+      expect(preparing.body.orders).toEqual([]);
+      await start().expect(409);
+    },
+  );
+  it.each([
+    'QUEUED',
+    'PENDING_CONFIRMATION',
+    'REJECTED',
+    'UNPAID',
+    'MISSING_START',
+    'COMPLETED',
+  ])('cannot mark ineligible orders ready: %s', async (state) => {
+    await preparingOrder();
+    if (state === 'UNPAID') saved.paymentStatus = state;
+    else if (['QUEUED', 'COMPLETED'].includes(state))
+      saved.preparationStatus = state;
+    else if (state === 'MISSING_START') saved.preparationStartedAt = null;
+    else saved.status = state;
+    await ready().expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rejects unauthorized, revoked and foreign ready actions', async () => {
+    await preparingOrder();
+    role = 'CASHIER';
+    await ready().expect(403);
+    await request(app.getHttpServer())
+      .post(`/api/v1/shops/${shopId}/orders/${orderId}/mark-ready`)
+      .send({})
+      .expect(401);
+    role = 'KITCHEN';
+    await ready({}, shopId, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa').expect(404);
+    await ready({}, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa').expect(404);
+    active = false;
+    await ready().expect(404);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it.each([
+    { preparationReadyAt: '2020-01-01' },
+    { preparationReadyBy: 'forged' },
+    { preparationStatus: 'READY' },
+  ])('rejects forged ready fields %j', async (body) => {
+    await preparingOrder();
+    await ready(body).expect(400);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('rejects a stale conditional ready write', async () => {
+    await preparingOrder();
+    updateOrder.mockResolvedValueOnce({ count: 0 });
+    await ready().expect(409);
+    expect(saved.preparationStatus).toBe('PREPARING');
+    expect(saved.preparationReadyAt).toBeNull();
   });
   it('requires manual attestation and appropriate fields for combined payment', async () => {
     await preparePending();

@@ -346,6 +346,7 @@
 }
 .kitchen-state-switch {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   width: fit-content;
   max-width: 100%;
@@ -361,7 +362,7 @@
   justify-content: center;
   gap: 9px;
   min-height: 44px;
-  padding: 10px 22px;
+  padding: 10px 14px;
   border: 0;
   border-radius: 10px;
   background: transparent;
@@ -383,6 +384,38 @@
 .kitchen-ticket .kitchen-ribbon-preparing {
   color: var(--color-canvas);
   background: var(--color-text);
+}
+.kitchen-ticket .kitchen-ribbon-ready {
+  color: #243329;
+  background: var(--color-lime);
+}
+.kitchen-ready-time {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 18px 22px 0;
+  padding: 16px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-secondary);
+}
+.kitchen-ready-time > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.kitchen-ready-time > div {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+.kitchen-ready-time strong {
+  font-size: 15px;
+}
+.kitchen-ready-time span {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
 }
 .kitchen-start-time {
   display: flex;

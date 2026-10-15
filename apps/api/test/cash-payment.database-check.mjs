@@ -12,6 +12,7 @@ import { OrderDecisionService } from '../dist/modules/orders/order-decision.serv
 import { CashPaymentService } from '../dist/modules/orders/cash-payment.service.js';
 import { PreparationQueueService } from '../dist/modules/orders/preparation-queue.service.js';
 import { PreparationStartService } from '../dist/modules/orders/preparation-start.service.js';
+import { PreparationReadyService } from '../dist/modules/orders/preparation-ready.service.js';
 
 // Real competing service transactions use only this disposable schema. Public
 // tables and migration history remain untouched; close sessions before removal.
@@ -74,6 +75,8 @@ try {
   // Rebuild the pre-cash shape in our private schema, even after deployment,
   // then exercise the complete migration (including its trigger definition).
   for (const column of [
+    'preparationReadyAt',
+    'preparationReadyBy',
     'preparationStartedAt',
     'preparationStartedBy',
     'preparationStatus',
@@ -136,6 +139,14 @@ try {
     'utf8',
   );
   await setup.query(startSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
+  const readySql = await readFile(
+    new URL(
+      '../prisma/migrations/20261015090000_preparation_ready/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await setup.query(readySql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
   await setup.query('COMMIT');
   created = true;
   prisma = new PrismaClient({
@@ -159,6 +170,7 @@ try {
   const cash = new CashPaymentService(prisma, qr);
   const queue = new PreparationQueueService(prisma);
   const preparation = new PreparationStartService(prisma);
+  const preparationReady = new PreparationReadyService(prisma);
   const users = await Promise.all(
     [1, 2].map((n) =>
       prisma.user.create({
@@ -1214,12 +1226,139 @@ try {
       data: { preparationStatus: 'PREPARING' },
     }),
   );
+  await assert.rejects(
+    preparationReady.ready(users[0].id, shop.id, failStart.id),
+    { status: 409 },
+  );
+  for (const id of ineligibleQueueIds)
+    await assert.rejects(preparationReady.ready(users[0].id, shop.id, id), {
+      status: 409,
+    });
+  await assert.rejects(
+    preparationReady.ready(users[0].id, randomUUID(), firstQueued.id),
+    { status: 404 },
+  );
+  const readiness = await Promise.all(
+    users.map((user) =>
+      preparationReady.ready(user.id, shop.id, firstQueued.id),
+    ),
+  );
+  assert.equal(readiness.filter((result) => !result.alreadyReady).length, 1);
+  assert.deepEqual(readiness[0].order, readiness[1].order);
+  const savedReady = await prisma.order.findFirst({
+    where: { id: firstQueued.id, shopId: shop.id },
+  });
+  assert.equal(savedReady.preparationStatus, 'READY');
+  assert.ok(savedReady.preparationReadyAt >= savedReady.preparationStartedAt);
+  assert.ok(users.some((user) => user.id === savedReady.preparationReadyBy));
+  for (const key of [
+    'paymentMethod',
+    'paymentRequestId',
+    'paidBy',
+    'paidAt',
+    'amountReceived',
+    'changeDue',
+    'totalPrice',
+    'queuedAt',
+    'status',
+    'paymentStatus',
+    'preparationStartedAt',
+    'preparationStartedBy',
+  ])
+    assert.deepEqual(savedReady[key], savedStart[key]);
+  const readyReplay = await preparationReady.ready(
+    users[0].id,
+    shop.id,
+    firstQueued.id,
+  );
+  assert.equal(readyReplay.alreadyReady, true);
+  assert.deepEqual(readyReplay.order, readiness[0].order);
+  assert.ok(
+    !(
+      await queue.list(users[0].id, shop.id, undefined, 'PREPARING')
+    ).orders.some((item) => item.id === firstQueued.id),
+  );
+  const readyPage = await queue.list(users[0].id, shop.id, undefined, 'READY');
+  assert.deepEqual(
+    readyPage.orders.map((item) => item.id),
+    [firstQueued.id],
+  );
+  assert.equal(
+    readyPage.orders[0].preparationReadyAt,
+    savedReady.preparationReadyAt.toISOString(),
+  );
+  for (const data of [
+    { preparationReadyAt: new Date(0) },
+    {
+      preparationReadyBy: users.find(
+        (user) => user.id !== savedReady.preparationReadyBy,
+      ).id,
+    },
+    { preparationStatus: 'PREPARING' },
+  ]) {
+    await assert.rejects(
+      prisma.order.updateMany({
+        where: { id: firstQueued.id, shopId: shop.id },
+        data,
+      }),
+    );
+  }
+  const skipReady = queued.orders.find(
+    (item) => ![firstQueued.id, failStart.id].includes(item.id),
+  );
+  await assert.rejects(
+    prisma.order.updateMany({
+      where: { id: skipReady.id, shopId: shop.id },
+      data: {
+        preparationStatus: 'READY',
+        preparationStartedAt: new Date(),
+        preparationStartedBy: users[0].id,
+        preparationReadyAt: new Date(),
+        preparationReadyBy: users[0].id,
+      },
+    }),
+  );
+  await preparation.start(users[0].id, shop.id, failStart.id);
+  const beforeReadyFailure = await prisma.order.findFirst({
+    where: { id: failStart.id, shopId: shop.id },
+  });
+  await setup.query(
+    `CREATE FUNCTION "${schema}".fail_preparation_ready() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.id = '${failStart.id}' AND NEW."preparationStatus" = 'READY' THEN RAISE EXCEPTION 'Injected readiness failure'; END IF; RETURN NEW; END $$`,
+  );
+  await setup.query(
+    `CREATE TRIGGER fail_preparation_ready AFTER UPDATE ON "${schema}".orders FOR EACH ROW EXECUTE FUNCTION "${schema}".fail_preparation_ready()`,
+  );
+  await assert.rejects(
+    preparationReady.ready(users[0].id, shop.id, failStart.id),
+  );
+  assert.deepEqual(
+    await prisma.order.findFirst({
+      where: { id: failStart.id, shopId: shop.id },
+    }),
+    beforeReadyFailure,
+  );
+  await setup.query(
+    `DROP TRIGGER fail_preparation_ready ON "${schema}".orders`,
+  );
+  await assert.rejects(
+    prisma.order.updateMany({
+      where: { id: failStart.id, shopId: shop.id },
+      data: { preparationStatus: 'READY' },
+    }),
+  );
+  console.log(
+    'Passed: PREPARING to READY records server time and staff once under concurrent calls, preserves start/payment metadata, appears in Ready, rejects skipped/ineligible/foreign states, protects ready metadata and rolls back failed writes.',
+  );
   await prisma.shopMember.update({
     where: { userId_shopId: { userId: users[0].id, shopId: shop.id } },
     data: { role: 'CASHIER' },
   });
   await assert.rejects(
     preparation.start(users[0].id, shop.id, firstQueued.id),
+    { status: 404 },
+  );
+  await assert.rejects(
+    preparationReady.ready(users[0].id, shop.id, firstQueued.id),
     { status: 404 },
   );
   console.log(

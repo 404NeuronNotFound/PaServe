@@ -20,6 +20,7 @@ import {
 import type {
   CurrentUserResponse,
   PreparationQueueResponse,
+  PreparationStatus,
 } from "@paserve/contracts";
 import { hasShopPermission } from "@paserve/contracts";
 import { currentUserKey } from "../../features/auth/api/session";
@@ -27,6 +28,7 @@ import { useActiveShop } from "../../features/shops/active-shop";
 import {
   getPreparationQueue,
   startPreparing,
+  markReady,
 } from "../../features/kitchen/queue";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
@@ -37,6 +39,47 @@ const time = (value: string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
+const views = {
+  QUEUED: {
+    title: "New orders",
+    label: "Queued",
+    eyebrow: "THE PREPARATION QUEUE",
+    hero: "Accepted. Awaiting your craft.",
+    intro: "Accepted by cashier and paid. Preparation has not started.",
+    count: "orders waiting",
+    description: "Waiting for kitchen / barista to begin preparation.",
+    emptyTitle: "A little room to breathe.",
+    empty:
+      "No orders are queued. Newly confirmed and paid orders will appear here.",
+    list: "New orders, oldest first",
+  },
+  PREPARING: {
+    title: "Preparing",
+    label: "Preparing",
+    eyebrow: "PREPARATION IN PROGRESS",
+    hero: "Good things are in the making.",
+    intro: "Started by your team. Every detail, still at hand.",
+    count: "orders preparing",
+    description:
+      "Preparation has started. Each order retains its original start time.",
+    emptyTitle: "Nothing preparing just yet.",
+    empty: "Start a queued order when your team begins preparing it.",
+    list: "Preparing orders, oldest first",
+  },
+  READY: {
+    title: "Ready",
+    label: "Ready",
+    eyebrow: "PREPARATION COMPLETE",
+    hero: "Made with care. Ready to go.",
+    intro: "Prepared and waiting for pickup or table service.",
+    count: "orders ready",
+    description:
+      "Preparation is complete. Orders are awaiting pickup or service.",
+    emptyTitle: "The finishing touches come next.",
+    empty: "Mark a preparing order ready when every item is finished.",
+    list: "Ready orders, oldest first",
+  },
+} as const;
 export function KitchenPage() {
   const membership = useActiveShop();
   return <NewOrders key={membership.shopId} />;
@@ -48,14 +91,15 @@ function NewOrders() {
     useQueryClient().getQueryData<CurrentUserResponse>(currentUserKey)!.user;
   const location = useLocation();
   const heading = useRef<HTMLHeadingElement>(null);
-  const [state, setState] = useState<"QUEUED" | "PREPARING">("QUEUED");
+  const [state, setState] = useState<PreparationStatus>("QUEUED");
+  const view = views[state];
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    document.title = `${state === "QUEUED" ? "New orders" : "Preparing"} · ${shop.name} · PaServe`;
+    document.title = `${view.title} · ${shop.name} · PaServe`;
     heading.current?.focus();
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
-  }, [shop.name, state]);
+  }, [shop.name, view.title]);
   const queue = useInfiniteQuery({
     queryKey: ["kitchen", "queue", user.id, shopId, state],
     initialPageParam: null as string | null,
@@ -106,7 +150,7 @@ function NewOrders() {
         <div>
           <p className="section-label">KITCHEN / BARISTA</p>
           <h1 ref={heading} tabIndex={-1}>
-            {state === "QUEUED" ? "New orders" : "Preparing"}
+            {view.title}
             <span>.</span>
           </h1>
           <p>The next great order starts here.</p>
@@ -132,21 +176,9 @@ function NewOrders() {
           <FiCoffee aria-hidden="true" />
         </div>
         <div>
-          <span className="section-label">
-            {state === "QUEUED"
-              ? "THE PREPARATION QUEUE"
-              : "PREPARATION IN PROGRESS"}
-          </span>
-          <h2>
-            {state === "QUEUED"
-              ? "Accepted. Awaiting your craft."
-              : "Good things are in the making."}
-          </h2>
-          <p>
-            {state === "QUEUED"
-              ? "Accepted by cashier and paid. Preparation has not started."
-              : "Started by your team. Every detail, still at hand."}
-          </p>
+          <span className="section-label">{view.eyebrow}</span>
+          <h2>{view.hero}</h2>
+          <p>{view.intro}</p>
         </div>
         <div className="kitchen-order-count">
           <strong>
@@ -154,13 +186,7 @@ function NewOrders() {
               ? `${orders.length}${queue.hasNextPage ? "+" : ""}`
               : "—"}
           </strong>
-          <span>
-            {queue.hasNextPage
-              ? "orders loaded"
-              : state === "QUEUED"
-                ? "orders waiting"
-                : "orders preparing"}
-          </span>
+          <span>{queue.hasNextPage ? "orders loaded" : view.count}</span>
         </div>
       </div>
       <div
@@ -182,20 +208,24 @@ function NewOrders() {
           <FiCoffee aria-hidden="true" />
           Preparing
         </button>
+        <button
+          aria-pressed={state === "READY"}
+          onClick={() => setState("READY")}
+        >
+          <FiCheck aria-hidden="true" />
+          Ready
+        </button>
       </div>
       <div className="kitchen-queue-heading">
         <div>
           <h2 id="kitchen-queued-heading">
-            {state === "QUEUED" ? "Queued" : "Preparing"}{" "}
-            <span>{queue.data ? orders.length : "—"}</span>
+            {view.label} <span>{queue.data ? orders.length : "—"}</span>
           </h2>
           <p
             id="kitchen-queued-description"
             className="kitchen-queue-description"
           >
-            {state === "QUEUED"
-              ? "Waiting for kitchen / barista to begin preparation."
-              : "Preparation has started. Each order retains its original start time."}
+            {view.description}
           </p>
         </div>
         <p>
@@ -233,25 +263,13 @@ function NewOrders() {
           <span className="kitchen-empty-icon">
             <FiCheck aria-hidden="true" />
           </span>
-          <h2>
-            {state === "QUEUED"
-              ? "A little room to breathe."
-              : "Nothing preparing just yet."}
-          </h2>
-          <p>
-            {state === "QUEUED"
-              ? "No orders are queued. Newly confirmed and paid orders will appear here."
-              : "Start a queued order when your team begins preparing it."}
-          </p>
+          <h2>{view.emptyTitle}</h2>
+          <p>{view.empty}</p>
         </div>
       )}
       <ol
         className="kitchen-tickets"
-        aria-label={
-          state === "QUEUED"
-            ? "New orders, oldest first"
-            : "Preparing orders, oldest first"
-        }
+        aria-label={view.list}
         aria-describedby="kitchen-queued-description"
       >
         {orders.map((order, index) => (
@@ -295,31 +313,57 @@ function Ticket({
   const { role, shopId } = useActiveShop();
   const user = client.getQueryData<CurrentUserResponse>(currentUserKey)!.user;
   const preparing = order.preparationStatus === "PREPARING";
+  const ready = order.preparationStatus === "READY";
+  const readyLabel =
+    order.mode === "TAKEOUT" ? "Ready for pickup" : "Ready to serve";
+  const finishTransition = async (
+    source: PreparationStatus,
+    message: string,
+  ) => {
+    const prefix = ["kitchen", "queue", user.id, shopId];
+    await client.cancelQueries({ queryKey: prefix });
+    client.setQueryData<InfiniteData<PreparationQueueResponse>>(
+      [...prefix, source],
+      (data) =>
+        data && {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            orders: page.orders.filter((item) => item.id !== order.id),
+          })),
+        },
+    );
+    feedback.toast(message);
+    onStarted();
+    await client.invalidateQueries({ queryKey: prefix });
+  };
   const start = useMutation({
     mutationFn: () => startPreparing(shopId, order.id),
     retry: false,
     onSuccess: async (result) => {
-      const prefix = ["kitchen", "queue", user.id, shopId];
-      await client.cancelQueries({ queryKey: prefix });
-      client.setQueryData<InfiniteData<PreparationQueueResponse>>(
-        [...prefix, "QUEUED"],
-        (data) =>
-          data && {
-            ...data,
-            pages: data.pages.map((page) => ({
-              ...page,
-              orders: page.orders.filter((item) => item.id !== order.id),
-            })),
-          },
-      );
-      feedback.toast(
+      await finishTransition(
+        "QUEUED",
         result.alreadyStarted
           ? "This order is already preparing."
           : `Preparation started for ${order.orderNumber}.`,
       );
-      onStarted();
-      await client.invalidateQueries({ queryKey: prefix });
     },
+    onError: () => {
+      void client.invalidateQueries({
+        queryKey: ["kitchen", "queue", user.id, shopId],
+      });
+    },
+  });
+  const mark = useMutation({
+    mutationFn: () => markReady(shopId, order.id),
+    retry: false,
+    onSuccess: (result) =>
+      finishTransition(
+        "PREPARING",
+        result.alreadyReady
+          ? "This order is already ready."
+          : `${order.orderNumber}: ${readyLabel.toLowerCase()}.`,
+      ),
     onError: () => {
       void client.invalidateQueries({
         queryKey: ["kitchen", "queue", user.id, shopId],
@@ -335,11 +379,15 @@ function Ticket({
     <li className={`kitchen-ticket${first ? " kitchen-ticket-first" : ""}`}>
       <article aria-label={`Order ${order.orderNumber}`}>
         <div
-          className={`kitchen-ticket-ribbon${preparing ? " kitchen-ribbon-preparing" : ""}`}
+          className={`kitchen-ticket-ribbon${preparing ? " kitchen-ribbon-preparing" : ready ? " kitchen-ribbon-ready" : ""}`}
         >
           <span>
             <span className="kitchen-status-dot" />
-            {preparing ? "PREPARING · IN PROGRESS" : "QUEUED · NOT STARTED"}
+            {preparing
+              ? "PREPARING · IN PROGRESS"
+              : ready
+                ? "READY · PREPARATION COMPLETE"
+                : "QUEUED · NOT STARTED"}
           </span>
           {first && <span>Oldest ticket</span>}
         </div>
@@ -360,7 +408,7 @@ function Ticket({
           </div>
           <p className="kitchen-wait">
             <FiClock aria-hidden="true" />
-            {preparing
+            {preparing || ready
               ? "Queued"
               : minutes < 1
                 ? "Just queued"
@@ -374,6 +422,35 @@ function Ticket({
             </time>
           </p>
         </header>
+        {ready && order.preparationReadyAt && (
+          <div className="kitchen-ready-time">
+            <FiCheck aria-hidden="true" />
+            <div>
+              <strong>{readyLabel}</strong>
+              <span>
+                Ready since{" "}
+                <time
+                  dateTime={order.preparationReadyAt}
+                  title={new Date(order.preparationReadyAt).toLocaleString()}
+                >
+                  {time(order.preparationReadyAt)}
+                </time>{" "}
+                ·{" "}
+                {Math.max(
+                  0,
+                  Math.floor(
+                    (now - Date.parse(order.preparationReadyAt)) / 60_000,
+                  ),
+                )}{" "}
+                min ago
+              </span>
+              <span>
+                Preparation complete · Awaiting{" "}
+                {order.mode === "TAKEOUT" ? "collection" : "table service"}
+              </span>
+            </div>
+          </div>
+        )}
         {preparing && order.preparationStartedAt && (
           <div className="kitchen-start-time">
             <FiPlay aria-hidden="true" />
@@ -442,7 +519,7 @@ function Ticket({
             Cashier accepted · Paid <FiCheck aria-hidden="true" />
           </span>
         </footer>
-        {!preparing &&
+        {order.preparationStatus === "QUEUED" &&
           hasShopPermission(role, "shop.preparation.status.update") && (
             <div className="kitchen-ticket-action">
               <button
@@ -459,6 +536,27 @@ function Ticket({
                   Couldn’t confirm preparation start. {start.error.message}{" "}
                   Refresh to check its saved status; retrying preserves any
                   recorded start.
+                </InlineMessage>
+              )}
+            </div>
+          )}
+        {preparing &&
+          hasShopPermission(role, "shop.preparation.status.update") && (
+            <div className="kitchen-ticket-action">
+              <button
+                className="primary-button"
+                disabled={mark.isPending}
+                onClick={() => mark.mutate()}
+                aria-label={`Mark ready ${order.orderNumber}`}
+              >
+                <FiCheck aria-hidden="true" />
+                {mark.isPending ? "Marking ready…" : "Mark ready"}
+              </button>
+              {mark.isError && (
+                <InlineMessage>
+                  Couldn’t confirm readiness. {mark.error.message} Refresh to
+                  check its saved status; retrying preserves any recorded ready
+                  time.
                 </InlineMessage>
               )}
             </div>

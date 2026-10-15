@@ -26,7 +26,7 @@ export class PreparationQueueService {
     actorId: string,
     shopId: string,
     cursor?: string,
-    preparationStatus: 'QUEUED' | 'PREPARING' = 'QUEUED',
+    preparationStatus: 'QUEUED' | 'PREPARING' | 'READY' = 'QUEUED',
   ): Promise<PreparationQueueResponse> {
     const access = shopAccessWhere(actorId, shopId, PREPARATION_QUEUE_ROLES);
     let after: { queuedAt: Date; id: string } | undefined;
@@ -88,6 +88,8 @@ export class PreparationQueueService {
         queuedAt: true,
         preparationStartedAt: true,
         preparationStartedBy: true,
+        preparationReadyAt: true,
+        preparationReadyBy: true,
         orderItems: {
           where: {
             shopId,
@@ -129,10 +131,14 @@ export class PreparationQueueService {
         items = order.orderItems.map(readPriceSnapshot);
         if (
           !order.queuedAt ||
-          (preparationStatus === 'PREPARING' &&
+          (preparationStatus !== 'QUEUED' &&
             (!order.preparationStartedAt ||
               !order.preparationStartedBy ||
               order.preparationStartedAt < order.queuedAt)) ||
+          (preparationStatus === 'READY' &&
+            (!order.preparationReadyAt ||
+              !order.preparationReadyBy ||
+              order.preparationReadyAt < order.preparationStartedAt!)) ||
           order.currency !== 'PHP' ||
           !items.length ||
           !items
@@ -161,6 +167,8 @@ export class PreparationQueueService {
         preparationStatus,
         preparationStartedAt: order.preparationStartedAt?.toISOString() ?? null,
         preparationStartedBy: order.preparationStartedBy ?? null,
+        preparationReadyAt: order.preparationReadyAt?.toISOString() ?? null,
+        preparationReadyBy: order.preparationReadyBy ?? null,
         items,
       };
     });

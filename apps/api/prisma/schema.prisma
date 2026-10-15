@@ -131,6 +131,8 @@ model Order {
   queuedAt DateTime?
   preparationStartedAt DateTime?
   preparationStartedBy String?
+  preparationReadyAt DateTime?
+  preparationReadyBy String?
   orderNumber String @db.VarChar(32)
   qrTokenNonce String
   qrTokenExpiresAt DateTime

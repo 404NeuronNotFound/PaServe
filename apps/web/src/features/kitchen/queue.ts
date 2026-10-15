@@ -1,6 +1,8 @@
 import type {
   PreparationQueueResponse,
   StartPreparationResponse,
+  ReadyPreparationResponse,
+  PreparationStatus,
 } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import "../auth/api/session";
@@ -10,7 +12,7 @@ import { parseCashierItems } from "../cashier/order-items";
 export function parseQueue(
   data: PreparationQueueResponse,
   shopId: string,
-  state: "QUEUED" | "PREPARING" = "QUEUED",
+  state: PreparationStatus = "QUEUED",
 ): PreparationQueueResponse {
   const invalid = () =>
     new Error("The saved queue could not be verified. Refresh to try again.");
@@ -45,12 +47,23 @@ export function parseQueue(
     )
       throw invalid();
     if (
-      state === "PREPARING" &&
+      state !== "QUEUED" &&
       (typeof order.preparationStartedAt !== "string" ||
         !Number.isFinite(Date.parse(order.preparationStartedAt)) ||
         Date.parse(order.preparationStartedAt) < Date.parse(order.queuedAt) ||
         typeof order.preparationStartedBy !== "string" ||
         !order.preparationStartedBy)
+    )
+      throw invalid();
+    if (
+      state === "READY"
+        ? typeof order.preparationReadyAt !== "string" ||
+          !Number.isFinite(Date.parse(order.preparationReadyAt)) ||
+          Date.parse(order.preparationReadyAt) <
+            Date.parse(order.preparationStartedAt!) ||
+          typeof order.preparationReadyBy !== "string" ||
+          !order.preparationReadyBy
+        : order.preparationReadyAt != null || order.preparationReadyBy != null
     )
       throw invalid();
     if (
@@ -70,10 +83,10 @@ export async function getPreparationQueue(
   shopId: string,
   cursor: string | null,
   signal: AbortSignal,
-  state: "QUEUED" | "PREPARING" = "QUEUED",
+  state: PreparationStatus = "QUEUED",
 ) {
   const { data } = await api.get<PreparationQueueResponse>(
-    `/shops/${encodeURIComponent(shopId)}/preparation/${state === "QUEUED" ? "queue" : "preparing"}`,
+    `/shops/${encodeURIComponent(shopId)}/preparation/${state === "QUEUED" ? "queue" : state === "PREPARING" ? "preparing" : "ready"}`,
     {
       params: cursor ? { cursor } : undefined,
       signal,
@@ -106,6 +119,41 @@ export async function startPreparing(shopId: string, orderId: string) {
   )
     throw new Error(
       "The preparation start could not be verified. Refresh before trying again.",
+    );
+  return data;
+}
+
+export async function markReady(shopId: string, orderId: string) {
+  const { data } = await api.post<ReadyPreparationResponse>(
+    `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}/mark-ready`,
+    {},
+    { timeout: AUTH_REQUEST_TIMEOUT_MS },
+  );
+  const order = data?.order;
+  if (
+    !order ||
+    order.id !== orderId ||
+    order.shopId !== shopId ||
+    order.preparationStatus !== "READY" ||
+    typeof data.alreadyReady !== "boolean" ||
+    typeof order.preparationStartedBy !== "string" ||
+    !order.preparationStartedBy ||
+    typeof order.preparationReadyBy !== "string" ||
+    !order.preparationReadyBy ||
+    ![
+      order.queuedAt,
+      order.preparationStartedAt,
+      order.preparationReadyAt,
+    ].every(
+      (value) =>
+        typeof value === "string" && Number.isFinite(Date.parse(value)),
+    ) ||
+    Date.parse(order.preparationStartedAt) < Date.parse(order.queuedAt) ||
+    Date.parse(order.preparationReadyAt) <
+      Date.parse(order.preparationStartedAt)
+  )
+    throw new Error(
+      "The ready status could not be verified. Refresh before trying again.",
     );
   return data;
 }
