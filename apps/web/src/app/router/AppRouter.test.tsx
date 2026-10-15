@@ -49,6 +49,7 @@ it.each(["T12", "t_9dd21e8326b440b2a73f22d4f16c038a"])(
     expect(screen.getByText("Ordering for Table 12")).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith(`/menu/shop/table/${code}`, {
       signal: expect.any(AbortSignal),
+      timeout: 15_000,
     });
     expect(getCurrentUser).not.toHaveBeenCalled();
   },
@@ -222,6 +223,7 @@ it.each(["/cafe-north", "/menu/cafe-north"])(
     expect(screen.getByRole("heading", { name: "Coffee" })).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith("/menu/cafe-north", {
       signal: expect.any(AbortSignal),
+      timeout: 15_000,
     });
     expect(getCurrentUser).not.toHaveBeenCalled();
     expect(window.location.pathname).toBe(path);
@@ -345,6 +347,7 @@ it("resolves a new shop context when navigating between public slugs", async () 
   );
   expect(api.get).toHaveBeenLastCalledWith("/menu/cafe-south", {
     signal: expect.any(AbortSignal),
+      timeout: 15_000,
   });
   expect(getCurrentUser).not.toHaveBeenCalled();
 });

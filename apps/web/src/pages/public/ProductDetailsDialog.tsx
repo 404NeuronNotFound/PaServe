@@ -48,7 +48,7 @@ export function ProductDetailsDialog({
       (
         await api.get<PublicProductDetailsResponse>(
           `/menu/${encodeURIComponent(shop.slug)}/products/${encodeURIComponent(product.id)}`,
-          { signal },
+          { signal, timeout: 15_000 },
         )
       ).data,
     retry: false,

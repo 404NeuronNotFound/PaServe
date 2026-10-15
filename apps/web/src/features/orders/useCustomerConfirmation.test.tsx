@@ -242,3 +242,26 @@ it("recovers saved confirmation through polling while the event stream stays una
   expect(result.current).toEqual(confirmed);
   expect(fetchStatus).toHaveBeenCalledTimes(2);
 });
+
+it("releases the live stream and recovery listeners after receipt access is denied", async () => {
+  const { unmount } = renderHook(() =>
+    useCustomerConfirmation("cafe", orderId, token),
+  );
+  await flush();
+  const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
+  const stop = vi.mocked(subscribeOrderStream).mock.results[0].value;
+  fetchStatus.mockResolvedValue({ ok: false, status: 403 });
+  act(() => notify("resync", { shopId, orderId }));
+  await flush();
+  expect(stop).toHaveBeenCalledTimes(1);
+  act(() => {
+    vi.advanceTimersByTime(60_000);
+    window.dispatchEvent(new Event("focus"));
+    window.dispatchEvent(new Event("online"));
+    notify("order_ready", { shopId, orderId });
+  });
+  await flush();
+  expect(fetchStatus).toHaveBeenCalledTimes(2);
+  unmount();
+  expect(stop).toHaveBeenCalledTimes(1);
+});

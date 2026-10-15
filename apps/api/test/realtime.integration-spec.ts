@@ -125,6 +125,7 @@ describe('Supabase Realtime foundation (live)', () => {
 
   it('receives committed updates for the filtered shop, excluding another shop', async () => {
     const received: Array<Record<string, unknown>> = [];
+    const connectionStates: string[] = [];
     let resolveUpdate: () => void = () => {};
     let rejectUpdate: (reason: Error) => void = () => {};
     const update = new Promise<void>((resolve, reject) => {
@@ -146,10 +147,14 @@ describe('Supabase Realtime foundation (live)', () => {
       },
     );
 
-    await subscribe(channel);
+    await subscribe(channel, (status) => connectionStates.push(status));
     const timeout = setTimeout(
       () =>
-        rejectUpdate(new Error('No product update received within 20 seconds')),
+        rejectUpdate(
+          new Error(
+            `No product update received within 20 seconds; channel states: ${connectionStates.join(', ')}`,
+          ),
+        ),
       20_000,
     );
     try {
@@ -174,13 +179,17 @@ describe('Supabase Realtime foundation (live)', () => {
   }, 45_000);
 });
 
-function subscribe(channel: RealtimeChannel): Promise<void> {
+function subscribe(
+  channel: RealtimeChannel,
+  onStatus?: (status: string) => void,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(
       () => reject(new Error('Realtime connection timed out')),
       15_000,
     );
     channel.subscribe((status) => {
+      onStatus?.(status);
       if (status === 'SUBSCRIBED') {
         clearTimeout(timeout);
         resolve();

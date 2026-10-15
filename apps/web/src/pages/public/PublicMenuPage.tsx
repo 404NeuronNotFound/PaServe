@@ -46,7 +46,7 @@ function PublicMenuSession({
       (
         await api.get<PublicMenuResponse>(
           `/menu/${encodeURIComponent(shopSlug)}${code ? `/table/${encodeURIComponent(code)}` : ""}`,
-          { signal },
+          { signal, timeout: 15_000 },
         )
       ).data,
     retry: false,

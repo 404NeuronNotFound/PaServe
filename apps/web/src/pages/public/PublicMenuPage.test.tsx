@@ -324,6 +324,7 @@ it("displays the persisted shop logo on a public route", async () => {
   expect(screen.getByText(/No items are available/)).toBeInTheDocument();
   expect(api.get).toHaveBeenCalledWith("/menu/cafe", {
     signal: expect.any(AbortSignal),
+    timeout: 15_000,
   });
 });
 it("falls back to shop identity when a logo is missing or fails to load", async () => {
@@ -391,7 +392,7 @@ it.each(["grid", "list", "compact"])("loads configured product order for indepen
     client.clear();
   }
   expect(api.get).toHaveBeenCalledTimes(3);
-  expect(api.get).toHaveBeenLastCalledWith("/menu/cafe", { signal: expect.any(AbortSignal) });
+  expect(api.get).toHaveBeenLastCalledWith("/menu/cafe", { signal: expect.any(AbortSignal), timeout: 15_000 });
 });
 it("shows a recovery state for unavailable menus", async () => {
   vi.mocked(api.get).mockRejectedValue({

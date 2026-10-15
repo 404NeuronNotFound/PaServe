@@ -96,7 +96,7 @@ try {
       const ready = waitFor(stream, 'resync');
       await service.relay(
         topic,
-        ['order_confirmed', 'order_preparing'],
+        ['order_preparing'],
         scope,
         async () => {},
         stream,

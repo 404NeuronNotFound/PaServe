@@ -20,7 +20,7 @@ function frame(event: string, shopId = "shop-a", workflow = "kitchen") {
 }
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   vi.stubGlobal("fetch", fetchMock);
   useSessionStore.getState().setAccessToken("private-token");
   fetchMock.mockImplementation(async (_url, options: RequestInit) => {
@@ -231,3 +231,59 @@ it.each(["product_sold_out", "product_available"] as const)(
     });
   },
 );
+
+it.each(["cleanup", "logout"])(
+  "does not dispatch buffered events after %s during a callback",
+  async (reason) => {
+    refresh.mockImplementationOnce(() => {
+      if (reason === "cleanup") stop?.();
+      else useSessionStore.getState().setAccessToken(null);
+    });
+    stop = subscribeNewOrders("shop-a", "kitchen", refresh, status);
+    await flush();
+    push.enqueue(
+      new TextEncoder().encode(frame("new_order") + frame("new_order")),
+    );
+    await flush();
+    expect(refresh).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(90_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  },
+);
+
+it("does not deliver an event when a live-status callback closes the stream", async () => {
+  status
+    .mockImplementationOnce(() => {})
+    .mockImplementationOnce(() => stop?.());
+  stop = subscribeNewOrders("shop-a", "kitchen", refresh, status);
+  await flush();
+  push.enqueue(new TextEncoder().encode(frame("new_order")));
+  await flush();
+  expect(refresh).not.toHaveBeenCalled();
+});
+
+it("keeps the original scope and event allowlist after caller-owned objects change", async () => {
+  const scope = { shopId: "shop-a", workflow: "kitchen" };
+  const events: ("new_order" | "order_ready")[] = ["new_order"];
+  stop = subscribeOrderStream(
+    "/events",
+    scope,
+    events,
+    () => "token",
+    refresh,
+    status,
+  );
+  scope.shopId = "shop-b";
+  events.push("order_ready");
+  await flush();
+  push.enqueue(
+    new TextEncoder().encode(
+      frame("new_order", "shop-b") + frame("order_ready") + frame("new_order"),
+    ),
+  );
+  await flush();
+  expect(refresh).toHaveBeenCalledExactlyOnceWith("new_order", {
+    shopId: "shop-a",
+    workflow: "kitchen",
+  });
+});

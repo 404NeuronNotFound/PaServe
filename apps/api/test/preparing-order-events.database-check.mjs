@@ -24,6 +24,10 @@ const count = async () =>
 try {
   await client.connect();
   await client.query('BEGIN');
+  // Replace the policy only within this rollback-only fixture transaction.
+  await client.query(
+    'DROP POLICY IF EXISTS preparing_order_backend_only ON realtime.messages',
+  );
   await client.query(
     `CREATE TEMP TABLE orders(id text PRIMARY KEY,"shopId" text,status text,"paymentStatus" text,"preparationStatus" text,"queuedAt" timestamp(3),"preparationStartedAt" timestamp(3),"preparationStartedBy" text)`,
   );

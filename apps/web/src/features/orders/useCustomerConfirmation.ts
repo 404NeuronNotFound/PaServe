@@ -65,6 +65,7 @@ export function useCustomerConfirmation(
         );
         if ([401, 403, 404].includes(response.status)) {
           denied = true;
+          stopWatching();
           return;
         }
         if (!response.ok) throw new Error("Unable to read order");

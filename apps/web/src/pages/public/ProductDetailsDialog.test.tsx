@@ -144,6 +144,7 @@ it("shows fresh product information and restores keyboard focus when closed", as
   expect(within(dialog).getByRole("radio", { name: /Regular/ })).toBeChecked();
   expect(api.get).toHaveBeenCalledWith("/menu/cafe/products/product", {
     signal: expect.any(AbortSignal),
+    timeout: 15_000,
   });
   await user.click(within(dialog).getByRole("button", { name: "Close" }));
   await vi.waitFor(() => expect(trigger).toHaveFocus());

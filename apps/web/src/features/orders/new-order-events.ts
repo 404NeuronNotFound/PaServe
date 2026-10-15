@@ -41,6 +41,10 @@ export function subscribeOrderStream(
   staff = false,
   publicStream = false,
 ) {
+  const channelScope = Object.freeze({ ...scope });
+  const accepted = new Set(
+    typeof eventName === "string" ? [eventName] : eventName,
+  );
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let controller: AbortController | undefined;
@@ -92,7 +96,7 @@ export function subscribeOrderStream(
       ) {
         stopped = true;
         onStatus("denied");
-        if (staff) onEvent("resync", scope);
+        if (staff) onEvent("resync", channelScope);
         return;
       }
       if (
@@ -105,14 +109,18 @@ export function subscribeOrderStream(
       const decoder = new TextDecoder();
       let buffer = "";
       try {
-        while (!stopped) {
+        while (!stopped && !signal.aborted) {
           const { value, done } = await reader.read();
           if (done || stopped || signal.aborted) break;
           touch();
           buffer += decoder.decode(value, { stream: true }).replace(/\r/g, "");
           if (buffer.length > 65_536) throw new Error("Invalid order stream");
           let boundary: number;
-          while ((boundary = buffer.indexOf("\n\n")) !== -1) {
+          while (
+            !stopped &&
+            !signal.aborted &&
+            (boundary = buffer.indexOf("\n\n")) !== -1
+          ) {
             const frame = buffer.slice(0, boundary);
             buffer = buffer.slice(boundary + 2);
             const event = frame
@@ -128,20 +136,16 @@ export function subscribeOrderStream(
             if (
               !data ||
               typeof data !== "object" ||
-              !Object.entries(scope).every(
+              !Object.entries(channelScope).every(
                 ([key, value]) =>
                   (data as Record<string, unknown>)[key] === value,
               )
             )
               continue;
             if (event === "unavailable") onStatus("retrying");
-            if (
-              event === "resync" ||
-              (typeof eventName === "string"
-                ? event === eventName
-                : eventName.some((name) => name === event))
-            ) {
+            if (event === "resync" || accepted.has(event as OrderEvent)) {
               onStatus("live");
+              if (stopped || signal.aborted) break;
               onEvent(event, data as Record<string, unknown>);
             }
           }
