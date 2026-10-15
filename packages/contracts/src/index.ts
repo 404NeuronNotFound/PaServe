@@ -777,6 +777,7 @@ export interface CustomerOrderStatusResponse {
     preparationStatus: PreparationStatus | null;
     preparationStartedAt: string | null;
     preparationReadyAt: string | null;
+    completedAt: string | null;
     updatedAt: string;
   };
 }

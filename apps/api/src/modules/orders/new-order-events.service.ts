@@ -11,7 +11,11 @@ import { ShopMembersService } from '../shop-members/shop-members.service.js';
 
 export type OrderWorkflow = 'cashier' | 'kitchen';
 type OrderEvent =
-  'new_order' | 'order_confirmed' | 'order_preparing' | 'order_ready';
+  | 'new_order'
+  | 'order_confirmed'
+  | 'order_preparing'
+  | 'order_ready'
+  | 'order_completed';
 type RelayEvent = OrderEvent | 'resync' | 'unavailable';
 type Listener = (event: RelayEvent, data?: Record<string, string>) => void;
 type Subscription = {
@@ -84,7 +88,8 @@ export class NewOrderEventsService implements OnModuleDestroy {
             event !== 'new_order' &&
             event !== 'order_confirmed' &&
             event !== 'order_preparing' &&
-            event !== 'order_ready'
+            event !== 'order_ready' &&
+            event !== 'order_completed'
           )
             return;
           const data = payload as Record<string, unknown> | null;
@@ -181,7 +186,8 @@ export class NewOrderEventsService implements OnModuleDestroy {
           pending =
             event === 'order_confirmed' ||
             event === 'order_preparing' ||
-            event === 'order_ready'
+            event === 'order_ready' ||
+            event === 'order_completed'
               ? { event: 'resync', data: scope }
               : { event, data };
         return;

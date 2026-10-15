@@ -271,6 +271,49 @@ it("updates a pending receipt to the server-confirmed paid state without manual 
   expect(screen.queryByText("Preparing")).not.toBeInTheDocument();
   expect(screen.getAllByText("ORD-000042")).toHaveLength(1);
   expect(api.post).not.toHaveBeenCalled();
+  fetchStatus.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      order: {
+        ...pending,
+        status: "CONFIRMED",
+        paymentStatus: "PAID",
+        confirmedAt: "2026-10-15T01:01:00Z",
+        preparationStatus: "COMPLETED",
+        preparationStartedAt: "2026-10-15T01:02:00Z",
+        preparationReadyAt: "2026-10-15T01:03:00Z",
+        completedAt: "2026-10-15T01:04:00Z",
+        updatedAt: "2026-10-15T01:04:00Z",
+      },
+    }),
+  });
+  act(() => {
+    for (let i = 0; i < 3; i++)
+      vi.mocked(subscribeOrderStream).mock.calls[0][4]("order_completed", {
+        shopId,
+        orderId,
+      });
+  });
+  await screen.findByRole("heading", { name: "Order completed" });
+  expect(
+    screen.getAllByRole("heading", { name: "Order completed" }),
+  ).toHaveLength(1);
+  expect(screen.getByText("Completed")).toBeInTheDocument();
+  expect(
+    screen.getByText("Keep this receipt for your records."),
+  ).toBeInTheDocument();
+  expect(
+    document.querySelector('time[datetime="2026-10-15T01:04:00Z"]'),
+  ).toBeInTheDocument();
+  expect(
+    document.querySelector('[aria-current="step"]'),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(/Please collect it at the counter/),
+  ).not.toBeInTheDocument();
+  expect(screen.getAllByText("ORD-000042")).toHaveLength(1);
+  expect(api.post).not.toHaveBeenCalled();
 });
 
 it("keeps the QR and order number after memory loss and a full reload", async () => {

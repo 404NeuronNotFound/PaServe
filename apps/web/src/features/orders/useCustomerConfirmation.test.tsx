@@ -28,7 +28,9 @@ const confirmed = {
   confirmedAt: "2026-10-15T01:01:00Z",
   updatedAt: "2026-10-15T01:01:00Z",
 };
-const response = (order: typeof pending | typeof confirmed) => ({
+const response = (
+  order: (typeof pending | typeof confirmed) & { completedAt?: string | null },
+) => ({
   ok: true,
   status: 200,
   json: async () => ({ order }),
@@ -155,4 +157,72 @@ it("updates READY on the event without polling and ignores duplicates and older 
   act(() => notify("resync", { shopId, orderId }));
   await flush();
   expect(result.current).toEqual(ready);
+});
+
+it("finalizes completion immediately, ignores stale phases, and stops all tracking after verified completion", async () => {
+  const ready = {
+    ...confirmed,
+    preparationStatus: "READY",
+    preparationStartedAt: "2026-10-15T01:02:00Z",
+    preparationReadyAt: "2026-10-15T01:03:00Z",
+    updatedAt: "2026-10-15T01:03:00Z",
+  };
+  fetchStatus.mockResolvedValue(response(ready));
+  const started = Date.now();
+  const { result, unmount } = renderHook(() =>
+    useCustomerConfirmation("cafe", orderId, token),
+  );
+  await flush();
+  const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
+  const stop = vi.mocked(subscribeOrderStream).mock.results[0].value;
+  fetchStatus.mockResolvedValue(
+    response({ ...confirmed, updatedAt: "2026-10-15T02:00:00Z" }),
+  );
+  act(() => notify("resync", { shopId, orderId }));
+  await flush();
+  expect(result.current).toEqual(ready);
+  const completed = {
+    ...ready,
+    preparationStatus: "COMPLETED",
+    completedAt: "2026-10-15T01:04:00Z",
+  };
+  for (const invalid of [null, "2026-10-15T01:00:00Z"]) {
+    fetchStatus.mockResolvedValue(
+      response({ ...completed, completedAt: invalid }),
+    );
+    act(() => notify("order_completed", { shopId, orderId }));
+    await flush();
+    expect(result.current).toEqual(ready);
+    expect(stop).not.toHaveBeenCalled();
+  }
+  fetchStatus.mockResolvedValue(response(completed));
+  act(() => {
+    for (let i = 0; i < 5; i++) notify("order_completed", { shopId, orderId });
+  });
+  await flush();
+  expect(result.current).toEqual(completed);
+  expect(Date.now()).toBe(started);
+  expect(stop).toHaveBeenCalledTimes(1);
+  const reads = fetchStatus.mock.calls.length;
+  fetchStatus.mockResolvedValue(response(ready));
+  act(() => {
+    notify("order_completed", { shopId, orderId });
+    window.dispatchEvent(new Event("focus"));
+    window.dispatchEvent(new Event("online"));
+    vi.advanceTimersByTime(60_000);
+  });
+  await flush();
+  expect(fetchStatus).toHaveBeenCalledTimes(reads);
+  expect(result.current).toEqual(completed);
+  unmount();
+  expect(stop).toHaveBeenCalledTimes(1);
+  fetchStatus.mockResolvedValue(response(completed));
+  const restored = renderHook(() =>
+    useCustomerConfirmation("cafe", orderId, token),
+  );
+  await flush();
+  expect(restored.result.current).toEqual(completed);
+  expect(
+    vi.mocked(subscribeOrderStream).mock.results[1].value,
+  ).toHaveBeenCalledTimes(1);
 });

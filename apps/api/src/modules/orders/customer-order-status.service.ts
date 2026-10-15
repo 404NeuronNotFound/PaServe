@@ -62,6 +62,7 @@ export class CustomerOrderStatusService {
         preparationStatus: true,
         preparationStartedAt: true,
         preparationReadyAt: true,
+        completedAt: true,
         queuedAt: true,
       },
     });
@@ -76,6 +77,7 @@ export class CustomerOrderStatusService {
     const preparationStatus = order.preparationStatus ?? null;
     const startedAt = order.preparationStartedAt ?? null;
     const readyAt = order.preparationReadyAt ?? null;
+    const completedAt = order.completedAt ?? null;
     if (
       !['PENDING_CONFIRMATION', 'CONFIRMED', 'REJECTED'].includes(
         order.status,
@@ -93,7 +95,9 @@ export class CustomerOrderStatusService {
         preparationStatus !== 'QUEUED' &&
         (!startedAt || !order.queuedAt || startedAt < order.queuedAt)) ||
       ((preparationStatus === 'READY' || preparationStatus === 'COMPLETED') &&
-        (!readyAt || !startedAt || readyAt < startedAt))
+        (!readyAt || !startedAt || readyAt < startedAt)) ||
+      (preparationStatus === 'COMPLETED' &&
+        (!completedAt || !readyAt || completedAt < readyAt))
     )
       throw new BadRequestException({
         code: 'INVALID_ORDER_STATE',
@@ -114,6 +118,7 @@ export class CustomerOrderStatusService {
           preparationStatus as CustomerOrderStatusResponse['order']['preparationStatus'],
         preparationStartedAt: startedAt?.toISOString() ?? null,
         preparationReadyAt: readyAt?.toISOString() ?? null,
+        completedAt: completedAt?.toISOString() ?? null,
       },
     };
   }

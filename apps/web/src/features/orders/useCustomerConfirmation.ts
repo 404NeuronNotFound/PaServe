@@ -5,6 +5,15 @@ import { api } from "../../lib/api/client";
 import { parseOrderQrToken } from "./order-qr-reference";
 import { subscribeOrderStream } from "./new-order-events";
 
+function phase(order: CustomerOrderStatusResponse["order"]) {
+  return order.status === "CONFIRMED"
+    ? 1 +
+        (order.preparationStatus
+          ? PREPARATION_STATUSES.indexOf(order.preparationStatus) + 1
+          : 0)
+    : 0;
+}
+
 export function useCustomerConfirmation(
   shopSlug: string,
   orderId: string,
@@ -21,11 +30,23 @@ export function useCustomerConfirmation(
     let active = true,
       loading = false,
       again = false,
-      denied = false;
+      denied = false,
+      terminal = false;
     let request: AbortController | undefined;
+    let unsubscribe = () => {};
+    const recover = () => {
+      void refresh();
+    };
+    function stopWatching() {
+      clearInterval(interval);
+      unsubscribe();
+      unsubscribe = () => {};
+      window.removeEventListener("focus", recover);
+      window.removeEventListener("online", recover);
+    }
     const path = `/menu/${encodeURIComponent(shopSlug)}/orders/${encodeURIComponent(orderId)}`;
     async function refresh() {
-      if (!active || denied) return;
+      if (!active || denied || terminal) return;
       if (loading) {
         again = true;
         return;
@@ -73,6 +94,11 @@ export function useCustomerConfirmation(
               !Number.isFinite(Date.parse(order.preparationReadyAt)) ||
               Date.parse(order.preparationReadyAt) <
                 Date.parse(order.preparationStartedAt!))) ||
+          (order.preparationStatus === "COMPLETED" &&
+            (!order.completedAt ||
+              !Number.isFinite(Date.parse(order.completedAt)) ||
+              Date.parse(order.completedAt) <
+                Date.parse(order.preparationReadyAt!))) ||
           (order.status === "CONFIRMED" &&
             (order.paymentStatus !== "PAID" ||
               !order.confirmedAt ||
@@ -82,10 +108,17 @@ export function useCustomerConfirmation(
         if (active)
           setSaved((previous) =>
             previous?.key === key &&
-            Date.parse(previous.order.updatedAt) > Date.parse(order.updatedAt)
+            (phase(previous.order) > phase(order) ||
+              (phase(previous.order) === phase(order) &&
+                Date.parse(previous.order.updatedAt) >
+                  Date.parse(order.updatedAt)))
               ? previous
               : { key, order },
           );
+        if (active && order.preparationStatus === "COMPLETED") {
+          terminal = true;
+          stopWatching();
+        }
       } catch {
         /* Keep the last verified status; the counter remains available. */
       } finally {
@@ -98,10 +131,10 @@ export function useCustomerConfirmation(
       }
     }
     void refresh();
-    const unsubscribe = subscribeOrderStream(
+    unsubscribe = subscribeOrderStream(
       `${path}/events`,
       { shopId: reference.shopId, orderId },
-      ["order_confirmed", "order_preparing", "order_ready"],
+      ["order_confirmed", "order_preparing", "order_ready", "order_completed"],
       () => token,
       () => {
         void refresh();
@@ -111,18 +144,12 @@ export function useCustomerConfirmation(
     const interval = setInterval(() => {
       void refresh();
     }, 15_000);
-    const recover = () => {
-      void refresh();
-    };
     window.addEventListener("focus", recover);
     window.addEventListener("online", recover);
     return () => {
       active = false;
       request?.abort();
-      clearInterval(interval);
-      unsubscribe();
-      window.removeEventListener("focus", recover);
-      window.removeEventListener("online", recover);
+      stopWatching();
     };
   }, [shopSlug, orderId, token, key]);
   return saved?.key === key ? saved.order : null;

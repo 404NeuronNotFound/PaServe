@@ -4,7 +4,11 @@ import { useSessionStore } from "../auth/stores/session";
 export type OrderWorkflow = "cashier" | "kitchen";
 export type LiveOrderStatus = "connecting" | "live" | "retrying" | "denied";
 type OrderEvent =
-  "new_order" | "order_confirmed" | "order_preparing" | "order_ready";
+  | "new_order"
+  | "order_confirmed"
+  | "order_preparing"
+  | "order_ready"
+  | "order_completed";
 
 /** Browser credentials stay in the Authorization header, never in a URL. */
 export function subscribeNewOrders(

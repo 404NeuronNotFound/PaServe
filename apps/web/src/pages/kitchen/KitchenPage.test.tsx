@@ -168,7 +168,7 @@ it("removes a started order from the queue on a preparation event without manual
   expect(subscribeOrderStream).toHaveBeenCalledWith(
     "/shops/shop-a/orders/preparation-events",
     { shopId: "shop-a" },
-    ["order_preparing", "order_ready"],
+    ["order_preparing", "order_ready", "order_completed"],
     expect.any(Function),
     expect.any(Function),
     expect.any(Function),
@@ -598,12 +598,10 @@ it.each(["Preparing", "Ready"])(
     else await screen.findByText("The finishing touches come next.");
     isReady = true;
     act(() =>
-      vi
-        .mocked(subscribeOrderStream)
-        .mock.calls[0][4]("order_ready", {
-          shopId: "shop-a",
-          orderId: "first",
-        }),
+      vi.mocked(subscribeOrderStream).mock.calls[0][4]("order_ready", {
+        shopId: "shop-a",
+        orderId: "first",
+      }),
     );
     if (view === "Preparing")
       await waitFor(() =>
@@ -847,6 +845,24 @@ it("replaces completed pages rather than appending and can return to the first p
     "/shops/shop-a/preparation/completed",
     expect.objectContaining({ params: { limit: 12, cursor: "page2" } }),
   );
+  const reads = vi.mocked(api.get).mock.calls.length;
+  act(() =>
+    vi
+      .mocked(subscribeOrderStream)
+      .mock.calls[0][4]("order_completed", {
+        shopId: "shop-a",
+        orderId: "remote-completed",
+      }),
+  );
+  await waitFor(() =>
+    expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThan(reads),
+  );
+  expect(api.get).toHaveBeenLastCalledWith(
+    "/shops/shop-a/preparation/completed",
+    expect.objectContaining({ params: { limit: 12, cursor: "page2" } }),
+  );
+  expect(screen.getByText("ORD-000041")).toBeInTheDocument();
+  expect(screen.queryByText("ORD-000042")).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Previous" }));
   await screen.findByText("ORD-000042");
 });
@@ -963,3 +979,60 @@ it("keeps applied history filters visible when switching preparation views", asy
     ),
   );
 });
+
+it.each(["Ready", "Completed"])(
+  "refreshes the open %s view on remote completion without duplicate cards or writes",
+  async (view) => {
+    setup("KITCHEN", []);
+    await screen.findByRole("button", { name: view });
+    const completed = historyTicket();
+    const ready = {
+      ...completed,
+      preparationStatus: "READY",
+      completedAt: null,
+      completedBy: null,
+    };
+    let done = false;
+    vi.mocked(api.get).mockImplementation(async (url) => ({
+      data: {
+        orders: String(url).endsWith("/ready")
+          ? done
+            ? []
+            : [ready]
+          : String(url).endsWith("/completed")
+            ? done
+              ? [completed]
+              : []
+            : [],
+        nextCursor: null,
+      },
+    }));
+    await userEvent.click(screen.getByRole("button", { name: view }));
+    if (view === "Ready") await screen.findByRole("article");
+    else
+      await waitFor(() =>
+        expect(api.get).toHaveBeenCalledWith(
+          "/shops/shop-a/preparation/completed",
+          expect.any(Object),
+        ),
+      );
+    done = true;
+    act(() => {
+      for (let i = 0; i < 3; i++)
+        vi.mocked(subscribeOrderStream).mock.calls[0][4]("order_completed", {
+          shopId: "shop-a",
+          orderId: completed.id,
+        });
+    });
+    if (view === "Ready")
+      await waitFor(() =>
+        expect(screen.queryByRole("article")).not.toBeInTheDocument(),
+      );
+    else {
+      await screen.findByText(completed.orderNumber);
+      expect(screen.getAllByText(completed.orderNumber)).toHaveLength(1);
+      expect(screen.queryByRole("article")).not.toBeInTheDocument();
+    }
+    expect(api.post).not.toHaveBeenCalled();
+  },
+);

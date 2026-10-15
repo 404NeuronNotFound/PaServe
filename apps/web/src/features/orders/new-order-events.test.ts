@@ -106,7 +106,7 @@ it("accepts confirmation and preparation on one receipt stream while filtering o
   stop = subscribeOrderStream(
     "/menu/cafe/orders/order-a/events",
     { shopId: "shop-a", orderId: "order-a" },
-    ["order_confirmed", "order_preparing", "order_ready"],
+    ["order_confirmed", "order_preparing", "order_ready", "order_completed"],
     () => "receipt-token",
     events,
     status,
@@ -121,6 +121,8 @@ it("accepts confirmation and preparation on one receipt stream while filtering o
         message("order_preparing") +
         message("order_ready", "order-b") +
         message("order_ready") +
+        message("order_completed", "order-b") +
+        message("order_completed") +
         message("unknown"),
     ),
   );
@@ -129,6 +131,7 @@ it("accepts confirmation and preparation on one receipt stream while filtering o
     "order_confirmed",
     "order_preparing",
     "order_ready",
+    "order_completed",
   ]);
 });
 

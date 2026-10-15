@@ -34,6 +34,7 @@ describe('Customer receipt status access', () => {
     preparationStatus: null as string | null,
     preparationStartedAt: null as Date | null,
     preparationReadyAt: null as Date | null,
+    completedAt: null as Date | null,
     queuedAt: null as Date | null,
     paidBy: 'private-actor',
     paymentReference: 'private-reference',
@@ -54,6 +55,7 @@ describe('Customer receipt status access', () => {
     );
     expect(result.order.status).toBe('PENDING_CONFIRMATION');
     expect(Object.keys(result.order).sort()).toEqual([
+      'completedAt',
       'confirmedAt',
       'id',
       'orderNumber',
@@ -116,6 +118,28 @@ describe('Customer receipt status access', () => {
     await expect(
       service.read('cafe', id, tokens.issue(order)),
     ).rejects.toMatchObject({ response: { code: 'INVALID_ORDER_STATE' } });
+  });
+  it('returns saved completion and rejects missing or out-of-order completion time', async () => {
+    order.status = 'CONFIRMED';
+    order.paymentStatus = 'PAID';
+    order.decidedAt = new Date();
+    order.queuedAt = order.decidedAt;
+    order.preparationStatus = 'COMPLETED';
+    order.preparationStartedAt = new Date(order.decidedAt.getTime() + 1000);
+    order.preparationReadyAt = new Date(order.decidedAt.getTime() + 2000);
+    order.completedAt = new Date(order.decidedAt.getTime() + 3000);
+    const result = await service.read('cafe', id, tokens.issue(order));
+    expect(result.order).toMatchObject({
+      preparationStatus: 'COMPLETED',
+      completedAt: order.completedAt.toISOString(),
+    });
+    expect(result.order).not.toHaveProperty('completedBy');
+    for (const invalid of [null, order.decidedAt]) {
+      order.completedAt = invalid;
+      await expect(
+        service.read('cafe', id, tokens.issue(order)),
+      ).rejects.toMatchObject({ response: { code: 'INVALID_ORDER_STATE' } });
+    }
   });
   it.each([
     'wrong-order',

@@ -55,7 +55,7 @@ export class CustomerOrderStatusController {
     const { shopId } = saved.order;
     return this.events.relay(
       `customer:confirmed:${shopId}:${orderId}`,
-      ['order_confirmed', 'order_preparing', 'order_ready'],
+      ['order_confirmed', 'order_preparing', 'order_ready', 'order_completed'],
       { shopId, orderId },
       () => this.status.read(slug, orderId, token),
       response,
@@ -78,7 +78,7 @@ export class ConfirmedOrderEventsController {
       shopId = request.shopMembership.shopId;
     return this.events.relay(
       `staff:confirmed:${shopId}`,
-      ['order_confirmed', 'order_preparing', 'order_ready'],
+      ['order_confirmed', 'order_preparing', 'order_ready', 'order_completed'],
       { shopId },
       async () => {
         const actor = await this.auth.currentUser(token);
@@ -102,7 +102,7 @@ export class ConfirmedOrderEventsController {
       shopId = request.shopMembership.shopId;
     return this.events.relay(
       `staff:preparation:${shopId}`,
-      ['order_preparing', 'order_ready'],
+      ['order_preparing', 'order_ready', 'order_completed'],
       { shopId },
       async () => {
         const actor = await this.auth.currentUser(token);

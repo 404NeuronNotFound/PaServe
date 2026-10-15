@@ -31,6 +31,7 @@ export function CustomerOrderPage() {
   const confirmed = savedStatus?.status === "CONFIRMED";
   const rejected = savedStatus?.status === "REJECTED";
   const preparation = confirmed ? savedStatus.preparationStatus : null;
+  const completed = preparation === "COMPLETED";
   const preparationCopy =
     preparation === "PREPARING"
       ? {
@@ -56,7 +57,7 @@ export function CustomerOrderPage() {
               label: "Completed",
               heading: "Order completed",
               title: "Your order is fulfilled",
-              message: "Staff recorded your order as fulfilled.",
+              message: "Your order is complete. Thank you!",
               step: "Order fulfilled.",
             }
           : null;
@@ -177,7 +178,9 @@ export function CustomerOrderPage() {
                       : "Show your order QR at the counter"}
               </h2>
               <p>
-                {confirmed ? (
+                {completed ? (
+                  "Keep this receipt for your records."
+                ) : confirmed ? (
                   "Keep your order number handy for pickup or table service."
                 ) : rejected ? (
                   "Your order was not accepted. Ask staff before placing another order."
@@ -218,7 +221,10 @@ export function CustomerOrderPage() {
                     </p>
                   </div>
                 </li>
-                <li aria-current={confirmed ? "step" : undefined}>
+                <li
+                  className={completed ? "is-complete" : undefined}
+                  aria-current={confirmed && !completed ? "step" : undefined}
+                >
                   <span aria-hidden="true">03</span>
                   <div>
                     <strong>
@@ -252,10 +258,22 @@ export function CustomerOrderPage() {
                   </>
                 )}
               </div>
+              {completed && savedStatus?.completedAt && (
+                <p className="order-receipt-note">
+                  Completed at{" "}
+                  <time dateTime={savedStatus.completedAt}>
+                    {new Date(savedStatus.completedAt).toLocaleString()}
+                  </time>
+                </p>
+              )}
             </section>
           </div>
           <footer>
-            <p>Need an update? Ask the counter staff.</p>
+            <p>
+              {completed
+                ? "Thank you for your order."
+                : "Need an update? Ask the counter staff."}
+            </p>
             <Link className="primary-button" to={menuUrl}>
               Back to menu <FiArrowUpRight aria-hidden="true" />
             </Link>

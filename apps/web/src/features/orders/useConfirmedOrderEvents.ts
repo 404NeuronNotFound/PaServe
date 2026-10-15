@@ -25,7 +25,12 @@ export function useConfirmedOrderEvents(
       subscribeOrderStream(
         `/shops/${encodeURIComponent(shopId)}/orders/confirmed-events`,
         { shopId },
-        ["order_confirmed", "order_preparing", "order_ready"],
+        [
+          "order_confirmed",
+          "order_preparing",
+          "order_ready",
+          "order_completed",
+        ],
         () => useSessionStore.getState().accessToken,
         (event, data) => {
           if (event === "resync" || data.orderId === orderId) {

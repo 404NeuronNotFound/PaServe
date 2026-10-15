@@ -116,7 +116,7 @@ function NewOrders() {
     useQueryClient().getQueryData<CurrentUserResponse>(currentUserKey)!.user;
   const queryClient = useQueryClient();
   usePreparationEvents(shopId, () => {
-    for (const status of ["QUEUED", "PREPARING", "READY"])
+    for (const status of ["QUEUED", "PREPARING", "READY", "COMPLETED"])
       void queryClient.invalidateQueries({
         queryKey: ["kitchen", "queue", user.id, shopId, status],
       });
