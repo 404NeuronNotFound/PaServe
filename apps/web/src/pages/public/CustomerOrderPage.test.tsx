@@ -205,6 +205,41 @@ it("updates a pending receipt to the server-confirmed paid state without manual 
     1,
   );
   expect(api.post).not.toHaveBeenCalled();
+  fetchStatus.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      order: {
+        ...pending,
+        status: "CONFIRMED",
+        paymentStatus: "PAID",
+        confirmedAt: "2026-10-15T01:01:00Z",
+        preparationStatus: "PREPARING",
+        preparationStartedAt: "2026-10-15T01:02:00Z",
+        updatedAt: "2026-10-15T01:02:00Z",
+      },
+    }),
+  });
+  act(() =>
+    vi
+      .mocked(subscribeOrderStream)
+      .mock.calls[0][4]("order_preparing", { shopId, orderId }),
+  );
+  await screen.findByRole("heading", { name: "Order in preparation" });
+  expect(screen.getByText("Preparing")).toBeInTheDocument();
+  expect(screen.getByText("Preparation started.")).toBeInTheDocument();
+  act(() => {
+    for (let i = 0; i < 3; i++)
+      vi.mocked(subscribeOrderStream).mock.calls[0][4]("order_preparing", {
+        shopId,
+        orderId,
+      });
+  });
+  await waitFor(() =>
+    expect(
+      screen.getAllByRole("heading", { name: "Order in preparation" }),
+    ).toHaveLength(1),
+  );
 });
 
 it("keeps the QR and order number after memory loss and a full reload", async () => {

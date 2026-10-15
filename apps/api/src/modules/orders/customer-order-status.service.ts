@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import type { CustomerOrderStatusResponse } from '@paserve/contracts';
+import { PREPARATION_STATUSES } from '@paserve/contracts';
 import { PrismaService } from '../../database/prisma.service.js';
 import { OrderTokenService } from './order-token.service.js';
 
@@ -58,6 +59,9 @@ export class CustomerOrderStatusService {
         qrTokenExpiresAt: true,
         qrTokenRevokedAt: true,
         receiptAccessRevokedAt: true,
+        preparationStatus: true,
+        preparationStartedAt: true,
+        queuedAt: true,
       },
     });
     if (!order)
@@ -68,13 +72,24 @@ export class CustomerOrderStatusService {
     // Verify canonical signature, nonce, shop/order binding, expiry, and receipt
     // revocation. Staff scan consumption never grants write authority here.
     this.tokens.verifyReceipt(credential, order);
+    const preparationStatus = order.preparationStatus ?? null;
+    const startedAt = order.preparationStartedAt ?? null;
     if (
       !['PENDING_CONFIRMATION', 'CONFIRMED', 'REJECTED'].includes(
         order.status,
       ) ||
       !['UNPAID', 'PAID'].includes(order.paymentStatus) ||
       (order.status === 'CONFIRMED' &&
-        (order.paymentStatus !== 'PAID' || !order.decidedAt))
+        (order.paymentStatus !== 'PAID' || !order.decidedAt)) ||
+      (preparationStatus !== null &&
+        (!PREPARATION_STATUSES.includes(
+          preparationStatus as (typeof PREPARATION_STATUSES)[number],
+        ) ||
+          order.status !== 'CONFIRMED' ||
+          order.paymentStatus !== 'PAID')) ||
+      (preparationStatus !== null &&
+        preparationStatus !== 'QUEUED' &&
+        (!startedAt || !order.queuedAt || startedAt < order.queuedAt))
     )
       throw new BadRequestException({
         code: 'INVALID_ORDER_STATE',
@@ -91,6 +106,9 @@ export class CustomerOrderStatusService {
         confirmedAt:
           order.status === 'CONFIRMED' ? order.decidedAt!.toISOString() : null,
         updatedAt: order.updatedAt.toISOString(),
+        preparationStatus:
+          preparationStatus as CustomerOrderStatusResponse['order']['preparationStatus'],
+        preparationStartedAt: startedAt?.toISOString() ?? null,
       },
     };
   }

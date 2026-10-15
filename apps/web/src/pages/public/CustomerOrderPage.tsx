@@ -30,11 +30,37 @@ export function CustomerOrderPage() {
   );
   const confirmed = savedStatus?.status === "CONFIRMED";
   const rejected = savedStatus?.status === "REJECTED";
-  const statusLabel = confirmed
-    ? "Confirmed"
-    : rejected
-      ? "Rejected"
-      : "Pending";
+  const preparation = confirmed ? savedStatus.preparationStatus : null;
+  const preparationCopy =
+    preparation === "PREPARING"
+      ? {
+          label: "Preparing",
+          heading: "Order in preparation",
+          title: "We're preparing your order",
+          message: "The kitchen has started preparing your order.",
+          step: "Preparation started.",
+        }
+      : preparation === "READY"
+        ? {
+            label: "Ready",
+            heading: "Order ready",
+            title: "Your order is ready",
+            message:
+              "Preparation is complete. Check with staff for pickup or service.",
+            step: "Preparation complete.",
+          }
+        : preparation === "COMPLETED"
+          ? {
+              label: "Completed",
+              heading: "Order completed",
+              title: "Your order is fulfilled",
+              message: "Staff recorded your order as fulfilled.",
+              step: "Order fulfilled.",
+            }
+          : null;
+  const statusLabel =
+    preparationCopy?.label ??
+    (confirmed ? "Confirmed" : rejected ? "Rejected" : "Pending");
   const heading = useRef<HTMLHeadingElement>(null);
   const menuUrl =
     receipt?.mode === "DINE_IN"
@@ -70,18 +96,22 @@ export function CustomerOrderPage() {
             <div>
               <p className="section-label">{receipt.shopName}</p>
               <h1 id="order-receipt-title" ref={heading} tabIndex={-1}>
-                {confirmed
-                  ? "Order confirmed"
-                  : rejected
-                    ? "Order rejected"
-                    : "Order submitted"}
+                {preparationCopy
+                  ? preparationCopy.heading
+                  : confirmed
+                    ? "Order confirmed"
+                    : rejected
+                      ? "Order rejected"
+                      : "Order submitted"}
               </h1>
               <p className="order-receipt-intro">
-                {confirmed
-                  ? "Your payment is recorded. Your order has been sent to the kitchen."
-                  : rejected
-                    ? "Please ask the counter staff for help."
-                    : "One more step before the kitchen."}
+                {preparationCopy
+                  ? preparationCopy.message
+                  : confirmed
+                    ? "Your payment is recorded. Your order has been sent to the kitchen."
+                    : rejected
+                      ? "Please ask the counter staff for help."
+                      : "One more step before the kitchen."}
               </p>
             </div>
             <p className="order-receipt-context">
@@ -136,11 +166,13 @@ export function CustomerOrderPage() {
                 {confirmed ? "With your team" : "At the counter"}
               </p>
               <h2 id="order-receipt-next-title">
-                {confirmed
-                  ? "Your order is confirmed"
-                  : rejected
-                    ? "Please speak to the counter staff"
-                    : "Show your order QR at the counter"}
+                {preparationCopy
+                  ? preparationCopy.title
+                  : confirmed
+                    ? "Your order is confirmed"
+                    : rejected
+                      ? "Please speak to the counter staff"
+                      : "Show your order QR at the counter"}
               </h2>
               <p>
                 {confirmed ? (
@@ -187,16 +219,26 @@ export function CustomerOrderPage() {
                 <li aria-current={confirmed ? "step" : undefined}>
                   <span aria-hidden="true">03</span>
                   <div>
-                    <strong>Kitchen queue</strong>
+                    <strong>
+                      {preparationCopy
+                        ? "Kitchen preparation"
+                        : "Kitchen queue"}
+                    </strong>
                     <p>
-                      {confirmed ? "Sent to the kitchen." : "Not queued yet."}
+                      {preparationCopy
+                        ? preparationCopy.step
+                        : confirmed
+                          ? "Sent to the kitchen."
+                          : "Not queued yet."}
                     </p>
                   </div>
                 </li>
               </ol>
               <div className="order-receipt-status" role="status">
                 <span className="sr-only">{statusLabel}. </span>
-                {confirmed ? (
+                {preparationCopy ? (
+                  preparationCopy.message
+                ) : confirmed ? (
                   "The cashier confirmed your order and payment. Your order has been sent to the kitchen."
                 ) : rejected ? (
                   "This order was rejected. Ask the counter staff for assistance."

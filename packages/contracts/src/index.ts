@@ -774,6 +774,8 @@ export interface CustomerOrderStatusResponse {
     status: "PENDING_CONFIRMATION" | "CONFIRMED" | "REJECTED";
     paymentStatus: "UNPAID" | "PAID";
     confirmedAt: string | null;
+    preparationStatus: PreparationStatus | null;
+    preparationStartedAt: string | null;
     updatedAt: string;
   };
 }

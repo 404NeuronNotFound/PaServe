@@ -10,7 +10,8 @@ import { AuthService } from '../auth/auth.service.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 
 export type OrderWorkflow = 'cashier' | 'kitchen';
-type RelayEvent = 'new_order' | 'order_confirmed' | 'resync' | 'unavailable';
+type OrderEvent = 'new_order' | 'order_confirmed' | 'order_preparing';
+type RelayEvent = OrderEvent | 'resync' | 'unavailable';
 type Listener = (event: RelayEvent, data?: Record<string, string>) => void;
 type Subscription = {
   channel: RealtimeChannel;
@@ -48,10 +49,17 @@ export class NewOrderEventsService implements OnModuleDestroy {
   /** Reuse one private Supabase subscription per shop/workflow per API process. */
   private async listen(
     topic: string,
-    eventName: 'new_order' | 'order_confirmed',
+    eventName: OrderEvent | readonly OrderEvent[],
     scope: Record<string, string>,
     listener: Listener,
   ) {
+    const accepted = new Set(
+      typeof eventName === 'string' ? [eventName] : eventName,
+    );
+    const scopedListener: Listener = (event, data) => {
+      if (event === 'resync' || event === 'unavailable' || accepted.has(event))
+        listener(event, data);
+    };
     // A rapid reconnect must not reuse a channel that is still leaving.
     await this.removals.get(topic);
     if (!this.client) {
@@ -68,27 +76,29 @@ export class NewOrderEventsService implements OnModuleDestroy {
       const subscription = { channel, listeners, connected: false };
       entry = subscription;
       this.subscriptions.set(topic, entry);
-      listeners.add(listener);
+      listeners.add(scopedListener);
       channel
-        .on('broadcast', { event: eventName }, ({ payload }) => {
+        .on('broadcast', { event: '*' }, ({ event, payload }) => {
+          if (
+            event !== 'new_order' &&
+            event !== 'order_confirmed' &&
+            event !== 'order_preparing'
+          )
+            return;
           const data = payload as Record<string, unknown> | null;
           if (
             !data ||
             !Object.entries(scope).every(([key, value]) => data[key] === value)
           )
             return;
-          if (
-            eventName === 'order_confirmed' &&
-            typeof data.orderId !== 'string'
-          )
-            return;
+          if (event !== 'new_order' && typeof data.orderId !== 'string') return;
           const safe = {
             ...scope,
-            ...(eventName === 'order_confirmed'
+            ...(event !== 'new_order'
               ? { orderId: data.orderId as string }
               : {}),
           };
-          for (const notify of listeners) notify(eventName, safe);
+          for (const notify of listeners) notify(event, safe);
         })
         .subscribe((status) => {
           subscription.connected = status === 'SUBSCRIBED';
@@ -96,13 +106,13 @@ export class NewOrderEventsService implements OnModuleDestroy {
           for (const notify of listeners) notify(event);
         });
     } else {
-      entry.listeners.add(listener);
+      entry.listeners.add(scopedListener);
       // Close the initial read/subscription race for additional local consumers.
-      listener(entry.connected ? 'resync' : 'unavailable');
+      scopedListener(entry.connected ? 'resync' : 'unavailable');
     }
     const subscription = entry;
     return () => {
-      subscription.listeners.delete(listener);
+      subscription.listeners.delete(scopedListener);
       if (!subscription.listeners.size) {
         this.subscriptions.delete(topic);
         const removal = Promise.resolve(
@@ -137,7 +147,7 @@ export class NewOrderEventsService implements OnModuleDestroy {
   /** Internal relay only: callers construct topics and supply a live access check. */
   async relay(
     topic: string,
-    eventName: 'new_order' | 'order_confirmed',
+    eventName: OrderEvent | readonly OrderEvent[],
     scope: Record<string, string>,
     authorize: () => Promise<unknown>,
     response: Response,
@@ -167,7 +177,7 @@ export class NewOrderEventsService implements OnModuleDestroy {
         // Coalesce bursts; the client fetches authoritative state, not deltas.
         if (event !== 'heartbeat')
           pending =
-            event === 'order_confirmed'
+            event === 'order_confirmed' || event === 'order_preparing'
               ? { event: 'resync', data: scope }
               : { event, data };
         return;

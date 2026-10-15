@@ -3,6 +3,7 @@ import { useSessionStore } from "../auth/stores/session";
 
 export type OrderWorkflow = "cashier" | "kitchen";
 export type LiveOrderStatus = "connecting" | "live" | "retrying" | "denied";
+type OrderEvent = "new_order" | "order_confirmed" | "order_preparing";
 
 /** Browser credentials stay in the Authorization header, never in a URL. */
 export function subscribeNewOrders(
@@ -26,7 +27,7 @@ export function subscribeNewOrders(
 export function subscribeOrderStream(
   path: string,
   scope: Record<string, string>,
-  eventName: "new_order" | "order_confirmed",
+  eventName: OrderEvent | readonly OrderEvent[],
   getToken: () => string | null,
   onEvent: (event: string, data: Record<string, unknown>) => void,
   onStatus: (status: LiveOrderStatus) => void,
@@ -112,7 +113,7 @@ export function subscribeOrderStream(
               .split("\n")
               .find((line) => line.startsWith("data: "))
               ?.slice(6);
-            if (!raw) continue;
+            if (!raw || !event) continue;
             const data: unknown = JSON.parse(raw);
             if (
               !data ||
@@ -124,7 +125,12 @@ export function subscribeOrderStream(
             )
               continue;
             if (event === "unavailable") onStatus("retrying");
-            if (event === eventName || event === "resync") {
+            if (
+              event === "resync" ||
+              (typeof eventName === "string"
+                ? event === eventName
+                : eventName.some((name) => name === event))
+            ) {
               onStatus("live");
               onEvent(event, data as Record<string, unknown>);
             }

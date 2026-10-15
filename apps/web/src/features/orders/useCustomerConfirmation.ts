@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CustomerOrderStatusResponse } from "@paserve/contracts";
+import { PREPARATION_STATUSES } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import { parseOrderQrToken } from "./order-qr-reference";
 import { subscribeOrderStream } from "./new-order-events";
@@ -57,6 +58,15 @@ export function useCustomerConfirmation(
           ) ||
           !["UNPAID", "PAID"].includes(order.paymentStatus) ||
           !Number.isFinite(Date.parse(order.updatedAt)) ||
+          (order.preparationStatus != null &&
+            (!PREPARATION_STATUSES.includes(order.preparationStatus) ||
+              order.status !== "CONFIRMED" ||
+              order.paymentStatus !== "PAID" ||
+              (order.preparationStatus !== "QUEUED" &&
+                (!order.preparationStartedAt ||
+                  !Number.isFinite(
+                    Date.parse(order.preparationStartedAt),
+                  ))))) ||
           (order.status === "CONFIRMED" &&
             (order.paymentStatus !== "PAID" ||
               !order.confirmedAt ||
@@ -85,7 +95,7 @@ export function useCustomerConfirmation(
     const unsubscribe = subscribeOrderStream(
       `${path}/events`,
       { shopId: reference.shopId, orderId },
-      "order_confirmed",
+      ["order_confirmed", "order_preparing"],
       () => token,
       () => {
         void refresh();

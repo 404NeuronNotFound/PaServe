@@ -22,10 +22,14 @@ import { api } from "../../lib/api/client";
 import { KitchenRoute } from "../../features/kitchen/KitchenRoute";
 import { KitchenPage } from "./KitchenPage";
 import { feedback } from "../../app/stores/feedback";
-import { subscribeNewOrders } from "../../features/orders/new-order-events";
+import {
+  subscribeNewOrders,
+  subscribeOrderStream,
+} from "../../features/orders/new-order-events";
 
 vi.mock("../../features/orders/new-order-events", () => ({
   subscribeNewOrders: vi.fn(() => vi.fn()),
+  subscribeOrderStream: vi.fn(() => vi.fn()),
 }));
 
 vi.mock("../../features/shops/api/context", () => ({
@@ -157,6 +161,33 @@ it("refreshes queued orders when the shop's New Order subscription signals entry
   await screen.findByRole("article", { name: "Order ORD-000002" });
   act(() => callback(false));
   await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(2));
+});
+it("removes a started order from the queue on a preparation event without manual refresh", async () => {
+  setup("KITCHEN");
+  await screen.findByRole("article", { name: "Order ORD-000001" });
+  expect(subscribeOrderStream).toHaveBeenCalledWith(
+    "/shops/shop-a/orders/preparation-events",
+    { shopId: "shop-a" },
+    "order_preparing",
+    expect.any(Function),
+    expect.any(Function),
+    expect.any(Function),
+    true,
+  );
+  vi.mocked(api.get).mockResolvedValue({
+    data: { orders: [], nextCursor: null },
+  });
+  act(() =>
+    vi.mocked(subscribeOrderStream).mock.calls[0][4]("order_preparing", {
+      shopId: "shop-a",
+      orderId: "first",
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("article", { name: "Order ORD-000001" }),
+    ).not.toBeInTheDocument(),
+  );
 });
 it.each(["KITCHEN", "OWNER", "ADMIN", "MANAGER"] as const)(
   "shows real preparation details for %s",
@@ -328,6 +359,40 @@ it("starts a ticket and shows its saved preparation time in Preparing", async ()
     {},
     expect.any(Object),
   );
+});
+
+it("adds the remotely started order to an open Preparing view without a local action", async () => {
+  setup("KITCHEN", []);
+  await screen.findByRole("button", { name: "Preparing" });
+  await userEvent.click(screen.getByRole("button", { name: "Preparing" }));
+  await screen.findByText("Nothing preparing just yet.");
+  const prepared = {
+    ...ticket(),
+    preparationStatus: "PREPARING",
+    preparationStartedAt: "2026-10-15T01:05:00.000Z",
+    preparationStartedBy: "remote-staff",
+  };
+  vi.mocked(api.get).mockResolvedValue({
+    data: { orders: [prepared], nextCursor: null },
+  });
+  act(() =>
+    vi
+      .mocked(subscribeOrderStream)
+      .mock.calls[0][4]("order_preparing", {
+        shopId: "shop-a",
+        orderId: "first",
+      }),
+  );
+  const article = await screen.findByRole("article", {
+    name: "Order ORD-000001",
+  });
+  expect(
+    within(article).getByText("PREPARING · IN PROGRESS"),
+  ).toBeInTheDocument();
+  expect(
+    article.querySelector('time[datetime="2026-10-15T01:05:00.000Z"]'),
+  ).toBeInTheDocument();
+  expect(api.post).not.toHaveBeenCalled();
 });
 it("keeps a ticket and exposes recovery when preparation start fails", async () => {
   setup();

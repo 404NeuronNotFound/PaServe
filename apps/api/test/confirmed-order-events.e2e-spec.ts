@@ -29,6 +29,9 @@ describe('Confirmed order customer/staff HTTP access', () => {
     qrTokenExpiresAt: Date;
     qrTokenRevokedAt: Date | null;
     receiptAccessRevokedAt: Date | null;
+    preparationStatus: string | null;
+    preparationStartedAt: Date | null;
+    queuedAt: Date | null;
   };
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
@@ -75,6 +78,9 @@ describe('Confirmed order customer/staff HTTP access', () => {
       ...tokens.metadata(),
       qrTokenRevokedAt: new Date(),
       receiptAccessRevokedAt: null,
+      preparationStatus: null,
+      preparationStartedAt: null,
+      queuedAt: null,
     };
     findShop.mockImplementation(async ({ where }) =>
       where.slug === 'cafe' ? { id: shopId } : null,
@@ -114,6 +120,50 @@ describe('Confirmed order customer/staff HTTP access', () => {
     });
     expect(Object.keys(result.body.order)).not.toContain('qrTokenNonce');
   });
+  it('returns the current preparation state through the same credential-protected receipt', async () => {
+    order.preparationStatus = 'PREPARING';
+    order.queuedAt = new Date();
+    order.preparationStartedAt = new Date(order.queuedAt.getTime() + 1000);
+    const result = await customer('status').expect(200);
+    expect(result.body.order).toMatchObject({
+      preparationStatus: 'PREPARING',
+      preparationStartedAt: order.preparationStartedAt.toISOString(),
+    });
+    expect(result.body.order).not.toHaveProperty('preparationStartedBy');
+  });
+  it.each(['OWNER', 'KITCHEN'] as const)(
+    'permits the preparation dashboard stream for %s',
+    async (value) => {
+      role = value;
+      await request(app.getHttpServer())
+        .get(`/api/v1/shops/${shopId}/orders/preparation-events`)
+        .set('Authorization', 'Bearer staff-session')
+        .expect(200);
+      expect(relay).toHaveBeenCalledWith(
+        `staff:preparation:${shopId}`,
+        'order_preparing',
+        { shopId },
+        expect.any(Function),
+        expect.anything(),
+      );
+    },
+  );
+  it('denies cashier-only, anonymous and other-shop preparation dashboard subscriptions', async () => {
+    const path = `/api/v1/shops/${shopId}/orders/preparation-events`;
+    await request(app.getHttpServer()).get(path).expect(401);
+    role = 'CASHIER';
+    await request(app.getHttpServer())
+      .get(path)
+      .set('Authorization', 'Bearer staff-session')
+      .expect(403);
+    role = 'OWNER';
+    await request(app.getHttpServer())
+      .get(
+        '/api/v1/shops/55b18d73-f2fb-4fe6-bb1c-30cf385c3b24/orders/preparation-events',
+      )
+      .set('Authorization', 'Bearer staff-session')
+      .expect(404);
+  });
   it('requires a credential, and denies tampered/expired/revoked receipts', async () => {
     await request(app.getHttpServer())
       .get(`/api/v1/menu/cafe/orders/${id}/status`)
@@ -138,7 +188,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
     await customer('events').expect(200);
     expect(relay).toHaveBeenCalledWith(
       `customer:confirmed:${shopId}:${id}`,
-      'order_confirmed',
+      ['order_confirmed', 'order_preparing'],
       { shopId, orderId: id },
       expect.any(Function),
       expect.anything(),
@@ -154,7 +204,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
         .expect(200);
       expect(relay).toHaveBeenCalledWith(
         `staff:confirmed:${shopId}`,
-        'order_confirmed',
+        ['order_confirmed', 'order_preparing'],
         { shopId },
         expect.any(Function),
         expect.anything(),

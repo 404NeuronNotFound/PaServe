@@ -101,6 +101,34 @@ it("delivers confirmation only for the subscribed customer shop and exact order"
   );
 });
 
+it("accepts confirmation and preparation on one receipt stream while filtering other orders", async () => {
+  const events = vi.fn();
+  stop = subscribeOrderStream(
+    "/menu/cafe/orders/order-a/events",
+    { shopId: "shop-a", orderId: "order-a" },
+    ["order_confirmed", "order_preparing"],
+    () => "receipt-token",
+    events,
+    status,
+  );
+  await flush();
+  const message = (event: string, orderId = "order-a") =>
+    `event: ${event}\ndata: ${JSON.stringify({ shopId: "shop-a", orderId })}\n\n`;
+  push.enqueue(
+    new TextEncoder().encode(
+      message("order_confirmed") +
+        message("order_preparing", "order-b") +
+        message("order_preparing") +
+        message("unknown"),
+    ),
+  );
+  await flush();
+  expect(events.mock.calls.map(([event]) => event)).toEqual([
+    "order_confirmed",
+    "order_preparing",
+  ]);
+});
+
 it("reconnects and resynchronizes after a closed stream without inventing arrivals", async () => {
   stop = subscribeNewOrders("shop-a", "kitchen", refresh, status);
   await flush();

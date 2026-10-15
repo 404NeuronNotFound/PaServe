@@ -55,7 +55,7 @@ export class CustomerOrderStatusController {
     const { shopId } = saved.order;
     return this.events.relay(
       `customer:confirmed:${shopId}:${orderId}`,
-      'order_confirmed',
+      ['order_confirmed', 'order_preparing'],
       { shopId, orderId },
       () => this.status.read(slug, orderId, token),
       response,
@@ -78,7 +78,7 @@ export class ConfirmedOrderEventsController {
       shopId = request.shopMembership.shopId;
     return this.events.relay(
       `staff:confirmed:${shopId}`,
-      'order_confirmed',
+      ['order_confirmed', 'order_preparing'],
       { shopId },
       async () => {
         const actor = await this.auth.currentUser(token);
@@ -86,6 +86,30 @@ export class ConfirmedOrderEventsController {
           actor.id,
           shopId,
           'shop.orders.read',
+        );
+      },
+      response,
+    );
+  }
+
+  @Get('preparation-events')
+  @Roles('OWNER', 'ADMIN', 'MANAGER', 'KITCHEN')
+  preparationStream(
+    @Req() request: ShopMemberRequest,
+    @Res() response: Response,
+  ) {
+    const token = bearer(request),
+      shopId = request.shopMembership.shopId;
+    return this.events.relay(
+      `staff:preparation:${shopId}`,
+      'order_preparing',
+      { shopId },
+      async () => {
+        const actor = await this.auth.currentUser(token);
+        await this.members.requirePermission(
+          actor.id,
+          shopId,
+          'shop.preparation.queue.read',
         );
       },
       response,

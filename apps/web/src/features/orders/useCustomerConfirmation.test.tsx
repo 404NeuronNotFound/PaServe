@@ -96,3 +96,30 @@ it("coalesces duplicate events during a read and retains one confirmed state aga
   await flush();
   expect(result.current).toEqual(confirmed);
 });
+
+it("updates preparation immediately and does not regress after duplicates or an older confirmation", async () => {
+  fetchStatus.mockResolvedValue(response(confirmed));
+  const started = Date.now();
+  const { result } = renderHook(() =>
+    useCustomerConfirmation("cafe", orderId, token),
+  );
+  await flush();
+  const preparing = {
+    ...confirmed,
+    preparationStatus: "PREPARING",
+    preparationStartedAt: "2026-10-15T01:02:00Z",
+    updatedAt: "2026-10-15T01:02:00Z",
+  };
+  fetchStatus.mockResolvedValue(response(preparing));
+  const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
+  act(() => {
+    for (let i = 0; i < 3; i++) notify("order_preparing", { shopId, orderId });
+  });
+  await flush();
+  expect(result.current).toEqual(preparing);
+  expect(Date.now()).toBe(started);
+  fetchStatus.mockResolvedValue(response(confirmed));
+  act(() => notify("resync", { shopId, orderId }));
+  await flush();
+  expect(result.current).toEqual(preparing);
+});

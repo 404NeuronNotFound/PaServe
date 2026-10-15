@@ -31,6 +31,9 @@ describe('Customer receipt status access', () => {
     receiptAccessRevokedAt: null as Date | null,
     decidedAt: null as Date | null,
     updatedAt: new Date(),
+    preparationStatus: null as string | null,
+    preparationStartedAt: null as Date | null,
+    queuedAt: null as Date | null,
     paidBy: 'private-actor',
     paymentReference: 'private-reference',
   });
@@ -54,6 +57,8 @@ describe('Customer receipt status access', () => {
       'id',
       'orderNumber',
       'paymentStatus',
+      'preparationStartedAt',
+      'preparationStatus',
       'shopId',
       'status',
       'updatedAt',
@@ -72,6 +77,24 @@ describe('Customer receipt status access', () => {
       paymentStatus: 'PAID',
       confirmedAt: order.decidedAt.toISOString(),
     });
+  });
+  it('returns saved preparation status and time without exposing the preparation actor', async () => {
+    order.status = 'CONFIRMED';
+    order.paymentStatus = 'PAID';
+    order.decidedAt = new Date();
+    order.preparationStatus = 'PREPARING';
+    order.queuedAt = order.decidedAt;
+    order.preparationStartedAt = new Date(order.decidedAt.getTime() + 1000);
+    const result = await service.read('cafe', id, tokens.issue(order));
+    expect(result.order).toMatchObject({
+      preparationStatus: 'PREPARING',
+      preparationStartedAt: order.preparationStartedAt.toISOString(),
+    });
+    expect(result.order).not.toHaveProperty('preparationStartedBy');
+    order.preparationStartedAt = null;
+    await expect(
+      service.read('cafe', id, tokens.issue(order)),
+    ).rejects.toMatchObject({ response: { code: 'INVALID_ORDER_STATE' } });
   });
   it.each([
     'wrong-order',

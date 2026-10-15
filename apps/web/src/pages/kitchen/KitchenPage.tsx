@@ -45,6 +45,7 @@ import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import "./kitchen.css";
 import { useNewOrderEvents } from "../../features/orders/useNewOrderEvents";
+import { usePreparationEvents } from "../../features/orders/usePreparationEvents";
 
 const time = (value: string) =>
   new Date(value).toLocaleTimeString([], {
@@ -114,6 +115,12 @@ function NewOrders() {
   const user =
     useQueryClient().getQueryData<CurrentUserResponse>(currentUserKey)!.user;
   const queryClient = useQueryClient();
+  usePreparationEvents(shopId, () => {
+    for (const status of ["QUEUED", "PREPARING"])
+      void queryClient.invalidateQueries({
+        queryKey: ["kitchen", "queue", user.id, shopId, status],
+      });
+  });
   const liveStatus = useNewOrderEvents(shopId, "kitchen", () => {
     void queryClient.invalidateQueries({
       queryKey: ["kitchen", "queue", user.id, shopId, "QUEUED"],

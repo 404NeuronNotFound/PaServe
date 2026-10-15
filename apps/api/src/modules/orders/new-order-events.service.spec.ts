@@ -24,7 +24,7 @@ describe('New order staff subscriptions', () => {
   const members = { requirePermission: vi.fn() };
   const config = { getOrThrow: vi.fn((key: string) => key) };
   let service: NewOrderEventsService;
-  let broadcast: (message: { payload: unknown }) => void;
+  let broadcast: (message: { payload: unknown; event?: string }) => void;
   let status: (value: string) => void;
   const channel = { on: vi.fn(), subscribe: vi.fn() };
   const client = {
@@ -54,7 +54,7 @@ describe('New order staff subscriptions', () => {
     members.requirePermission.mockResolvedValue({ role: 'KITCHEN' });
     client.channel.mockReturnValue(channel);
     channel.on.mockImplementation((_type, _filter, callback) => {
-      broadcast = callback;
+      broadcast = (message) => callback({ event: 'new_order', ...message });
       return channel;
     });
     channel.subscribe.mockImplementation((callback) => {
@@ -111,6 +111,49 @@ describe('New order staff subscriptions', () => {
       'shop.orders.read',
     );
     expect(client.channel).not.toHaveBeenCalled();
+  });
+  it('isolates preparation events by scope and event type on a shared channel', async () => {
+    const preparing = new Stream(),
+      confirmation = new Stream();
+    const authorize = vi.fn().mockResolvedValue(undefined);
+    await service.relay(
+      'staff:preparation:shop-a',
+      'order_preparing',
+      { shopId: 'shop-a' },
+      authorize,
+      preparing as unknown as Response,
+    );
+    await service.relay(
+      'staff:preparation:shop-a',
+      'order_confirmed',
+      { shopId: 'shop-a' },
+      authorize,
+      confirmation as unknown as Response,
+    );
+    await flush();
+    preparing.write.mockClear();
+    confirmation.write.mockClear();
+    broadcast({
+      event: 'order_preparing',
+      payload: { shopId: 'shop-b', orderId: 'other-order' },
+    });
+    await flush();
+    expect(preparing.write).not.toHaveBeenCalled();
+    broadcast({
+      event: 'order_preparing',
+      payload: {
+        shopId: 'shop-a',
+        orderId: 'order-a',
+        preparationStartedBy: 'private',
+      },
+    });
+    await flush();
+    expect(preparing.write).toHaveBeenCalledExactlyOnceWith(
+      'event: order_preparing\ndata: {"shopId":"shop-a","orderId":"order-a"}\n\n',
+    );
+    expect(confirmation.write).not.toHaveBeenCalled();
+    preparing.emit('close');
+    confirmation.emit('close');
   });
 
   it('rechecks the session and live membership before delivery and closes revoked access', async () => {
