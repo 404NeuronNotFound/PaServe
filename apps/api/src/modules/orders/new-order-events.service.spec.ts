@@ -125,7 +125,7 @@ describe('New order staff subscriptions', () => {
     );
     await service.relay(
       'staff:preparation:shop-a',
-      'order_confirmed',
+      'order_ready',
       { shopId: 'shop-a' },
       authorize,
       confirmation as unknown as Response,
@@ -281,6 +281,102 @@ describe('New order staff subscriptions', () => {
     const second = await reopening;
     expect(client.channel).toHaveBeenCalledTimes(2);
     second.emit('close');
+  });
+
+  it('rejects a mismatched tenant channel before authorization or subscription', async () => {
+    const authorize = vi.fn();
+    await expect(
+      service.relay(
+        'staff:confirmed:shop-b',
+        'order_ready',
+        { shopId: 'shop-a' },
+        authorize,
+        new Stream() as unknown as Response,
+      ),
+    ).rejects.toThrow('Invalid realtime channel configuration');
+    expect(authorize).not.toHaveBeenCalled();
+    expect(client.channel).not.toHaveBeenCalled();
+  });
+
+  it('recovers after failed subscription setup instead of reusing a poisoned channel', async () => {
+    channel.subscribe.mockImplementationOnce(() => {
+      throw new Error('upstream unavailable');
+    });
+    await expect(open()).rejects.toMatchObject({
+      response: { code: 'REALTIME_UNAVAILABLE' },
+      status: 503,
+    });
+    expect(client.removeChannel).toHaveBeenCalledOnce();
+    const stream = await open();
+    status('SUBSCRIBED');
+    await flush();
+    expect(client.channel).toHaveBeenCalledTimes(2);
+    expect(stream.write.mock.lastCall?.[0]).toContain('event: resync');
+  });
+
+  it('opens SSE headers before synchronous subscribe callbacks or shared-channel resync writes', async () => {
+    channel.subscribe.mockImplementationOnce((callback) => {
+      status = callback;
+      callback('SUBSCRIBED');
+      return channel;
+    });
+    const first = await open();
+    const second = await open();
+    await flush();
+    for (const stream of [first, second]) {
+      expect(stream.write.mock.calls.length).toBeGreaterThan(0);
+      expect(stream.flushHeaders.mock.invocationCallOrder[0]).toBeLessThan(
+        stream.write.mock.invocationCallOrder[0],
+      );
+      expect(stream.write.mock.lastCall?.[0]).toContain('event: resync');
+    }
+  });
+
+  it('revokes one shared-channel recipient without delivering to it or disconnecting an authorized peer', async () => {
+    const first = new Stream(),
+      second = new Stream();
+    const authorizeFirst = vi.fn().mockResolvedValue(undefined),
+      authorizeSecond = vi.fn().mockResolvedValue(undefined);
+    for (const [stream, authorize] of [
+      [first, authorizeFirst],
+      [second, authorizeSecond],
+    ] as const) {
+      await service.relay(
+        'staff:confirmed:shop-a',
+        'order_completed',
+        { shopId: 'shop-a' },
+        authorize,
+        stream as unknown as Response,
+      );
+    }
+    await flush();
+    first.write.mockClear();
+    second.write.mockClear();
+    authorizeFirst.mockRejectedValue(new Error('membership removed'));
+    broadcast({
+      event: 'order_completed',
+      payload: { shopId: 'shop-a', orderId: 'order-a' },
+    });
+    await flush();
+    expect(first.write).not.toHaveBeenCalled();
+    expect(first.end).toHaveBeenCalledOnce();
+    expect(second.write).toHaveBeenCalledExactlyOnceWith(
+      'event: order_completed\ndata: {"shopId":"shop-a","orderId":"order-a"}\n\n',
+    );
+    expect(second.end).not.toHaveBeenCalled();
+    expect(client.removeChannel).not.toHaveBeenCalled();
+  });
+
+  it('still closes an SSE connection if upstream channel cleanup throws', async () => {
+    const stream = await open();
+    client.removeChannel.mockImplementationOnce(() => {
+      throw new Error('socket already closed');
+    });
+    expect(() => stream.emit('close')).not.toThrow();
+    expect(stream.end).toHaveBeenCalledOnce();
+    const recovered = await open();
+    expect(client.channel).toHaveBeenCalledTimes(2);
+    recovered.emit('close');
   });
 
   it('ends active streams on module shutdown', async () => {

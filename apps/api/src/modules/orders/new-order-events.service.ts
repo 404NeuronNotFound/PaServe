@@ -1,4 +1,8 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleDestroy,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   createClient,
@@ -9,15 +13,13 @@ import type { Response } from 'express';
 import { AuthService } from '../auth/auth.service.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 
+import {
+  realtimeChannel,
+  type RealtimeEvent,
+} from '../realtime/realtime-channel.js';
+
 export type OrderWorkflow = 'cashier' | 'kitchen';
-type OrderEvent =
-  | 'new_order'
-  | 'order_confirmed'
-  | 'order_preparing'
-  | 'order_ready'
-  | 'order_completed'
-  | 'product_sold_out'
-  | 'product_available';
+type OrderEvent = RealtimeEvent;
 type RelayEvent = OrderEvent | 'resync' | 'unavailable';
 type Listener = (event: RelayEvent, data?: Record<string, string>) => void;
 type Subscription = {
@@ -84,40 +86,48 @@ export class NewOrderEventsService implements OnModuleDestroy {
       entry = subscription;
       this.subscriptions.set(topic, entry);
       listeners.add(scopedListener);
-      channel
-        .on('broadcast', { event: '*' }, ({ event, payload }) => {
-          if (
-            event !== 'new_order' &&
-            event !== 'order_confirmed' &&
-            event !== 'order_preparing' &&
-            event !== 'order_ready' &&
-            event !== 'order_completed' &&
-            event !== 'product_sold_out' &&
-            event !== 'product_available'
-          )
-            return;
-          const data = payload as Record<string, unknown> | null;
-          if (
-            !data ||
-            !Object.entries(scope).every(([key, value]) => data[key] === value)
-          )
-            return;
-          const orderEvent =
-            event !== 'new_order' &&
-            event !== 'product_sold_out' &&
-            event !== 'product_available';
-          if (orderEvent && typeof data.orderId !== 'string') return;
-          const safe = {
-            ...scope,
-            ...(orderEvent ? { orderId: data.orderId as string } : {}),
-          };
-          for (const notify of listeners) notify(event, safe);
-        })
-        .subscribe((status) => {
-          subscription.connected = status === 'SUBSCRIBED';
-          const event = status === 'SUBSCRIBED' ? 'resync' : 'unavailable';
-          for (const notify of listeners) notify(event);
-        });
+      try {
+        channel
+          .on('broadcast', { event: '*' }, ({ event, payload }) => {
+            if (
+              event !== 'new_order' &&
+              event !== 'order_confirmed' &&
+              event !== 'order_preparing' &&
+              event !== 'order_ready' &&
+              event !== 'order_completed' &&
+              event !== 'product_sold_out' &&
+              event !== 'product_available'
+            )
+              return;
+            const data = payload as Record<string, unknown> | null;
+            if (
+              !data ||
+              !Object.entries(scope).every(
+                ([key, value]) => data[key] === value,
+              )
+            )
+              return;
+            const orderEvent =
+              event !== 'new_order' &&
+              event !== 'product_sold_out' &&
+              event !== 'product_available';
+            if (orderEvent && typeof data.orderId !== 'string') return;
+            const safe = {
+              ...scope,
+              ...(orderEvent ? { orderId: data.orderId as string } : {}),
+            };
+            for (const notify of listeners) notify(event, safe);
+          })
+          .subscribe((status) => {
+            subscription.connected = status === 'SUBSCRIBED';
+            const event = status === 'SUBSCRIBED' ? 'resync' : 'unavailable';
+            for (const notify of listeners) notify(event);
+          });
+      } catch (error) {
+        this.retire(topic, subscription);
+        await this.removals.get(topic);
+        throw error;
+      }
     } else {
       entry.listeners.add(scopedListener);
       // Close the initial read/subscription race for additional local consumers.
@@ -127,16 +137,26 @@ export class NewOrderEventsService implements OnModuleDestroy {
     return () => {
       subscription.listeners.delete(scopedListener);
       if (!subscription.listeners.size) {
-        this.subscriptions.delete(topic);
-        const removal = Promise.resolve(
-          this.client?.removeChannel(subscription.channel),
-        ).catch(() => undefined);
-        this.removals.set(topic, removal);
-        void removal.then(() => {
-          if (this.removals.get(topic) === removal) this.removals.delete(topic);
-        });
+        this.retire(topic, subscription);
       }
     };
+  }
+
+  private retire(topic: string, subscription: Subscription) {
+    if (this.subscriptions.get(topic) !== subscription) return;
+    this.subscriptions.delete(topic);
+    let removal: Promise<unknown>;
+    try {
+      removal = Promise.resolve(
+        this.client?.removeChannel(subscription.channel),
+      ).catch(() => undefined);
+    } catch {
+      removal = Promise.resolve();
+    }
+    this.removals.set(topic, removal);
+    void removal.then(() => {
+      if (this.removals.get(topic) === removal) this.removals.delete(topic);
+    });
   }
 
   async stream(
@@ -165,6 +185,7 @@ export class NewOrderEventsService implements OnModuleDestroy {
     authorize: () => Promise<unknown>,
     response: Response,
   ) {
+    const channel = realtimeChannel(topic, eventName, scope);
     await authorize();
     if (response.destroyed) return;
     let closed = false;
@@ -175,6 +196,8 @@ export class NewOrderEventsService implements OnModuleDestroy {
     let unlisten: (() => void) | undefined;
     let heartbeat: ReturnType<typeof setInterval> | undefined;
     let expiry: ReturnType<typeof setTimeout> | undefined;
+    let opened = false;
+    let initial: 'resync' | 'unavailable' | undefined;
     const close = () => {
       if (closed) return;
       closed = true;
@@ -184,7 +207,10 @@ export class NewOrderEventsService implements OnModuleDestroy {
       this.streams.delete(close);
       response.end();
     };
-    const deliver = async (event: RelayEvent | 'heartbeat', data = scope) => {
+    const deliver = async (
+      event: RelayEvent | 'heartbeat',
+      data = channel.scope,
+    ) => {
       if (closed) return;
       if (checking) {
         // Coalesce bursts; the client fetches authoritative state, not deltas.
@@ -196,7 +222,7 @@ export class NewOrderEventsService implements OnModuleDestroy {
             event === 'order_completed' ||
             event === 'product_sold_out' ||
             event === 'product_available'
-              ? { event: 'resync', data: scope }
+              ? { event: 'resync', data: channel.scope }
               : { event, data };
         return;
       }
@@ -221,9 +247,18 @@ export class NewOrderEventsService implements OnModuleDestroy {
     this.streams.add(close);
     try {
       // Resolve configuration and subscribe before opening a successful stream.
-      unlisten = await this.listen(topic, eventName, scope, (event, data) => {
-        void deliver(event, data);
-      });
+      unlisten = await this.listen(
+        channel.topic,
+        channel.events,
+        channel.scope,
+        (event, data) => {
+          if (!opened) {
+            initial = event === 'unavailable' ? 'unavailable' : 'resync';
+            return;
+          }
+          void deliver(event, data);
+        },
+      );
       if (closed) {
         unlisten();
         return;
@@ -232,12 +267,14 @@ export class NewOrderEventsService implements OnModuleDestroy {
       response.setHeader('Cache-Control', 'no-store');
       response.setHeader('X-Accel-Buffering', 'no');
       response.flushHeaders();
+      opened = true;
+      if (initial) void deliver(initial);
       heartbeat = setInterval(() => {
         void deliver('heartbeat');
       }, 15_000);
       // Bound connection lifetime. Reconnection uses the current browser token.
       expiry = setTimeout(close, 60_000);
-    } catch (error) {
+    } catch {
       if (response.headersSent) close();
       else {
         closed = true;
@@ -245,7 +282,10 @@ export class NewOrderEventsService implements OnModuleDestroy {
         response.off('close', close);
         unlisten?.();
       }
-      throw error;
+      throw new ServiceUnavailableException({
+        code: 'REALTIME_UNAVAILABLE',
+        message: 'Live updates are temporarily unavailable.',
+      });
     }
   }
 

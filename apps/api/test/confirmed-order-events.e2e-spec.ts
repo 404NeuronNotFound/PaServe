@@ -1,3 +1,4 @@
+import { ServiceUnavailableException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -123,6 +124,24 @@ describe('Confirmed order customer/staff HTTP access', () => {
       paymentStatus: 'PAID',
     });
     expect(Object.keys(result.body.order)).not.toContain('qrTokenNonce');
+  });
+  it('keeps receipt reads authorized and available when realtime is unavailable', async () => {
+    relay.mockImplementationOnce(async () => {
+      throw new ServiceUnavailableException({
+        code: 'REALTIME_UNAVAILABLE',
+        message: 'Live updates are temporarily unavailable.',
+      });
+    });
+    const failed = await customer('events').expect(503);
+    expect(failed.body.code).toBe('REALTIME_UNAVAILABLE');
+    const saved = await customer('status').expect(200);
+    expect(saved.body.order).toMatchObject({
+      id,
+      shopId,
+      status: 'CONFIRMED',
+      paymentStatus: 'PAID',
+    });
+    await customer('status', 'tampered-receipt').expect(403);
   });
   it('returns the current preparation state through the same credential-protected receipt', async () => {
     order.preparationStatus = 'PREPARING';

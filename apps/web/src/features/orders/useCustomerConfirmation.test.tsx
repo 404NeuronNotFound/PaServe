@@ -226,3 +226,19 @@ it("finalizes completion immediately, ignores stale phases, and stops all tracki
     vi.mocked(subscribeOrderStream).mock.results[1].value,
   ).toHaveBeenCalledTimes(1);
 });
+
+it("recovers saved confirmation through polling while the event stream stays unavailable", async () => {
+  const { result } = renderHook(() =>
+    useCustomerConfirmation("cafe", orderId, token),
+  );
+  await flush();
+  expect(result.current?.status).toBe("PENDING_CONFIRMATION");
+  act(() => vi.mocked(subscribeOrderStream).mock.calls[0][5]("retrying"));
+  fetchStatus.mockResolvedValue(response(confirmed));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(15_000);
+  });
+  await flush();
+  expect(result.current).toEqual(confirmed);
+  expect(fetchStatus).toHaveBeenCalledTimes(2);
+});
