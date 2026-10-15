@@ -26,6 +26,7 @@ export class PreparationQueueService {
     actorId: string,
     shopId: string,
     cursor?: string,
+    preparationStatus: 'QUEUED' | 'PREPARING' = 'QUEUED',
   ): Promise<PreparationQueueResponse> {
     const access = shopAccessWhere(actorId, shopId, PREPARATION_QUEUE_ROLES);
     let after: { queuedAt: Date; id: string } | undefined;
@@ -63,7 +64,7 @@ export class PreparationQueueService {
         shop: access,
         status: 'CONFIRMED',
         paymentStatus: 'PAID',
-        preparationStatus: 'QUEUED',
+        preparationStatus,
         queuedAt: { not: null },
         ...(after
           ? {
@@ -85,6 +86,8 @@ export class PreparationQueueService {
         currency: true,
         totalPrice: true,
         queuedAt: true,
+        preparationStartedAt: true,
+        preparationStartedBy: true,
         orderItems: {
           where: {
             shopId,
@@ -93,7 +96,7 @@ export class PreparationQueueService {
               shop: access,
               status: 'CONFIRMED',
               paymentStatus: 'PAID',
-              preparationStatus: 'QUEUED',
+              preparationStatus,
             },
           },
           orderBy: { lineNumber: 'asc' },
@@ -126,6 +129,10 @@ export class PreparationQueueService {
         items = order.orderItems.map(readPriceSnapshot);
         if (
           !order.queuedAt ||
+          (preparationStatus === 'PREPARING' &&
+            (!order.preparationStartedAt ||
+              !order.preparationStartedBy ||
+              order.preparationStartedAt < order.queuedAt)) ||
           order.currency !== 'PHP' ||
           !items.length ||
           !items
@@ -151,7 +158,9 @@ export class PreparationQueueService {
         currency: 'PHP' as const,
         totalPrice: order.totalPrice.toFixed(2),
         queuedAt: order.queuedAt.toISOString(),
-        preparationStatus: 'QUEUED' as const,
+        preparationStatus,
+        preparationStartedAt: order.preparationStartedAt?.toISOString() ?? null,
+        preparationStartedBy: order.preparationStartedBy ?? null,
         items,
       };
     });

@@ -7,11 +7,11 @@ import {
   PREPARATION_QUEUE_ROLES,
 } from './preparation-queue.service.js';
 
-@Controller('shops/:shopId/preparation/queue')
+@Controller('shops/:shopId/preparation')
 export class PreparationQueueController {
   constructor(private readonly queue: PreparationQueueService) {}
 
-  @Get()
+  @Get('queue')
   @Roles(...PREPARATION_QUEUE_ROLES)
   list(
     @Query('cursor') cursor: string | undefined,
@@ -23,6 +23,21 @@ export class PreparationQueueController {
       request.user.id,
       request.shopMembership.shopId,
       cursor,
+    );
+  }
+  @Get('preparing')
+  @Roles(...PREPARATION_QUEUE_ROLES)
+  preparing(
+    @Query('cursor') cursor: string | undefined,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.queue.list(
+      request.user.id,
+      request.shopMembership.shopId,
+      cursor,
+      'PREPARING',
     );
   }
 }

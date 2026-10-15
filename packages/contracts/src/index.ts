@@ -866,10 +866,23 @@ export interface PreparationQueueResponse {
     currency: "PHP";
     totalPrice: string;
     queuedAt: string;
-    preparationStatus: "QUEUED";
+    preparationStatus: "QUEUED" | "PREPARING";
+    preparationStartedAt?: string | null;
+    preparationStartedBy?: string | null;
     items: ProductSelectionQuoteResponse[];
   }>;
   nextCursor: string | null;
+}
+export interface StartPreparationResponse {
+  order: {
+    id: string;
+    shopId: string;
+    preparationStatus: "PREPARING";
+    queuedAt: string;
+    preparationStartedAt: string;
+    preparationStartedBy: string;
+  };
+  alreadyStarted: boolean;
 }
 export interface RestaurantTable {
   id: string;

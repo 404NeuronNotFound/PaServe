@@ -11,6 +11,7 @@ import { OrderQrService } from '../dist/modules/orders/order-qr.service.js';
 import { OrderDecisionService } from '../dist/modules/orders/order-decision.service.js';
 import { CashPaymentService } from '../dist/modules/orders/cash-payment.service.js';
 import { PreparationQueueService } from '../dist/modules/orders/preparation-queue.service.js';
+import { PreparationStartService } from '../dist/modules/orders/preparation-start.service.js';
 
 // Real competing service transactions use only this disposable schema. Public
 // tables and migration history remain untouched; close sessions before removal.
@@ -73,6 +74,8 @@ try {
   // Rebuild the pre-cash shape in our private schema, even after deployment,
   // then exercise the complete migration (including its trigger definition).
   for (const column of [
+    'preparationStartedAt',
+    'preparationStartedBy',
     'preparationStatus',
     'queuedAt',
     'paymentDescription',
@@ -125,6 +128,14 @@ try {
     'utf8',
   );
   await setup.query(queueSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
+  const startSql = await readFile(
+    new URL(
+      '../prisma/migrations/20261015080000_preparation_start/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await setup.query(startSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
   await setup.query('COMMIT');
   created = true;
   prisma = new PrismaClient({
@@ -147,6 +158,7 @@ try {
   const decisions = new OrderDecisionService(prisma, qr);
   const cash = new CashPaymentService(prisma, qr);
   const queue = new PreparationQueueService(prisma);
+  const preparation = new PreparationStartService(prisma);
   const users = await Promise.all(
     [1, 2].map((n) =>
       prisma.user.create({
@@ -966,27 +978,54 @@ try {
     'Passed: mandatory atomic confirmation/payment for all methods, standalone confirmation blocked, injected post-write failure rolls back approval/payment/QR/audit fields, exact replay and confirmation-versus-rejection race.',
   );
   // Exercise the queue eligibility constraint directly, outside the service.
-  const rejectedQueueCandidate = await confirmedOrder('ORD-000051', '10.00', true);
+  const rejectedQueueCandidate = await confirmedOrder(
+    'ORD-000051',
+    '10.00',
+    true,
+  );
   const rejectedQueueQr = tokens.issue(rejectedQueueCandidate);
-  const rejectedQueueVersion = (await qr.scan(users[0].id, shop.id, rejectedQueueQr)).order.reviewVersion;
-  await decisions.decide(users[0].id, shop.id, rejectedQueueCandidate.id, 'REJECTED', {
-    qrToken: rejectedQueueQr,
-    reviewVersion: rejectedQueueVersion,
-  });
-  const ineligibleQueueIds = [rollbackOrder.id, unpaidQueueCandidate.id, rejectedQueueCandidate.id];
+  const rejectedQueueVersion = (
+    await qr.scan(users[0].id, shop.id, rejectedQueueQr)
+  ).order.reviewVersion;
+  await decisions.decide(
+    users[0].id,
+    shop.id,
+    rejectedQueueCandidate.id,
+    'REJECTED',
+    {
+      qrToken: rejectedQueueQr,
+      reviewVersion: rejectedQueueVersion,
+    },
+  );
+  const ineligibleQueueIds = [
+    rollbackOrder.id,
+    unpaidQueueCandidate.id,
+    rejectedQueueCandidate.id,
+  ];
   for (const id of ineligibleQueueIds) {
-    const before = await prisma.order.findFirst({ where: { id, shopId: shop.id } });
+    const before = await prisma.order.findFirst({
+      where: { id, shopId: shop.id },
+    });
     await assert.rejects(
       setup.query(
         `UPDATE "${schema}".orders SET "preparationStatus" = 'QUEUED', "queuedAt" = CURRENT_TIMESTAMP WHERE id = $1 AND "shopId" = $2`,
         [id, shop.id],
       ),
-      (error) => error.code === '23514' &&
-        ['orders_preparation_check', 'orders_confirmation_requires_payment'].includes(error.constraint),
+      (error) =>
+        error.code === '23514' &&
+        [
+          'orders_preparation_check',
+          'orders_confirmation_requires_payment',
+        ].includes(error.constraint),
     );
-    assert.deepEqual(await prisma.order.findFirst({ where: { id, shopId: shop.id } }), before);
+    assert.deepEqual(
+      await prisma.order.findFirst({ where: { id, shopId: shop.id } }),
+      before,
+    );
   }
-  console.log('Passed: database queue eligibility rejects pending, rejected and confirmed/unpaid orders even through direct SQL; rejected writes preserve the saved order.');
+  console.log(
+    'Passed: database queue eligibility rejects pending, rejected and confirmed/unpaid orders even through direct SQL; rejected writes preserve the saved order.',
+  );
   await prisma.shopMember.update({
     where: { userId_shopId: { userId: users[0].id, shopId: shop.id } },
     data: { role: 'KITCHEN' },
@@ -999,9 +1038,13 @@ try {
     ),
   );
   assert.ok(!queued.orders.some((item) => item.id === rollbackOrder.id));
-  assert.ok(!queued.orders.some((item) => ineligibleQueueIds.includes(item.id)));
+  assert.ok(
+    !queued.orders.some((item) => ineligibleQueueIds.includes(item.id)),
+  );
   for (const item of queued.orders) {
-    const persisted = await prisma.order.findFirst({ where: { id: item.id, shopId: shop.id } });
+    const persisted = await prisma.order.findFirst({
+      where: { id: item.id, shopId: shop.id },
+    });
     assert.equal(persisted.status, 'CONFIRMED');
     assert.equal(persisted.paymentStatus, 'PAID');
     assert.ok(persisted.paidAt);
@@ -1066,6 +1109,121 @@ try {
   );
   console.log(
     'Passed: cashier attribution comes from the authenticated user/live shop membership, is immutable, and survives actor role revocation.',
+  );
+  // Start work under real row locks with two independently authorized staff.
+  await assert.rejects(
+    preparation.start(users[1].id, shop.id, firstQueued.id),
+    { status: 404 },
+  );
+  await assert.rejects(
+    preparation.start(users[0].id, randomUUID(), firstQueued.id),
+    { status: 404 },
+  );
+  for (const id of ineligibleQueueIds)
+    await assert.rejects(preparation.start(users[0].id, shop.id, id), {
+      status: 409,
+    });
+  await prisma.shopMember.update({
+    where: { userId_shopId: { userId: users[1].id, shopId: shop.id } },
+    data: { role: 'KITCHEN' },
+  });
+  const beforeStart = await prisma.order.findFirst({
+    where: { id: firstQueued.id, shopId: shop.id },
+  });
+  const starts = await Promise.all(
+    users.map((user) => preparation.start(user.id, shop.id, firstQueued.id)),
+  );
+  assert.equal(starts.filter((result) => !result.alreadyStarted).length, 1);
+  assert.deepEqual(starts[0].order, starts[1].order);
+  const savedStart = await prisma.order.findFirst({
+    where: { id: firstQueued.id, shopId: shop.id },
+  });
+  assert.equal(savedStart.preparationStatus, 'PREPARING');
+  assert.ok(savedStart.preparationStartedAt >= savedStart.queuedAt);
+  assert.ok(users.some((user) => user.id === savedStart.preparationStartedBy));
+  for (const key of [
+    'paymentMethod',
+    'paymentRequestId',
+    'paidBy',
+    'paidAt',
+    'amountReceived',
+    'changeDue',
+    'totalPrice',
+    'queuedAt',
+    'status',
+    'paymentStatus',
+  ])
+    assert.deepEqual(savedStart[key], beforeStart[key]);
+  assert.ok(
+    !(await queue.list(users[0].id, shop.id)).orders.some(
+      (item) => item.id === firstQueued.id,
+    ),
+  );
+  assert.deepEqual(
+    (await queue.list(users[0].id, shop.id, undefined, 'PREPARING')).orders.map(
+      (item) => item.id,
+    ),
+    [firstQueued.id],
+  );
+  const replayStart = await preparation.start(
+    users[0].id,
+    shop.id,
+    firstQueued.id,
+  );
+  assert.deepEqual(replayStart.order, starts[0].order);
+  assert.equal(replayStart.alreadyStarted, true);
+  for (const data of [
+    { preparationStartedAt: new Date(0) },
+    {
+      preparationStartedBy: users.find(
+        (user) => user.id !== savedStart.preparationStartedBy,
+      ).id,
+    },
+    { preparationStatus: 'QUEUED' },
+  ]) {
+    await assert.rejects(
+      prisma.order.updateMany({
+        where: { id: firstQueued.id, shopId: shop.id },
+        data,
+      }),
+    );
+  }
+  const failStart = queued.orders.find((item) => item.id !== firstQueued.id);
+  const failStartBefore = await prisma.order.findFirst({
+    where: { id: failStart.id, shopId: shop.id },
+  });
+  await setup.query(
+    `CREATE FUNCTION "${schema}".fail_preparation_start() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.id = '${failStart.id}' AND NEW."preparationStatus" = 'PREPARING' THEN RAISE EXCEPTION 'Injected preparation failure'; END IF; RETURN NEW; END $$`,
+  );
+  await setup.query(
+    `CREATE TRIGGER fail_preparation_start AFTER UPDATE ON "${schema}".orders FOR EACH ROW EXECUTE FUNCTION "${schema}".fail_preparation_start()`,
+  );
+  await assert.rejects(preparation.start(users[0].id, shop.id, failStart.id));
+  assert.deepEqual(
+    await prisma.order.findFirst({
+      where: { id: failStart.id, shopId: shop.id },
+    }),
+    failStartBefore,
+  );
+  await setup.query(
+    `DROP TRIGGER fail_preparation_start ON "${schema}".orders`,
+  );
+  await assert.rejects(
+    prisma.order.updateMany({
+      where: { id: failStart.id, shopId: shop.id },
+      data: { preparationStatus: 'PREPARING' },
+    }),
+  );
+  await prisma.shopMember.update({
+    where: { userId_shopId: { userId: users[0].id, shopId: shop.id } },
+    data: { role: 'CASHIER' },
+  });
+  await assert.rejects(
+    preparation.start(users[0].id, shop.id, firstQueued.id),
+    { status: 404 },
+  );
+  console.log(
+    'Passed: preparation start records server time and staff once under competing requests, preserves paid receipts and queue time, moves to preparing list, rejects ineligible/foreign/revoked access, protects start metadata and rolls back injected failures.',
   );
   console.log(
     'Passed: cash migration, confirmed-only collection, underpayment, exact change, competing collectors commit once, idempotent replay, immutable receipts and revoked access.',

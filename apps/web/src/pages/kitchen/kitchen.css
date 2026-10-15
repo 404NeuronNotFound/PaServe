@@ -1,59 +1,463 @@
-.kitchen-workspace { max-width: 1500px; margin: 0 auto; padding-bottom: 36px; color: var(--color-text); }
-.kitchen-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 30px; }
-.kitchen-heading h1 { margin: 8px 0 12px; font: 400 clamp(38px, 5vw, 64px)/1.05 Georgia, serif; letter-spacing: -2px; }
-.kitchen-heading h1 > span { color: var(--color-muted); }
-.kitchen-heading p, .kitchen-brief p { margin: 0; color: var(--color-muted); line-height: 1.6; }
-.kitchen-refresh { display: grid; justify-items: end; gap: 12px; }
-.kitchen-refresh > span { font-size: 12px; color: var(--color-muted); }
-.kitchen-brief { display: flex; align-items: center; gap: 22px; padding: clamp(22px, 3vw, 36px); border: 1px solid var(--color-border); border-radius: 24px; background: linear-gradient(120deg, var(--color-secondary), var(--color-surface)); }
-.kitchen-brief-icon { display: grid; place-items: center; width: 64px; height: 64px; flex-shrink: 0; border-radius: 20px; background: var(--color-text); color: var(--color-canvas); font-size: 28px; transform: rotate(-6deg); }
-.kitchen-brief h2 { margin: 8px 0; font: 400 clamp(22px, 2.5vw, 32px)/1.2 Georgia, serif; }
-.kitchen-order-count { display: grid; gap: 5px; margin-left: auto; text-align: right; flex-shrink: 0; }
-.kitchen-order-count strong { font: 400 48px/1 Georgia, serif; font-variant-numeric: tabular-nums; }
-.kitchen-order-count span { color: var(--color-muted); font-size: 12px; }
-.kitchen-queue-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 30px 0 18px; }
-.kitchen-queue-heading h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 18px; }
-.kitchen-queue-heading h2 span { padding: 5px 9px; border-radius: 8px; background: var(--color-secondary); font-size: 12px; }
-.kitchen-queue-heading p { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--color-muted); font-size: 12px; }
-.kitchen-queue-heading .kitchen-queue-description { margin-top: 9px; line-height: 1.6; }
-.kitchen-tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); align-items: start; list-style: none; gap: 22px; padding: 0; margin: 0; }
-.kitchen-ticket { min-width: 0; border: 1px solid var(--color-border); border-radius: 19px; background: var(--color-surface); box-shadow: 0 8px 25px color-mix(in srgb, var(--color-text) 4%, transparent); overflow: hidden; animation: kitchen-arrive 220ms ease-out; }
-.kitchen-ticket-first { border-color: var(--color-muted); }
-.kitchen-ticket-ribbon { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 13px 22px; background: var(--color-secondary); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; }
-.kitchen-ticket-first .kitchen-ticket-ribbon { background: var(--color-lime); color: #243329; }
-.kitchen-ticket-ribbon > span:first-child { display: flex; align-items: center; gap: 7px; }
-.kitchen-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.kitchen-ticket-ribbon > span:last-child:not(:first-child) { letter-spacing: 0; font-weight: 500; }
-.kitchen-ticket-header { padding: 23px 22px 18px; border-bottom: 1px dashed var(--color-border); }
-.kitchen-ticket h3 { margin: 0 0 17px; font-size: clamp(22px, 2vw, 28px); letter-spacing: -1px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.kitchen-ticket-context { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
-.kitchen-ticket-context > span { color: var(--color-muted); margin-left: auto; }
-.kitchen-ticket-context strong { overflow-wrap: anywhere; min-width: 0; }
-.kitchen-wait { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin: 12px 0 0; font-size: 12px; color: var(--color-muted); font-variant-numeric: tabular-nums; }
-.kitchen-items { list-style: none; padding: 0 22px; margin: 0; }
-.kitchen-items > li { display: flex; gap: 12px; padding: 20px 0; }
-.kitchen-items > li + li { border-top: 1px solid var(--color-border); }
-.kitchen-quantity { display: grid; place-items: center; align-self: start; flex-shrink: 0; min-width: 34px; min-height: 32px; padding: 0 4px; border-radius: 8px; background: var(--color-secondary); font-size: 13px; font-weight: 700; }
-.kitchen-item-detail { min-width: 0; flex: 1; }
-.kitchen-item-detail h4 { margin: 5px 0 9px; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
-.kitchen-modifiers { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; list-style: none; }
-.kitchen-modifiers li { border: 1px solid var(--color-border); border-radius: 6px; padding: 5px 7px; color: var(--color-muted); font-size: 12px; overflow-wrap: anywhere; max-width: 100%; }
-.kitchen-note { display: flex; gap: 8px; margin-top: 12px; padding: 12px; border-radius: 8px; border-left: 2px solid var(--color-muted); background: var(--color-secondary); }
-.kitchen-note > svg { flex-shrink: 0; margin-top: 2px; }
-.kitchen-note > div { min-width: 0; }
-.kitchen-note span { font-size: 9px; font-weight: 700; letter-spacing: 1px; }
-.kitchen-note p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 5px 0 0; font-size: 13px; line-height: 1.6; }
-.kitchen-ticket-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px dashed var(--color-border); color: var(--color-muted); font-size: 12px; }
-.kitchen-ticket-footer span:last-child { display: flex; align-items: center; gap: 5px; }
-.kitchen-empty { display: grid; justify-items: center; text-align: center; padding: 60px 24px; border: 1px dashed var(--color-border); border-radius: 20px; background: var(--color-surface); }
-.kitchen-empty > svg, .kitchen-empty-icon { font-size: 28px; }
-.kitchen-empty-icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--color-secondary); }
-.kitchen-empty h2 { margin: 20px 0 8px; font: 400 28px/1.2 Georgia, serif; }
-.kitchen-empty p { color: var(--color-muted); max-width: 370px; line-height: 1.7; margin: 0; }
-.kitchen-load-more { text-align: center; margin-top: 28px; }
-.kitchen-load-more p { font-size: 12px; color: var(--color-muted); }
-.kitchen-workspace .feedback-inline { margin-bottom: 18px; }
-@keyframes kitchen-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-@media (min-width: 1500px) { .kitchen-tickets { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 700px) { .kitchen-heading { align-items: start; flex-direction: column; gap: 18px; } .kitchen-refresh { justify-items: start; } .kitchen-brief { flex-wrap: wrap; gap: 16px; } .kitchen-brief-icon { display: none; } .kitchen-order-count strong { font-size: 36px; } .kitchen-brief > div:nth-child(2) { flex: 1; min-width: 180px; } }
-@media (prefers-reduced-motion: reduce) { .kitchen-ticket { animation: none; } }
+.kitchen-workspace {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding-bottom: 36px;
+  color: var(--color-text);
+}
+.kitchen-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+.kitchen-heading h1 {
+  margin: 8px 0 12px;
+  font:
+    400 clamp(38px, 5vw, 64px)/1.05 Georgia,
+    serif;
+  letter-spacing: -2px;
+}
+.kitchen-heading h1 > span {
+  color: var(--color-muted);
+}
+.kitchen-heading p,
+.kitchen-brief p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+.kitchen-refresh {
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+}
+.kitchen-refresh > span {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.kitchen-brief {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: clamp(22px, 3vw, 36px);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background: linear-gradient(
+    120deg,
+    var(--color-secondary),
+    var(--color-surface)
+  );
+}
+.kitchen-brief-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 20px;
+  background: var(--color-text);
+  color: var(--color-canvas);
+  font-size: 28px;
+  transform: rotate(-6deg);
+}
+.kitchen-brief h2 {
+  margin: 8px 0;
+  font:
+    400 clamp(22px, 2.5vw, 32px)/1.2 Georgia,
+    serif;
+}
+.kitchen-order-count {
+  display: grid;
+  gap: 5px;
+  margin-left: auto;
+  text-align: right;
+  flex-shrink: 0;
+}
+.kitchen-order-count strong {
+  font:
+    400 48px/1 Georgia,
+    serif;
+  font-variant-numeric: tabular-nums;
+}
+.kitchen-order-count span {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.kitchen-queue-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 30px 0 18px;
+}
+.kitchen-queue-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px;
+}
+.kitchen-queue-heading h2 span {
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--color-secondary);
+  font-size: 12px;
+}
+.kitchen-queue-heading p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.kitchen-queue-heading .kitchen-queue-description {
+  margin-top: 9px;
+  line-height: 1.6;
+}
+.kitchen-tickets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr));
+  align-items: start;
+  list-style: none;
+  gap: 22px;
+  padding: 0;
+  margin: 0;
+}
+.kitchen-ticket {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 19px;
+  background: var(--color-surface);
+  box-shadow: 0 8px 25px color-mix(in srgb, var(--color-text) 4%, transparent);
+  overflow: hidden;
+  animation: kitchen-arrive 220ms ease-out;
+}
+.kitchen-ticket-first {
+  border-color: var(--color-muted);
+}
+.kitchen-ticket-ribbon {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 22px;
+  background: var(--color-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+.kitchen-ticket-first .kitchen-ticket-ribbon {
+  background: var(--color-lime);
+  color: #243329;
+}
+.kitchen-ticket-ribbon > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.kitchen-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.kitchen-ticket-ribbon > span:last-child:not(:first-child) {
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.kitchen-ticket-header {
+  padding: 23px 22px 18px;
+  border-bottom: 1px dashed var(--color-border);
+}
+.kitchen-ticket h3 {
+  margin: 0 0 17px;
+  font-size: clamp(22px, 2vw, 28px);
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.kitchen-ticket-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.kitchen-ticket-context > span {
+  color: var(--color-muted);
+  margin-left: auto;
+}
+.kitchen-ticket-context strong {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.kitchen-wait {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.kitchen-items {
+  list-style: none;
+  padding: 0 22px;
+  margin: 0;
+}
+.kitchen-items > li {
+  display: flex;
+  gap: 12px;
+  padding: 20px 0;
+}
+.kitchen-items > li + li {
+  border-top: 1px solid var(--color-border);
+}
+.kitchen-quantity {
+  display: grid;
+  place-items: center;
+  align-self: start;
+  flex-shrink: 0;
+  min-width: 34px;
+  min-height: 32px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--color-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+.kitchen-item-detail {
+  min-width: 0;
+  flex: 1;
+}
+.kitchen-item-detail h4 {
+  margin: 5px 0 9px;
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.kitchen-modifiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+.kitchen-modifiers li {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 5px 7px;
+  color: var(--color-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.kitchen-note {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 2px solid var(--color-muted);
+  background: var(--color-secondary);
+}
+.kitchen-note > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.kitchen-note > div {
+  min-width: 0;
+}
+.kitchen-note span {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.kitchen-note p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.kitchen-ticket-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px dashed var(--color-border);
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.kitchen-ticket-footer span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.kitchen-empty {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  padding: 60px 24px;
+  border: 1px dashed var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+}
+.kitchen-empty > svg,
+.kitchen-empty-icon {
+  font-size: 28px;
+}
+.kitchen-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-secondary);
+}
+.kitchen-empty h2 {
+  margin: 20px 0 8px;
+  font:
+    400 28px/1.2 Georgia,
+    serif;
+}
+.kitchen-empty p {
+  color: var(--color-muted);
+  max-width: 370px;
+  line-height: 1.7;
+  margin: 0;
+}
+.kitchen-load-more {
+  text-align: center;
+  margin-top: 28px;
+}
+.kitchen-load-more p {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.kitchen-workspace .feedback-inline {
+  margin-bottom: 18px;
+}
+.kitchen-state-switch {
+  display: flex;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 26px;
+  padding: 5px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-secondary);
+}
+.kitchen-state-switch button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kitchen-state-switch button[aria-pressed="true"] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.kitchen-state-switch button:focus-visible {
+  outline: 2px solid var(--color-muted);
+  outline-offset: 2px;
+}
+.kitchen-ticket .kitchen-ribbon-preparing {
+  color: var(--color-canvas);
+  background: var(--color-text);
+}
+.kitchen-start-time {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 18px 22px 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--color-secondary);
+}
+.kitchen-start-time div {
+  display: grid;
+  gap: 5px;
+}
+.kitchen-start-time strong {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.kitchen-start-time span {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.kitchen-ticket-action {
+  padding: 0 22px 20px;
+}
+.kitchen-ticket-action > button {
+  width: 100%;
+  min-height: 44px;
+  gap: 8px;
+}
+.kitchen-ticket-action .feedback-inline {
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+@keyframes kitchen-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (min-width: 1500px) {
+  .kitchen-tickets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .kitchen-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .kitchen-refresh {
+    justify-items: start;
+  }
+  .kitchen-brief {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .kitchen-brief-icon {
+    display: none;
+  }
+  .kitchen-order-count strong {
+    font-size: 36px;
+  }
+  .kitchen-brief > div:nth-child(2) {
+    flex: 1;
+    min-width: 180px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kitchen-ticket {
+    animation: none;
+  }
+}

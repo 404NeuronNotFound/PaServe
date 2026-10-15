@@ -16,6 +16,8 @@ import { CashPaymentController } from './cash-payment.controller.js';
 import { CashPaymentService } from './cash-payment.service.js';
 import { PreparationQueueService } from './preparation-queue.service.js';
 import { PreparationQueueController } from './preparation-queue.controller.js';
+import { PreparationStartController } from './preparation-start.controller.js';
+import { PreparationStartService } from './preparation-start.service.js';
 
 @Controller('menu/:shopSlug/orders')
 export class OrdersController {
@@ -38,6 +40,7 @@ export class OrdersController {
     OrderDecisionController,
     CashPaymentController,
     PreparationQueueController,
+    PreparationStartController,
   ],
   providers: [
     OrdersService,
@@ -49,6 +52,7 @@ export class OrdersController {
     OrderDecisionService,
     CashPaymentService,
     PreparationQueueService,
+    PreparationStartService,
   ],
 })
 export class OrdersModule {}

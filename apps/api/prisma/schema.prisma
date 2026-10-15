@@ -129,6 +129,8 @@ model Order {
   // Preparation is separate from immutable approval/payment state.
   preparationStatus String?
   queuedAt DateTime?
+  preparationStartedAt DateTime?
+  preparationStartedBy String?
   orderNumber String @db.VarChar(32)
   qrTokenNonce String
   qrTokenExpiresAt DateTime
