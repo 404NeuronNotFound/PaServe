@@ -152,4 +152,65 @@ describe('Preparation queue pages', () => {
       });
     },
   );
+  it('applies completed filters to the scoped database query with a bounded page', async () => {
+    findMany.mockResolvedValue([]);
+    await service.list(actorId, shopId, undefined, 'COMPLETED', {
+      search: 'ord-000042',
+      from: '2026-10-14T00:00:00.000Z',
+      to: '2026-10-16T00:00:00.000Z',
+      limit: '12',
+    });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 13,
+        where: expect.objectContaining({
+          shopId,
+          preparationStatus: 'COMPLETED',
+          orderNumber: { contains: 'ORD-000042' },
+          completedAt: {
+            not: null,
+            gte: new Date('2026-10-14T00:00:00.000Z'),
+            lt: new Date('2026-10-16T00:00:00.000Z'),
+          },
+        }),
+      }),
+    );
+  });
+  it.each([
+    { search: ['ORD'] },
+    { search: 'x'.repeat(33) },
+    { search: '%' },
+    { from: 'invalid' },
+    { to: ['2026-10-15'] },
+    { limit: '10000' },
+    { from: '2026-10-16T00:00:00Z', to: '2026-10-15T00:00:00Z' },
+  ])('rejects invalid history filters before querying: %j', async (filters) => {
+    await expect(
+      service.list(actorId, shopId, undefined, 'COMPLETED', filters),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(findMany).not.toHaveBeenCalled();
+  });
+  it('returns only twelve history orders and builds the cursor from the last displayed row', async () => {
+    const rows = Array.from({ length: 13 }, (_, index) => ({
+      ...row(),
+      preparationStartedAt: new Date('2026-10-14T00:00:00.000Z'),
+      preparationStartedBy: actorId,
+      preparationReadyAt: new Date('2026-10-14T01:00:00.000Z'),
+      preparationReadyBy: actorId,
+      completedAt: new Date(
+        Date.parse('2026-10-15T02:00:00.000Z') - index * 1000,
+      ),
+      completedBy: actorId,
+    }));
+    findMany.mockResolvedValue(rows);
+    const result = await service.list(actorId, shopId, undefined, 'COMPLETED', {
+      limit: '12',
+    });
+    expect(result.orders.map((order) => order.id)).toEqual(
+      rows.slice(0, 12).map((order) => order.id),
+    );
+    expect(
+      JSON.parse(Buffer.from(result.nextCursor!, 'base64url').toString()),
+    ).toEqual([rows[11].completedAt.toISOString(), rows[11].id]);
+  });
 });

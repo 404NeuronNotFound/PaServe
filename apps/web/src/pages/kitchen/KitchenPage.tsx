@@ -10,6 +10,7 @@ import { isAxiosError } from "axios";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import {
   FiArrowDown,
+  FiArchive,
   FiCheck,
   FiClock,
   FiCoffee,
@@ -17,6 +18,10 @@ import {
   FiPlay,
   FiRefreshCw,
   FiShoppingBag,
+  FiSearch,
+  FiX,
+  FiChevronLeft,
+  FiChevronRight,
 } from "react-icons/fi";
 import type {
   CurrentUserResponse,
@@ -34,6 +39,7 @@ import {
   startPreparing,
   markReady,
   completeOrder,
+  type HistoryFilters,
 } from "../../features/kitchen/queue";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
@@ -48,10 +54,7 @@ const views = {
   QUEUED: {
     title: "New orders",
     label: "Queued",
-    eyebrow: "THE PREPARATION QUEUE",
-    hero: "Accepted. Awaiting your craft.",
     intro: "Accepted by cashier and paid. Preparation has not started.",
-    count: "orders waiting",
     description: "Waiting for kitchen / barista to begin preparation.",
     emptyTitle: "A little room to breathe.",
     empty:
@@ -61,10 +64,7 @@ const views = {
   PREPARING: {
     title: "Preparing",
     label: "Preparing",
-    eyebrow: "PREPARATION IN PROGRESS",
-    hero: "Good things are in the making.",
     intro: "Started by your team. Every detail, still at hand.",
-    count: "orders preparing",
     description:
       "Preparation has started. Each order retains its original start time.",
     emptyTitle: "Nothing preparing just yet.",
@@ -74,10 +74,7 @@ const views = {
   READY: {
     title: "Ready",
     label: "Ready",
-    eyebrow: "PREPARATION COMPLETE",
-    hero: "Made with care. Ready to go.",
     intro: "Prepared and waiting for pickup or table service.",
-    count: "orders ready",
     description:
       "Preparation is complete. Orders are awaiting pickup or service.",
     emptyTitle: "The finishing touches come next.",
@@ -87,10 +84,7 @@ const views = {
   COMPLETED: {
     title: "Completed",
     label: "Completed",
-    eyebrow: "FULFILLED ORDERS",
-    hero: "Made. Served. Remembered.",
     intro: "Orders your customers have received, with every detail preserved.",
-    count: "orders completed",
     description: "Fulfilled orders, most recently completed first.",
     emptyTitle: "A good finish is worth keeping.",
     empty: "Orders appear here after staff confirm service or collection.",
@@ -122,6 +116,14 @@ function NewOrders() {
   const heading = useRef<HTMLHeadingElement>(null);
   const [state, setState] = useState<PreparationStatus>("QUEUED");
   const view = views[state];
+  const [history, setHistory] = useState<HistoryFilters>({ limit: 12 });
+  const [cursors, setCursors] = useState<(string | null)[]>([null]);
+  const historyCursor = cursors[cursors.length - 1];
+  const [selected, setSelected] = useState<
+    PreparationQueueResponse["orders"][number] | null
+  >(null);
+  const detailTrigger = useRef<HTMLButtonElement | null>(null);
+  const historyHeading = useRef<HTMLHeadingElement>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     document.title = `${view.title} · ${shop.name} · PaServe`;
@@ -130,10 +132,24 @@ function NewOrders() {
     return () => window.clearInterval(timer);
   }, [shop.name, view.title]);
   const queue = useInfiniteQuery({
-    queryKey: ["kitchen", "queue", user.id, shopId, state],
-    initialPageParam: null as string | null,
+    queryKey: [
+      "kitchen",
+      "queue",
+      user.id,
+      shopId,
+      state,
+      ...(state === "COMPLETED" ? [history, historyCursor] : []),
+    ],
+    initialPageParam:
+      state === "COMPLETED" ? historyCursor : (null as string | null),
     queryFn: ({ pageParam, signal }) =>
-      getPreparationQueue(shopId, pageParam, signal, state),
+      getPreparationQueue(
+        shopId,
+        pageParam,
+        signal,
+        state,
+        state === "COMPLETED" ? history : undefined,
+      ),
     getNextPageParam: (page) => page.nextCursor,
     retry: false,
     gcTime: 0,
@@ -184,7 +200,9 @@ function NewOrders() {
             {view.title}
             <span>.</span>
           </h1>
-          <p>The next great order starts here.</p>
+          <p>
+            {state === "COMPLETED" ? "Every order, neatly kept." : view.intro}
+          </p>
         </div>
         <div className="kitchen-refresh">
           <button
@@ -202,24 +220,6 @@ function NewOrders() {
           </span>
         </div>
       </header>
-      <div className="kitchen-brief">
-        <div className="kitchen-brief-icon">
-          <FiCoffee aria-hidden="true" />
-        </div>
-        <div>
-          <span className="section-label">{view.eyebrow}</span>
-          <h2>{view.hero}</h2>
-          <p>{view.intro}</p>
-        </div>
-        <div className="kitchen-order-count">
-          <strong>
-            {queue.data
-              ? `${orders.length}${queue.hasNextPage ? "+" : ""}`
-              : "—"}
-          </strong>
-          <span>{queue.hasNextPage ? "orders loaded" : view.count}</span>
-        </div>
-      </div>
       <div
         className="kitchen-state-switch"
         role="group"
@@ -250,14 +250,27 @@ function NewOrders() {
           aria-pressed={state === "COMPLETED"}
           onClick={() => setState("COMPLETED")}
         >
-          <FiCheck aria-hidden="true" />
+          <FiArchive aria-hidden="true" />
           Completed
         </button>
       </div>
+      <div hidden={state !== "COMPLETED"}>
+        <HistorySearch
+          onApply={(filters) => {
+            setHistory({ ...filters, limit: 12 });
+            setCursors([null]);
+          }}
+        />
+      </div>
       <div className="kitchen-queue-heading">
         <div>
-          <h2 id="kitchen-queued-heading">
-            {view.label} <span>{queue.data ? orders.length : "—"}</span>
+          <h2 id="kitchen-queued-heading" ref={historyHeading} tabIndex={-1}>
+            {state === "COMPLETED" ? "Completed history" : view.label}{" "}
+            <span>
+              {queue.data
+                ? `${orders.length}${state !== "COMPLETED" && queue.hasNextPage ? "+" : ""}`
+                : "—"}
+            </span>
           </h2>
           <p
             id="kitchen-queued-description"
@@ -304,26 +317,134 @@ function NewOrders() {
           <span className="kitchen-empty-icon">
             <FiCheck aria-hidden="true" />
           </span>
-          <h2>{view.emptyTitle}</h2>
-          <p>{view.empty}</p>
+          <h2>
+            {state === "COMPLETED" &&
+            (history.search || history.from || history.to)
+              ? "No matching orders."
+              : view.emptyTitle}
+          </h2>
+          <p>
+            {state === "COMPLETED" &&
+            (history.search || history.from || history.to)
+              ? "Try another order number or clear the date filters."
+              : view.empty}
+          </p>
         </div>
       )}
-      <ol
-        className="kitchen-tickets"
-        aria-label={view.list}
-        aria-describedby="kitchen-queued-description"
-      >
-        {orders.map((order, index) => (
-          <Ticket
-            key={order.id}
-            order={order}
-            first={index === 0}
-            now={now}
-            onStarted={() => heading.current?.focus()}
-          />
-        ))}
-      </ol>
-      {queue.hasNextPage && (
+      {state === "COMPLETED" ? (
+        <ol
+          className="kitchen-history"
+          aria-label={view.list}
+          aria-busy={queue.isFetching}
+        >
+          {orders.map((order) => (
+            <li key={order.id}>
+              <span className="kitchen-history-check">
+                <FiCheck aria-hidden="true" />
+              </span>
+              <div className="kitchen-history-identity">
+                <strong>{order.orderNumber}</strong>
+                <span>
+                  {order.mode === "TAKEOUT"
+                    ? "Pickup · Takeout"
+                    : `Table ${order.tableNumber} · Dine-in`}
+                </span>
+              </div>
+              <div className="kitchen-history-summary">
+                <strong>
+                  {order.items.reduce((sum, item) => sum + item.quantity, 0)}{" "}
+                  items
+                </strong>
+                <span>
+                  {order.items
+                    .map((item) => `${item.quantity}\u00d7 ${item.productName}`)
+                    .join("\u00b7 ")}
+                </span>
+              </div>
+              <time dateTime={order.completedAt!}>
+                {new Date(order.completedAt!).toLocaleString([], {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </time>
+              <button
+                className="secondary-button"
+                aria-label={`View details for ${order.orderNumber}`}
+                onClick={(event) => {
+                  detailTrigger.current = event.currentTarget;
+                  setSelected(order);
+                }}
+              >
+                View details <FiChevronRight aria-hidden="true" />
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <ol
+          className="kitchen-tickets"
+          aria-label={view.list}
+          aria-describedby="kitchen-queued-description"
+        >
+          {orders.map((order, index) => (
+            <Ticket
+              key={order.id}
+              order={order}
+              first={index === 0}
+              now={now}
+              onStarted={() => heading.current?.focus()}
+            />
+          ))}
+        </ol>
+      )}
+      {state === "COMPLETED" && (
+        <nav
+          className="kitchen-pagination"
+          aria-label="Completed history pages"
+        >
+          <span role="status">
+            Page {cursors.length} · Up to 12 orders per page
+          </span>
+          <div>
+            <button
+              className="secondary-button"
+              disabled={cursors.length === 1 || queue.isFetching}
+              onClick={() => {
+                setCursors((pages) => pages.slice(0, -1));
+                historyHeading.current?.focus();
+              }}
+            >
+              <FiChevronLeft aria-hidden="true" /> Previous
+            </button>
+            <button
+              className="secondary-button"
+              disabled={!queue.hasNextPage || queue.isFetching}
+              onClick={() => {
+                setCursors((pages) => [
+                  ...pages,
+                  queue.data?.pages[0].nextCursor ?? null,
+                ]);
+                historyHeading.current?.focus();
+              }}
+            >
+              Next <FiChevronRight aria-hidden="true" />
+            </button>
+          </div>
+        </nav>
+      )}
+      {selected && state === "COMPLETED" && (
+        <TicketDetails
+          order={selected}
+          now={now}
+          onClose={() => {
+            setSelected(null);
+            detailTrigger.current?.focus();
+          }}
+        />
+      )}
+      {state !== "COMPLETED" && queue.hasNextPage && (
         <div className="kitchen-load-more">
           <button
             className="secondary-button"
@@ -332,14 +453,117 @@ function NewOrders() {
           >
             {queue.isFetchingNextPage ? "Loading more…" : "Load more orders"}
           </button>
-          <p>
-            {state === "COMPLETED"
-              ? "Most recently completed orders stay at the top."
-              : "Earlier tickets always stay at the top."}
-          </p>
+          <p>Earlier tickets always stay at the top.</p>
         </div>
       )}
     </section>
+  );
+}
+
+function HistorySearch({
+  onApply,
+}: {
+  onApply: (filters: HistoryFilters) => void;
+}) {
+  const [error, setError] = useState("");
+  return (
+    <form
+      className="kitchen-history-filters"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        const search = String(data.get("search") ?? "").trim();
+        const start = String(data.get("from") ?? ""),
+          end = String(data.get("to") ?? "");
+        if (start && end && start > end) {
+          setError("The end date must be on or after the start date.");
+          return;
+        }
+        const from = start ? new Date(`${start}T00:00:00`) : undefined;
+        const to = end ? new Date(`${end}T00:00:00`) : undefined;
+        if (to) to.setDate(to.getDate() + 1);
+        setError("");
+        onApply({
+          ...(search ? { search } : {}),
+          ...(from ? { from: from.toISOString() } : {}),
+          ...(to ? { to: to.toISOString() } : {}),
+        });
+      }}
+      onReset={() => {
+        setError("");
+        onApply({});
+      }}
+    >
+      <label className="kitchen-history-search">
+        Order number
+        <div>
+          <FiSearch aria-hidden="true" />
+          <input
+            name="search"
+            type="search"
+            placeholder="Search ORD-000016"
+            maxLength={32}
+            pattern="[A-Za-z0-9-]*"
+          />
+        </div>
+      </label>
+      <label>
+        From
+        <input name="from" type="date" />
+      </label>
+      <label>
+        To
+        <input name="to" type="date" />
+      </label>
+      <button className="primary-button" type="submit">
+        Find orders
+      </button>
+      <button className="secondary-button" type="reset">
+        Clear filters
+      </button>
+      {error && (
+        <div className="kitchen-history-filter-error">
+          <InlineMessage>{error}</InlineMessage>
+        </div>
+      )}
+    </form>
+  );
+}
+function TicketDetails({
+  order,
+  now,
+  onClose,
+}: {
+  order: PreparationQueueResponse["orders"][number];
+  now: number;
+  onClose: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const node = dialog.current;
+    node?.showModal();
+    return () => node?.close();
+  }, []);
+  return (
+    <dialog
+      ref={dialog}
+      className="kitchen-details"
+      aria-label={`Details for ${order.orderNumber}`}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
+      <header>
+        <span className="section-label">COMPLETED ORDER</span>
+        <button autoFocus className="secondary-button" onClick={onClose}>
+          <FiX aria-hidden="true" /> Close details
+        </button>
+      </header>
+      <ol className="kitchen-tickets">
+        <Ticket order={order} first={false} now={now} onStarted={() => {}} />
+      </ol>
+    </dialog>
   );
 }
 

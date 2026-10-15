@@ -1,5 +1,13 @@
-import { afterEach, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -68,6 +76,28 @@ const ticket = (
       notes: "No ice, please",
     },
   ],
+});
+const dialogMethods = ["showModal", "close"] as const;
+const dialogDescriptors = dialogMethods.map((method) =>
+  Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, method),
+);
+beforeEach(() => {
+  for (const method of dialogMethods)
+    Object.defineProperty(HTMLDialogElement.prototype, method, {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.open = method === "showModal";
+      },
+    });
+});
+afterEach(() => {
+  cleanup();
+  dialogMethods.forEach((method, index) => {
+    const descriptor = dialogDescriptors[index];
+    if (descriptor)
+      Object.defineProperty(HTMLDialogElement.prototype, method, descriptor);
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, method);
+  });
 });
 afterEach(() => vi.resetAllMocks());
 function setup(
@@ -530,7 +560,12 @@ it.each(["DINE_IN", "TAKEOUT"] as const)(
       expect(screen.queryByRole("article")).not.toBeInTheDocument(),
     );
     await userEvent.click(screen.getByRole("button", { name: "Completed" }));
-    const card = await screen.findByRole("article");
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "View details for ORD-000001",
+      }),
+    );
+    const card = within(screen.getByRole("dialog")).getByRole("article");
     expect(
       within(card).getByText(
         mode === "TAKEOUT" ? "Collected by customer" : "Served to customer",
@@ -614,4 +649,161 @@ it.each([
     "could not be verified",
   );
   expect(screen.queryByRole("article")).not.toBeInTheDocument();
+});
+
+const historyTicket = (
+  id = "done-1",
+  number = "ORD-000042",
+): PreparationQueueResponse["orders"][number] => ({
+  ...ticket(id, number),
+  preparationStatus: "COMPLETED",
+  preparationStartedAt: "2026-10-15T01:01:00.000Z",
+  preparationStartedBy: "staff",
+  preparationReadyAt: "2026-10-15T01:10:00.000Z",
+  preparationReadyBy: "staff",
+  completedAt: "2026-10-15T01:20:00.000Z",
+  completedBy: "staff",
+});
+it("replaces completed pages rather than appending and can return to the first page", async () => {
+  setup();
+  await screen.findByRole("article");
+  vi.mocked(api.get).mockImplementation(async (_url, config) => ({
+    data: {
+      orders: [
+        (config?.params as { cursor?: string } | undefined)?.cursor
+          ? historyTicket("done-2", "ORD-000041")
+          : historyTicket(),
+      ],
+      nextCursor: (config?.params as { cursor?: string } | undefined)?.cursor
+        ? null
+        : "page2",
+    },
+  }));
+  await userEvent.click(screen.getByRole("button", { name: "Completed" }));
+  await screen.findByText("ORD-000042");
+  expect(screen.queryByRole("article")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByText("ORD-000041");
+  expect(screen.queryByText("ORD-000042")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  expect(api.get).toHaveBeenLastCalledWith(
+    "/shops/shop-a/preparation/completed",
+    expect.objectContaining({ params: { limit: 12, cursor: "page2" } }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Previous" }));
+  await screen.findByText("ORD-000042");
+});
+it("searches the whole completed history and resets pagination and filters", async () => {
+  setup();
+  await screen.findByRole("article");
+  vi.mocked(api.get).mockResolvedValue({
+    data: { orders: [historyTicket()], nextCursor: "page2" },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Completed" }));
+  await screen.findByText("ORD-000042");
+  await userEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByText(/Page 2/);
+  await userEvent.type(screen.getByLabelText("Order number"), "000099");
+  fireEvent.change(screen.getByLabelText("From"), {
+    target: { value: "2026-10-14" },
+  });
+  fireEvent.change(screen.getByLabelText("To"), {
+    target: { value: "2026-10-15" },
+  });
+  vi.mocked(api.get).mockResolvedValue({
+    data: { orders: [], nextCursor: null },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Find orders" }));
+  await screen.findByText("No matching orders.");
+  const from = new Date("2026-10-14T00:00:00").toISOString();
+  const to = new Date("2026-10-16T00:00:00").toISOString();
+  expect(api.get).toHaveBeenLastCalledWith(
+    "/shops/shop-a/preparation/completed",
+    expect.objectContaining({
+      params: { limit: 12, search: "000099", from, to },
+    }),
+  );
+  expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+  await waitFor(() =>
+    expect(api.get).toHaveBeenLastCalledWith(
+      "/shops/shop-a/preparation/completed",
+      expect.objectContaining({ params: { limit: 12 } }),
+    ),
+  );
+  expect(screen.getByLabelText("Order number")).toHaveValue("");
+});
+it("keeps invalid date ranges local and preserves all ticket details in a dismissible modal", async () => {
+  setup();
+  await screen.findByRole("article");
+  vi.mocked(api.get).mockResolvedValue({
+    data: { orders: [historyTicket()], nextCursor: null },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Completed" }));
+  const trigger = await screen.findByRole("button", {
+    name: "View details for ORD-000042",
+  });
+  await userEvent.click(trigger);
+  const dialog = screen.getByRole("dialog", { name: "Details for ORD-000042" });
+  for (const text of ["No ice, please", "Large", "+ Oat milk"])
+    expect(within(dialog).getByText(text)).toBeInTheDocument();
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "Close details" }),
+  );
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(trigger).toHaveFocus();
+  await userEvent.click(trigger);
+  fireEvent(
+    screen.getByRole("dialog"),
+    new Event("cancel", { cancelable: true }),
+  );
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("From"), {
+    target: { value: "2026-10-16" },
+  });
+  fireEvent.change(screen.getByLabelText("To"), {
+    target: { value: "2026-10-15" },
+  });
+  const calls = vi.mocked(api.get).mock.calls.length;
+  await userEvent.click(screen.getByRole("button", { name: "Find orders" }));
+  expect(
+    screen.getByText("The end date must be on or after the start date."),
+  ).toBeInTheDocument();
+  expect(api.get).toHaveBeenCalledTimes(calls);
+});
+
+it("allows returning to a previous history page after the next request fails", async () => {
+  setup();
+  await screen.findByRole("article");
+  vi.mocked(api.get).mockResolvedValue({
+    data: { orders: [historyTicket()], nextCursor: "page2" },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Completed" }));
+  await screen.findByText("ORD-000042");
+  vi.mocked(api.get).mockRejectedValueOnce(new Error("Connection interrupted"));
+  await userEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByText(/Connection interrupted/);
+  await userEvent.click(screen.getByRole("button", { name: "Previous" }));
+  await screen.findByText("ORD-000042");
+});
+it("keeps applied history filters visible when switching preparation views", async () => {
+  setup();
+  await screen.findByRole("article");
+  vi.mocked(api.get).mockResolvedValue({
+    data: { orders: [], nextCursor: null },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Completed" }));
+  await userEvent.type(screen.getByLabelText("Order number"), "000042");
+  await userEvent.click(screen.getByRole("button", { name: "Find orders" }));
+  await screen.findByText("No matching orders.");
+  await userEvent.click(screen.getByRole("button", { name: "Queued" }));
+  await userEvent.click(screen.getByRole("button", { name: "Completed" }));
+  expect(screen.getByLabelText("Order number")).toHaveValue("000042");
+  await waitFor(() =>
+    expect(api.get).toHaveBeenLastCalledWith(
+      "/shops/shop-a/preparation/completed",
+      expect.objectContaining({ params: { limit: 12, search: "000042" } }),
+    ),
+  );
 });

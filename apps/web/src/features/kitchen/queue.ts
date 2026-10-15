@@ -91,16 +91,28 @@ export function parseQueue(
   return { orders, nextCursor: data.nextCursor };
 }
 
+export type HistoryFilters = {
+  search?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+};
+
 export async function getPreparationQueue(
   shopId: string,
   cursor: string | null,
   signal: AbortSignal,
   state: PreparationStatus = "QUEUED",
+  history?: HistoryFilters,
 ) {
   const { data } = await api.get<PreparationQueueResponse>(
     `/shops/${encodeURIComponent(shopId)}/preparation/${state === "QUEUED" ? "queue" : state === "PREPARING" ? "preparing" : state === "READY" ? "ready" : "completed"}`,
     {
-      params: cursor ? { cursor } : undefined,
+      params: history
+        ? { ...history, ...(cursor ? { cursor } : {}) }
+        : cursor
+          ? { cursor }
+          : undefined,
       signal,
       timeout: AUTH_REQUEST_TIMEOUT_MS,
     },

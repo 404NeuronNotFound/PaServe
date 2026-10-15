@@ -13,6 +13,10 @@ export class PreparationQueueController {
   @Get('completed')
   @Roles(...PREPARATION_QUEUE_ROLES)
   completed(
+    @Query('search') search: string | undefined,
+    @Query('from') from: string | undefined,
+    @Query('to') to: string | undefined,
+    @Query('limit') limit: string | undefined,
     @Query('cursor') cursor: string | undefined,
     @Req() request: ShopMemberRequest,
     @Res({ passthrough: true }) response: Response,
@@ -23,6 +27,7 @@ export class PreparationQueueController {
       request.shopMembership.shopId,
       cursor,
       'COMPLETED',
+      { search, from, to, limit },
     );
   }
   @Get('ready')

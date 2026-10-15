@@ -1514,4 +1514,46 @@ describe('Cash collection', () => {
     expect(result.body.payment.changeDue).toBe('64.50');
     expect(updateOrder).toHaveBeenCalledTimes(1);
   });
+  it('passes completed history filters through the authorized route to the scoped query', async () => {
+    role = 'KITCHEN';
+    await request(app.getHttpServer())
+      .get(`/api/v1/shops/${shopId}/preparation/completed`)
+      .query({
+        limit: '12',
+        search: '000042',
+        from: '2026-10-14T00:00:00.000Z',
+        to: '2026-10-16T00:00:00.000Z',
+      })
+      .set('Authorization', 'Bearer session')
+      .expect(200);
+    expect(findQueue).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        take: 13,
+        where: expect.objectContaining({
+          shopId,
+          preparationStatus: 'COMPLETED',
+          orderNumber: { contains: '000042' },
+          completedAt: {
+            not: null,
+            gte: new Date('2026-10-14T00:00:00.000Z'),
+            lt: new Date('2026-10-16T00:00:00.000Z'),
+          },
+        }),
+      }),
+    );
+  });
+  it.each([
+    { limit: '999' },
+    { search: '%' },
+    { from: '2026-02-30T00:00:00.000Z' },
+    { from: 'invalid' },
+  ])('rejects invalid completed history queries: %j', async (query) => {
+    role = 'KITCHEN';
+    await request(app.getHttpServer())
+      .get(`/api/v1/shops/${shopId}/preparation/completed`)
+      .query(query)
+      .set('Authorization', 'Bearer session')
+      .expect(400);
+    expect(findQueue).not.toHaveBeenCalled();
+  });
 });

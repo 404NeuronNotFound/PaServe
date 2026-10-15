@@ -3,7 +3,7 @@ import {
   ConflictException,
   Injectable,
 } from '@nestjs/common';
-import { isUUID } from 'class-validator';
+import { isUUID, isISO8601 } from 'class-validator';
 import {
   SHOP_ROLES,
   hasShopPermission,
@@ -28,9 +28,44 @@ export class PreparationQueueService {
     shopId: string,
     cursor?: string,
     preparationStatus: PreparationStatus = 'QUEUED',
+    history: {
+      search?: unknown;
+      from?: unknown;
+      to?: unknown;
+      limit?: unknown;
+    } = {},
   ): Promise<PreparationQueueResponse> {
     const access = shopAccessWhere(actorId, shopId, PREPARATION_QUEUE_ROLES);
     const completed = preparationStatus === 'COMPLETED';
+    if (
+      history.limit !== undefined &&
+      (typeof history.limit !== 'string' || !/^(12|50)$/.test(history.limit))
+    )
+      throw new BadRequestException('Invalid history page size.');
+    const limit = history.limit === undefined ? 50 : Number(history.limit);
+    const search = history.search === undefined ? '' : history.search;
+    const parseDate = (value: unknown): Date | undefined => {
+      if (value === undefined) return undefined;
+      if (
+        typeof value !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}T/.test(value) ||
+        !isISO8601(value, { strict: true, strictSeparator: true }) ||
+        !/(Z|[+-]\d{2}:\d{2})$/.test(value) ||
+        !Number.isFinite(Date.parse(value))
+      )
+        throw new BadRequestException('Invalid history date.');
+      return new Date(value);
+    };
+    const from = parseDate(history.from),
+      to = parseDate(history.to);
+    if (
+      ![12, 50].includes(limit) ||
+      typeof search !== 'string' ||
+      search.length > 32 ||
+      !/^[A-Za-z0-9-]*$/.test(search) ||
+      (from && to && from >= to)
+    )
+      throw new BadRequestException('Invalid history filters.');
     let after: { queuedAt: Date; id: string } | undefined;
     if (cursor !== undefined) {
       try {
@@ -68,7 +103,18 @@ export class PreparationQueueService {
         paymentStatus: 'PAID',
         preparationStatus,
         queuedAt: { not: null },
-        ...(completed ? { completedAt: { not: null } } : {}),
+        ...(completed
+          ? {
+              completedAt: {
+                not: null,
+                ...(from ? { gte: from } : {}),
+                ...(to ? { lt: to } : {}),
+              },
+              ...(search
+                ? { orderNumber: { contains: search.toUpperCase() } }
+                : {}),
+            }
+          : {}),
         ...(after
           ? {
               OR: completed
@@ -86,7 +132,7 @@ export class PreparationQueueService {
       orderBy: completed
         ? [{ completedAt: 'desc' }, { id: 'desc' }]
         : [{ queuedAt: 'asc' }, { id: 'asc' }],
-      take: 51,
+      take: limit + 1,
       select: {
         id: true,
         shopId: true,
@@ -130,7 +176,7 @@ export class PreparationQueueService {
         },
       },
     });
-    const page = saved.slice(0, 50);
+    const page = saved.slice(0, limit);
     const orders = page.map((order) => {
       let items: PreparationQueueResponse['orders'][number]['items'];
       try {
@@ -194,7 +240,7 @@ export class PreparationQueueService {
     return {
       orders,
       nextCursor:
-        saved.length > 50 && last
+        saved.length > limit && last
           ? Buffer.from(
               JSON.stringify([
                 completed ? last.completedAt : last.queuedAt,
