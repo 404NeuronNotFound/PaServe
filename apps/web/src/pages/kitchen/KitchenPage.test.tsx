@@ -54,6 +54,22 @@ it("shows an honest empty state", async () => {
   expect(await screen.findByText("A little room to breathe.")).toBeInTheDocument();
   expect(screen.queryByRole("article")).not.toBeInTheDocument();
 });
+it("represents queued work as cashier accepted and paid with preparation not started", async () => {
+  setup();
+  const order = await screen.findByRole("article", { name: "Order ORD-000001" });
+  expect(screen.getByText("Accepted by cashier and paid. Preparation has not started.")).toBeInTheDocument();
+  expect(within(order).getByText("QUEUED · NOT STARTED")).toBeInTheDocument();
+  expect(within(order).getByText("Cashier accepted · Paid")).toBeInTheDocument();
+  expect(screen.getByRole("list", { name: "New orders, oldest first" })).toHaveAccessibleDescription("Waiting for kitchen / barista to begin preparation.");
+});
+it("removes a ticket on refresh when it no longer belongs to queued work", async () => {
+  setup();
+  await screen.findByRole("article", { name: "Order ORD-000001" });
+  vi.mocked(api.get).mockResolvedValueOnce({ data: { orders: [], nextCursor: null } });
+  await userEvent.click(screen.getByRole("button", { name: "Refresh orders" }));
+  expect(await screen.findByText("A little room to breathe.")).toBeInTheDocument();
+  expect(screen.queryByRole("article")).not.toBeInTheDocument();
+});
 it("loads the next cursor without duplicating tickets", async () => {
   setup("KITCHEN", [ticket()], "cursor123");
   const more = await screen.findByRole("button", { name: "Load more orders" });
@@ -94,7 +110,7 @@ it("hides cached tickets immediately when queue access is revoked", async () => 
   expect(screen.queryByRole("article")).not.toBeInTheDocument();
 });
 it.each([
-  { shopId: "foreign-shop" }, { preparationStatus: "READY" }, { queuedAt: "invalid" },
+  { shopId: "foreign-shop" }, { preparationStatus: "READY" }, { preparationStatus: "PREPARING" }, { queuedAt: "invalid" },
   { mode: "DINE_IN", tableNumber: null }, { items: [] }, { totalPrice: "1.00" },
 ])("rejects an invalid or foreign queue response: %j", async (change) => {
   setup("KITCHEN", [{ ...ticket(), ...change } as ReturnType<typeof ticket>]);

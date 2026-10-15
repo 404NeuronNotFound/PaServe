@@ -54,14 +54,14 @@ function NewOrders() {
     </header>
     <div className="kitchen-brief">
       <div className="kitchen-brief-icon"><FiCoffee aria-hidden="true" /></div>
-      <div><span className="section-label">THE PREPARATION QUEUE</span><h2>One ticket. Every detail.</h2><p>Confirmed, paid, and ready for your attention.</p></div>
+      <div><span className="section-label">THE PREPARATION QUEUE</span><h2>Accepted. Awaiting your craft.</h2><p>Accepted by cashier and paid. Preparation has not started.</p></div>
       <div className="kitchen-order-count"><strong>{queue.data ? `${orders.length}${queue.hasNextPage ? "+" : ""}` : "—"}</strong><span>{queue.hasNextPage ? "orders loaded" : "orders waiting"}</span></div>
     </div>
-    <div className="kitchen-queue-heading"><h2>Queued <span>{queue.data ? orders.length : "—"}</span></h2><p><FiArrowDown aria-hidden="true" /> Oldest first · queue arrival time</p></div>
+    <div className="kitchen-queue-heading"><div><h2 id="kitchen-queued-heading">Queued <span>{queue.data ? orders.length : "—"}</span></h2><p id="kitchen-queued-description" className="kitchen-queue-description">Waiting for kitchen / barista to begin preparation.</p></div><p><FiArrowDown aria-hidden="true" /> Oldest first · queue arrival time</p></div>
     {queue.isPending && <div className="kitchen-empty" role="status"><FiCoffee aria-hidden="true" /><h2>Gathering your tickets…</h2><p>Loading the saved preparation queue.</p></div>}
     {queue.isError && <InlineMessage>{queue.data ? "The queue could not refresh. Tickets below may be out of date. " : "We couldn’t load the queue. "}{queue.error.message} <button className="secondary-button" disabled={queue.isFetching} onClick={() => void (queue.isFetchNextPageError ? queue.fetchNextPage() : queue.refetch())}>Try again</button></InlineMessage>}
     {queue.isSuccess && orders.length === 0 && <div className="kitchen-empty"><span className="kitchen-empty-icon"><FiCheck aria-hidden="true" /></span><h2>A little room to breathe.</h2><p>No orders are queued. Newly confirmed and paid orders will appear here.</p></div>}
-    <ol className="kitchen-tickets" aria-label="New orders, oldest first">
+    <ol className="kitchen-tickets" aria-label="New orders, oldest first" aria-describedby="kitchen-queued-description">
       {orders.map((order, index) => <Ticket key={order.id} order={order} first={index === 0} now={now} />)}
     </ol>
     {queue.hasNextPage && <div className="kitchen-load-more"><button className="secondary-button" disabled={queue.isFetching} onClick={() => void queue.fetchNextPage()}>{queue.isFetchingNextPage ? "Loading more…" : "Load more orders"}</button><p>Earlier tickets always stay at the top.</p></div>}
@@ -73,7 +73,7 @@ function Ticket({ order, first, now }: { order: PreparationQueueResponse["orders
   const count = order.items.reduce((sum, item) => sum + item.quantity, 0);
   return <li className={`kitchen-ticket${first ? " kitchen-ticket-first" : ""}`}>
     <article aria-label={`Order ${order.orderNumber}`}>
-      <div className="kitchen-ticket-ribbon"><span><span className="kitchen-status-dot" />QUEUED</span>{first && <span>Oldest ticket</span>}</div>
+      <div className="kitchen-ticket-ribbon"><span><span className="kitchen-status-dot" />QUEUED · NOT STARTED</span>{first && <span>Oldest ticket</span>}</div>
       <header className="kitchen-ticket-header"><h3>{order.orderNumber}</h3><div className="kitchen-ticket-context">{order.mode === "DINE_IN" ? <FiCoffee aria-hidden="true" /> : <FiShoppingBag aria-hidden="true" />}<strong>{order.mode === "DINE_IN" ? `Table ${order.tableNumber}` : "Pickup"}</strong><span>{order.mode === "DINE_IN" ? "Dine-in" : "Takeout"}</span></div>
         <p className="kitchen-wait"><FiClock aria-hidden="true" />{minutes < 1 ? "Just queued" : `${minutes} min waiting`}<span> · </span><time dateTime={order.queuedAt} title={new Date(order.queuedAt).toLocaleString()}>{time(order.queuedAt)}</time></p></header>
       <ul className="kitchen-items">{order.items.map((item, index) => <li key={index}>
@@ -81,7 +81,7 @@ function Ticket({ order, first, now }: { order: PreparationQueueResponse["orders
           {(item.variants.length > 0 || item.addOns.length > 0) && <ul className="kitchen-modifiers">{item.variants.map((variant) => <li key={`v-${variant.id}`}>{variant.name}</li>)}{item.addOns.map((addOn) => <li key={`a-${addOn.id}`}>+ {addOn.name}</li>)}</ul>}
           {item.notes && <div className="kitchen-note"><FiFileText aria-hidden="true" /><div><span>ITEM NOTE</span><p>{item.notes}</p></div></div>}</div>
       </li>)}</ul>
-      <footer className="kitchen-ticket-footer"><span>{count} {count === 1 ? "item" : "items"}</span><span>Paid <FiCheck aria-hidden="true" /></span></footer>
+      <footer className="kitchen-ticket-footer"><span>{count} {count === 1 ? "item" : "items"}</span><span>Cashier accepted · Paid <FiCheck aria-hidden="true" /></span></footer>
     </article>
   </li>;
 }

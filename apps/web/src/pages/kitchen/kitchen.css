@@ -15,10 +15,11 @@
 .kitchen-queue-heading h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 18px; }
 .kitchen-queue-heading h2 span { padding: 5px 9px; border-radius: 8px; background: var(--color-secondary); font-size: 12px; }
 .kitchen-queue-heading p { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--color-muted); font-size: 12px; }
+.kitchen-queue-heading .kitchen-queue-description { margin-top: 9px; line-height: 1.6; }
 .kitchen-tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); align-items: start; list-style: none; gap: 22px; padding: 0; margin: 0; }
 .kitchen-ticket { min-width: 0; border: 1px solid var(--color-border); border-radius: 19px; background: var(--color-surface); box-shadow: 0 8px 25px color-mix(in srgb, var(--color-text) 4%, transparent); overflow: hidden; animation: kitchen-arrive 220ms ease-out; }
 .kitchen-ticket-first { border-color: var(--color-muted); }
-.kitchen-ticket-ribbon { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 13px 22px; background: var(--color-secondary); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; }
+.kitchen-ticket-ribbon { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 13px 22px; background: var(--color-secondary); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; }
 .kitchen-ticket-first .kitchen-ticket-ribbon { background: var(--color-lime); color: #243329; }
 .kitchen-ticket-ribbon > span:first-child { display: flex; align-items: center; gap: 7px; }
 .kitchen-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
@@ -42,7 +43,7 @@
 .kitchen-note > div { min-width: 0; }
 .kitchen-note span { font-size: 9px; font-weight: 700; letter-spacing: 1px; }
 .kitchen-note p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 5px 0 0; font-size: 13px; line-height: 1.6; }
-.kitchen-ticket-footer { display: flex; justify-content: space-between; padding: 14px 22px; border-top: 1px dashed var(--color-border); color: var(--color-muted); font-size: 12px; }
+.kitchen-ticket-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px dashed var(--color-border); color: var(--color-muted); font-size: 12px; }
 .kitchen-ticket-footer span:last-child { display: flex; align-items: center; gap: 5px; }
 .kitchen-empty { display: grid; justify-items: center; text-align: center; padding: 60px 24px; border: 1px dashed var(--color-border); border-radius: 20px; background: var(--color-surface); }
 .kitchen-empty > svg, .kitchen-empty-icon { font-size: 28px; }

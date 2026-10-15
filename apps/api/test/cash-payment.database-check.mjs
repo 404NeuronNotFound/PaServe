@@ -678,6 +678,8 @@ try {
   console.log(
     'Passed: manual GCash migration preserves CASH, exact full settlement, zero change, saved actor, replay, immutable method and competing cash/GCash recording commits once.',
   );
+  // Preserve a genuine historical unpaid confirmation before the new policy.
+  const unpaidQueueCandidate = await confirmedOrder('ORD-000050');
   const policySql = await readFile(
     new URL(
       '../prisma/migrations/20261014000000_confirmation_requires_payment/migration.sql',
@@ -963,6 +965,28 @@ try {
   console.log(
     'Passed: mandatory atomic confirmation/payment for all methods, standalone confirmation blocked, injected post-write failure rolls back approval/payment/QR/audit fields, exact replay and confirmation-versus-rejection race.',
   );
+  // Exercise the queue eligibility constraint directly, outside the service.
+  const rejectedQueueCandidate = await confirmedOrder('ORD-000051', '10.00', true);
+  const rejectedQueueQr = tokens.issue(rejectedQueueCandidate);
+  const rejectedQueueVersion = (await qr.scan(users[0].id, shop.id, rejectedQueueQr)).order.reviewVersion;
+  await decisions.decide(users[0].id, shop.id, rejectedQueueCandidate.id, 'REJECTED', {
+    qrToken: rejectedQueueQr,
+    reviewVersion: rejectedQueueVersion,
+  });
+  const ineligibleQueueIds = [rollbackOrder.id, unpaidQueueCandidate.id, rejectedQueueCandidate.id];
+  for (const id of ineligibleQueueIds) {
+    const before = await prisma.order.findFirst({ where: { id, shopId: shop.id } });
+    await assert.rejects(
+      setup.query(
+        `UPDATE "${schema}".orders SET "preparationStatus" = 'QUEUED', "queuedAt" = CURRENT_TIMESTAMP WHERE id = $1 AND "shopId" = $2`,
+        [id, shop.id],
+      ),
+      (error) => error.code === '23514' &&
+        ['orders_preparation_check', 'orders_confirmation_requires_payment'].includes(error.constraint),
+    );
+    assert.deepEqual(await prisma.order.findFirst({ where: { id, shopId: shop.id } }), before);
+  }
+  console.log('Passed: database queue eligibility rejects pending, rejected and confirmed/unpaid orders even through direct SQL; rejected writes preserve the saved order.');
   await prisma.shopMember.update({
     where: { userId_shopId: { userId: users[0].id, shopId: shop.id } },
     data: { role: 'KITCHEN' },
@@ -975,6 +999,14 @@ try {
     ),
   );
   assert.ok(!queued.orders.some((item) => item.id === rollbackOrder.id));
+  assert.ok(!queued.orders.some((item) => ineligibleQueueIds.includes(item.id)));
+  for (const item of queued.orders) {
+    const persisted = await prisma.order.findFirst({ where: { id: item.id, shopId: shop.id } });
+    assert.equal(persisted.status, 'CONFIRMED');
+    assert.equal(persisted.paymentStatus, 'PAID');
+    assert.ok(persisted.paidAt);
+    assert.ok(persisted.queuedAt >= persisted.paidAt);
+  }
   assert.equal(
     new Set(queued.orders.map((item) => item.id)).size,
     queued.orders.length,

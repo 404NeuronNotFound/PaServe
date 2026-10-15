@@ -301,6 +301,41 @@ describe('Cash collection', () => {
       });
     },
   );
+  it.each(['PREPARING', 'READY'])(
+    'excludes paid orders from queued work once they are %s',
+    async (preparationStatus) => {
+      await preparePending();
+      await atomic().expect(200);
+      role = 'KITCHEN';
+      saved.preparationStatus = preparationStatus;
+      const before = JSON.stringify(saved);
+      updateOrder.mockClear();
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/shops/${shopId}/preparation/queue`)
+        .set('Authorization', 'Bearer session')
+        .expect(200);
+      expect(response.body).toEqual({ orders: [], nextCursor: null });
+      expect(JSON.stringify(saved)).toBe(before);
+      expect(updateOrder).not.toHaveBeenCalled();
+    },
+  );
+  it('keeps accepted paid orders queued across reads until preparation starts', async () => {
+    await preparePending();
+    await atomic().expect(200);
+    role = 'KITCHEN';
+    const before = JSON.stringify(saved);
+    updateOrder.mockClear();
+    for (let index = 0; index < 2; index++) {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/shops/${shopId}/preparation/queue`)
+        .set('Authorization', 'Bearer session')
+        .expect(200);
+      expect(response.body.orders).toHaveLength(1);
+      expect(response.body.orders[0]).toMatchObject({ id: orderId, preparationStatus: 'QUEUED' });
+    }
+    expect(JSON.stringify(saved)).toBe(before);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
   it('denies cashier, anonymous and revoked queue access', async () => {
     const path = `/api/v1/shops/${shopId}/preparation/queue`;
     await request(app.getHttpServer()).get(path).expect(401);
