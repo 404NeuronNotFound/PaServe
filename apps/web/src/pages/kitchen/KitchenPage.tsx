@@ -44,6 +44,7 @@ import {
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import "./kitchen.css";
+import { useNewOrderEvents } from "../../features/orders/useNewOrderEvents";
 
 const time = (value: string) =>
   new Date(value).toLocaleTimeString([], {
@@ -112,6 +113,12 @@ function NewOrders() {
   const { shopId, shop } = useActiveShop();
   const user =
     useQueryClient().getQueryData<CurrentUserResponse>(currentUserKey)!.user;
+  const queryClient = useQueryClient();
+  const liveStatus = useNewOrderEvents(shopId, "kitchen", () => {
+    void queryClient.invalidateQueries({
+      queryKey: ["kitchen", "queue", user.id, shopId, "QUEUED"],
+    });
+  });
   const location = useLocation();
   const heading = useRef<HTMLHeadingElement>(null);
   const [state, setState] = useState<PreparationStatus>("QUEUED");
@@ -193,6 +200,13 @@ function NewOrders() {
   );
   return (
     <section className="kitchen-workspace">
+      {(liveStatus === "delayed" || liveStatus === "denied") && (
+        <InlineMessage tone="warning" className="">
+          {liveStatus === "denied"
+            ? "Order access is unavailable. Refresh orders to check your access."
+            : "Order updates are delayed. Refresh orders to check."}
+        </InlineMessage>
+      )}
       <header className="kitchen-heading">
         <div>
           <p className="section-label">KITCHEN / BARISTA</p>

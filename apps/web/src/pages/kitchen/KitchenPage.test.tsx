@@ -22,6 +22,11 @@ import { api } from "../../lib/api/client";
 import { KitchenRoute } from "../../features/kitchen/KitchenRoute";
 import { KitchenPage } from "./KitchenPage";
 import { feedback } from "../../app/stores/feedback";
+import { subscribeNewOrders } from "../../features/orders/new-order-events";
+
+vi.mock("../../features/orders/new-order-events", () => ({
+  subscribeNewOrders: vi.fn(() => vi.fn()),
+}));
 
 vi.mock("../../features/shops/api/context", () => ({
   getShopMembership: vi.fn(),
@@ -127,6 +132,32 @@ function setup(
   );
   return client;
 }
+it("refreshes queued orders when the shop's New Order subscription signals entry or reconnect", async () => {
+  setup("KITCHEN");
+  await screen.findByRole("article", { name: "Order ORD-000001" });
+  const callback = vi.mocked(subscribeNewOrders).mock.calls[0][2];
+  expect(
+    screen.queryByText(
+      /Live updates connecting|New orders update live|every 15 seconds/,
+    ),
+  ).not.toBeInTheDocument();
+  expect(subscribeNewOrders).toHaveBeenCalledWith(
+    "shop-a",
+    "kitchen",
+    expect.any(Function),
+    expect.any(Function),
+  );
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      orders: [ticket(), ticket("second", "ORD-000002")],
+      nextCursor: null,
+    },
+  });
+  act(() => callback(true));
+  await screen.findByRole("article", { name: "Order ORD-000002" });
+  act(() => callback(false));
+  await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(2));
+});
 it.each(["KITCHEN", "OWNER", "ADMIN", "MANAGER"] as const)(
   "shows real preparation details for %s",
   async (role) => {

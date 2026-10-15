@@ -1,11 +1,21 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FiArrowUpRight, FiCheck, FiShoppingBag } from "react-icons/fi";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { OrderQrScanner } from "./OrderQrScanner";
+import { useNewOrderEvents } from "../../features/orders/useNewOrderEvents";
+import { InlineMessage } from "../../components/feedback/InlineMessage";
 
 export function CashierPage() {
   const membership = useActiveShop();
+  const [arrivalShop, setArrivalShop] = useState<string | null>(null);
+  const liveStatus = useNewOrderEvents(
+    membership.shopId,
+    "cashier",
+    (isNewOrder) => {
+      if (isNewOrder) setArrivalShop(membership.shopId);
+    },
+  );
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     document.title = `Cashier · ${membership.shop.name} · PaServe`;
@@ -55,6 +65,19 @@ export function CashierPage() {
         </li>
       </ol>
       <OrderQrScanner key={membership.shopId} shopId={membership.shopId} />
+      {(liveStatus === "delayed" || liveStatus === "denied") && (
+        <InlineMessage tone="warning" className="">
+          {liveStatus === "denied"
+            ? "Order access is unavailable. Choose a shop with active cashier access."
+            : "Order updates are delayed. Scan an order QR or enter its number to check."}
+        </InlineMessage>
+      )}
+      {liveStatus !== "denied" && arrivalShop === membership.shopId && (
+        <InlineMessage tone="info" className="">
+          A new order arrived. Scan the customer's QR or enter their order
+          number to review it.
+        </InlineMessage>
+      )}
     </section>
   );
 }
