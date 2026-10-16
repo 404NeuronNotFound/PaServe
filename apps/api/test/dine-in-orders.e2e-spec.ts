@@ -71,7 +71,7 @@ describe('dine-in order submission', () => {
     raw
       .mockReset()
       .mockResolvedValueOnce([
-        { id: 'shop-a', isActive: true, acceptingOrders: true },
+        { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
       ])
       .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
     saved.mockReset().mockResolvedValue(null);
@@ -130,6 +130,38 @@ describe('dine-in order submission', () => {
   const post = (body: unknown = payload()) =>
     request(app.getHttpServer()).post('/api/v1/menu/cafe/orders').send(body);
   it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'captures shop display details for %s and preserves them across settings edits and retries',
+    async (mode) => {
+      const originalShop = {
+        id: 'shop-a', isActive: true, acceptingOrders: true,
+        name: 'Internal Cafe', displayName: 'Receipt Cafe', address: '12 Old Street',
+        phone: '09171234567', contactEmail: 'hello@example.com', website: 'https://example.com',
+      };
+      raw.mockReset().mockResolvedValueOnce([originalShop])
+        .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
+      const body = mode === 'DINE_IN' ? payload() : takeout();
+      const created = await post(body).expect(201);
+      const details = {
+        name: 'Receipt Cafe', address: '12 Old Street', phone: '09171234567',
+        contactEmail: 'hello@example.com', website: 'https://example.com',
+      };
+      expect(created.body.order.shopDetails).toEqual(details);
+      const persisted = create.mock.calls[0][0].data;
+      expect(persisted.shopDetailsSnapshot).toEqual(details);
+      saved.mockResolvedValue({ ...persisted, id: 'order-a' });
+      raw.mockReset().mockResolvedValue([{ ...originalShop, displayName: 'Renamed', address: 'New address' }]);
+      const replay = await post(body).expect(201);
+      expect(replay.body.order.shopDetails).toEqual(details);
+      expect(create).toHaveBeenCalledTimes(1);
+    },
+  );
+  it('uses the shop name when no display name or contact fields are configured', async () => {
+    const result = await post(takeout()).expect(201);
+    expect(result.body.order.shopDetails).toEqual({
+      name: 'Cafe', address: null, phone: null, contactEmail: null, website: null,
+    });
+  });
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
     'persists each configured cart line separately in the parent transaction for %s',
     async (mode) => {
       const body = mode === 'DINE_IN' ? payload() : takeout();
@@ -181,7 +213,7 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValue([
-          { id: 'shop-a', isActive: true, acceptingOrders: true },
+          { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
         ]);
       await post({
         ...body,
@@ -236,7 +268,7 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValue([
-          { id: 'shop-a', isActive: true, acceptingOrders: true },
+          { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
         ]);
       const replay = await post(body).expect(201);
       expect(replay.body.order).toEqual(created.body.order);
@@ -249,7 +281,7 @@ describe('dine-in order submission', () => {
     raw
       .mockReset()
       .mockResolvedValue([
-        { id: 'shop-a', isActive: true, acceptingOrders: true },
+        { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
       ]);
     const second = await post({
       ...takeout(),
@@ -371,7 +403,7 @@ describe('dine-in order submission', () => {
     raw
       .mockReset()
       .mockResolvedValueOnce([
-        { id: 'shop-a', isActive: true, acceptingOrders: true },
+        { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
       ])
       .mockResolvedValueOnce([]);
     await post().expect(404);
@@ -399,7 +431,7 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValue([
-          { id: 'shop-a', isActive: false, acceptingOrders: true },
+          { id: 'shop-a', name: 'Cafe', isActive: false, acceptingOrders: true },
         ]);
       await post(mode === 'DINE_IN' ? payload() : takeout()).expect(404);
       expect(raw).toHaveBeenCalledTimes(1);
@@ -414,7 +446,7 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValue([
-          { id: 'shop-a', isActive: true, acceptingOrders: false },
+          { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: false },
         ]);
       const result = await post(body).expect(409);
       expect(result.body.code).toBe('SHOP_NOT_ACCEPTING_ORDERS');
@@ -424,7 +456,7 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValueOnce([
-          { id: 'shop-a', isActive: true, acceptingOrders: true },
+          { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
         ])
         .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
       await post(body).expect(201);
@@ -444,7 +476,7 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValue([
-          { id: 'shop-a', isActive: true, acceptingOrders: false },
+          { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: false },
         ]);
       const replay = await post(body).expect(201);
       expect(replay.body.order.id).toBe('order-a');
@@ -465,7 +497,7 @@ describe('dine-in order submission', () => {
       .expect(201);
     expect(raw.mock.calls[0][1]).toBe('cafe');
     expect(raw.mock.calls[0][0].join('?')).toContain(
-      '"acceptingOrders" FROM "shops" WHERE "slug" = ? FOR UPDATE',
+      '"website" FROM "shops" WHERE "slug" = ? FOR UPDATE',
     );
     expect(saved).toHaveBeenCalledWith({
       where: { shopId_requestId: { shopId: 'shop-a', requestId: id } },
@@ -564,7 +596,7 @@ describe('dine-in order submission', () => {
           raw
             .mockReset()
             .mockResolvedValueOnce([
-              { id: 'shop-a', isActive: true, acceptingOrders: true },
+              { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
             ])
             .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
           const result = await post({ ...body, items: lines }).expect(404);
@@ -589,7 +621,7 @@ describe('dine-in order submission', () => {
         raw
           .mockReset()
           .mockResolvedValue([
-            { id: 'shop-a', isActive: true, acceptingOrders: true },
+            { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
           ]);
         const result = await post(body).expect(201);
         expect(result.body.order.id).toBe('order-a');
@@ -630,7 +662,7 @@ describe('dine-in order submission', () => {
           raw
             .mockReset()
             .mockResolvedValueOnce([
-              { id: 'shop-a', isActive: true, acceptingOrders: true },
+              { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
             ])
             .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
           await post(body).expect(201);
@@ -713,7 +745,7 @@ describe('dine-in order submission', () => {
     raw
       .mockReset()
       .mockResolvedValue([
-        { id: 'shop-a', isActive: true, acceptingOrders: true },
+        { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
       ]);
     const replay = await post().expect(201);
     expect(replay.body.order.id).toBe('order-a');
@@ -854,7 +886,7 @@ describe('dine-in order submission', () => {
     raw
       .mockReset()
       .mockResolvedValue([
-        { id: 'shop-a', isActive: true, acceptingOrders: true },
+        { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
       ]);
     const replay = await post(takeout()).expect(201);
     expect(replay.body.order.mode).toBe('TAKEOUT');
@@ -872,7 +904,7 @@ describe('dine-in order submission', () => {
     raw
       .mockReset()
       .mockResolvedValue([
-        { id: 'shop-a', isActive: false, acceptingOrders: true },
+        { id: 'shop-a', name: 'Cafe', isActive: false, acceptingOrders: true },
       ]);
     const replay = await post(takeout()).expect(201);
     expect(replay.body.order.status).toBe('PENDING_CONFIRMATION');
@@ -895,7 +927,7 @@ describe('dine-in order submission', () => {
     raw
       .mockReset()
       .mockResolvedValue([
-        { id: 'shop-a', isActive: true, acceptingOrders: true },
+        { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
       ]);
     await post(takeout()).expect(500);
     expect(create).toHaveBeenCalledTimes(1);
@@ -918,7 +950,7 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValue([
-          { id: 'shop-a', isActive: true, acceptingOrders: true },
+          { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
         ]);
       const reads = readItems.mock.calls.length;
       const result = await post(original).expect(409);
@@ -940,7 +972,7 @@ describe('dine-in order submission', () => {
     raw
       .mockReset()
       .mockResolvedValue([
-        { id: 'shop-a', isActive: false, acceptingOrders: true },
+        { id: 'shop-a', name: 'Cafe', isActive: false, acceptingOrders: true },
       ]);
     const clock = vi
       .spyOn(Date, 'now')
@@ -951,7 +983,7 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValue([
-          { id: 'shop-a', isActive: true, acceptingOrders: true },
+          { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
         ]);
       await post({
         ...original,
@@ -1275,7 +1307,7 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValue([
-          { id: 'shop-a', isActive: true, acceptingOrders: true },
+          { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
         ]);
       const replay = await post(body).expect(201);
       expect(replay.body.order.items).toEqual(created.body.order.items);
@@ -1402,7 +1434,7 @@ describe('dine-in order submission', () => {
     raw
       .mockReset()
       .mockResolvedValue([
-        { id: 'shop-a', isActive: true, acceptingOrders: true },
+        { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
       ]);
     const replay = await post(body).expect(201);
     expect(replay.body.order.subtotalPrice).toBe(

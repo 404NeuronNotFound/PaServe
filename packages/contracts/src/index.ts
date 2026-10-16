@@ -717,9 +717,38 @@ export interface CreateTakeoutOrderRequest {
   items: CustomerCheckoutRequest["items"];
 }
 export type CreateCustomerOrderRequest = CreateDineInOrderRequest | CreateTakeoutOrderRequest;
+/** Public shop identity captured at checkout, independent of later settings edits. */
+export interface ReceiptShopDetails {
+  name: string;
+  address: string | null;
+  phone: string | null;
+  contactEmail: string | null;
+  website: string | null;
+}
+/** Allowlist receipt display fields at both API and browser boundaries. */
+export function parseReceiptShopDetails(value: unknown): ReceiptShopDetails | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const limits = { name: SHOP_LIMITS.nameMax, address: SHOP_SETTINGS_LIMITS.address,
+    phone: SHOP_SETTINGS_LIMITS.phone, contactEmail: SHOP_SETTINGS_LIMITS.contactEmail,
+    website: SHOP_SETTINGS_LIMITS.website };
+  for (const [field, limit] of Object.entries(limits)) {
+    const text = raw[field];
+    if (text === null && field !== "name") continue;
+    if (typeof text !== "string" || !text.trim() || text.length > limit) return null;
+  }
+  return {
+    name: raw.name as string,
+    address: raw.address as string | null,
+    phone: raw.phone as string | null,
+    contactEmail: raw.contactEmail as string | null,
+    website: raw.website as string | null,
+  };
+}
 export interface DineInOrderResponse {
   order: {
     id: string;
+    shopDetails?: ReceiptShopDetails | null;
     mode: "DINE_IN";
     /** Awaiting staff confirmation; implements the roadmap's PENDING_CONFIRMATION state. */
     status: "PENDING_CONFIRMATION";
@@ -751,6 +780,7 @@ export interface VerifyOrderQrResponse {
   verified: true;
   order: {
     id: string;
+    shopDetails?: ReceiptShopDetails | null;
     shopId: string;
     orderNumber: string;
     mode: "DINE_IN" | "TAKEOUT";
@@ -787,6 +817,7 @@ export interface CustomerOrderStatusResponse {
 export interface CustomerReceiptSummary {
   shopSlug: string;
   shopName: string;
+  shopDetails?: ReceiptShopDetails | null;
   primaryColor: string | null;
   accentColor: string | null;
   id: string;

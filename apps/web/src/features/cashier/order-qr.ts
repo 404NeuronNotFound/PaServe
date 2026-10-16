@@ -1,4 +1,5 @@
 import type { VerifyOrderQrResponse } from "@paserve/contracts";
+import { parseReceiptShopDetails } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import "../auth/api/session";
 import { AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
@@ -56,7 +57,7 @@ export function parseReview(
   shopId: string,
   orderId: string,
   forPayment = false,
-) {
+): VerifyOrderQrResponse["order"] {
   if (
     !data ||
     data.verified !== true ||
@@ -66,6 +67,7 @@ export function parseReview(
     !["DINE_IN", "TAKEOUT"].includes(data.order.mode) ||
     data.order.currency !== "PHP" ||
     !isOrderTotal(data.order.totalPrice) ||
+    (data.order.shopDetails != null && !parseReceiptShopDetails(data.order.shopDetails)) ||
     data.order.status !== (forPayment ? "CONFIRMED" : "PENDING_CONFIRMATION") ||
     !(forPayment ? ["UNPAID", "PAID"] : ["UNPAID"]).includes(
       data.order.paymentStatus,
@@ -107,6 +109,7 @@ export function parseReview(
   return {
     id,
     shopId,
+    ...(data.order.shopDetails ? { shopDetails: parseReceiptShopDetails(data.order.shopDetails)! } : {}),
     orderNumber,
     mode,
     status,

@@ -6,6 +6,7 @@ import type {
   CashPaymentReviewResponse,
   VerifyOrderQrResponse,
 } from "@paserve/contracts";
+import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
 import {
   PAYMENT_REFERENCE_PATTERN,
   CASH_AMOUNT_MAX,
@@ -314,6 +315,7 @@ export function CashierCashPayment({
                 : "GCash payment recorded manually"}
         </h2>
         <p role="status">{review.order.orderNumber} is paid.</p>
+        <ReceiptShopDetails details={review.order.shopDetails} />
         {review.queue && (
           <p role="status">
             {review.queue.status === "QUEUED"

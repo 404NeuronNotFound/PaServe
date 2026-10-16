@@ -16,6 +16,7 @@ import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import { OrderTokenService } from './order-token.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { readPriceSnapshot } from './order-price-snapshots.js';
+import { readReceiptShopDetails } from './receipt-shop-details.js';
 import { createHash } from 'node:crypto';
 
 export const ORDER_QR_ROLES = SHOP_ROLES.filter(
@@ -155,6 +156,7 @@ export class OrderQrService {
         currency: true,
         totalPrice: true,
         tableNumber: true,
+        shopDetailsSnapshot: true,
         qrTokenNonce: true,
         qrTokenExpiresAt: true,
         qrTokenRevokedAt: true,
@@ -250,6 +252,7 @@ export class OrderQrService {
       verified: true as const,
       order: {
         ...review,
+        shopDetails: readReceiptShopDetails(order.shopDetailsSnapshot),
         reviewVersion: createHash('sha256')
           .update(JSON.stringify(review))
           .digest('hex'),

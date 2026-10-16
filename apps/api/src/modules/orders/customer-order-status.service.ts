@@ -8,6 +8,7 @@ import type { CustomerOrderStatusResponse } from '@paserve/contracts';
 import { PREPARATION_STATUSES } from '@paserve/contracts';
 import { PrismaService } from '../../database/prisma.service.js';
 import { OrderTokenService } from './order-token.service.js';
+import { readReceiptShopDetails } from './receipt-shop-details.js';
 
 @Injectable()
 export class CustomerOrderStatusService {
@@ -68,6 +69,7 @@ export class CustomerOrderStatusService {
         tableCode: true,
         tableNumber: true,
         totalPrice: true,
+        shopDetailsSnapshot: true,
       },
     });
     if (!order)
@@ -108,11 +110,13 @@ export class CustomerOrderStatusService {
         code: 'INVALID_ORDER_STATE',
         message: 'Unable to read the saved order status.',
       });
+    const shopDetails = readReceiptShopDetails(order.shopDetailsSnapshot);
     return {
       trackingExpiresAt: order.qrTokenExpiresAt.toISOString(),
       receipt: {
         shopSlug: slug,
-        shopName: shop.name,
+        shopName: shopDetails?.name ?? shop.name,
+        shopDetails,
         primaryColor: shop.primaryColor,
         accentColor: shop.accentColor,
         id: order.id,

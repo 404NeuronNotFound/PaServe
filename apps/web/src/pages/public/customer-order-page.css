@@ -438,7 +438,7 @@
   color: #642519;
   border-color: #d6a18b;
 }
-.order-receipt-details dl {
+.order-receipt-details > dl {
   margin: 28px 0 0;
 }
 .order-receipt-total {
@@ -687,7 +687,7 @@
   .order-receipt-next {
     padding: 24px 20px;
   }
-  .order-receipt-details dl,
+  .order-receipt-details > dl,
   .order-receipt-details > .order-receipt-note {
     margin-left: 4px;
     margin-right: 4px;

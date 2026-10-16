@@ -1,0 +1,38 @@
+.receipt-shop-details {
+  min-width: 0;
+  padding-block: 16px;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+}
+
+.receipt-shop-details h2 {
+  margin: 0 0 8px;
+  font: 600 1.25rem/1.35 Georgia, serif;
+}
+
+.receipt-shop-details p {
+  margin: 0 0 8px;
+  color: var(--color-muted);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.receipt-shop-details dl,
+.phase-two .receipt-shop-details dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.receipt-shop-details dl > div,
+.phase-two .receipt-shop-details dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.receipt-shop-details dt { color: var(--color-muted); }
+.receipt-shop-details dd,
+.phase-two .receipt-shop-details dd { margin: 0; min-width: 0; text-align: left; }

@@ -125,6 +125,19 @@ function setup(path = "/menu/cafe/orders/order-a") {
   );
 }
 
+it("shows the saved shop identity in the customer receipt after refresh", () => {
+  saveOrderReceipt("cafe", "Current menu name", { ...order, shopDetails: {
+    name: "Original Cafe", address: "12 Old Street", phone: "09171234567",
+    contactEmail: "hello@example.com", website: "https://example.com",
+  } });
+  orderReceipts.clearMemory();
+  setup();
+  expect(screen.getByRole("region", { name: "Shop details" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Original Cafe" })).toBeInTheDocument();
+  expect(screen.getByText("12 Old Street")).toBeInTheDocument();
+  expect(screen.queryByText("Current menu name")).not.toBeInTheDocument();
+});
+
 it("opens a private tracking link on another device and reopens from the guest cookie without a saved receipt or cashier QR", async () => {
   const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828";
   const shopId = "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e";

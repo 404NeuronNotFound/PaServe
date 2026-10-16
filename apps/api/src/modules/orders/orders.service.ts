@@ -16,6 +16,7 @@ import { CreateOrderDto } from './create-order.dto.js';
 import { TableContextService } from '../tables/table-context.service.js';
 import { OrderTokenService } from './order-token.service.js';
 import { formatOrderNumber } from './order-number.js';
+import { readReceiptShopDetails } from './receipt-shop-details.js';
 import {
   copyPriceSnapshot,
   readPriceSnapshot,
@@ -115,6 +116,7 @@ export class OrdersService {
         throw new Error('Invalid persisted receipt total.');
       const common = {
         id: order.id,
+        shopDetails: readReceiptShopDetails(order.shopDetailsSnapshot),
         status: 'PENDING_CONFIRMATION' as const,
         paymentStatus: 'UNPAID' as const,
         orderNumber: order.orderNumber,
@@ -155,8 +157,10 @@ export class OrdersService {
           // shared-lock upgrade deadlocks between concurrent submissions.
           // Shop/table state stays locked until commit.
           const shops = await tx.$queryRaw<
-            { id: string; isActive: boolean; acceptingOrders: boolean }[]
-          >`SELECT "id", "isActive", "acceptingOrders" FROM "shops" WHERE "slug" = ${slug} FOR UPDATE`;
+            { id: string; isActive: boolean; acceptingOrders: boolean;
+              name: string; displayName: string | null; address: string | null;
+              phone: string | null; contactEmail: string | null; website: string | null }[]
+          >`SELECT "id", "isActive", "acceptingOrders", "name", "displayName", "address", "phone", "contactEmail", "website" FROM "shops" WHERE "slug" = ${slug} FOR UPDATE`;
           const shop = shops[0];
           if (!shop) throw unavailable();
           const saved = await tx.order.findUnique({
@@ -255,6 +259,13 @@ export class OrdersService {
               tableNumber: table?.number ?? null,
               currency: PRODUCT_CURRENCY,
               totalPrice: total,
+              shopDetailsSnapshot: {
+                name: shop.displayName?.trim() || shop.name,
+                address: shop.address?.trim() || null,
+                phone: shop.phone?.trim() || null,
+                contactEmail: shop.contactEmail?.trim() || null,
+                website: shop.website?.trim() || null,
+              },
               items: items as unknown as Prisma.InputJsonValue,
             },
           });

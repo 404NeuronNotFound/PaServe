@@ -22,6 +22,7 @@ describe('Customer receipt status access', () => {
   let order: ReturnType<typeof fixture>;
   const fixture = () => ({
     id,
+    shopDetailsSnapshot: null as unknown,
     shopId,
     orderNumber: 'ORD-000042',
     status: 'PENDING_CONFIRMATION',
@@ -53,6 +54,24 @@ describe('Customer receipt status access', () => {
       accentColor: null,
     });
     database.order.findFirst.mockImplementation(async () => order);
+  });
+
+  it('reopens the original shop identity after current settings change', async () => {
+    const details = {
+      name: 'Original Cafe', address: '12 Old Street', phone: '09171234567',
+      contactEmail: 'hello@example.com', website: 'https://example.com',
+    };
+    order.shopDetailsSnapshot = { ...details, privateField: 'must not escape' };
+    database.shop.findFirst.mockResolvedValue({ id: shopId, name: 'Renamed Cafe' });
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
+    expect(result.receipt?.shopName).toBe(details.name);
+    expect(result.receipt?.shopDetails).toEqual(details);
+  });
+
+  it('does not invent contact details for legacy orders', async () => {
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
+    expect(result.receipt?.shopDetails).toBeNull();
+    expect(result.receipt?.shopName).toBe('Cafe');
   });
 
   it('reads only the credential-bound order under its resolved shop', async () => {

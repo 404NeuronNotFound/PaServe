@@ -20,6 +20,7 @@ import { OrderReferenceCard } from "./OrderReferenceCard";
 import { useCustomerConfirmation } from "../../features/orders/useCustomerConfirmation";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { GuestTrackingShare } from "./GuestTrackingShare";
+import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
 
 export function CustomerOrderPage() {
   const { shopSlug = "", orderId = "" } = useParams();
@@ -145,6 +146,7 @@ export function CustomerOrderPage() {
               tabIndex={-1}
               ref={receiptDetails}
             >
+              <ReceiptShopDetails details={receipt.shopDetails} />
               <OrderReferenceCard
                 key={`${shopSlug}:${orderId}`}
                 credential={

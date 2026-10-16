@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { FiCheckCircle, FiArrowLeft } from "react-icons/fi";
 import type { VerifyOrderQrResponse } from "@paserve/contracts";
 import { formatCartPrice } from "../../lib/money";
+import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
 
 export function CashierOrderReview({
   order,
@@ -73,6 +74,7 @@ export function CashierOrderReview({
       </p>
       <div className="cashier-review-layout">
         <div className="cashier-review-receipt">
+          <ReceiptShopDetails details={order.shopDetails} />
           <div className="cashier-review-order-number">
             <span>Order number</span>
             <strong>{order.orderNumber}</strong>

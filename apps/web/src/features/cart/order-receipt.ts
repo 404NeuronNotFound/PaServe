@@ -1,7 +1,9 @@
 import type {
   CustomerOrderResponse,
   PublicMenuResponse,
+  ReceiptShopDetails,
 } from "@paserve/contracts";
+import { parseReceiptShopDetails } from "@paserve/contracts";
 import { createPendingOrderStorage } from "./pending-orders";
 import { isPublicTableContext } from "../shops/customer-table";
 import { captureCustomerOrderQr } from "./customer-order-qr";
@@ -16,6 +18,7 @@ import {
 export interface OrderReceipt {
   shopSlug: string;
   shopName: string;
+  shopDetails?: ReceiptShopDetails | null;
   primaryColor?: string | null;
   accentColor?: string | null;
   id: string;
@@ -45,9 +48,11 @@ export function saveOrderReceipt(
   > = {},
 ) {
   captureCustomerOrderQr(shopSlug, order);
+  const shopDetails = parseReceiptShopDetails(order.shopDetails);
   const receipt: OrderReceipt = {
     shopSlug,
-    shopName,
+    shopName: shopDetails?.name ?? shopName,
+    ...(shopDetails ? { shopDetails } : {}),
     primaryColor: branding.primaryColor,
     accentColor: branding.accentColor,
     id: order.id,
@@ -108,9 +113,12 @@ export function readOrderReceipt(
       return null;
     // Restore only display fields; legacy or tampered storage must not surface
     // credentials, notes, or other request data through the receipt reader.
+    const shopDetails = parseReceiptShopDetails(value.shopDetails);
+    if (value.shopDetails != null && !shopDetails) return null;
     return {
       shopSlug,
-      shopName: value.shopName,
+      shopName: shopDetails?.name ?? value.shopName,
+      ...(shopDetails ? { shopDetails } : {}),
       primaryColor: value.primaryColor,
       accentColor: value.accentColor,
       id: value.id,

@@ -149,6 +149,8 @@ model Order {
   tableNumber String?   @db.VarChar(40)
   currency    String    @default("PHP")
   totalPrice  Decimal   @db.Decimal(12, 2)
+  // Public receipt identity captured once at order placement; legacy orders are null.
+  shopDetailsSnapshot Json?
   items       Json
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

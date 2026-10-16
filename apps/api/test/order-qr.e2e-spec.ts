@@ -30,6 +30,7 @@ describe('Cashier order QR verification', () => {
   let hasMembership: boolean;
   const savedOrder = () => ({
     id: orderId,
+    shopDetailsSnapshot: null as unknown,
     shopId,
     orderNumber: 'ORD-000001',
     mode: 'TAKEOUT' as 'TAKEOUT' | 'DINE_IN',
@@ -323,6 +324,13 @@ describe('Cashier order QR verification', () => {
     await scan(token).expect(403);
     await verify(token).expect(403);
   });
+  it('returns saved public shop details without copying unrelated snapshot fields', async () => {
+    const details = { name: 'Original Cafe', address: '12 Old Street', phone: '09171234567', contactEmail: null, website: null };
+    persisted.shopDetailsSnapshot = { ...details, internalField: 'private' };
+    const result = await verify().expect(200);
+    expect(result.body.order.shopDetails).toEqual(details);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
     'resolves a scanned token for live %s and returns only saved order details',
     async (allowedRole) => {
@@ -449,6 +457,7 @@ describe('Cashier order QR verification', () => {
           totalPrice: '135.50',
           tableNumber: null,
           reviewVersion: expect.stringMatching(/^[a-f0-9]{64}$/),
+          shopDetails: null,
           items: [
             {
               productId: 'saved-product',

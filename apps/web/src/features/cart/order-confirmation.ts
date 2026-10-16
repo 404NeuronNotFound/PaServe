@@ -1,5 +1,6 @@
 import {
   normalizeCustomerNote,
+  parseReceiptShopDetails,
   type CreateCustomerOrderRequest,
   type CustomerOrderResponse,
 } from "@paserve/contracts";
@@ -30,6 +31,7 @@ export function isCreatedOrderResponse(
     order.mode !== (request.mode ?? "DINE_IN") ||
     order.currency !== "PHP" ||
     !isOrderTotal(order.totalPrice) ||
+    (order.shopDetails != null && !parseReceiptShopDetails(order.shopDetails)) ||
     typeof order.createdAt !== "string" ||
     !Number.isFinite(Date.parse(order.createdAt)) ||
     !Array.isArray(order.items) ||
