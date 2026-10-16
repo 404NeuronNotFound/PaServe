@@ -27,6 +27,18 @@ it("loads an explicit shop/resource with cancellation and isolates cache entries
     );
 });
 it.each([
+  { status: "PENDING_CONFIRMATION" },
+  { status: "REJECTED" },
+  { paymentStatus: "UNPAID" },
+  { preparationStatus: "READY" },
+  { completedAt: null },
+  { updatedAt: "2026-10-15T00:00:00.000Z" },
+  { history: [] },
+  {
+    history: [
+      { status: "PLACED", at: "2026-10-16T00:00:00.000Z", actorId: null },
+    ],
+  },
   {
     payment: {
       method: "CASH",
@@ -86,5 +98,29 @@ it("allows metadata-only review for unavailable snapshots and redacts unsafe rec
 it("checks saved line arithmetic without loading current menu products", () => {
   const data = orderDetailsFixture();
   data.order.items![0].unitPrice = "19.00";
+  expect(() => parseOrderDetails(data, "shop-a", "order-a")).toThrow();
+});
+it("keeps supported legacy missing metadata readable without inventing milestones", () => {
+  const data = orderDetailsFixture();
+  Object.assign(data.order, {
+    status: "CONFIRMED",
+    paymentStatus: "UNPAID",
+    preparationStatus: null,
+    paidAt: null,
+    completedAt: null,
+    payment: null,
+    history: [data.order.history[0]],
+    permittedActions: ["CASHIER"],
+  });
+  expect(
+    parseOrderDetails(data, "shop-a", "order-a").order.permittedActions,
+  ).toEqual(["CASHIER"]);
+});
+it("rejects plausible-looking milestones that contradict saved payment and completion timestamps", () => {
+  const data = orderDetailsFixture();
+  data.order.history[1].at = "2026-10-16T00:02:00.000Z";
+  expect(() => parseOrderDetails(data, "shop-a", "order-a")).toThrow();
+  data.order.history[1].at = data.order.paidAt!;
+  data.order.history[2].at = "2026-10-16T00:04:00.000Z";
   expect(() => parseOrderDetails(data, "shop-a", "order-a")).toThrow();
 });

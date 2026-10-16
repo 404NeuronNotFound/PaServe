@@ -74,6 +74,32 @@ export function parseOrderDetails(
     throw invalid();
   const payment =
     order.payment === null ? null : parseReceiptPaymentDetails(order.payment);
+  const created = Date.parse(order.createdAt),
+    updated = Date.parse(order.updatedAt);
+  const stage =
+    order.preparationStatus === null
+      ? 0
+      : ["QUEUED", "PREPARING", "READY", "COMPLETED"].indexOf(
+          order.preparationStatus,
+        ) + 1;
+  if (
+    updated < created ||
+    (order.status !== "CONFIRMED" &&
+      (order.paymentStatus !== "UNPAID" || stage !== 0)) ||
+    (stage !== 0 && order.paymentStatus !== "PAID") ||
+    (order.paymentStatus === "UNPAID" &&
+      (payment !== null || order.paidAt !== null)) ||
+    (order.paidAt !== null &&
+      (Date.parse(order.paidAt) < created ||
+        Date.parse(order.paidAt) > updated)) ||
+    (order.preparationStatus === "COMPLETED") !==
+      (order.completedAt !== null) ||
+    (order.completedAt !== null &&
+      (Date.parse(order.completedAt) <
+        Date.parse(order.paidAt ?? order.createdAt) ||
+        Date.parse(order.completedAt) > updated))
+  )
+    throw invalid();
   if (
     payment?.method === "CASH" &&
     payment.amountReceived !== undefined &&
@@ -95,13 +121,37 @@ export function parseOrderDetails(
   ];
   const seen = new Set<string>();
   let previous = -Infinity;
+  let previousStage = -1;
   for (const event of order.history) {
+    const eventStage =
+      event?.status === "REJECTED"
+        ? 1
+        : [
+            "PLACED",
+            "CONFIRMED",
+            "PAID",
+            "QUEUED",
+            "PREPARING",
+            "READY",
+            "COMPLETED",
+          ].indexOf(event?.status);
     if (
       !event ||
       !milestones.includes(event.status) ||
       seen.has(event.status) ||
       !isReceiptTimestamp(event.at) ||
       Date.parse(event.at) < previous ||
+      Date.parse(event.at) < created ||
+      Date.parse(event.at) > updated ||
+      eventStage < previousStage ||
+      (event.status === "PLACED" &&
+        (event.at !== order.createdAt || event.actorId !== null)) ||
+      (event.status === "CONFIRMED" && order.status !== "CONFIRMED") ||
+      (event.status === "REJECTED" && order.status !== "REJECTED") ||
+      (event.status === "PAID" &&
+        (order.paymentStatus !== "PAID" || event.at !== order.paidAt)) ||
+      (eventStage >= 3 && stage < eventStage - 2) ||
+      (event.status === "COMPLETED" && event.at !== order.completedAt) ||
       !(
         event.actorId === null ||
         (typeof event.actorId === "string" && !!event.actorId)
@@ -109,8 +159,15 @@ export function parseOrderDetails(
     )
       throw invalid();
     previous = Date.parse(event.at);
+    previousStage = eventStage;
     seen.add(event.status);
   }
+  if (
+    !seen.has("PLACED") ||
+    (order.paidAt !== null && !seen.has("PAID")) ||
+    (order.completedAt !== null && !seen.has("COMPLETED"))
+  )
+    throw invalid();
   const allowed = new Set<string>();
   if (items && !order.snapshotIssue) {
     if (

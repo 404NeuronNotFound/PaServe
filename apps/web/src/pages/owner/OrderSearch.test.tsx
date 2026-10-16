@@ -7,7 +7,11 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  onlineManager,
+} from "@tanstack/react-query";
 import type {
   ActiveOrderSummary,
   CurrentUserResponse,
@@ -55,7 +59,10 @@ beforeEach(() => {
   for (const request of Object.values(requests))
     request.mockResolvedValue(empty);
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  onlineManager.setOnline(true);
+});
 function setup(view: View) {
   const Page = pages[view];
   const client = new QueryClient({
@@ -92,6 +99,25 @@ function search(value: string) {
 describe.each(["active", "completed", "cancelled"] as const)(
   "%s owner search",
   (view) => {
+    it("attempts an explicit offline refresh and reports failure instead of keeping stale results paused", async () => {
+      const { client } = setup(view);
+      await waitFor(() => expect(requests[view]).toHaveBeenCalledTimes(1));
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled(),
+      );
+      requests[view].mockRejectedValue(new Error("Offline"));
+      onlineManager.setOnline(false);
+      fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /couldn’t refresh/,
+      );
+      expect(
+        client
+          .getQueryCache()
+          .getAll()
+          .some((query) => query.state.fetchStatus === "paused"),
+      ).toBe(false);
+    });
     it("submits trimmed safe text to the server rather than filtering only the loaded page", async () => {
       setup(view);
       await waitFor(() => expect(requests[view]).toHaveBeenCalledTimes(1));

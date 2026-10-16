@@ -13,6 +13,24 @@ import { CompletedOrdersService } from './completed-orders.service.js';
 import { CancelledOrdersService } from './cancelled-orders.service.js';
 
 describe('Owner order filter validation and dates', () => {
+  it('accepts all 40 Unicode table characters and normalizes NFC like table management', () => {
+    const label = '𠮷'.repeat(40);
+    expect(normalizeOwnerOrderFilters({ table: label }, 'active')).toEqual({
+      table: label,
+    });
+    expect(
+      normalizeOwnerOrderFilters({ table: 'e\u0301' }, 'completed'),
+    ).toEqual({ table: 'é' });
+    expect(
+      normalizeOwnerOrderFilters({ table: '𠮷'.repeat(41) }, 'active'),
+    ).toBeNull();
+    expect(
+      normalizeOwnerOrderFilters({ table: '\ud800' }, 'active'),
+    ).toBeNull();
+    expect(
+      normalizeOwnerOrderFilters({ table: 'Patio\u200b' }, 'active'),
+    ).toBeNull();
+  });
   it('normalizes blank selections and preserves printable exact table labels', () => {
     expect(
       normalizeOwnerOrderFilters({ mode: '', table: '   ' }, 'active'),

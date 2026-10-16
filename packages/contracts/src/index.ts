@@ -162,6 +162,13 @@ export function normalizeOwnerOrderFilters(value: unknown, view: OwnerOrderView)
   for (const field of OWNER_ORDER_FILTER_FIELDS) {
     const raw = source[field];
     if (raw === undefined || raw === "") continue;
+    if (field === "table") {
+      if (typeof raw !== "string" || raw.length > TABLE_LIMITS.numberMaxLength * 2 || !TABLE_NUMBER_PATTERN.test(raw)) return null;
+      const label = raw.normalize("NFC").trim();
+      if ([...label].length > TABLE_LIMITS.numberMaxLength) return null;
+      if (label) normalized[field] = label;
+      continue;
+    }
     if (typeof raw !== "string" || raw.length > 40 || /\p{Cc}/u.test(raw)) return null;
     if (raw.trim()) normalized[field] = raw.trim();
   }

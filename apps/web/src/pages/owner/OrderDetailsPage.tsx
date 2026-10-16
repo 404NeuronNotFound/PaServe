@@ -85,10 +85,14 @@ function OrderDetailsWorkspace({
     queryFn: ({ signal }) => getOrderDetails(shopId, orderId, signal),
     enabled: role === "OWNER" && !!orderId,
     retry: false,
+    networkMode: "always",
     gcTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     refetchInterval: 15000,
   });
   const mutation = useMutation({
+    networkMode: "always",
     mutationFn: async (action: PreparationAction) => {
       await {
         START_PREPARING: startPreparing,

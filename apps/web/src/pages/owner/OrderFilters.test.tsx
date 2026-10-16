@@ -85,9 +85,7 @@ const change = (label: string, value: string) => {
       CARD_MANUAL: "Card (manual)",
     };
     fireEvent.click(control);
-    fireEvent.click(
-      screen.getByRole("option", { name: labels[value] }),
-    );
+    fireEvent.click(screen.getByRole("option", { name: labels[value] }));
   } else fireEvent.change(control, { target: { value } });
 };
 const apply = () =>
@@ -102,6 +100,26 @@ const open = () =>
 describe.each(["active", "completed", "cancelled"] as const)(
   "%s order filters",
   (view) => {
+    it("supports saved table labels with 40 supplementary Unicode characters", async () => {
+      setup(view);
+      await waitFor(() => expect(requests[view]).toHaveBeenCalledTimes(1));
+      open();
+      const label = "𠮷".repeat(40);
+      expect(
+        (screen.getByLabelText("Table label") as HTMLInputElement).maxLength,
+      ).toBeGreaterThanOrEqual(label.length);
+      change("Table label", label);
+      apply();
+      await waitFor(() =>
+        expect(requests[view]).toHaveBeenLastCalledWith(
+          "a",
+          null,
+          expect.any(AbortSignal),
+          "",
+          { table: label },
+        ),
+      );
+    });
     it("applies trimmed table, type and business dates with search, then clears them independently", async () => {
       setup(view);
       await waitFor(() => expect(requests[view]).toHaveBeenCalledTimes(1));

@@ -62,6 +62,7 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
       getCompletedOrders(shopId, cursor, signal, search, filters),
     enabled: role === "OWNER",
     retry: false,
+    networkMode: "always",
     gcTime: 0,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,

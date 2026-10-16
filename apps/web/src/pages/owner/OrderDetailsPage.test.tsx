@@ -7,7 +7,11 @@ import {
   within,
 } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  onlineManager,
+} from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import type {
   CurrentUserResponse,
@@ -76,7 +80,45 @@ beforeEach(() => {
     this.open = false;
   });
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  onlineManager.setOnline(true);
+  vi.restoreAllMocks();
+});
+
+it("fails an offline action immediately instead of deferring it until reconnect", async () => {
+  const data = orderDetailsFixture();
+  data.order.preparationStatus = "READY";
+  data.order.completedAt = null;
+  data.order.permittedActions = ["COMPLETE"];
+  vi.mocked(getOrderDetails).mockResolvedValue(data);
+  vi.mocked(completeOrder).mockRejectedValue(new Error("Offline"));
+  const { rerender, view, client } = setup();
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Mark fulfilled" }),
+  );
+  onlineManager.setOnline(false);
+  fireEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Mark fulfilled",
+    }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    /could not be updated/,
+  );
+  expect(completeOrder).toHaveBeenCalledExactlyOnceWith("shop-a", "order-a");
+  expect(
+    client
+      .getMutationCache()
+      .getAll()
+      .some((mutation) => mutation.state.isPaused),
+  ).toBe(false);
+  rerender(view("shop-b"));
+  onlineManager.setOnline(true);
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(completeOrder).toHaveBeenCalledOnce();
+});
 
 it("shows the saved full snapshot, totals, timestamps, payment and recorded actors", async () => {
   setup();
@@ -86,7 +128,7 @@ it("shows the saved full snapshot, totals, timestamps, payment and recorded acto
   expect(screen.getByText(/Oat milk ·/)).toBeInTheDocument();
   expect(screen.getByText("Customer note: Less ice")).toBeInTheDocument();
   expect(screen.getByText(/Dine-in · Table Patio 2/)).toBeInTheDocument();
-  expect(screen.getByText(/Actor ID: owner-a/)).toBeInTheDocument();
+  expect(screen.getAllByText(/Actor ID: owner-a/)).toHaveLength(2);
   expect(screen.getByText(/not a complete event log/)).toBeInTheDocument();
   expect(screen.getByText(/Amount received \(PHP\):/)).toHaveTextContent(
     "50.00",

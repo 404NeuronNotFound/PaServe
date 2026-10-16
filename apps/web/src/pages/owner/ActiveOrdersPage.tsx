@@ -78,6 +78,7 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
       getActiveOrders(shopId, cursor, signal, search, filters),
     enabled: role === "OWNER",
     retry: false,
+    networkMode: "always",
     gcTime: 0,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,

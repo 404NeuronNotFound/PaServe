@@ -51,6 +51,7 @@ function CancelledOrdersWorkspace({ userId }: { userId: string }) {
       getCancelledOrders(shopId, cursor, signal, search, filters),
     enabled: role === "OWNER",
     retry: false,
+    networkMode: "always",
     gcTime: 0,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,

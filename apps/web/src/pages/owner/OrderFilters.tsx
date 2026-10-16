@@ -3,6 +3,7 @@ import {
   normalizeOwnerOrderFilters,
   OWNER_ACTIVE_STATUS_FILTERS,
   OWNER_PAYMENT_METHOD_FILTERS,
+  TABLE_LIMITS,
   type OwnerOrderFilters,
   type OwnerOrderView,
 } from "@paserve/contracts";
@@ -171,7 +172,7 @@ export function OrderFilters({
             Table label
             <input
               value={draft.table ?? ""}
-              maxLength={40}
+              maxLength={TABLE_LIMITS.numberMaxLength * 2}
               disabled={draft.mode === "TAKEOUT"}
               placeholder="Any table"
               onChange={(e) => update("table", e.target.value)}
