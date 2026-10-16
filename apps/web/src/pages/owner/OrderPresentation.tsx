@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ActiveOrderSummary } from "@paserve/contracts";
+import { OrderViewsNavigation } from "./OrderViewsNavigation";
 import {
   FiArrowUpRight,
   FiCheckCircle,
@@ -33,29 +34,32 @@ export function OrderPageHeader({
 }) {
   const Icon = viewIcons[view];
   return (
-    <header className="active-orders-header">
-      <div className="owner-orders-heading">
-        <span className="owner-orders-emblem">
-          <Icon aria-hidden="true" />
-        </span>
-        <div>
-          <p className="section-label">ORDER MANAGEMENT</p>
-          <h1 id={titleId}>{title}</h1>
-          <p>{children}</p>
+    <>
+      <header className="active-orders-header">
+        <div className="owner-orders-heading">
+          <span className="owner-orders-emblem">
+            <Icon aria-hidden="true" />
+          </span>
+          <div>
+            <p className="section-label">ORDER MANAGEMENT</p>
+            <h1 id={titleId}>{title}</h1>
+            <p>{children}</p>
+          </div>
         </div>
-      </div>
-      <button
-        className="secondary-button owner-orders-refresh"
-        disabled={fetching}
-        onClick={onRefresh}
-      >
-        <FiRefreshCw
-          aria-hidden="true"
-          className={fetching ? "is-refreshing" : undefined}
-        />
-        {fetching ? "Refreshing…" : "Refresh"}
-      </button>
-    </header>
+        <button
+          className="secondary-button owner-orders-refresh"
+          disabled={fetching}
+          onClick={onRefresh}
+        >
+          <FiRefreshCw
+            aria-hidden="true"
+            className={fetching ? "is-refreshing" : undefined}
+          />
+          {fetching ? "Refreshing…" : "Refresh"}
+        </button>
+      </header>
+      <OrderViewsNavigation />
+    </>
   );
 }
 
@@ -97,6 +101,7 @@ export function OrderDetailsLink({
   return (
     <a
       className="owner-order-detail-link"
+      data-receipt={receipt || undefined}
       href={`/app/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}`}
     >
       <span>{receipt ? "View details / receipt" : "View details"}</span>

@@ -17,6 +17,7 @@ import { ActiveShopContext } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getCancelledOrders } from "../../features/orders/cancelled-orders";
 import { CancelledOrdersPage } from "./CancelledOrdersPage";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../features/orders/cancelled-orders", async (original) => ({
   ...(await original<
@@ -54,16 +55,18 @@ function setup(role: UserMembership["role"] = "OWNER") {
   } as CurrentUserResponse);
   const page = (shopId = "a", nextRole = role) => (
     <QueryClientProvider client={client}>
-      <ActiveShopContext.Provider
-        value={{
-          id: "member",
-          shopId,
-          role: nextRole,
-          shop: { id: shopId, name: "Cafe", slug: "cafe", isActive: true },
-        }}
-      >
-        <CancelledOrdersPage />
-      </ActiveShopContext.Provider>
+      <MemoryRouter>
+        <ActiveShopContext.Provider
+          value={{
+            id: "member",
+            shopId,
+            role: nextRole,
+            shop: { id: shopId, name: "Cafe", slug: "cafe", isActive: true },
+          }}
+        >
+          <CancelledOrdersPage />
+        </ActiveShopContext.Provider>
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return { ...render(page()), page, client };
@@ -77,7 +80,10 @@ afterEach(cleanup);
 it("shows rejection accurately with captured reason/actor, saved total/table and Manila timestamps", async () => {
   setup();
   expect(await screen.findByText("ORD-000042")).toBeVisible();
-  expect(screen.getByRole("link", { name: "View details" })).toHaveAttribute("href", "/app/shops/a/orders/order-a");
+  expect(screen.getByRole("link", { name: "View details" })).toHaveAttribute(
+    "href",
+    "/app/shops/a/orders/order-a",
+  );
   expect(
     screen.getByText("Rejected", { selector: ".active-order-badge" }),
   ).toBeVisible();

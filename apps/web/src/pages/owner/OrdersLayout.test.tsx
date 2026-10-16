@@ -4,9 +4,21 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { UserMembership } from "@paserve/contracts";
 import { ActiveShopContext } from "../../features/shops/active-shop";
 import { OrdersLayout } from "./OrdersLayout";
+import { OrderPageHeader } from "./OrderPresentation";
 
 afterEach(cleanup);
 function setup(role: UserMembership["role"] = "OWNER") {
+  const page = (view: "active" | "completed" | "cancelled", title: string) => (
+    <OrderPageHeader
+      view={view}
+      title={title}
+      titleId="order-title"
+      fetching={false}
+      onRefresh={() => {}}
+    >
+      Saved orders
+    </OrderPageHeader>
+  );
   render(
     <ActiveShopContext.Provider
       value={{
@@ -19,9 +31,15 @@ function setup(role: UserMembership["role"] = "OWNER") {
       <MemoryRouter initialEntries={["/app/shops/a/orders"]}>
         <Routes>
           <Route path="/app/shops/a/orders" element={<OrdersLayout />}>
-            <Route index element={<h1>Active content</h1>} />
-            <Route path="completed" element={<h1>Completed content</h1>} />
-            <Route path="cancelled" element={<h1>Rejected content</h1>} />
+            <Route index element={page("active", "Active content")} />
+            <Route
+              path="completed"
+              element={page("completed", "Completed content")}
+            />
+            <Route
+              path="cancelled"
+              element={page("cancelled", "Rejected content")}
+            />
           </Route>
         </Routes>
       </MemoryRouter>

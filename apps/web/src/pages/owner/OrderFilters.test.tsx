@@ -16,6 +16,7 @@ import { getCancelledOrders } from "../../features/orders/cancelled-orders";
 import { ActiveOrdersPage } from "./ActiveOrdersPage";
 import { CompletedOrdersPage } from "./CompletedOrdersPage";
 import { CancelledOrdersPage } from "./CancelledOrdersPage";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../features/orders/active-orders", async (original) => ({
   ...(await original<typeof import("../../features/orders/active-orders")>()),
@@ -60,16 +61,18 @@ function setup(view: View) {
   } as CurrentUserResponse);
   const page = (shopId = "a", role: UserMembership["role"] = "OWNER") => (
     <QueryClientProvider client={client}>
-      <ActiveShopContext.Provider
-        value={{
-          id: "member",
-          shopId,
-          role,
-          shop: { id: shopId, name: "Cafe", slug: "cafe", isActive: true },
-        }}
-      >
-        <Page />
-      </ActiveShopContext.Provider>
+      <MemoryRouter>
+        <ActiveShopContext.Provider
+          value={{
+            id: "member",
+            shopId,
+            role,
+            shop: { id: shopId, name: "Cafe", slug: "cafe", isActive: true },
+          }}
+        >
+          <Page />
+        </ActiveShopContext.Provider>
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return { ...render(page()), page, client };
@@ -164,7 +167,13 @@ describe.each(["active", "completed", "cancelled"] as const)(
           expect.objectContaining({ mode: "DINE_IN", table: "Patio %_" }),
         ),
       );
-      fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+      fireEvent.click(
+        screen.getByText(/Filters \(4 active\)/, { selector: "summary" }),
+      );
+      expect(screen.getByText(/Applied:.*Dine-in.*Patio %_/)).toBeVisible();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Clear applied filters" }),
+      );
       await waitFor(() =>
         expect(requests[view]).toHaveBeenLastCalledWith(
           "a",

@@ -18,6 +18,7 @@ import { ActiveShopContext } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getCompletedOrders } from "../../features/orders/completed-orders";
 import { CompletedOrdersPage } from "./CompletedOrdersPage";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../features/orders/completed-orders", async (original) => ({
   ...(await original<
@@ -55,16 +56,18 @@ function setup(role: UserMembership["role"] = "OWNER") {
   } as CurrentUserResponse);
   const page = (shopId = "a", nextRole = role) => (
     <QueryClientProvider client={client}>
-      <ActiveShopContext.Provider
-        value={{
-          id: "member",
-          shopId,
-          role: nextRole,
-          shop: { id: shopId, name: "Cafe", slug: "cafe", isActive: true },
-        }}
-      >
-        <CompletedOrdersPage />
-      </ActiveShopContext.Provider>
+      <MemoryRouter>
+        <ActiveShopContext.Provider
+          value={{
+            id: "member",
+            shopId,
+            role: nextRole,
+            shop: { id: shopId, name: "Cafe", slug: "cafe", isActive: true },
+          }}
+        >
+          <CompletedOrdersPage />
+        </ActiveShopContext.Provider>
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return { ...render(page()), page, client };
@@ -78,7 +81,9 @@ afterEach(cleanup);
 it("shows fulfilled history, saved table/amount, recorded payment and Manila completion time", async () => {
   setup();
   expect(await screen.findByText("ORD-000042")).toBeVisible();
-  expect(screen.getByRole("link", { name: "View details / receipt" })).toHaveAttribute("href", "/app/shops/a/orders/order-a");
+  expect(
+    screen.getByRole("link", { name: "View details / receipt" }),
+  ).toHaveAttribute("href", "/app/shops/a/orders/order-a");
   expect(
     screen.getByText("Fulfilled", { selector: ".active-order-badge" }),
   ).toBeVisible();

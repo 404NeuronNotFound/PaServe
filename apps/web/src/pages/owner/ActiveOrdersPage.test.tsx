@@ -18,6 +18,7 @@ import { ActiveShopContext } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getActiveOrders } from "../../features/orders/active-orders";
 import { ActiveOrdersPage } from "./ActiveOrdersPage";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../features/orders/active-orders", async (original) => ({
   ...(await original<typeof import("../../features/orders/active-orders")>()),
@@ -51,16 +52,18 @@ function setup(role: UserMembership["role"] = "OWNER") {
   } as CurrentUserResponse);
   const page = (shopId = "a", nextRole = role) => (
     <QueryClientProvider client={client}>
-      <ActiveShopContext.Provider
-        value={{
-          id: "member",
-          shopId,
-          role: nextRole,
-          shop: { id: shopId, name: "Cafe", slug: "cafe", isActive: true },
-        }}
-      >
-        <ActiveOrdersPage />
-      </ActiveShopContext.Provider>
+      <MemoryRouter>
+        <ActiveShopContext.Provider
+          value={{
+            id: "member",
+            shopId,
+            role: nextRole,
+            shop: { id: shopId, name: "Cafe", slug: "cafe", isActive: true },
+          }}
+        >
+          <ActiveOrdersPage />
+        </ActiveShopContext.Provider>
+      </MemoryRouter>
     </QueryClientProvider>
   );
   return { ...render(page()), page, client };
@@ -74,7 +77,10 @@ afterEach(cleanup);
 it("shows approval/payment, placed and updated Manila times, order age, type/table and exact total", async () => {
   setup();
   expect(await screen.findByText("ORD-000042")).toBeVisible();
-  expect(screen.getByRole("link", { name: "View details" })).toHaveAttribute("href", "/app/shops/a/orders/order-a");
+  expect(screen.getByRole("link", { name: "View details" })).toHaveAttribute(
+    "href",
+    "/app/shops/a/orders/order-a",
+  );
   expect(
     screen.getByText("Pending confirmation", {
       selector: ".active-order-badge",

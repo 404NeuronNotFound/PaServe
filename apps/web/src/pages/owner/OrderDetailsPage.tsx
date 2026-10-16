@@ -31,6 +31,7 @@ import { ReceiptPaymentMethod } from "../public/ReceiptPaymentMethod";
 import { formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./order-details.css";
+import { OrderViewsNavigation } from "./OrderViewsNavigation";
 import "../cashier/receipt-print.css";
 
 const label = (value: string) =>
@@ -161,6 +162,7 @@ function OrderDetailsWorkspace({
           Refresh
         </button>
       </header>
+      <OrderViewsNavigation />
       {query.isPending && <p role="status">Loading saved order details…</p>}
       {query.isError && (
         <div className="active-orders-message">
