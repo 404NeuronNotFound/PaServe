@@ -795,7 +795,7 @@ export interface VerifyOrderQrResponse {
     reviewVersion: string;
   };
 }
-/** Minimal credential-protected customer read model, without staff/payment details. */
+/** Credential-protected customer read model, without staff identity or internal payment metadata. */
 export interface CustomerOrderStatusResponse {
   receipt?: CustomerReceiptSummary;
   trackingExpiresAt?: string;
@@ -829,6 +829,8 @@ export interface CustomerReceiptSummary {
   totalPrice: string;
   /** Saved receipt lines in submission order; optional for older API responses. */
   items?: ProductSelectionQuoteResponse[];
+  /** Customer-safe saved method details; null before payment, absent on older APIs. */
+  payment?: ReceiptPaymentDetails | null;
 }
 export interface OrderDecisionRequest extends VerifyOrderQrRequest {
   reviewVersion: string;
@@ -898,6 +900,45 @@ export function isSafeOtherPaymentText(value: unknown, maxLength = 200): value i
     !/\b(?:cvv|cvc|pan|pin|expiry|expiration|security[ -]*code)\b/i.test(normalized);
 }
 export const PAYMENT_REFERENCE_PATTERN = /^[^\p{Cc}\p{Cf}<>]{0,200}$(?![\s\S])/u;
+/** Public receipt projection; excludes cashier identity and internal request metadata. */
+export interface ReceiptPaymentDetails {
+  method: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER";
+  reference: string | null;
+  description: string | null;
+}
+/** Free-text references must not turn the receipt into a credential display. */
+function isSafeReceiptPaymentText(value: string): boolean {
+  const normalized = value.normalize("NFKC");
+  if (/\b(?:cvv|cvc|pan|pin|expiry|expiration|security[ -]*code|password|passcode|otp|secret|bearer|authorization|api[ _-]?key|access[ _-]?token|refresh[ _-]?token|client[ _-]?secret)\b/i.test(normalized) ||
+    /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]+/.test(normalized) ||
+    /[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/.test(normalized) ||
+    /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/.test(normalized)) return false;
+  // Keep numeric transaction IDs, but omit recognized card numbers (Luhn),
+  // including those accidentally entered as GCash references.
+  return !(normalized.match(/\d(?:[ -]*\d){12,18}/g) ?? []).some((candidate) => {
+    const digits = candidate.replace(/[ -]/g, "");
+    const checksum = [...digits].reverse().reduce((sum, digit, index) => {
+      let number = Number(digit);
+      if (index % 2) number *= 2;
+      return sum + (number > 9 ? number - 9 : number);
+    }, 0);
+    return checksum % 10 === 0;
+  });
+}
+/** Keep method-specific reference rules, including numeric GCash transaction IDs. */
+export function parseReceiptPaymentDetails(value: unknown): ReceiptPaymentDetails | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  if (typeof raw.method !== "string" || !["CASH", "GCASH_MANUAL", "CARD_MANUAL", "OTHER"].includes(raw.method)) return null;
+  const method = raw.method as ReceiptPaymentDetails["method"];
+  const reference = method !== "CASH" && typeof raw.reference === "string" && raw.reference.trim() &&
+    PAYMENT_REFERENCE_PATTERN.test(raw.reference) &&
+    isSafeReceiptPaymentText(raw.reference) &&
+    (method === "GCASH_MANUAL" || isSafeOtherPaymentText(raw.reference)) ? raw.reference : null;
+  const description = method === "OTHER" && typeof raw.description === "string" && raw.description.trim() &&
+    isSafeOtherPaymentText(raw.description, 80) && isSafeReceiptPaymentText(raw.description) ? raw.description : null;
+  return { method, reference, description };
+}
 /** Terminal receipt identifiers only; reject recognizable raw card details. */
 export function isSafeManualCardReference(value: unknown): boolean {
   return value == null || isSafeOtherPaymentText(value);

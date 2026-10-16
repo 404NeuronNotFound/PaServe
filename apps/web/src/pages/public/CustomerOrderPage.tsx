@@ -22,6 +22,7 @@ import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { GuestTrackingShare } from "./GuestTrackingShare";
 import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
 import { ReceiptOrderItems } from "./ReceiptOrderItems";
+import { ReceiptPaymentMethod } from "./ReceiptPaymentMethod";
 
 export function CustomerOrderPage() {
   const { shopSlug = "", orderId = "" } = useParams();
@@ -156,6 +157,7 @@ export function CustomerOrderPage() {
                 orderNumber={receipt.orderNumber}
               />
               <ReceiptOrderItems items={receipt.items} />
+              <ReceiptPaymentMethod payment={receipt.payment} confirmed={confirmed} />
               <dl>
                 <div className="order-receipt-total">
                   <dt>
@@ -173,7 +175,9 @@ export function CustomerOrderPage() {
                 <FiLock aria-hidden="true" />{" "}
                 {confirmed
                   ? "Payment confirmed by the cashier."
-                  : "Payment has not been confirmed by the cashier."}
+                  : receipt.payment
+                    ? "Payment method shown from your last saved receipt."
+                    : "Payment has not been confirmed by the cashier."}
               </p>
               {tracking.state === "current" && (
                 <GuestTrackingShare key={`share:${shopSlug}:${orderId}`} shopSlug={shopSlug} orderId={orderId} orderNumber={receipt.orderNumber} />

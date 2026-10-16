@@ -182,6 +182,7 @@ it("opens a private tracking link on another device and reopens from the guest c
       id: orderId, orderNumber: "ORD-000042", mode: "TAKEOUT", table: null,
       status: "PENDING_CONFIRMATION", currency: "PHP", totalPrice: "12.00",
       items: order.items,
+      payment: { method: "CARD_MANUAL", reference: "00001234", description: null },
     },
   };
   const fetchStatus = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => saved });
@@ -191,6 +192,8 @@ it("opens a private tracking link on another device and reopens from the guest c
   const view = setup(path);
   await screen.findByRole("heading", { name: "Order confirmed" });
   expect(screen.getByRole("heading", { name: "1 × Coffee" })).toBeInTheDocument();
+  expect(screen.getByText("Card (manual)")).toBeInTheDocument();
+  expect(screen.getByText("Card receipt reference: 00001234")).toBeInTheDocument();
   expect(screen.getByText("Order number: ORD-000042")).toBeVisible();
   expect(window.location.hash).toBe("");
   expect(fetchStatus.mock.calls[0][0]).toBe(`${path}/tracking-session`);

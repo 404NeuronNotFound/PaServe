@@ -51,6 +51,8 @@ describe('Customer receipt status access', () => {
     completedAt: null as Date | null,
     queuedAt: null as Date | null,
     paidBy: 'private-actor',
+    paymentMethod: 'CASH' as string | null,
+    paymentDescription: null as string | null,
     paymentReference: 'private-reference',
   });
   beforeEach(() => {
@@ -82,6 +84,46 @@ describe('Customer receipt status access', () => {
     expect(result.receipt?.shopDetails).toBeNull();
     expect(result.receipt?.shopName).toBe('Cafe');
   });
+
+  it('does not expose a method or stale reference before payment', async () => {
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
+    expect(result.receipt?.payment).toBeNull();
+    expect(JSON.stringify(result)).not.toContain('private-reference');
+  });
+  it.each(['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
+    'returns only safe recorded customer payment details for %s', async (method) => {
+      order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
+      order.paymentMethod = method;
+      order.paymentReference = '00001234';
+      order.paymentDescription = 'Bank transfer';
+      const result = await service.read('cafe', id, tokens.issueTracking(order));
+      expect(result.receipt?.payment).toEqual({ method,
+        reference: method === 'CASH' ? null : '00001234',
+        description: method === 'OTHER' ? 'Bank transfer' : null,
+      });
+      expect(JSON.stringify(result)).not.toContain('private-actor');
+      expect(result.receipt?.payment).not.toHaveProperty('paymentRequestId');
+    },
+  );
+  it('omits unsafe legacy card references without breaking order tracking', async () => {
+    order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
+    order.paymentMethod = 'CARD_MANUAL'; order.paymentReference = '4111111111111111';
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
+    expect(result.receipt?.payment).toEqual({ method: 'CARD_MANUAL', reference: null, description: null });
+    expect(JSON.stringify(result)).not.toContain('4111111111111111');
+  });
+  it.each(['GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
+    'omits payment credentials from the %s customer projection', async (method) => {
+      order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
+      order.paymentMethod = method;
+      for (const reference of ['4111111111111111', 'Bearer private-token', 'password receipt-secret']) {
+        order.paymentReference = reference; order.paymentDescription = reference;
+        const result = await service.read('cafe', id, tokens.issueTracking(order));
+        expect(result.receipt?.payment).toEqual({ method, reference: null, description: null });
+        expect(JSON.stringify(result)).not.toContain(reference);
+      }
+    },
+  );
 
   it('returns saved receipt lines and exact quantities, options and totals under the order/shop scope', async () => {
     const result = await service.read('cafe', id, tokens.issueTracking(order));

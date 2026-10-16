@@ -481,6 +481,10 @@
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
+.receipt-payment-method { margin-top: 24px; overflow-wrap: anywhere; }
+.receipt-payment-method h2 { margin: 0 0 12px; font: 600 1.25rem/1.4 Georgia, serif; }
+.receipt-payment-method p { margin: 8px 0 0; color: var(--color-muted); font-size: 0.875rem; line-height: 1.6; }
+.receipt-payment-method .receipt-payment-label { color: var(--color-text); font-weight: 650; }
 .order-receipt-total {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);

@@ -3,8 +3,9 @@ import type {
   PublicMenuResponse,
   ReceiptShopDetails,
   ProductSelectionQuoteResponse,
+  ReceiptPaymentDetails,
 } from "@paserve/contracts";
-import { parseReceiptShopDetails } from "@paserve/contracts";
+import { parseReceiptPaymentDetails, parseReceiptShopDetails } from "@paserve/contracts";
 import { createPendingOrderStorage } from "./pending-orders";
 import { isPublicTableContext } from "../shops/customer-table";
 import { captureCustomerOrderQr } from "./customer-order-qr";
@@ -32,6 +33,7 @@ export interface OrderReceipt {
   /** Exact saved server total; never derived from current cart or menu prices. */
   totalPrice: string;
   items?: ProductSelectionQuoteResponse[];
+  payment?: ReceiptPaymentDetails | null;
 }
 
 export const orderReceipts = createPendingOrderStorage(
@@ -122,6 +124,8 @@ export function readOrderReceipt(
     if (value.shopDetails != null && !shopDetails) return null;
     const items = value.items === undefined ? null : parseReceiptItems(value.items, value.totalPrice);
     if (value.items !== undefined && !items) return null;
+    const payment = value.payment == null ? null : parseReceiptPaymentDetails(value.payment);
+    if (value.payment != null && !payment) return null;
     return {
       shopSlug,
       shopName: shopDetails?.name ?? value.shopName,
@@ -139,6 +143,7 @@ export function readOrderReceipt(
       currency: "PHP",
       totalPrice: value.totalPrice,
       ...(items ? { items } : {}),
+      ...(value.payment !== undefined ? { payment } : {}),
     };
   } catch {
     return null;

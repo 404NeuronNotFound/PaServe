@@ -173,7 +173,8 @@ export function useCustomerConfirmation(
             : null;
           if (
             data.receipt &&
-            (!receipt || receipt.orderNumber !== order.orderNumber)
+            (!receipt || receipt.orderNumber !== order.orderNumber ||
+              (receipt.payment != null && order.paymentStatus !== "PAID"))
           )
             throw new Error("Invalid saved receipt");
           if (receipt) recoverOrderReceipt(shopSlug, orderId, receipt);

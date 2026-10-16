@@ -20,6 +20,9 @@ describe('Confirmed order customer/staff HTTP access', () => {
     membership = vi.fn();
   let relay: ReturnType<typeof vi.spyOn>;
   let order: {
+    paymentMethod: string | null;
+    paymentReference: string | null;
+    paymentDescription: string | null;
     orderItems: ReturnType<typeof savedItems>;
     mode: string;
     totalPrice: { toFixed: () => string };
@@ -93,6 +96,9 @@ describe('Confirmed order customer/staff HTTP access', () => {
       tableNumber: null,
       status: 'CONFIRMED',
       paymentStatus: 'PAID',
+      paymentMethod: 'CASH',
+      paymentReference: null,
+      paymentDescription: null,
       decidedAt: new Date(),
       updatedAt: new Date(),
       ...tokens.metadata(),
@@ -133,6 +139,28 @@ describe('Confirmed order customer/staff HTTP access', () => {
     request(app.getHttpServer())
       .get(`/api/v1/menu/${slug}/orders/${orderId}/${suffix}`)
       .set('Authorization', `Bearer ${token}`);
+  it.each(['GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
+    'does not serialize card numbers or credentials in %s receipt details', async (method) => {
+      order.paymentMethod = method;
+      order.paymentReference = '4111111111111111';
+      order.paymentDescription = 'Bearer private-token';
+      const result = await customer('status').expect(200);
+      expect(result.body.receipt.payment).toEqual({ method, reference: null, description: null });
+      expect(result.text).not.toContain('4111111111111111');
+      expect(result.text).not.toContain('private-token');
+    },
+  );
+  it.each(['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
+    'returns customer-safe saved payment details for %s through protected reads', async (method) => {
+      order.paymentMethod = method; order.paymentReference = '00001234'; order.paymentDescription = 'Bank transfer';
+      const result = await customer('status').expect(200);
+      expect(result.body.receipt.payment).toEqual({ method,
+        reference: method === 'CASH' ? null : '00001234', description: method === 'OTHER' ? 'Bank transfer' : null,
+      });
+      expect(result.body.receipt.payment).not.toHaveProperty('paidBy');
+      expect(result.body.receipt.payment).not.toHaveProperty('requestId');
+    },
+  );
   it('returns minimal confirmed status after QR scan consumption without staff authentication', async () => {
     const result = await customer('status').expect(200);
     expect(result.headers['cache-control']).toBe('no-store');

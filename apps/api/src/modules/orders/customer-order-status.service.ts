@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import type { CustomerOrderStatusResponse } from '@paserve/contracts';
-import { PREPARATION_STATUSES } from '@paserve/contracts';
+import { parseReceiptPaymentDetails, PREPARATION_STATUSES } from '@paserve/contracts';
 import { PrismaService } from '../../database/prisma.service.js';
 import { OrderTokenService } from './order-token.service.js';
 import { readReceiptShopDetails } from './receipt-shop-details.js';
@@ -56,6 +56,9 @@ export class CustomerOrderStatusService {
         orderNumber: true,
         status: true,
         paymentStatus: true,
+        paymentMethod: true,
+        paymentReference: true,
+        paymentDescription: true,
         decidedAt: true,
         updatedAt: true,
         qrTokenNonce: true,
@@ -163,6 +166,11 @@ export class CustomerOrderStatusService {
         currency: 'PHP',
         totalPrice: order.totalPrice.toFixed(2),
         items,
+        payment: order.paymentStatus === 'PAID' ? parseReceiptPaymentDetails({
+          method: order.paymentMethod,
+          reference: order.paymentReference,
+          description: order.paymentDescription,
+        }) : null,
       },
       order: {
         id: order.id,

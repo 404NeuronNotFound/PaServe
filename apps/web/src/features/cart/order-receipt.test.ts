@@ -7,6 +7,16 @@ const receipt = {
   mode: "TAKEOUT", table: null, status: "PENDING_CONFIRMATION", currency: "PHP", totalPrice: "12.00",
 };
 const details = { name: "Original Cafe", address: "12 Old Street", phone: "09171234567", contactEmail: null, website: null };
+it("recovers recorded method and safe reference without internal payment fields", () => {
+  recoverOrderReceipt("cafe", "order-a", { ...receipt, payment: {
+    method: "CARD_MANUAL", reference: "00001234", description: null,
+    paidBy: "private-cashier", requestId: "private-request",
+  } });
+  orderReceipts.clearMemory();
+  const saved = readOrderReceipt("cafe", "order-a");
+  expect(saved?.payment).toEqual({ method: "CARD_MANUAL", reference: "00001234", description: null });
+  expect(JSON.stringify(saved)).not.toContain("private");
+});
 afterEach(() => { sessionStorage.clear(); orderReceipts.clearMemory(); });
 it("restores historical shop details and allowlists display fields", () => {
   recoverOrderReceipt("cafe", "order-a", { ...receipt, shopDetails: { ...details, secret: "private" } });

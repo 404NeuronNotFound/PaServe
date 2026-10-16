@@ -53,6 +53,21 @@ afterEach(() => {
   window.history.replaceState({}, "", "/");
 });
 
+it("rejects a paid receipt projection attached to an unpaid order", async () => {
+  fetchStatus.mockResolvedValue({ ok: true, status: 200, json: async () => ({
+    order: pending,
+    receipt: { shopSlug: "cafe", shopName: "Cafe", id: orderId, orderNumber: pending.orderNumber,
+      mode: "TAKEOUT", table: null, status: "PENDING_CONFIRMATION", currency: "PHP", totalPrice: "12.00",
+      payment: { method: "CASH", reference: null, description: null },
+    },
+  }) });
+  const { result } = renderHook(() => useCustomerConfirmation("cafe", orderId, token));
+  await flush();
+  expect(result.current.order).toBeNull();
+  expect(result.current.receipt).toBeNull();
+  expect(result.current.state).toBe("stale");
+});
+
 it.each(["", "000042", "ORD-000000", "ORD-9999999999999999999", orderId])(
   "retains the verified order when a later read has an invalid readable number: %s",
   async (orderNumber) => {
