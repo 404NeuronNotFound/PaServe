@@ -1496,6 +1496,32 @@ describe('Cash collection', () => {
     );
     expect(updateOrder).not.toHaveBeenCalled();
   });
+  it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)('serves daily gross sales for %s with an explicit Manila period', async (reportRole) => {
+    role = reportRole;
+    aggregateOrders.mockResolvedValueOnce({ _count: { _all: 2 }, _sum: { totalPrice: new Prisma.Decimal('0.30') } });
+    const result = await request(app.getHttpServer())
+      .get(`/api/v1/shops/${shopId}/reports/daily-sales`)
+      .query({ date: '2026-10-16' })
+      .set('Authorization', 'Bearer session').expect(200);
+    expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.body).toEqual({ shopId, businessDate: '2026-10-16', timezone: 'Asia/Manila', from: '2026-10-15T16:00:00.000Z', to: '2026-10-16T16:00:00.000Z', currency: 'PHP', completedOrders: 2, totalSales: '0.30' });
+    expect(aggregateOrders).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ shopId, status: 'CONFIRMED', paymentStatus: 'PAID', preparationStatus: 'COMPLETED', completedAt: { gte: new Date('2026-10-15T16:00:00.000Z'), lt: new Date('2026-10-16T16:00:00.000Z') } }) }));
+  });
+  it.each(['KITCHEN', 'CASHIER'] as const)('denies daily sales for %s', async (reportRole) => {
+    role = reportRole;
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/daily-sales`).query({ date: '2026-10-16' }).set('Authorization', 'Bearer session').expect(403);
+    expect(aggregateOrders).not.toHaveBeenCalled();
+  });
+  it('rejects missing or invalid daily dates and anonymous report access', async () => {
+    role = 'OWNER';
+    for (const query of [{}, { date: '2026-02-30' }, { date: ['2026-10-15', '2026-10-16'] }]) {
+      await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/daily-sales`).query(query).set('Authorization', 'Bearer session').expect(400);
+    }
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/daily-sales`).query({ date: '2026-10-16' }).expect(401);
+    active = false;
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/daily-sales`).query({ date: '2026-10-16' }).set('Authorization', 'Bearer session').expect(404);
+    expect(aggregateOrders).not.toHaveBeenCalled();
+  });
   it('denies anonymous collection', async () => {
     await collect({}, shopId, false).expect(401);
     expect(transaction).not.toHaveBeenCalled();

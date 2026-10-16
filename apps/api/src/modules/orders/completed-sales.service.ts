@@ -2,6 +2,9 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   SHOP_ROLES,
   hasShopPermission,
+  salesBusinessDayBounds,
+  SALES_TIMEZONE,
+  type DailySalesResponse,
   type CompletedSalesResponse,
 } from '@paserve/contracts';
 import { isISO8601 } from 'class-validator';
@@ -14,6 +17,30 @@ export const COMPLETED_SALES_ROLES = SHOP_ROLES.filter((role) =>
 @Injectable()
 export class CompletedSalesService {
   constructor(private readonly prisma: PrismaService) {}
+  async daily(
+    actorId: string,
+    shopId: string,
+    date: unknown,
+  ): Promise<DailySalesResponse> {
+    const bounds = salesBusinessDayBounds(date);
+    if (!bounds)
+      throw new BadRequestException({
+        code: 'INVALID_SALES_DATE',
+        message: 'Provide a valid business date as YYYY-MM-DD in Asia/Manila.',
+      });
+    const summary = await this.aggregate(
+      actorId,
+      shopId,
+      new Date(bounds.from),
+      new Date(bounds.to),
+    );
+    return {
+      ...summary,
+      shopId,
+      businessDate: date as string,
+      timezone: SALES_TIMEZONE,
+    };
+  }
   async summary(
     actorId: string,
     shopId: string,
@@ -37,6 +64,15 @@ export class CompletedSalesService {
       });
     const start = new Date(from),
       end = new Date(to);
+    return this.aggregate(actorId, shopId, start, end);
+  }
+
+  private async aggregate(
+    actorId: string,
+    shopId: string,
+    start: Date,
+    end: Date,
+  ): Promise<CompletedSalesResponse> {
     const result = await this.prisma.order.aggregate({
       where: {
         shopId,

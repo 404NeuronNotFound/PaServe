@@ -10,6 +10,20 @@ import {
 @Controller('shops/:shopId/reports')
 export class CompletedSalesController {
   constructor(private readonly sales: CompletedSalesService) {}
+  @Get('daily-sales')
+  @Roles(...COMPLETED_SALES_ROLES)
+  daily(
+    @Query('date') date: unknown,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.sales.daily(
+      request.user.id,
+      request.shopMembership.shopId,
+      date,
+    );
+  }
   @Get('completed-sales')
   @Roles(...COMPLETED_SALES_ROLES)
   summary(

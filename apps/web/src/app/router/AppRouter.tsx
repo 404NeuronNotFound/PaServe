@@ -20,6 +20,7 @@ import {
   ShopSelectionPage,
 } from "../../pages/owner/ShopSelectionPage";
 import { ActiveShopPage } from "../../pages/owner/ActiveShopPage";
+import { SalesDashboardPage } from "../../pages/owner/SalesDashboardPage";
 import { ActiveOrdersPage } from "../../pages/owner/ActiveOrdersPage";
 import { CompletedOrdersPage } from "../../pages/owner/CompletedOrdersPage";
 import { CancelledOrdersPage } from "../../pages/owner/CancelledOrdersPage";
@@ -71,6 +72,7 @@ export function AppRouter() {
           <Route path="shops/:shopId" element={<ActiveShopRoute />}>
             <Route element={<OwnerDashboardLayout />}>
               <Route index element={<ActiveShopPage />} />
+              <Route path="sales" element={<SalesDashboardPage />} />
               <Route path="orders" element={<OrdersLayout />}>
                 <Route index element={<ActiveOrdersPage />} />
                 <Route path="completed" element={<CompletedOrdersPage />} />

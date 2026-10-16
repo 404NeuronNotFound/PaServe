@@ -1,0 +1,253 @@
+// Real PostgreSQL reconciliation. Private schema and all fixture data roll back.
+import 'dotenv/config';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import pg from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../dist/generated/prisma/client.js';
+import { CompletedSalesService } from '../dist/modules/orders/completed-sales.service.js';
+
+const schema = `daily_sales_${randomUUID().replaceAll('-', '')}`;
+assert.match(schema, /^daily_sales_[a-f0-9]{32}$/);
+const client = new pg.Client({
+  connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 5000,
+  statement_timeout: 10000,
+});
+const pool = new pg.Pool({
+  connectionString: 'postgres://unused:unused@127.0.0.1:1/unused',
+});
+pool.query = (query) => client.query(query);
+pool.connect = async () => {
+  throw new Error('Only the rollback fixture connection may be used');
+};
+const prisma = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
+let transaction = false;
+try {
+  await client.connect();
+  await client.query('BEGIN');
+  transaction = true;
+  await client.query(`CREATE SCHEMA "${schema}"`);
+  for (const name of ['MenuLayout', 'OrderMode', 'ShopRole']) {
+    const labels = await client.query(
+      'SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname=$1 AND t.typname=$2 ORDER BY e.enumsortorder',
+      ['public', name],
+    );
+    assert.ok(labels.rows.length);
+    await client.query(
+      `CREATE TYPE "${schema}"."${name}" AS ENUM (${labels.rows.map((row) => `'${row.enumlabel.replaceAll("'", "''")}'`).join(',')})`,
+    );
+  }
+  for (const table of ['users', 'shops', 'shop_members', 'orders']) {
+    await client.query(
+      `CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`,
+    );
+  }
+  for (const [table, column, type, initial] of [
+    ['shops', 'menuLayout', 'MenuLayout', 'list'],
+    ['shop_members', 'role', 'ShopRole', null],
+    ['orders', 'mode', 'OrderMode', 'DINE_IN'],
+  ]) {
+    await client.query(
+      `ALTER TABLE "${schema}"."${table}" ALTER COLUMN "${column}" DROP DEFAULT`,
+    );
+    await client.query(
+      `ALTER TABLE "${schema}"."${table}" ALTER COLUMN "${column}" TYPE "${schema}"."${type}" USING "${column}"::text::"${schema}"."${type}"`,
+    );
+    if (initial)
+      await client.query(
+        `ALTER TABLE "${schema}"."${table}" ALTER COLUMN "${column}" SET DEFAULT '${initial}'::"${schema}"."${type}"`,
+      );
+  }
+  await client.query(`SET LOCAL search_path TO "${schema}", public`);
+  const actor = await prisma.user.create({
+    data: {
+      email: 'daily-sales@example.com',
+      passwordHash: 'unused-test-hash',
+    },
+  });
+  const shop = await prisma.shop.create({
+    data: { name: 'Daily sales', slug: 'daily-sales' },
+  });
+  const foreign = await prisma.shop.create({
+    data: { name: 'Other shop', slug: 'other-shop' },
+  });
+  const membership = await prisma.shopMember.create({
+    data: { userId: actor.id, shopId: shop.id, role: 'OWNER' },
+  });
+  await prisma.shopMember.create({
+    data: { userId: actor.id, shopId: foreign.id, role: 'OWNER' },
+  });
+  const base = new Date('2026-10-14T00:00:00.000Z');
+  let number = 0;
+  const orderData = (overrides = {}) => ({
+    shopId: shop.id,
+    requestId: randomUUID(),
+    requestHash: 'a'.repeat(64),
+    orderNumber: `ORD-${String(++number).padStart(6, '0')}`,
+    mode: 'TAKEOUT',
+    currency: 'PHP',
+    totalPrice: '900.00',
+    items: [{ productId: randomUUID(), quantity: 1 }],
+    qrTokenNonce: randomUUID(),
+    qrTokenExpiresAt: new Date('2099-01-01T00:00:00Z'),
+    createdAt: base,
+    ...overrides,
+  });
+  const paidData = () => ({
+    status: 'CONFIRMED',
+    paymentStatus: 'PAID',
+    paymentMethod: 'CASH',
+    paymentRequestId: randomUUID(),
+    paymentReviewVersion: 'b'.repeat(64),
+    amountReceived: '900.00',
+    changeDue: '0.00',
+    decidedAt: base,
+    decidedBy: actor.id,
+    qrTokenRevokedAt: base,
+    paidAt: base,
+    paidBy: actor.id,
+    preparationStatus: 'QUEUED',
+    queuedAt: base,
+  });
+  const completed = async (time, amount, overrides = {}) =>
+    prisma.order.create({
+      data: orderData({
+        ...paidData(),
+        totalPrice: amount,
+        amountReceived: amount,
+        preparationStatus: 'COMPLETED',
+        preparationStartedAt: base,
+        preparationStartedBy: actor.id,
+        preparationReadyAt: base,
+        preparationReadyBy: actor.id,
+        completedAt: new Date(time),
+        completedBy: actor.id,
+        ...overrides,
+      }),
+    });
+
+  const expected = [];
+  expected.push(await completed('2026-10-15T16:00:00.000Z', '0.10')); // Exactly start: included.
+  expected.push(await completed('2026-10-16T15:59:59.999Z', '0.20')); // Last millisecond: included.
+  for (const paymentMethod of ['GCASH_MANUAL', 'CARD_MANUAL', 'OTHER']) {
+    expected.push(
+      await completed('2026-10-16T04:00:00.000Z', '10.01', {
+        paymentMethod,
+        paymentDescription: paymentMethod === 'OTHER' ? 'Voucher' : null,
+      }),
+    );
+  }
+  expected.push(await completed('2026-10-16T04:00:00.000Z', '9999999999.99'));
+  expected.push(await completed('2026-10-16T04:00:00.000Z', '0.00'));
+  // More than a history page: the metric must aggregate the entire day.
+  for (let index = 0; index < 30; index++)
+    expected.push(await completed('2026-10-16T04:00:00.000Z', '1.00'));
+  await completed('2026-10-15T15:59:59.999Z', '900.00'); // Before start: excluded.
+  await completed('2026-10-16T16:00:00.000Z', '900.00'); // Exactly end: excluded.
+  await completed('2026-10-16T04:00:00.000Z', '900.00', { shopId: foreign.id });
+  await prisma.order.create({ data: orderData() }); // Pending/unpaid: excluded.
+  await prisma.order.create({
+    data: orderData({
+      status: 'REJECTED',
+      decidedAt: base,
+      decidedBy: actor.id,
+      rejectionReason: 'Test rejection',
+      qrTokenRevokedAt: base,
+    }),
+  });
+  for (const stage of ['QUEUED', 'PREPARING', 'READY']) {
+    await prisma.order.create({
+      data: orderData({
+        ...paidData(),
+        preparationStatus: stage,
+        ...(stage !== 'QUEUED'
+          ? { preparationStartedAt: base, preparationStartedBy: actor.id }
+          : {}),
+        ...(stage === 'READY'
+          ? { preparationReadyAt: base, preparationReadyBy: actor.id }
+          : {}),
+      }),
+    });
+  }
+
+  const sales = new CompletedSalesService(prisma);
+  const report = await sales.daily(actor.id, shop.id, '2026-10-16');
+  // Independently filter persisted rows using PostgreSQL business-date conversion.
+  // Do not reuse the service's bounds helper or its aggregate query.
+  const { rows } = await client.query(
+    `SELECT id, "totalPrice"::text AS total FROM "${schema}".orders WHERE "shopId"=$1 AND status='CONFIRMED' AND "paymentStatus"='PAID' AND "preparationStatus"='COMPLETED' AND "completedBy" IS NOT NULL AND currency='PHP' AND (("completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila')::date=$2::date ORDER BY id`,
+    [shop.id, '2026-10-16'],
+  );
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    expected.map((row) => row.id).sort(),
+  );
+  const totalCents = rows.reduce(
+    (sum, row) => sum + BigInt(row.total.replace('.', '')),
+    0n,
+  );
+  const expectedTotal = `${totalCents / 100n}.${String(totalCents % 100n).padStart(2, '0')}`;
+  assert.equal(report.completedOrders, rows.length);
+  assert.equal(report.totalSales, expectedTotal);
+  assert.equal(report.totalSales, '10000000060.32');
+  assert.equal(report.completedOrders, 37);
+  assert.equal(
+    (await sales.daily(actor.id, shop.id, '2026-10-17')).totalSales,
+    '900.00',
+  );
+  assert.equal(
+    (await sales.daily(actor.id, shop.id, '2026-10-18')).totalSales,
+    '0.00',
+  );
+  assert.equal(
+    (await sales.daily(actor.id, foreign.id, '2026-10-16')).totalSales,
+    '900.00',
+  );
+  await prisma.shopMember.update({
+    where: { id: membership.id },
+    data: { role: 'CASHIER' },
+  });
+  assert.equal(
+    (await sales.daily(actor.id, shop.id, '2026-10-16')).totalSales,
+    '0.00',
+  );
+  console.log(
+    JSON.stringify({
+      passed: true,
+      criterion: 'Metric matches filtered underlying orders',
+      businessDate: '2026-10-16',
+      timezone: report.timezone,
+      matchedOrders: rows.length,
+      grossSales: report.totalSales,
+      checks:
+        'Independent SQL reconciliation, exact cents, all payment methods, >25 orders, start/end boundaries, completion vs payment day, unfinished/unpaid/rejected/foreign exclusions, empty day and revoked access predicate',
+      scope: 'Real PostgreSQL in private schema; all fixture data rolled back',
+    }),
+  );
+} catch (error) {
+  console.error(
+    'Daily sales reconciliation failed:',
+    error.code ?? error.name,
+    String(error.message)
+      .replace(/postgres(?:ql)?:\/\/\S+/g, '[redacted]')
+      .slice(0, 1200),
+  );
+  process.exitCode = 1;
+} finally {
+  if (transaction) {
+    await client.query('ROLLBACK');
+    const remaining = await client.query(
+      'SELECT count(*)::int AS count FROM pg_namespace WHERE nspname=$1',
+      [schema],
+    );
+    assert.equal(
+      remaining.rows[0].count,
+      0,
+      'Fixture schema must not survive rollback',
+    );
+  }
+  await prisma.$disconnect();
+  await pool.end();
+  await client.end();
+}

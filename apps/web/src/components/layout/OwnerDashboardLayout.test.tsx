@@ -314,10 +314,12 @@ it.each(["ADMIN", "MANAGER", "CASHIER", "KITCHEN"] as const)(
       within(nav).queryByRole("link", { name: "Menu preview" }),
     ).not.toBeInTheDocument();
     if (role === "ADMIN" || role === "MANAGER") {
+      expect(within(nav).getByRole("link", { name: "Sales dashboard" })).toHaveAttribute("href", "/app/shops/a/sales");
       expect(
         within(nav).getByRole("group", { name: "Menu management" }),
       ).toBeInTheDocument();
     } else {
+      expect(within(nav).queryByRole("link", { name: "Sales dashboard" })).not.toBeInTheDocument();
       expect(
         within(nav).queryByRole("group", { name: "Menu management" }),
       ).not.toBeInTheDocument();
@@ -473,7 +475,8 @@ it("restores an icon rail preference and keeps every permitted destination acces
   const expand = screen.getByRole("button", { name: "Expand sidebar" });
   expect(expand).toHaveAttribute("aria-expanded", "false");
   const nav = screen.getByRole("navigation", { name: "Shop navigation" });
-  expect(within(nav).getAllByRole("link")).toHaveLength(13);
+  expect(within(nav).getAllByRole("link")).toHaveLength(14);
+  expect(within(nav).getByRole("link", { name: "Sales dashboard" })).toHaveAttribute("href", "/app/shops/a/sales");
   expect(within(nav).getByRole("link", { name: "Products" })).toHaveAttribute("title", "Products");
   await user.click(expand);
   expect(localStorage.getItem("paserve.sidebar.collapsed")).toBe("false");

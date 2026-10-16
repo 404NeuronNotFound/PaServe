@@ -1215,6 +1215,28 @@ export interface CompletedSalesResponse {
   completedOrders: number;
   totalSales: string;
 }
+
+export const SALES_TIMEZONE = "Asia/Manila" as const;
+
+/** Philippine business date, independent of the browser/server's local timezone. */
+export function salesBusinessDate(now: Date = new Date()): string {
+  return new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/** Midnight inclusive to next midnight exclusive; reject normalized invalid dates. */
+export function salesBusinessDayBounds(date: unknown): { from: string; to: string } | null {
+  if (typeof date !== "string" || !/^(?!0000)\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const midnight = Date.parse(`${date}T00:00:00.000Z`);
+  if (!Number.isFinite(midnight) || new Date(midnight).toISOString().slice(0, 10) !== date) return null;
+  const start = midnight - 8 * 60 * 60 * 1000;
+  return { from: new Date(start).toISOString(), to: new Date(start + 86_400_000).toISOString() };
+}
+
+export interface DailySalesResponse extends CompletedSalesResponse {
+  shopId: string;
+  businessDate: string;
+  timezone: typeof SALES_TIMEZONE;
+}
 export interface RestaurantTable {
   id: string;
   shopId: string;

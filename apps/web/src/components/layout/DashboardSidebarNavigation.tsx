@@ -16,6 +16,7 @@ import {
   FiSliders,
   FiUser,
   FiUsers,
+  FiTrendingUp,
 } from "react-icons/fi";
 import { hasShopPermission, type UserMembership } from "@paserve/contracts";
 import { shopPath } from "../../features/shops/active-shop";
@@ -74,6 +75,7 @@ export function DashboardSidebarNavigation({ membership, rail, onNavigate }: {
       <p className="dashboard-nav-label">Daily workspace</p>
       <div className="dashboard-nav-links">
         {destination(base, "Overview", FiGrid, true)}
+        {hasShopPermission(membership.role, "shop.reports.read") && destination(`${base}/sales`, "Sales dashboard", FiTrendingUp)}
         {membership.role === "OWNER" && destination(`${base}/orders`, "Orders", FiClipboard)}
         {canUseCashier(membership.role) && destination(`${base}/cashier`, "Cashier", FiCreditCard)}
         {hasShopPermission(membership.role, "shop.preparation.queue.read") && destination(`${base}/kitchen`, "Kitchen / Barista", FiCoffee)}
