@@ -152,6 +152,30 @@ export interface CompletedOrdersResponse {
   nextCursor: string | null;
 }
 
+/** Current terminal failure outcome is REJECTED; cancellation is not a stored state. */
+export interface CancelledOrderSummary {
+  id: string;
+  shopId: string;
+  orderNumber: string;
+  mode: "DINE_IN" | "TAKEOUT";
+  tableNumber: string | null;
+  status: "REJECTED";
+  paymentStatus: "UNPAID";
+  preparationStatus: null;
+  currency: "PHP";
+  totalPrice: string;
+  createdAt: string;
+  decidedAt: string | null;
+  /** Saved actor ID; retained even if the actor later leaves the shop. */
+  decidedBy: string | null;
+  rejectionReason: string | null;
+}
+
+export interface CancelledOrdersResponse {
+  orders: CancelledOrderSummary[];
+  nextCursor: string | null;
+}
+
 export function canTransitionPreparationStatus(
   from: PreparationStatus,
   to: PreparationStatus,

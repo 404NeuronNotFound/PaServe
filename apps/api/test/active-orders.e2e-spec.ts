@@ -8,7 +8,7 @@ import { PrismaService } from '../src/database/prisma.service.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { Prisma } from '../src/generated/prisma/client.js';
 
-describe.each(['active', 'completed'])(
+describe.each(['active', 'completed', 'cancelled'])(
   'Owner %s orders HTTP access',
   (view) => {
     const actorId = '75992537-5d60-4d22-8e1e-60a114644681';
@@ -71,9 +71,17 @@ describe.each(['active', 'completed'])(
           orderNumber: 'ORD-000042',
           mode: 'TAKEOUT',
           tableNumber: null,
-          status: 'CONFIRMED',
-          paymentStatus: 'PAID',
-          preparationStatus: view === 'completed' ? 'COMPLETED' : 'READY',
+          status: view === 'cancelled' ? 'REJECTED' : 'CONFIRMED',
+          paymentStatus: view === 'cancelled' ? 'UNPAID' : 'PAID',
+          preparationStatus:
+            view === 'cancelled'
+              ? null
+              : view === 'completed'
+                ? 'COMPLETED'
+                : 'READY',
+          decidedAt: new Date('2026-10-16T00:01:00Z'),
+          decidedBy: actorId,
+          rejectionReason: 'Item unavailable',
           paymentMethod: 'CASH',
           currency: 'PHP',
           totalPrice: new Prisma.Decimal('12.30'),
@@ -87,10 +95,23 @@ describe.each(['active', 'completed'])(
       expect(response.headers['cache-control']).toBe('no-store');
       expect(response.body.orders[0]).toMatchObject({
         totalPrice: '12.30',
-        preparationStatus: view === 'completed' ? 'COMPLETED' : 'READY',
+        preparationStatus:
+          view === 'cancelled'
+            ? null
+            : view === 'completed'
+              ? 'COMPLETED'
+              : 'READY',
         createdAt: '2026-10-16T00:00:00.000Z',
       });
       expect(findMany.mock.calls[0][0].where.shopId).toBe(shopId);
+      if (view === 'cancelled') {
+        expect(response.body.orders[0]).toMatchObject({
+          status: 'REJECTED',
+          paymentStatus: 'UNPAID',
+          decidedBy: actorId,
+          rejectionReason: 'Item unavailable',
+        });
+      }
     });
     it.each<ShopRole>(['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'])(
       'denies %s without reading orders',

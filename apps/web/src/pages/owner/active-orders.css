@@ -218,6 +218,32 @@
 .active-orders-workspace .secondary-button {
   min-height: 44px;
 }
+.cancelled-order-decision {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  font-size: 13px;
+}
+.cancelled-order-decision dt {
+  color: var(--color-muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.cancelled-order-decision dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+@media (max-width: 600px) {
+  .cancelled-order-decision {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 @media (max-width: 1150px) {
   .active-order-card {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

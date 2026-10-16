@@ -21,6 +21,7 @@ function setup(role: UserMembership["role"] = "OWNER") {
           <Route path="/app/shops/a/orders" element={<OrdersLayout />}>
             <Route index element={<h1>Active content</h1>} />
             <Route path="completed" element={<h1>Completed content</h1>} />
+            <Route path="cancelled" element={<h1>Rejected content</h1>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -42,6 +43,16 @@ it("navigates between owner order views with the correct current link", () => {
   ).toHaveAttribute("aria-current", "page");
   expect(
     screen.getByRole("link", { name: "Active orders" }),
+  ).not.toHaveAttribute("aria-current");
+  fireEvent.click(screen.getByRole("link", { name: "Cancelled / rejected" }));
+  expect(
+    screen.getByRole("heading", { name: "Rejected content" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("link", { name: "Cancelled / rejected" }),
+  ).toHaveAttribute("aria-current", "page");
+  expect(
+    screen.getByRole("link", { name: "Completed orders" }),
   ).not.toHaveAttribute("aria-current");
 });
 it("withholds owner navigation for other roles", () => {

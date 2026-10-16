@@ -794,6 +794,42 @@ describe('Cash collection', () => {
       expect(aggregateOrders).not.toHaveBeenCalled();
     },
   );
+  it('excludes rejected history from sales and leaves its captured decision unchanged', async () => {
+    role = 'OWNER';
+    Object.assign(saved, {
+      status: 'REJECTED',
+      paymentStatus: 'UNPAID',
+      preparationStatus: null,
+      decidedAt: new Date(),
+      decidedBy: userId,
+      rejectionReason: 'Customer declined alternative.',
+    });
+    const before = JSON.stringify(saved);
+    expect((await sales().expect(200)).body).toMatchObject({
+      completedOrders: 0,
+      totalSales: '0.00',
+    });
+    expect(JSON.stringify(saved)).toBe(before);
+    expect(updateOrder).not.toHaveBeenCalled();
+    expect(aggregateOrders.mock.calls.at(-1)![0].where).toMatchObject({
+      shopId,
+      status: 'CONFIRMED',
+      paymentStatus: 'PAID',
+      preparationStatus: 'COMPLETED',
+      completedBy: { not: null },
+      currency: 'PHP',
+    });
+  });
+  it('does not count a negative status even if stale paid/completed metadata is present', async () => {
+    await readyOrder();
+    await complete().expect(200);
+    role = 'OWNER';
+    saved.status = 'REJECTED';
+    expect((await sales().expect(200)).body).toMatchObject({
+      completedOrders: 0,
+      totalSales: '0.00',
+    });
+  });
   it('denies anonymous, missing-membership and revoked sales-report access before aggregation', async () => {
     role = 'OWNER';
     await request(app.getHttpServer())

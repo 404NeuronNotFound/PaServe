@@ -13,6 +13,7 @@ export function OrdersLayout() {
             Active orders
           </NavLink>
           <NavLink to={`${path}/completed`}>Completed orders</NavLink>
+          <NavLink to={`${path}/cancelled`}>Cancelled / rejected</NavLink>
         </nav>
       )}
       <Outlet />
