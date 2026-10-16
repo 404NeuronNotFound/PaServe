@@ -41,6 +41,7 @@ it.each([
       currency: "PHP",
       totalSales,
       completedOrders,
+      itemsSold: completedOrders * 2,
     });
     setup();
     const card = await screen.findByRole("article", {
@@ -83,6 +84,7 @@ beforeEach(() => {
     timezone: "Asia/Manila",
     currency: "PHP",
     completedOrders: 2,
+    itemsSold: 7,
     totalSales: "0.30",
   }));
 });
@@ -99,6 +101,11 @@ it.each(["OWNER", "ADMIN", "MANAGER"] as const)(
     expect(screen.getByLabelText("Business date")).toHaveValue("2026-10-16");
     expect(screen.getByText("Today’s Sales")).toBeVisible();
     expect(screen.getByText(/Midnight inclusive/)).toBeVisible();
+    expect(
+      within(screen.getByRole("article", { name: "Items Sold" })).getByText(
+        "7",
+      ),
+    ).toBeVisible();
     expect(
       within(
         screen.getByRole("article", { name: "Average Order Value" }),
@@ -136,6 +143,9 @@ it("loads the selected day, clears the total while pending, and returns to today
   });
   expect(screen.queryByText("₱0.30")).not.toBeInTheDocument();
   expect(
+    screen.queryByRole("article", { name: "Items Sold" }),
+  ).not.toBeInTheDocument();
+  expect(
     screen.queryByRole("article", { name: "Average Order Value" }),
   ).not.toBeInTheDocument();
   expect(
@@ -149,6 +159,7 @@ it("loads the selected day, clears the total while pending, and returns to today
       timezone: "Asia/Manila",
       currency: "PHP",
       completedOrders: 0,
+      itemsSold: 0,
       totalSales: "0.00",
     }),
   );
@@ -160,6 +171,9 @@ it("loads the selected day, clears the total while pending, and returns to today
   ).toBeVisible();
   expect(screen.getByText(/No eligible completed orders/)).toBeVisible();
   expect(screen.getByText("Gross Sales")).toBeVisible();
+  expect(
+    within(screen.getByRole("article", { name: "Items Sold" })).getByText("0"),
+  ).toBeVisible();
   expect(
     within(screen.getByRole("article", { name: "Number of Orders" })).getByText(
       "0",
@@ -182,6 +196,9 @@ it("hides a previous total on refresh failure and allows retry", async () => {
     "couldn’t refresh",
   );
   expect(
+    screen.queryByRole("article", { name: "Items Sold" }),
+  ).not.toBeInTheDocument();
+  expect(
     screen.queryByRole("article", { name: "Average Order Value" }),
   ).not.toBeInTheDocument();
   expect(screen.queryByText("₱0.30")).not.toBeInTheDocument();
@@ -203,6 +220,9 @@ it("hides totals when report access is revoked", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "access to this shop’s sales reports is unavailable",
   );
+  expect(
+    screen.queryByRole("article", { name: "Items Sold" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("article", { name: "Average Order Value" }),
   ).not.toBeInTheDocument();
@@ -256,10 +276,16 @@ it("displays the full eligible order count and refreshes it with the sales total
     timezone: "Asia/Manila",
     currency: "PHP",
     completedOrders: 1234,
+    itemsSold: 3456,
     totalSales: "0.00",
   });
   setup();
   expect(await screen.findByText("1,234")).toBeVisible();
+  expect(
+    within(screen.getByRole("article", { name: "Items Sold" })).getByText(
+      "3,456",
+    ),
+  ).toBeVisible();
   expect(screen.getAllByText("₱0.00")).toHaveLength(2);
   expect(
     screen.queryByText("No eligible orders for this business day."),
@@ -271,9 +297,15 @@ it("displays the full eligible order count and refreshes it with the sales total
     timezone: "Asia/Manila",
     currency: "PHP",
     completedOrders: 1235,
+    itemsSold: 3458,
     totalSales: "1.00",
   });
   fireEvent.click(screen.getByRole("button", { name: "Refresh sales" }));
   expect(await screen.findByText("1,235")).toBeVisible();
+  expect(
+    within(screen.getByRole("article", { name: "Items Sold" })).getByText(
+      "3,458",
+    ),
+  ).toBeVisible();
   expect(screen.getByText("₱1.00")).toBeVisible();
 });

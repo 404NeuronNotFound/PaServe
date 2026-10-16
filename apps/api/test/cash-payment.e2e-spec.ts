@@ -26,10 +26,12 @@ describe('Cash collection', () => {
     findOrder = vi.fn(),
     findQueue = vi.fn(),
     aggregateOrders = vi.fn(),
+    aggregateItems = vi.fn(),
     updateOrder = vi.fn(),
     raw = vi.fn(),
     transaction = vi.fn();
   const database = {
+    orderItem: { aggregate: aggregateItems },
     order: {
       findFirst: findOrder,
       updateMany: updateOrder,
@@ -156,6 +158,7 @@ describe('Cash collection', () => {
         : [],
     );
     transaction.mockImplementation(async (work) => work(database));
+    aggregateItems.mockResolvedValue({ _sum: { quantity: 7 } });
     aggregateOrders.mockImplementation(async ({ where }) => {
       const eligible =
         active &&
@@ -1504,7 +1507,7 @@ describe('Cash collection', () => {
       .query({ date: '2026-10-16' })
       .set('Authorization', 'Bearer session').expect(200);
     expect(result.headers['cache-control']).toBe('no-store');
-    expect(result.body).toEqual({ shopId, businessDate: '2026-10-16', timezone: 'Asia/Manila', from: '2026-10-15T16:00:00.000Z', to: '2026-10-16T16:00:00.000Z', currency: 'PHP', completedOrders: 2, totalSales: '0.30' });
+    expect(result.body).toEqual({ shopId, businessDate: '2026-10-16', timezone: 'Asia/Manila', from: '2026-10-15T16:00:00.000Z', to: '2026-10-16T16:00:00.000Z', currency: 'PHP', completedOrders: 2, totalSales: '0.30', itemsSold: 7 });
     expect(aggregateOrders).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ shopId, status: 'CONFIRMED', paymentStatus: 'PAID', preparationStatus: 'COMPLETED', completedAt: { gte: new Date('2026-10-15T16:00:00.000Z'), lt: new Date('2026-10-16T16:00:00.000Z') } }) }));
   });
   it.each(['KITCHEN', 'CASHIER'] as const)('denies daily sales for %s', async (reportRole) => {

@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import {
   SHOP_ROLES,
   hasShopPermission,
@@ -10,6 +14,7 @@ import {
 import { isISO8601 } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
+import { Prisma } from '../../generated/prisma/client.js';
 
 export const COMPLETED_SALES_ROLES = SHOP_ROLES.filter((role) =>
   hasShopPermission(role, 'shop.reports.read'),
@@ -28,14 +33,30 @@ export class CompletedSalesService {
         code: 'INVALID_SALES_DATE',
         message: 'Provide a valid business date as YYYY-MM-DD in Asia/Manila.',
       });
-    const summary = await this.aggregate(
-      actorId,
-      shopId,
-      new Date(bounds.from),
-      new Date(bounds.to),
+    const start = new Date(bounds.from),
+      end = new Date(bounds.to);
+    const { summary, itemsSold } = await this.prisma.$transaction(
+      async (tx) => {
+        const summary = await this.aggregate(actorId, shopId, start, end, tx);
+        const items = await tx.orderItem.aggregate({
+          where: {
+            shopId,
+            order: this.eligibleOrders(actorId, shopId, start, end),
+          },
+          _sum: { quantity: true },
+        });
+        const itemsSold = items._sum.quantity ?? 0;
+        if (!Number.isSafeInteger(itemsSold) || itemsSold < 0)
+          throw new InternalServerErrorException(
+            'Items sold could not be calculated.',
+          );
+        return { summary, itemsSold };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
     return {
       ...summary,
+      itemsSold,
       shopId,
       businessDate: date as string,
       timezone: SALES_TIMEZONE,
@@ -72,18 +93,10 @@ export class CompletedSalesService {
     shopId: string,
     start: Date,
     end: Date,
+    database: Pick<Prisma.TransactionClient, 'order'> = this.prisma,
   ): Promise<CompletedSalesResponse> {
-    const result = await this.prisma.order.aggregate({
-      where: {
-        shopId,
-        shop: shopAccessWhere(actorId, shopId, COMPLETED_SALES_ROLES),
-        status: 'CONFIRMED',
-        paymentStatus: 'PAID',
-        preparationStatus: 'COMPLETED',
-        completedAt: { gte: start, lt: end },
-        completedBy: { not: null },
-        currency: 'PHP',
-      },
+    const result = await database.order.aggregate({
+      where: this.eligibleOrders(actorId, shopId, start, end),
       _count: { _all: true },
       _sum: { totalPrice: true },
     });
@@ -93,6 +106,24 @@ export class CompletedSalesService {
       currency: 'PHP',
       completedOrders: result._count._all,
       totalSales: result._sum.totalPrice?.toFixed(2) ?? '0.00',
+    };
+  }
+
+  private eligibleOrders(
+    actorId: string,
+    shopId: string,
+    start: Date,
+    end: Date,
+  ): Prisma.OrderWhereInput {
+    return {
+      shopId,
+      shop: shopAccessWhere(actorId, shopId, COMPLETED_SALES_ROLES),
+      status: 'CONFIRMED',
+      paymentStatus: 'PAID',
+      preparationStatus: 'COMPLETED',
+      completedAt: { gte: start, lt: end },
+      completedBy: { not: null },
+      currency: 'PHP',
     };
   }
 }

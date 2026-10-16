@@ -10,6 +10,7 @@ import {
 import {
   FiBarChart2,
   FiClipboard,
+  FiShoppingBag,
   FiRefreshCw,
   FiTrendingUp,
 } from "react-icons/fi";
@@ -208,6 +209,26 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 </p>
                 {query.data.completedOrders === 0 && (
                   <p>No eligible orders; average is ₱0.00.</p>
+                )}
+              </article>
+              <article
+                className="sales-total"
+                aria-labelledby="sales-items-label"
+              >
+                <FiShoppingBag aria-hidden="true" />
+                <h2 id="sales-items-label" className="section-label">
+                  Items Sold
+                </h2>
+                <p className="sales-business-date">{date} · Asia/Manila</p>
+                <strong className="sales-amount">
+                  {new Intl.NumberFormat("en-PH").format(query.data.itemsSold)}
+                </strong>
+                <p>
+                  Total item quantities from eligible completed orders. Options
+                  and add-ons are included with their item.
+                </p>
+                {query.data.completedOrders === 0 && (
+                  <p>No eligible items for this business day.</p>
                 )}
               </article>
             </div>

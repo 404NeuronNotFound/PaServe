@@ -1233,6 +1233,7 @@ export function salesBusinessDayBounds(date: unknown): { from: string; to: strin
 }
 
 export interface DailySalesResponse extends CompletedSalesResponse {
+  itemsSold: number;
   shopId: string;
   businessDate: string;
   timezone: typeof SALES_TIMEZONE;

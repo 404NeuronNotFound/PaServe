@@ -29,6 +29,9 @@ export async function getDailySales(
     !/^(?:0|[1-9]\d*)\.\d{2}$/.test(data.totalSales) ||
     !Number.isSafeInteger(data.completedOrders) ||
     data.completedOrders < 0 ||
+    !Number.isSafeInteger(data.itemsSold) ||
+    data.itemsSold < 0 ||
+    (data.completedOrders === 0 && data.itemsSold !== 0) ||
     (data.completedOrders === 0 && data.totalSales !== "0.00")
   ) {
     throw new Error("Sales could not be verified. Please refresh.");

@@ -38,7 +38,13 @@ try {
       `CREATE TYPE "${schema}"."${name}" AS ENUM (${labels.rows.map((row) => `'${row.enumlabel.replaceAll("'", "''")}'`).join(',')})`,
     );
   }
-  for (const table of ['users', 'shops', 'shop_members', 'orders']) {
+  for (const table of [
+    'users',
+    'shops',
+    'shop_members',
+    'orders',
+    'order_items',
+  ]) {
     await client.query(
       `CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`,
     );
@@ -171,7 +177,57 @@ try {
     });
   }
 
-  const sales = new CompletedSalesService(prisma);
+  // Snapshot rows retain quantities even after the original product is gone.
+  const allOrders = await prisma.order.findMany();
+  for (const order of allOrders) {
+    const quantities =
+      order.id === expected[0].id
+        ? [2, 3]
+        : expected.some((row) => row.id === order.id)
+          ? [1]
+          : [99];
+    for (const [index, quantity] of quantities.entries()) {
+      const productId = randomUUID();
+      const snapshot = {
+        productId,
+        productName: 'Saved item',
+        currency: 'PHP',
+        quantity,
+        basePrice: '0.00',
+        unitPrice: '0.00',
+        totalPrice: '0.00',
+        variants: [],
+        addOns: [],
+      };
+      await prisma.orderItem.create({
+        data: {
+          shopId: order.shopId,
+          orderId: order.id,
+          lineNumber: index + 1,
+          quantity,
+          snapshot,
+          productSnapshotId: productId,
+          productNameSnapshot: snapshot.productName,
+          currency: 'PHP',
+          basePriceSnapshot: '0.00',
+          unitPriceSnapshot: '0.00',
+          lineTotalSnapshot: '0.00',
+          variantsSnapshot: [],
+          addOnsSnapshot: [],
+        },
+      });
+    }
+  }
+  // The fixture already pins every query to this rollback-only transaction.
+  // Do not start a nested BEGIN through Prisma, which would commit fixture DDL.
+  const pinned = new Proxy(prisma, {
+    get(target, property, receiver) {
+      return property === '$transaction'
+        ? async (work) => work(target)
+        : Reflect.get(target, property, receiver);
+    },
+  });
+  const sales = new CompletedSalesService(pinned);
   const report = await sales.daily(actor.id, shop.id, '2026-10-16');
   // Independently filter persisted rows using PostgreSQL business-date conversion.
   // Do not reuse the service's bounds helper or its aggregate query.
@@ -192,6 +248,43 @@ try {
   assert.equal(report.totalSales, expectedTotal);
   assert.equal(report.totalSales, '10000000060.32');
   assert.equal(report.completedOrders, 37);
+  const savedItems = await client.query(
+    `SELECT "orderId", "lineNumber", quantity FROM "${schema}".order_items WHERE "shopId"=$1 AND "orderId"=ANY($2::text[]) ORDER BY "orderId", "lineNumber"`,
+    [shop.id, rows.map((row) => row.id)],
+  );
+  assert.equal(
+    savedItems.rows.length,
+    38,
+    'Detailed lines differ from units sold',
+  );
+  assert.deepEqual(
+    savedItems.rows
+      .filter((line) => line.orderId === expected[0].id)
+      .map((line) => line.quantity),
+    [2, 3],
+  );
+  assert.equal(
+    report.itemsSold,
+    savedItems.rows.reduce((sum, line) => sum + line.quantity, 0),
+    'Metric equals the quantities on every eligible detailed line',
+  );
+  assert.equal(
+    report.itemsSold,
+    41,
+    'Sum quantities, not line count or order count',
+  );
+  assert.equal(
+    (await sales.daily(actor.id, shop.id, '2026-10-17')).itemsSold,
+    99,
+  );
+  assert.equal(
+    (await sales.daily(actor.id, shop.id, '2026-10-18')).itemsSold,
+    0,
+  );
+  assert.equal(
+    (await sales.daily(actor.id, foreign.id, '2026-10-16')).itemsSold,
+    99,
+  );
   assert.equal(
     (await sales.daily(actor.id, shop.id, '2026-10-16')).completedOrders,
     37,
@@ -229,6 +322,10 @@ try {
     data: { role: 'CASHIER' },
   });
   assert.equal(
+    (await sales.daily(actor.id, shop.id, '2026-10-16')).itemsSold,
+    0,
+  );
+  assert.equal(
     (await sales.daily(actor.id, shop.id, '2026-10-16')).totalSales,
     '0.00',
   );
@@ -239,6 +336,7 @@ try {
       businessDate: '2026-10-16',
       timezone: report.timezone,
       matchedOrders: rows.length,
+      itemsSold: report.itemsSold,
       grossSales: report.totalSales,
       checks:
         'Independent SQL reconciliation, exact cents, all payment methods, >25 orders, start/end boundaries, completion vs payment day, unfinished/unpaid/rejected/foreign exclusions, empty day and revoked access predicate',

@@ -10,6 +10,7 @@ const response = () => ({
   to: "2026-10-16T16:00:00.000Z",
   currency: "PHP",
   completedOrders: 30,
+  itemsSold: 75,
   totalSales: "12345678901234.30",
 });
 afterEach(() => vi.restoreAllMocks());
@@ -36,6 +37,11 @@ it.each([
   { completedOrders: "2" },
   { completedOrders: Number.MAX_SAFE_INTEGER + 1 },
   { completedOrders: 0 },
+  { itemsSold: undefined },
+  { itemsSold: -1 },
+  { itemsSold: 1.5 },
+  { itemsSold: "3" },
+  { itemsSold: Number.MAX_SAFE_INTEGER + 1 },
 ])("rejects a mismatched or malformed report: %j", async (change) => {
   vi.spyOn(api, "get").mockResolvedValue({
     data: { ...response(), ...change },

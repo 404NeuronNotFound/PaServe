@@ -8,8 +8,17 @@ describe('Daily gross sales', () => {
   const actorId = randomUUID(),
     shopId = randomUUID();
   const aggregate = vi.fn();
-  const service = new CompletedSalesService({
+  const aggregateItems = vi.fn();
+  const database = {
     order: { aggregate },
+    orderItem: { aggregate: aggregateItems },
+  };
+  const transaction = vi.fn(async (work: (tx: typeof database) => unknown) =>
+    work(database),
+  );
+  const service = new CompletedSalesService({
+    ...database,
+    $transaction: transaction,
   } as unknown as PrismaService);
   beforeEach(() => {
     vi.resetAllMocks();
@@ -17,6 +26,8 @@ describe('Daily gross sales', () => {
       _count: { _all: 0 },
       _sum: { totalPrice: null },
     });
+    aggregateItems.mockResolvedValue({ _sum: { quantity: null } });
+    transaction.mockImplementation(async (work) => work(database));
   });
 
   it('uses midnight in Manila, regardless of the host timezone', () => {
@@ -69,6 +80,7 @@ describe('Daily gross sales', () => {
       currency: 'PHP',
       completedOrders: 200,
       totalSales: '12345678901234.30',
+      itemsSold: 0,
     });
     expect(aggregate).toHaveBeenCalledWith({
       where: {
@@ -102,6 +114,36 @@ describe('Daily gross sales', () => {
     expect(await service.daily(actorId, shopId, '2026-10-16')).toMatchObject({
       totalSales: '0.00',
       completedOrders: 0,
+      itemsSold: 0,
     });
   });
+
+  it('sums saved quantities with the same eligibility and a consistent snapshot', async () => {
+    aggregate.mockResolvedValue({
+      _count: { _all: 2 },
+      _sum: { totalPrice: new Prisma.Decimal('10.00') },
+    });
+    aggregateItems.mockResolvedValue({ _sum: { quantity: 17 } });
+    expect(await service.daily(actorId, shopId, '2026-10-16')).toMatchObject({
+      completedOrders: 2,
+      totalSales: '10.00',
+      itemsSold: 17,
+    });
+    expect(aggregateItems).toHaveBeenCalledWith({
+      where: { shopId, order: aggregate.mock.calls[0][0].where },
+      _sum: { quantity: true },
+    });
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'RepeatableRead',
+    });
+  });
+  it.each([-1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    'fails closed for an invalid item aggregate %s',
+    async (quantity) => {
+      aggregateItems.mockResolvedValue({ _sum: { quantity } });
+      await expect(
+        service.daily(actorId, shopId, '2026-10-16'),
+      ).rejects.toThrow('Items sold could not be calculated');
+    },
+  );
 });
