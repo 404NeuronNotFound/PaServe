@@ -8,7 +8,16 @@ export const cancelledOrdersKey = (
   userId: string,
   shopId: string,
   cursor: string | null,
-) => ["owner-orders", userId, shopId, "cancelled", cursor] as const;
+  search = "",
+) =>
+  [
+    "owner-orders",
+    userId,
+    shopId,
+    "cancelled",
+    cursor,
+    ...(search ? [search] : []),
+  ] as const;
 
 export function parseCancelledOrders(
   data: CancelledOrdersResponse,
@@ -73,11 +82,12 @@ export async function getCancelledOrders(
   shopId: string,
   cursor: string | null,
   signal: AbortSignal,
+  search = "",
 ) {
   const { data } = await api.get<CancelledOrdersResponse>(
     `/shops/${encodeURIComponent(shopId)}/orders/cancelled`,
     {
-      params: cursor ? { cursor } : {},
+      params: { ...(cursor ? { cursor } : {}), ...(search ? { search } : {}) },
       signal,
       timeout: AUTH_REQUEST_TIMEOUT_MS,
     },

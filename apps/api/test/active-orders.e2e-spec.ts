@@ -144,5 +144,47 @@ describe.each(['active', 'completed', 'cancelled'])(
       await get(shopId, '?cursor=a&cursor=b').expect(400);
       expect(findMany).not.toHaveBeenCalled();
     });
+    it('limits server-side search to safe fields within the authorized shop and current state', async () => {
+      await get(shopId, '?search=%20pAtIo%202%20&field=qrTokenNonce').expect(
+        200,
+      );
+      const query = findMany.mock.calls[0][0];
+      expect(query.where).toMatchObject({
+        shopId,
+        shop: { id: shopId },
+        status:
+          view === 'active'
+            ? { in: ['PENDING_CONFIRMATION', 'CONFIRMED'] }
+            : view === 'completed'
+              ? 'CONFIRMED'
+              : 'REJECTED',
+      });
+      expect(query.where.AND).toEqual(
+        expect.arrayContaining([
+          {
+            OR: [
+              { orderNumber: { contains: 'pAtIo 2', mode: 'insensitive' } },
+              { tableNumber: { contains: 'pAtIo 2', mode: 'insensitive' } },
+            ],
+          },
+        ]),
+      );
+      expect(query.take).toBe(26);
+    });
+    it.each(['?search=a&search=b', `?search=${'x'.repeat(81)}`, '?search=%00'])(
+      'rejects invalid search input: %s',
+      async (suffix) => {
+        await get(shopId, suffix).expect(400);
+        expect(findMany).not.toHaveBeenCalled();
+      },
+    );
+    it('does not allow search to bypass role or tenant access', async () => {
+      await get('e47f6994-a303-4a7b-87b0-2386d5198828', '?search=ORD').expect(
+        404,
+      );
+      role = 'CASHIER';
+      await get(shopId, '?search=ORD').expect(403);
+      expect(findMany).not.toHaveBeenCalled();
+    });
   },
 );

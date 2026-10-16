@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import type {
@@ -17,6 +16,8 @@ import { formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import { sumPrices } from "../../features/cart/cart";
 import "./active-orders.css";
+import { useOrderListSearch } from "../../features/orders/useOrderListSearch";
+import { OrderSearch } from "./OrderSearch";
 
 const paymentLabels: Record<CompletedOrderSummary["paymentMethod"], string> = {
   CASH: "Cash",
@@ -39,11 +40,11 @@ export function CompletedOrdersPage() {
 
 function CompletedOrdersWorkspace({ userId }: { userId: string }) {
   const { shopId, role } = useActiveShop();
-  const [cursors, setCursors] = useState<(string | null)[]>([null]);
+  const { search, cursors, setCursors, applySearch } = useOrderListSearch();
   const cursor = cursors[cursors.length - 1];
   const query = useQuery({
-    queryKey: completedOrdersKey(userId, shopId, cursor),
-    queryFn: ({ signal }) => getCompletedOrders(shopId, cursor, signal),
+    queryKey: completedOrdersKey(userId, shopId, cursor, search),
+    queryFn: ({ signal }) => getCompletedOrders(shopId, cursor, signal, search),
     enabled: role === "OWNER",
     retry: false,
     gcTime: 0,
@@ -87,6 +88,7 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
           {query.isFetching ? "Refreshing…" : "Refresh"}
         </button>
       </header>
+      <OrderSearch search={search} onSearch={applySearch} />
       <div className="active-orders-toolbar">
         <span>
           <FiClock aria-hidden="true" /> Newest completions first
@@ -133,14 +135,20 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
             <div className="active-orders-empty">
               <FiArchive aria-hidden="true" />
               <h2>
-                {cursor
-                  ? "No completed orders on this page"
-                  : "No completed orders yet"}
+                {search
+                  ? cursor
+                    ? "No matching orders on this page"
+                    : "No matching orders"
+                  : cursor
+                    ? "No completed orders on this page"
+                    : "No completed orders yet"}
               </h2>
               <p>
-                {cursor
-                  ? "Go back or refresh to start again."
-                  : "Orders appear here after your team confirms pickup or table service. Payment alone does not mark an order fulfilled."}
+                {search
+                  ? "Try another order number or table label, or clear search."
+                  : cursor
+                    ? "Go back or refresh to start again."
+                    : "Orders appear here after your team confirms pickup or table service. Payment alone does not mark an order fulfilled."}
               </p>
             </div>
           ) : (

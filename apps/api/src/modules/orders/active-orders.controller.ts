@@ -12,6 +12,7 @@ export class ActiveOrdersController {
   @Roles('OWNER')
   list(
     @Query('cursor') cursor: unknown,
+    @Query('search') search: unknown,
     @Req() request: ShopMemberRequest,
     @Res({ passthrough: true }) response: Response,
   ) {
@@ -20,6 +21,7 @@ export class ActiveOrdersController {
       request.user.id,
       request.shopMembership.shopId,
       cursor,
+      search,
     );
   }
 }

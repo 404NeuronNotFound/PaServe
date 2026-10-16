@@ -129,6 +129,15 @@ export interface ActiveOrdersResponse {
   nextCursor: string | null;
 }
 
+export const OWNER_ORDER_SEARCH_MAX_LENGTH = 80;
+
+/** Safe display-field query only; missing/blank means no search. */
+export function normalizeOwnerOrderSearch(value: unknown): string | null {
+  if (value === undefined) return "";
+  if (typeof value !== "string" || value.length > OWNER_ORDER_SEARCH_MAX_LENGTH || /\p{Cc}/u.test(value)) return null;
+  return value.trim();
+}
+
 /** Fulfilled history uses the same eligibility as completed-sales reporting. */
 export interface CompletedOrderSummary {
   id: string;

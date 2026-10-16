@@ -8,7 +8,16 @@ export const activeOrdersKey = (
   userId: string,
   shopId: string,
   cursor: string | null,
-) => ["owner-orders", userId, shopId, "active", cursor] as const;
+  search = "",
+) =>
+  [
+    "owner-orders",
+    userId,
+    shopId,
+    "active",
+    cursor,
+    ...(search ? [search] : []),
+  ] as const;
 
 export function parseActiveOrders(
   data: ActiveOrdersResponse,
@@ -66,11 +75,12 @@ export async function getActiveOrders(
   shopId: string,
   cursor: string | null,
   signal: AbortSignal,
+  search = "",
 ) {
   const { data } = await api.get<ActiveOrdersResponse>(
     `/shops/${encodeURIComponent(shopId)}/orders/active`,
     {
-      params: cursor ? { cursor } : {},
+      params: { ...(cursor ? { cursor } : {}), ...(search ? { search } : {}) },
       signal,
       timeout: AUTH_REQUEST_TIMEOUT_MS,
     },

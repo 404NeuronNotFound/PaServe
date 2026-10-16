@@ -160,6 +160,7 @@ it("returns to the preceding page using its original cursor", async () => {
     "a",
     null,
     expect.any(AbortSignal),
+    "",
   );
 });
 
@@ -200,6 +201,7 @@ it("pages with the captured cursor and refreshes back to the first page", async 
     "a",
     "next",
     expect.any(AbortSignal),
+    "",
   );
   fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
   await waitFor(() =>
@@ -207,6 +209,7 @@ it("pages with the captured cursor and refreshes back to the first page", async 
       "a",
       null,
       expect.any(AbortSignal),
+      "",
     ),
   );
 });

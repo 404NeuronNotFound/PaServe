@@ -4,6 +4,7 @@ import { isUUID } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
+import { ownerOrderSearchWhere } from './owner-order-search.js';
 
 @Injectable()
 export class ActiveOrdersService {
@@ -16,8 +17,10 @@ export class ActiveOrdersService {
     actorId: string,
     shopId: string,
     cursor?: unknown,
+    search?: unknown,
   ): Promise<ActiveOrdersResponse> {
     const access = shopAccessWhere(actorId, shopId, ['OWNER']);
+    const searchWhere = ownerOrderSearchWhere(search);
     let after: { createdAt: Date; id: string } | undefined;
     if (cursor !== undefined) {
       try {
@@ -55,6 +58,7 @@ export class ActiveOrdersService {
         status: { in: ['PENDING_CONFIRMATION', 'CONFIRMED'] },
         completedAt: null,
         AND: [
+          ...(searchWhere ? [searchWhere] : []),
           {
             OR: [
               { preparationStatus: null },

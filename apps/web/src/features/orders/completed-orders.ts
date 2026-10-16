@@ -8,7 +8,16 @@ export const completedOrdersKey = (
   userId: string,
   shopId: string,
   cursor: string | null,
-) => ["owner-orders", userId, shopId, "completed", cursor] as const;
+  search = "",
+) =>
+  [
+    "owner-orders",
+    userId,
+    shopId,
+    "completed",
+    cursor,
+    ...(search ? [search] : []),
+  ] as const;
 
 export function parseCompletedOrders(
   data: CompletedOrdersResponse,
@@ -63,11 +72,12 @@ export async function getCompletedOrders(
   shopId: string,
   cursor: string | null,
   signal: AbortSignal,
+  search = "",
 ) {
   const { data } = await api.get<CompletedOrdersResponse>(
     `/shops/${encodeURIComponent(shopId)}/orders/completed`,
     {
-      params: cursor ? { cursor } : {},
+      params: { ...(cursor ? { cursor } : {}), ...(search ? { search } : {}) },
       signal,
       timeout: AUTH_REQUEST_TIMEOUT_MS,
     },

@@ -16,6 +16,8 @@ import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./active-orders.css";
+import { useOrderListSearch } from "../../features/orders/useOrderListSearch";
+import { OrderSearch } from "./OrderSearch";
 
 export function ActiveOrdersPage() {
   const membership = useActiveShop();
@@ -52,12 +54,12 @@ function elapsed(createdAt: string, now: number) {
 
 function ActiveOrdersWorkspace({ userId }: { userId: string }) {
   const { shopId, role } = useActiveShop();
-  const [cursors, setCursors] = useState<(string | null)[]>([null]);
+  const { search, cursors, setCursors, applySearch } = useOrderListSearch();
   const [now, setNow] = useState(Date.now);
   const cursor = cursors[cursors.length - 1];
   const query = useQuery({
-    queryKey: activeOrdersKey(userId, shopId, cursor),
-    queryFn: ({ signal }) => getActiveOrders(shopId, cursor, signal),
+    queryKey: activeOrdersKey(userId, shopId, cursor, search),
+    queryFn: ({ signal }) => getActiveOrders(shopId, cursor, signal, search),
     enabled: role === "OWNER",
     retry: false,
     gcTime: 0,
@@ -105,6 +107,7 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
           {query.isFetching ? "Refreshing…" : "Refresh"}
         </button>
       </header>
+      <OrderSearch search={search} onSearch={applySearch} />
       <div className="active-orders-toolbar">
         <span>
           <FiClock aria-hidden="true" /> Oldest orders first
@@ -140,14 +143,20 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
             <div className="active-orders-empty">
               <FiShoppingBag aria-hidden="true" />
               <h2>
-                {cursor
-                  ? "No active orders on this page"
-                  : "No active orders right now"}
+                {search
+                  ? cursor
+                    ? "No matching orders on this page"
+                    : "No matching orders"
+                  : cursor
+                    ? "No active orders on this page"
+                    : "No active orders right now"}
               </h2>
               <p>
-                {cursor
-                  ? "Orders may have been fulfilled. Go back or refresh to start again."
-                  : "New orders will appear here while they await confirmation, payment, preparation, or fulfillment."}
+                {search
+                  ? "Try another order number or table label, or clear search."
+                  : cursor
+                    ? "Orders may have been fulfilled. Go back or refresh to start again."
+                    : "New orders will appear here while they await confirmation, payment, preparation, or fulfillment."}
               </p>
             </div>
           ) : (

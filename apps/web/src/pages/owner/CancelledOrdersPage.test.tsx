@@ -136,6 +136,7 @@ it("pages Next/Previous and restarts at the first page on refresh", async () => 
     "a",
     "next",
     expect.any(AbortSignal),
+    "",
   );
   fireEvent.click(screen.getByRole("button", { name: "Previous" }));
   await screen.findByText("ORD-000042");
@@ -143,6 +144,7 @@ it("pages Next/Previous and restarts at the first page on refresh", async () => 
     "a",
     null,
     expect.any(AbortSignal),
+    "",
   );
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
   await screen.findByText("No rejected orders on this page");
@@ -152,6 +154,7 @@ it("pages Next/Previous and restarts at the first page on refresh", async () => 
     "a",
     null,
     expect.any(AbortSignal),
+    "",
   );
 });
 it("refreshes history automatically when an order is rejected", async () => {
