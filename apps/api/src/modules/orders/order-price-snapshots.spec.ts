@@ -1,5 +1,6 @@
 import type { ProductSelectionQuoteResponse } from '@paserve/contracts';
-import { copyPriceSnapshot } from './order-price-snapshots.js';
+import { copyPriceSnapshot, readPriceSnapshot } from './order-price-snapshots.js';
+import { Prisma } from '../../generated/prisma/client.js';
 
 const quote = (): ProductSelectionQuoteResponse => ({
   productId: 'coffee',
@@ -20,6 +21,47 @@ const quote = (): ProductSelectionQuoteResponse => ({
   ],
   addOns: [{ id: 'milk', name: 'Oat milk', priceAdjustment: '0.30' }],
 });
+const savedRow = () => {
+  const saved = quote();
+  return {
+    productSnapshotId: saved.productId,
+    productNameSnapshot: saved.productName,
+    currency: saved.currency,
+    quantity: saved.quantity,
+    notes: null,
+    basePriceSnapshot: new Prisma.Decimal(saved.basePrice),
+    unitPriceSnapshot: new Prisma.Decimal(saved.unitPrice),
+    lineTotalSnapshot: new Prisma.Decimal(saved.totalPrice),
+    variantsSnapshot: saved.variants,
+    addOnsSnapshot: saved.addOns,
+  };
+};
+
+it('reads saved names and prices without accessing live product data or legacy JSON', () => {
+  const row = savedRow();
+  for (const field of ['product', 'productId', 'snapshot', 'items']) {
+    Object.defineProperty(row, field, {
+      get: () => { throw new Error(`Receipt accessed forbidden source: ${field}`); },
+    });
+  }
+  expect(readPriceSnapshot(row)).toEqual(quote());
+});
+
+it('preserves original product identity after its live reference is cleared', () => {
+  const row = { ...savedRow(), productId: null, product: null };
+  expect(readPriceSnapshot(row)).toEqual(quote());
+});
+
+it.each(['name', 'price', 'option'])(
+  'rejects a broken %s snapshot even when live product and legacy JSON look valid',
+  (field) => {
+    const row = { ...savedRow(), product: { name: 'Current menu name', price: new Prisma.Decimal('0.10') }, snapshot: quote() };
+    if (field === 'name') row.productNameSnapshot = '';
+    if (field === 'price') row.unitPriceSnapshot = new Prisma.Decimal('99.00');
+    if (field === 'option') row.variantsSnapshot[0].name = '';
+    expect(() => readPriceSnapshot(row)).toThrow('Invalid server price snapshot.');
+  },
+);
 it('copies option names/prices independently of subsequent source-object edits', () => {
   const source = quote();
   const saved = copyPriceSnapshot(source);

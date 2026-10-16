@@ -96,6 +96,9 @@ export function copyPriceSnapshot(
   };
 }
 
+/** Receipt authority is the persisted snapshot columns. Never fall back to a live
+ * product relation, its nullable ID, or the legacy parent/item JSON. Invalid
+ * snapshots must fail validation so historical receipts cannot be silently repriced. */
 export function readPriceSnapshot(
   item: Pick<
     OrderItem,

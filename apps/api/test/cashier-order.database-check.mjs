@@ -137,6 +137,15 @@ try {
         await tx.addOn.delete({ where: { id: addOn.id, shopId: shop.id } });
         await tx.productVariant.delete({ where: { id: variant.id, shopId: shop.id } });
         await tx.product.delete({ where: { id: product.id } });
+        const retainedSnapshot = await tx.orderItem.findFirstOrThrow({
+          where: { shopId: shop.id, orderId: order.id, lineNumber: 1 },
+        });
+        assert.equal(retainedSnapshot.productId, null);
+        assert.equal(retainedSnapshot.productSnapshotId, product.id);
+        assert.equal(retainedSnapshot.productNameSnapshot, quote.productName);
+        assert.equal(retainedSnapshot.basePriceSnapshot.toFixed(2), quote.basePrice);
+        assert.equal(retainedSnapshot.unitPriceSnapshot.toFixed(2), quote.unitPrice);
+        assert.equal(retainedSnapshot.lineTotalSnapshot.toFixed(2), quote.totalPrice);
         assert.deepEqual(
           (await cashier.scan(user.id, shop.id, token)).order,
           initial.order,
