@@ -7,6 +7,20 @@ const receipt = {
   mode: "TAKEOUT", table: null, status: "PENDING_CONFIRMATION", currency: "PHP", totalPrice: "12.00",
 };
 const details = { name: "Original Cafe", address: "12 Old Street", phone: "09171234567", contactEmail: null, website: null };
+it('preserves saved UTC transaction timestamps after recovery', () => {
+  const times = { createdAt: '2026-10-16T00:00:00Z', paidAt: '2026-10-16T00:01:00Z', completedAt: '2026-10-16T00:10:00Z' };
+  recoverOrderReceipt('cafe', 'order-a', { ...receipt, ...times });
+  orderReceipts.clearMemory();
+  expect(readOrderReceipt('cafe', 'order-a')).toMatchObject(times);
+});
+it.each([
+  { createdAt: '2026-02-30T00:00:00Z' },
+  { createdAt: '2026-10-16T08:00:00' },
+  { createdAt: '2026-10-16T00:10:00Z', paidAt: '2026-10-16T00:00:00Z' },
+  { paidAt: '2026-10-16T00:10:00Z', completedAt: '2026-10-16T00:00:00Z' },
+])('rejects invalid or contradictory saved timestamp data %j', (times) => {
+  expect(readOrderReceipt('cafe', 'order-a', { ...receipt, ...times })).toBeNull();
+});
 it('retains exact saved cash tender after storage recovery', () => {
   recoverOrderReceipt('cafe', 'order-a', { ...receipt, payment: { method: 'CASH', amountReceived: '20.00', changeDue: '8.00' } });
   orderReceipts.clearMemory();

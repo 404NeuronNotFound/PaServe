@@ -833,6 +833,17 @@ export interface CustomerReceiptSummary {
   items?: ProductSelectionQuoteResponse[];
   /** Customer-safe saved method details; null before payment, absent on older APIs. */
   payment?: ReceiptPaymentDetails | null;
+  /** Saved UTC instants; optional for older receipts. */
+  createdAt?: string;
+  paidAt?: string | null;
+  completedAt?: string | null;
+}
+/** Validate canonical UTC timestamps without accepting ambiguous local dates. */
+export function isReceiptTimestamp(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) return false;
+  const time = new Date(value);
+  if (!Number.isFinite(time.getTime())) return false;
+  return time.toISOString() === value.replace(/(?:\.(\d{1,3}))?Z$/, (_match, fraction: string | undefined) => `.${(fraction ?? "").padEnd(3, "0")}Z`);
 }
 export interface OrderDecisionRequest extends VerifyOrderQrRequest {
   reviewVersion: string;

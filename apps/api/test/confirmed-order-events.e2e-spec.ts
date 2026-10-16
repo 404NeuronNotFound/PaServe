@@ -20,6 +20,8 @@ describe('Confirmed order customer/staff HTTP access', () => {
     membership = vi.fn();
   let relay: ReturnType<typeof vi.spyOn>;
   let order: {
+    createdAt: Date;
+    paidAt: Date | null;
     amountReceived: Prisma.Decimal | null;
     changeDue: Prisma.Decimal | null;
     paymentMethod: string | null;
@@ -105,6 +107,8 @@ describe('Confirmed order customer/staff HTTP access', () => {
       paymentDescription: null,
       decidedAt: new Date(),
       updatedAt: new Date(),
+      createdAt: new Date('2026-10-12T00:00:00Z'),
+      paidAt: null,
       ...tokens.metadata(),
       qrTokenRevokedAt: new Date(),
       receiptAccessRevokedAt: null,
@@ -143,6 +147,12 @@ describe('Confirmed order customer/staff HTTP access', () => {
     request(app.getHttpServer())
       .get(`/api/v1/menu/${slug}/orders/${orderId}/${suffix}`)
       .set('Authorization', `Bearer ${token}`);
+  it('returns original transaction times through protected receipt reads', async () => {
+    order.paidAt = new Date('2026-10-12T00:01:00Z');
+    const result = await customer('status').expect(200);
+    expect(result.body.receipt.createdAt).toBe('2026-10-12T00:00:00.000Z');
+    expect(result.body.receipt.paidAt).toBe('2026-10-12T00:01:00.000Z');
+  });
   it.each([['20.00', '8.00'], ['12.00', '0.00']])('returns saved cash tender %s and backend change %s', async (amount, change) => {
     order.amountReceived = new Prisma.Decimal(amount); order.changeDue = new Prisma.Decimal(change);
     const result = await customer('status').expect(200);

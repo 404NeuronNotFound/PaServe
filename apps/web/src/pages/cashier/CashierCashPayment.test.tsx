@@ -96,6 +96,8 @@ it("shows preparation queue state only from a saved paid receipt", async () => {
     <CashierCashPayment shopId="shop-a" orderId="order-a" onNext={vi.fn()} />,
   );
   expect(await screen.findByText("Queued for preparation.")).toBeVisible();
+  expect(screen.getByText('Payment recorded (Asia/Manila)')).toBeInTheDocument();
+  expect(screen.getByText(/Oct 13, 2026.*08:00:00.*AM.*GMT\+8/)).toBeInTheDocument();
 });
 it("reopens a saved card payment as a paid receipt without collection instructions", async () => {
   vi.mocked(reviewCashPayment).mockResolvedValue({

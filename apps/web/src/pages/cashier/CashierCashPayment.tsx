@@ -7,6 +7,7 @@ import type {
   VerifyOrderQrResponse,
 } from "@paserve/contracts";
 import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
+import { formatReceiptDateTime, RECEIPT_TIME_ZONE } from "../../lib/receipt-date-time";
 import {
   PAYMENT_REFERENCE_PATTERN,
   CASH_AMOUNT_MAX,
@@ -328,6 +329,10 @@ export function CashierCashPayment({
           </p>
         )}
         <dl>
+          <div>
+            <dt>Payment recorded ({RECEIPT_TIME_ZONE})</dt>
+            <dd><time dateTime={review.payment.paidAt}>{formatReceiptDateTime(review.payment.paidAt)}</time></dd>
+          </div>
           {review.payment.description && (
             <div>
               <dt>Payment method description</dt>

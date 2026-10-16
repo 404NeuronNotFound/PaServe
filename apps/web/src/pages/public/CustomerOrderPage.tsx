@@ -23,6 +23,8 @@ import { GuestTrackingShare } from "./GuestTrackingShare";
 import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
 import { ReceiptOrderItems } from "./ReceiptOrderItems";
 import { ReceiptPaymentMethod } from "./ReceiptPaymentMethod";
+import { ReceiptTimestamps } from "./ReceiptTimestamps";
+import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 
 export function CustomerOrderPage() {
   const { shopSlug = "", orderId = "" } = useParams();
@@ -158,6 +160,8 @@ export function CustomerOrderPage() {
               />
               <ReceiptOrderItems items={receipt.items} />
               <ReceiptPaymentMethod payment={receipt.payment} confirmed={confirmed} />
+              <ReceiptTimestamps createdAt={receipt.createdAt} paidAt={receipt.paidAt}
+                completedAt={receipt.completedAt} paid={confirmed || receipt.payment != null} />
               <dl>
                 {receipt.subtotalPrice !== undefined && (
                   <div className="order-receipt-subtotal">
@@ -327,7 +331,7 @@ export function CustomerOrderPage() {
                 <p className="order-receipt-note">
                   Completed at{" "}
                   <time dateTime={savedStatus.completedAt}>
-                    {new Date(savedStatus.completedAt).toLocaleString()}
+                    {formatReceiptDateTime(savedStatus.completedAt)}
                   </time>
                 </p>
               )}

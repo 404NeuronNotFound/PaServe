@@ -63,6 +63,8 @@ export class CustomerOrderStatusService {
         changeDue: true,
         decidedAt: true,
         updatedAt: true,
+        createdAt: true,
+        paidAt: true,
         qrTokenNonce: true,
         qrTokenExpiresAt: true,
         qrTokenRevokedAt: true,
@@ -128,7 +130,9 @@ export class CustomerOrderStatusService {
       ((preparationStatus === 'READY' || preparationStatus === 'COMPLETED') &&
         (!readyAt || !startedAt || readyAt < startedAt)) ||
       (preparationStatus === 'COMPLETED' &&
-        (!completedAt || !readyAt || completedAt < readyAt))
+        (!completedAt || !readyAt || completedAt < readyAt)) ||
+      (order.paymentStatus === 'PAID' && order.paidAt != null &&
+        (order.paidAt < order.createdAt || (completedAt != null && completedAt < order.paidAt)))
     )
       throw new BadRequestException({
         code: 'INVALID_ORDER_STATE',
@@ -186,6 +190,9 @@ export class CustomerOrderStatusService {
         subtotalPrice: order.totalPrice.toFixed(2),
         items,
         payment,
+        createdAt: order.createdAt.toISOString(),
+        paidAt: order.paymentStatus === 'PAID' ? order.paidAt?.toISOString() ?? null : null,
+        completedAt: completedAt?.toISOString() ?? null,
       },
       order: {
         id: order.id,

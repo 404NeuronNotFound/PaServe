@@ -5,7 +5,7 @@ import type {
   ProductSelectionQuoteResponse,
   ReceiptPaymentDetails,
 } from "@paserve/contracts";
-import { cashAmountCents, parseReceiptPaymentDetails, parseReceiptShopDetails } from "@paserve/contracts";
+import { cashAmountCents, isReceiptTimestamp, parseReceiptPaymentDetails, parseReceiptShopDetails } from "@paserve/contracts";
 import { createPendingOrderStorage } from "./pending-orders";
 import { isPublicTableContext } from "../shops/customer-table";
 import { captureCustomerOrderQr } from "./customer-order-qr";
@@ -35,6 +35,9 @@ export interface OrderReceipt {
   subtotalPrice?: string;
   items?: ProductSelectionQuoteResponse[];
   payment?: ReceiptPaymentDetails | null;
+  createdAt?: string;
+  paidAt?: string | null;
+  completedAt?: string | null;
 }
 
 export const orderReceipts = createPendingOrderStorage(
@@ -72,6 +75,7 @@ export function saveOrderReceipt(
     status: order.status,
     currency: order.currency,
     totalPrice: order.totalPrice,
+    createdAt: order.createdAt,
     ...(order.subtotalPrice !== undefined ? { subtotalPrice: order.subtotalPrice } : {}),
     ...(items ? { items } : {}),
   };
@@ -129,6 +133,11 @@ export function readOrderReceipt(
     const items = value.items === undefined ? null : parseReceiptItems(value.items, value.totalPrice);
     if (value.items !== undefined && !items) return null;
     const payment = value.payment == null ? null : parseReceiptPaymentDetails(value.payment);
+    if ((value.createdAt !== undefined && !isReceiptTimestamp(value.createdAt)) ||
+      (value.paidAt != null && !isReceiptTimestamp(value.paidAt)) ||
+      (value.completedAt != null && !isReceiptTimestamp(value.completedAt)) ||
+      (value.createdAt && value.paidAt && Date.parse(value.paidAt) < Date.parse(value.createdAt)) ||
+      (value.completedAt && Date.parse(value.completedAt) < Date.parse(value.paidAt ?? value.createdAt ?? value.completedAt))) return null;
     if (value.payment != null && !payment) return null;
     if (payment?.method === "CASH" && payment.amountReceived !== undefined &&
       cashAmountCents(payment.amountReceived)! < cashAmountCents(value.totalPrice)!) return null;
@@ -151,6 +160,9 @@ export function readOrderReceipt(
       status: "PENDING_CONFIRMATION",
       currency: "PHP",
       totalPrice: value.totalPrice,
+      ...(value.createdAt !== undefined ? { createdAt: value.createdAt } : {}),
+      ...(value.paidAt !== undefined ? { paidAt: value.paidAt } : {}),
+      ...(value.completedAt !== undefined ? { completedAt: value.completedAt } : {}),
       ...(value.subtotalPrice !== undefined ? { subtotalPrice: value.subtotalPrice } : {}),
       ...(items ? { items } : {}),
       ...(value.payment !== undefined ? { payment } : {}),

@@ -45,6 +45,8 @@ describe('Customer receipt status access', () => {
     receiptAccessRevokedAt: null as Date | null,
     decidedAt: null as Date | null,
     updatedAt: new Date(),
+    createdAt: new Date('2026-10-12T00:00:00Z'),
+    paidAt: null as Date | null,
     preparationStatus: null as string | null,
     preparationStartedAt: null as Date | null,
     preparationReadyAt: null as Date | null,
@@ -85,6 +87,25 @@ describe('Customer receipt status access', () => {
     const result = await service.read('cafe', id, tokens.issueTracking(order));
     expect(result.receipt?.shopDetails).toBeNull();
     expect(result.receipt?.shopName).toBe('Cafe');
+  });
+  it('returns saved UTC order/payment instants rather than status-update time', async () => {
+    order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
+    order.paidAt = new Date('2026-10-12T00:01:00Z');
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
+    expect(result.receipt?.createdAt).toBe('2026-10-12T00:00:00.000Z');
+    expect(result.receipt?.paidAt).toBe('2026-10-12T00:01:00.000Z');
+    expect(result.receipt?.completedAt).toBeNull();
+  });
+  it('does not expose stale payment time on unpaid orders', async () => {
+    order.paidAt = new Date();
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
+    expect(result.receipt?.paidAt).toBeNull();
+  });
+  it('rejects a saved payment time before order placement', async () => {
+    order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
+    order.paidAt = new Date('2026-10-11T00:00:00Z');
+    await expect(service.read('cafe', id, tokens.issueTracking(order)))
+      .rejects.toMatchObject({ response: { code: 'INVALID_ORDER_STATE' } });
   });
 
   it('does not expose a method or stale reference before payment', async () => {
