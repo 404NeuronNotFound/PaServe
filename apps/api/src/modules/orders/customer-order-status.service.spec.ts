@@ -132,6 +132,10 @@ describe('Customer receipt status access', () => {
       quantity: 2, notes: 'Less ice', basePrice: '4.00', unitPrice: '6.00', totalPrice: '12.00',
       variants: order.orderItems[0].variantsSnapshot, addOns: order.orderItems[0].addOnsSnapshot,
     }]);
+    expect(result.receipt?.totalPrice).toBe('12.00');
+    expect(result.receipt?.subtotalPrice).toBe('12.00');
+    expect(result.receipt).not.toHaveProperty('discountPrice');
+    expect(result.receipt).not.toHaveProperty('taxPrice');
     expect(database.order.findFirst).toHaveBeenCalledWith(expect.objectContaining({
       select: expect.objectContaining({ orderItems: expect.objectContaining({
         where: { shopId, orderId: id }, orderBy: { lineNumber: 'asc' },

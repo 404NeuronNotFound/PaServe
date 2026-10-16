@@ -32,6 +32,7 @@ export interface OrderReceipt {
   currency: "PHP";
   /** Exact saved server total; never derived from current cart or menu prices. */
   totalPrice: string;
+  subtotalPrice?: string;
   items?: ProductSelectionQuoteResponse[];
   payment?: ReceiptPaymentDetails | null;
 }
@@ -71,6 +72,7 @@ export function saveOrderReceipt(
     status: order.status,
     currency: order.currency,
     totalPrice: order.totalPrice,
+    ...(order.subtotalPrice !== undefined ? { subtotalPrice: order.subtotalPrice } : {}),
     ...(items ? { items } : {}),
   };
   orderReceipts.write(key(shopSlug, order.id), receipt);
@@ -107,6 +109,8 @@ export function readOrderReceipt(
       value.status !== "PENDING_CONFIRMATION" ||
       value.currency !== "PHP" ||
       !isOrderTotal(value.totalPrice) ||
+      (value.subtotalPrice !== undefined &&
+        (!isOrderTotal(value.subtotalPrice) || value.subtotalPrice !== value.totalPrice)) ||
       !(value.mode === "TAKEOUT"
         ? value.table === null
         : value.mode === "DINE_IN" &&
@@ -142,6 +146,7 @@ export function readOrderReceipt(
       status: "PENDING_CONFIRMATION",
       currency: "PHP",
       totalPrice: value.totalPrice,
+      ...(value.subtotalPrice !== undefined ? { subtotalPrice: value.subtotalPrice } : {}),
       ...(items ? { items } : {}),
       ...(value.payment !== undefined ? { payment } : {}),
     };

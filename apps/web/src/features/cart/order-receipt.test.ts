@@ -7,6 +7,20 @@ const receipt = {
   mode: "TAKEOUT", table: null, status: "PENDING_CONFIRMATION", currency: "PHP", totalPrice: "12.00",
 };
 const details = { name: "Original Cafe", address: "12 Old Street", phone: "09171234567", contactEmail: null, website: null };
+it("restores exact supported subtotal/total and ignores unsupported financial fields", () => {
+  recoverOrderReceipt("cafe", "order-a", { ...receipt, subtotalPrice: "12.00", taxPrice: "999.00", discountPrice: "1.00" });
+  orderReceipts.clearMemory();
+  const saved = readOrderReceipt("cafe", "order-a");
+  expect(saved?.subtotalPrice).toBe("12.00");
+  expect(saved?.totalPrice).toBe("12.00");
+  expect(saved).not.toHaveProperty("taxPrice");
+  expect(saved).not.toHaveProperty("discountPrice");
+});
+it.each(["11.99", "12", "NaN", "-1.00", null])(
+  "rejects inconsistent or invalid supported subtotal %j", (subtotalPrice) => {
+    expect(readOrderReceipt("cafe", "order-a", { ...receipt, subtotalPrice })).toBeNull();
+  },
+);
 it("recovers recorded method and safe reference without internal payment fields", () => {
   recoverOrderReceipt("cafe", "order-a", { ...receipt, payment: {
     method: "CARD_MANUAL", reference: "00001234", description: null,

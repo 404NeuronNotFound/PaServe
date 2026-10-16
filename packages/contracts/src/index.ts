@@ -827,6 +827,8 @@ export interface CustomerReceiptSummary {
   status: "PENDING_CONFIRMATION";
   currency: "PHP";
   totalPrice: string;
+  /** No order adjustments are modeled today; authoritative subtotal equals saved total. */
+  subtotalPrice?: string;
   /** Saved receipt lines in submission order; optional for older API responses. */
   items?: ProductSelectionQuoteResponse[];
   /** Customer-safe saved method details; null before payment, absent on older APIs. */

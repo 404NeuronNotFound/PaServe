@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -125,6 +125,25 @@ function setup(path = "/menu/cafe/orders/order-a") {
     </QueryClientProvider>,
   );
 }
+
+it.each(["0.00", "0.30", "9999999999.99"])(
+  "shows authoritative subtotal and total %s after refresh without cart estimates", (totalPrice) => {
+    useCart.getState().add("cafe", quote);
+    saveOrderReceipt("cafe", "Cafe", { ...order, totalPrice, subtotalPrice: totalPrice,
+      items: [{ ...quote, basePrice: totalPrice, unitPrice: totalPrice, totalPrice }],
+    });
+    orderReceipts.clearMemory();
+    setup();
+    const receipt = screen.getByRole("region", { name: "Order receipt" });
+    const total = receipt.querySelector(".order-receipt-total")!;
+    const subtotal = receipt.querySelector(".order-receipt-subtotal")!;
+    const formatted = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(Number(totalPrice));
+    expect(within(total as HTMLElement).getByText(formatted)).toBeInTheDocument();
+    expect(within(subtotal as HTMLElement).getByText(formatted)).toBeInTheDocument();
+    expect(within(receipt).queryByText(/^Tax/)).not.toBeInTheDocument();
+    expect(within(receipt).queryByText(/^Discount/)).not.toBeInTheDocument();
+  },
+);
 
 it.each(["DINE_IN", "TAKEOUT"] as const)(
   "keeps every saved %s receipt line and its options after refresh without menu repricing",

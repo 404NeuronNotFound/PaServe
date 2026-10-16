@@ -159,6 +159,12 @@ export function CustomerOrderPage() {
               <ReceiptOrderItems items={receipt.items} />
               <ReceiptPaymentMethod payment={receipt.payment} confirmed={confirmed} />
               <dl>
+                {receipt.subtotalPrice !== undefined && (
+                  <div className="order-receipt-subtotal">
+                    <dt>Subtotal <span>(PHP)</span></dt>
+                    <dd>{formatCartPrice(receipt.subtotalPrice)}</dd>
+                  </div>
+                )}
                 <div className="order-receipt-total">
                   <dt>
                     Order total <span>(PHP)</span>

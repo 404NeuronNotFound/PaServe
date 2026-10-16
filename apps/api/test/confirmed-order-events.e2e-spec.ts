@@ -196,6 +196,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
       shopName: 'Cafe',
       id,
       totalPrice: '12.00',
+      subtotalPrice: '12.00',
       mode: 'TAKEOUT',
     });
     expect(receipt.body.receipt.items).toEqual([{

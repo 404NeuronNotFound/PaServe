@@ -165,6 +165,8 @@ export class CustomerOrderStatusService {
         status: 'PENDING_CONFIRMATION',
         currency: 'PHP',
         totalPrice: order.totalPrice.toFixed(2),
+        // Current orders have no tax/discount adjustments; this matches checkout.
+        subtotalPrice: order.totalPrice.toFixed(2),
         items,
         payment: order.paymentStatus === 'PAID' ? parseReceiptPaymentDetails({
           method: order.paymentMethod,

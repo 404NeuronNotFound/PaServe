@@ -491,6 +491,17 @@
   align-items: baseline;
   gap: 12px;
 }
+.order-receipt-subtotal {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.order-receipt-subtotal dd { margin: 0; font-variant-numeric: tabular-nums; }
 .order-receipt-total dt {
   font-size: 0.875rem;
   font-weight: 650;
