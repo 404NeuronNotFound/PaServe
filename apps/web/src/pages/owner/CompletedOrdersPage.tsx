@@ -4,7 +4,7 @@ import type {
   CompletedOrderSummary,
   CurrentUserResponse,
 } from "@paserve/contracts";
-import { FiArchive, FiClock, FiRefreshCw } from "react-icons/fi";
+import { FiArchive, FiClock } from "react-icons/fi";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import {
@@ -19,6 +19,11 @@ import "./active-orders.css";
 import { useOrderListSearch } from "../../features/orders/useOrderListSearch";
 import { OrderSearch } from "./OrderSearch";
 import { OrderFilters } from "./OrderFilters";
+import {
+  OrderPageHeader,
+  OrderCardIdentity,
+  OrderDetailsLink,
+} from "./OrderPresentation";
 
 const paymentLabels: Record<CompletedOrderSummary["paymentMethod"], string> = {
   CASH: "Cash",
@@ -81,25 +86,23 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
       className="active-orders-workspace"
       aria-labelledby="completed-orders-title"
     >
-      <header className="active-orders-header">
-        <div>
-          <p className="section-label">ORDER MANAGEMENT</p>
-          <h1 id="completed-orders-title">Completed orders</h1>
-          <p>
-            Review fulfilled orders with their saved totals and payment records.
-          </p>
-        </div>
-        <button
-          className="secondary-button"
-          disabled={query.isFetching}
-          onClick={refresh}
-        >
-          <FiRefreshCw aria-hidden="true" />
-          {query.isFetching ? "Refreshing…" : "Refresh"}
-        </button>
-      </header>
-      <OrderSearch search={search} onSearch={applySearch} />
-      <OrderFilters view="completed" filters={filters} onApply={applyFilters} />
+      <OrderPageHeader
+        view="completed"
+        title="Completed orders"
+        titleId="completed-orders-title"
+        fetching={query.isFetching}
+        onRefresh={refresh}
+      >
+        Review fulfilled orders with their saved totals and payment records.
+      </OrderPageHeader>
+      <div className="owner-order-tools">
+        <OrderSearch search={search} onSearch={applySearch} />
+        <OrderFilters
+          view="completed"
+          filters={filters}
+          onApply={applyFilters}
+        />
+      </div>
       <div className="active-orders-toolbar">
         <span>
           <FiClock aria-hidden="true" /> Newest completions first
@@ -169,15 +172,11 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
             >
               {orders.map((order) => (
                 <li key={order.id} className="active-order-card">
-                  <div className="active-order-identity">
-                    <h2>{order.orderNumber}</h2>
-                    <a className="owner-order-detail-link" href={`/app/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(order.id)}`}>View details / receipt</a>
-                    <p>
-                      {order.mode === "TAKEOUT"
-                        ? "Takeout"
-                        : `Dine-in · Table ${order.tableNumber}`}
-                    </p>
-                  </div>
+                  <OrderCardIdentity
+                    orderNumber={order.orderNumber}
+                    mode={order.mode}
+                    tableNumber={order.tableNumber}
+                  />
                   <div className="active-order-state">
                     <span className="active-order-badge" data-state="COMPLETED">
                       Fulfilled
@@ -219,6 +218,11 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
                     <span>Saved total</span>
                     <strong>{formatCartPrice(order.totalPrice)}</strong>
                   </div>
+                  <OrderDetailsLink
+                    shopId={shopId}
+                    orderId={order.id}
+                    receipt
+                  />
                 </li>
               ))}
             </ul>

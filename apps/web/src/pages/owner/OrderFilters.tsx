@@ -7,6 +7,8 @@ import {
   type OwnerOrderView,
 } from "@paserve/contracts";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { FiSliders, FiChevronDown } from "react-icons/fi";
+import { SelectField } from "../../components/forms/SelectField";
 
 const statusLabels = {
   PENDING_CONFIRMATION: "Pending confirmation",
@@ -72,7 +74,11 @@ export function OrderFilters({
     .join(" · ");
   return (
     <details className="owner-order-filters">
-      <summary>Filters{count ? ` (${count} active)` : ""}</summary>
+      <summary>
+        <FiSliders aria-hidden="true" />
+        Filters{count ? ` (${count} active)` : ""}
+        <FiChevronDown aria-hidden="true" className="owner-filter-chevron" />
+      </summary>
       <form
         aria-label="Filter orders"
         onSubmit={apply}
@@ -80,54 +86,61 @@ export function OrderFilters({
       >
         <div className="owner-order-filter-grid">
           {view === "active" ? (
-            <label>
-              Status
-              <select
+            <div className="owner-order-filter-field">
+              <label htmlFor={`${id}-status`}>Status</label>
+              <SelectField
+                id={`${id}-status`}
+                label="Status"
                 value={draft.status ?? ""}
-                onChange={(e) => update("status", e.target.value)}
-              >
-                <option value="">All active statuses</option>
-                {OWNER_ACTIVE_STATUS_FILTERS.map((status) => (
-                  <option key={status} value={status}>
-                    {statusLabels[status]}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={(value) => update("status", value)}
+                options={[
+                  { value: "", label: "All active statuses" },
+                  ...OWNER_ACTIVE_STATUS_FILTERS.map((status) => ({
+                    value: status,
+                    label: statusLabels[status],
+                  })),
+                ]}
+              />
+            </div>
           ) : (
             <div className="owner-order-fixed-filter">
               <span>Status</span>
               <p>{view === "completed" ? "Fulfilled" : "Rejected"}</p>
             </div>
           )}
-          <label>
-            Order type
-            <select
+          <div className="owner-order-filter-field">
+            <label htmlFor={`${id}-mode`}>Order type</label>
+            <SelectField
+              id={`${id}-mode`}
+              label="Order type"
               value={draft.mode ?? ""}
-              onChange={(e) => update("mode", e.target.value)}
-            >
-              <option value="">All order types</option>
-              <option value="DINE_IN">Dine-in</option>
-              <option value="TAKEOUT">Takeout</option>
-            </select>
-          </label>
+              onChange={(value) => update("mode", value)}
+              options={[
+                { value: "", label: "All order types" },
+                { value: "DINE_IN", label: "Dine-in" },
+                { value: "TAKEOUT", label: "Takeout" },
+              ]}
+            />
+          </div>
           {view !== "cancelled" ? (
-            <label>
-              Payment method
-              <select
+            <div className="owner-order-filter-field">
+              <label htmlFor={`${id}-method`}>Payment method</label>
+              <SelectField
+                id={`${id}-method`}
+                label="Payment method"
                 value={draft.paymentMethod ?? ""}
-                onChange={(e) => update("paymentMethod", e.target.value)}
-              >
-                <option value="">All payment methods</option>
-                {OWNER_PAYMENT_METHOD_FILTERS.filter(
-                  (method) => view === "active" || method !== "UNRECORDED",
-                ).map((method) => (
-                  <option key={method} value={method}>
-                    {paymentLabels[method]}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={(value) => update("paymentMethod", value)}
+                options={[
+                  { value: "", label: "All payment methods" },
+                  ...OWNER_PAYMENT_METHOD_FILTERS.filter(
+                    (method) => view === "active" || method !== "UNRECORDED",
+                  ).map((method) => ({
+                    value: method,
+                    label: paymentLabels[method],
+                  })),
+                ]}
+              />
+            </div>
           ) : (
             <div className="owner-order-fixed-filter">
               <span>Payment</span>
@@ -171,7 +184,7 @@ export function OrderFilters({
           saved label exactly, ignoring case.
         </p>
         <div className="owner-order-filter-actions">
-          <button className="secondary-button" type="submit">
+          <button className="primary-button" type="submit">
             Apply filters
           </button>
           <button

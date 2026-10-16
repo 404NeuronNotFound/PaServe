@@ -38,6 +38,9 @@ export function OrderSearch({
     >
       <label htmlFor={id}>Search orders</label>
       <div className="owner-order-search-controls">
+        <span className="owner-order-search-icon">
+          <FiSearch aria-hidden="true" />
+        </span>
         <input
           ref={input}
           id={id}

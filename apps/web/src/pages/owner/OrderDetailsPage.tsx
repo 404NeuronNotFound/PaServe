@@ -2,6 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
+import {
+  FiArrowLeft,
+  FiFileText,
+  FiLayers,
+  FiCreditCard,
+  FiClock,
+  FiZap,
+  FiPrinter,
+} from "react-icons/fi";
 import type { CurrentUserResponse, OwnerOrderAction } from "@paserve/contracts";
 import { shopPath, useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
@@ -124,13 +133,21 @@ function OrderDetailsWorkspace({
     [401, 403, 404].includes(query.error.response?.status ?? 0);
   return (
     <section className="shop-context-content owner-order-details">
+      <Link className="owner-order-back" to={`${shopPath(shopId)}/orders`}>
+        <FiArrowLeft aria-hidden="true" /> Back to active orders
+      </Link>
       <header className="active-orders-header">
-        <div>
-          <p className="section-label">OWNER / ORDER DETAILS</p>
-          <h1 ref={heading} tabIndex={-1}>
-            {order?.orderNumber ?? "Order details"}
-          </h1>
-          <Link to={`${shopPath(shopId)}/orders`}>Back to active orders</Link>
+        <div className="owner-orders-heading">
+          <span className="owner-orders-emblem">
+            <FiFileText aria-hidden="true" />
+          </span>
+          <div>
+            <p className="section-label">OWNER / ORDER DETAILS</p>
+            <h1 ref={heading} tabIndex={-1}>
+              {order?.orderNumber ?? "Order details"}
+            </h1>
+            <p>The original order. Every detail, preserved.</p>
+          </div>
         </div>
         <button
           className="secondary-button"
@@ -164,7 +181,10 @@ function OrderDetailsWorkspace({
               className="owner-order-panel"
               aria-label="Saved order snapshot"
             >
-              <h2>Saved order snapshot</h2>
+              <h2>
+                <FiLayers aria-hidden="true" />
+                Saved order snapshot
+              </h2>
               <ReceiptShopDetails details={order.shopDetails} />
               <p>
                 {order.mode === "TAKEOUT"
@@ -234,19 +254,24 @@ function OrderDetailsWorkspace({
               className="owner-order-panel"
               aria-label="Status and payment"
             >
-              <h2>Status and payment</h2>
+              <h2>
+                <FiCreditCard aria-hidden="true" />
+                Status and payment
+              </h2>
               <dl>
                 <div>
                   <dt>Approval</dt>
-                  <dd>{label(order.status)}</dd>
+                  <dd data-state={order.status}>{label(order.status)}</dd>
                 </div>
                 <div>
                   <dt>Payment</dt>
-                  <dd>{label(order.paymentStatus)}</dd>
+                  <dd data-state={order.paymentStatus}>
+                    {label(order.paymentStatus)}
+                  </dd>
                 </div>
                 <div>
                   <dt>Preparation</dt>
-                  <dd>
+                  <dd data-state={order.preparationStatus ?? "NOT_STARTED"}>
                     {order.preparationStatus
                       ? label(order.preparationStatus)
                       : "Not started"}
@@ -284,7 +309,10 @@ function OrderDetailsWorkspace({
             className="owner-order-panel"
             aria-labelledby="order-history-title"
           >
-            <h2 id="order-history-title">Status history</h2>
+            <h2 id="order-history-title">
+              <FiClock aria-hidden="true" />
+              Status history
+            </h2>
             <p>
               Recorded milestones only. Missing timestamps and actor identities
               were not captured; this is not a complete event log. Times use
@@ -292,7 +320,7 @@ function OrderDetailsWorkspace({
             </p>
             <ol className="owner-order-history">
               {order.history.map((event) => (
-                <li key={event.status}>
+                <li key={event.status} data-state={event.status}>
                   <strong>{label(event.status)}</strong>
                   <time dateTime={event.at}>
                     {formatReceiptDateTime(event.at)}
@@ -309,7 +337,10 @@ function OrderDetailsWorkspace({
             </ol>
           </section>
           <section className="owner-order-panel" aria-label="Permitted actions">
-            <h2>Actions</h2>
+            <h2>
+              <FiZap aria-hidden="true" />
+              Actions
+            </h2>
             {notice && <InlineMessage tone="success">{notice}</InlineMessage>}
             <div className="owner-order-actions">
               {permitted("CASHIER") && (
@@ -361,7 +392,7 @@ function OrderDetailsWorkspace({
                   className="secondary-button"
                   onClick={() => window.print()}
                 >
-                  Print receipt
+                  <FiPrinter aria-hidden="true" /> Print receipt
                 </button>
               </div>
               <ReceiptDocument

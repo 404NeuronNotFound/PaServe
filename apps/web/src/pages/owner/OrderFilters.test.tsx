@@ -74,10 +74,22 @@ function setup(view: View) {
   );
   return { ...render(page()), page, client };
 }
-const change = (label: string, value: string) =>
-  fireEvent.change(screen.getByLabelText(label, { exact: true }), {
-    target: { value },
-  });
+const change = (label: string, value: string) => {
+  const control = screen.getByLabelText(label, { exact: true });
+  if (control.getAttribute("role") === "combobox") {
+    const labels: Record<string, string> = {
+      DINE_IN: "Dine-in",
+      TAKEOUT: "Takeout",
+      READY: "Ready",
+      GCASH_MANUAL: "GCash (manual)",
+      CARD_MANUAL: "Card (manual)",
+    };
+    fireEvent.click(control);
+    fireEvent.click(
+      screen.getByRole("option", { name: labels[value] }),
+    );
+  } else fireEvent.change(control, { target: { value } });
+};
 const apply = () =>
   fireEvent.submit(screen.getByRole("form", { name: "Filter orders" }));
 const search = (term: string) => {
@@ -227,7 +239,9 @@ describe.each(["active", "completed", "cancelled"] as const)(
       change("Order type", "TAKEOUT");
       apply();
       await screen.findByRole("alert");
-      expect(screen.getByLabelText("Order type")).toHaveValue("TAKEOUT");
+      expect(
+        screen.getByRole("combobox", { name: "Order type" }),
+      ).toHaveTextContent("Takeout");
       fireEvent.click(screen.getByRole("button", { name: "Retry" }));
       await screen.findByText("No matching orders");
       expect(requests[view]).toHaveBeenLastCalledWith(
@@ -247,7 +261,9 @@ describe.each(["active", "completed", "cancelled"] as const)(
           {},
         ),
       );
-      expect(screen.getByLabelText("Order type")).toHaveValue("");
+      expect(
+        screen.getByRole("combobox", { name: "Order type" }),
+      ).toHaveTextContent("All order types");
       rendered.rerender(rendered.page("b", "CASHIER"));
       expect(
         screen.queryByText("Filters", { selector: "summary" }),
@@ -272,6 +288,7 @@ it("offers useful active statuses and every recorded payment method", async () =
       { status: "READY", paymentMethod: "GCASH_MANUAL" },
     ),
   );
+  fireEvent.click(screen.getByRole("combobox", { name: "Payment method" }));
   expect(
     screen.getByRole("option", { name: "No payment recorded" }),
   ).toBeInTheDocument();
