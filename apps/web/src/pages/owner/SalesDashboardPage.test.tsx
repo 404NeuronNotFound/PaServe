@@ -187,6 +187,7 @@ it.each(["OWNER", "ADMIN", "MANAGER"] as const)(
     ).toBeVisible();
     expect(screen.getByLabelText("Business date")).toHaveValue("2026-10-16");
     expect(screen.getByText("Today’s Sales")).toBeVisible();
+    fireEvent.click(screen.getByText("How sales are counted"));
     expect(screen.getByText(/Midnight inclusive/)).toBeVisible();
     expect(
       within(screen.getByRole("article", { name: "Items Sold" })).getByText(

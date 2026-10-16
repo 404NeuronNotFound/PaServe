@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -7,21 +7,98 @@ import {
   salesBusinessDate,
   salesBusinessDayBounds,
   type CurrentUserResponse,
+  type PaymentBreakdownEntry,
 } from "@paserve/contracts";
 import {
+  FiArrowUpRight,
   FiBarChart2,
+  FiCalendar,
+  FiCheck,
+  FiChevronDown,
   FiClipboard,
-  FiShoppingBag,
+  FiClock,
+  FiCreditCard,
   FiRefreshCw,
+  FiShoppingBag,
   FiTrendingUp,
 } from "react-icons/fi";
+import type { IconType } from "react-icons";
 import { shopPath, useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getDailySales } from "../../features/orders/daily-sales";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
-import "./sales-dashboard.css";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
+import "./sales-dashboard.css";
+
+const paymentLabels = {
+  CASH: "Cash",
+  GCASH_MANUAL: "GCash (manual)",
+  CARD_MANUAL: "Card (manual)",
+  OTHER: "Other",
+};
+const countFormat = new Intl.NumberFormat("en-PH");
+const dateFormat = new Intl.DateTimeFormat("en-PH", {
+  timeZone: "Asia/Manila",
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+const updateFormat = new Intl.DateTimeFormat("en-PH", {
+  timeZone: "Asia/Manila",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
+/** Bounded ratio for drawing only; displayed monetary values remain exact strings. */
+function paymentShares(entries: PaymentBreakdownEntry[], total: string) {
+  const cents = BigInt(total.replace(".", ""));
+  let offset = 0;
+  return entries.map((entry) => {
+    const share =
+      cents === 0n
+        ? 0
+        : Number(
+            (BigInt(entry.totalSales.replace(".", "")) * 1_000_000n) / cents,
+          ) / 10_000;
+    const segment = { ...entry, share, offset };
+    offset += share;
+    return segment;
+  });
+}
+
+function Metric({
+  id,
+  title,
+  value,
+  note,
+  Icon,
+  number,
+}: {
+  id: string;
+  title: string;
+  value: string;
+  note: string;
+  Icon: IconType;
+  number: string;
+}) {
+  return (
+    <article className="sales-metric" aria-labelledby={id}>
+      <div className="sales-metric-top">
+        <span className="sales-metric-icon">
+          <Icon aria-hidden="true" />
+        </span>
+        <span className="sales-metric-index" aria-hidden="true">
+          {number}
+        </span>
+      </div>
+      <h2 id={id}>{title}</h2>
+      <strong className="sales-amount">{value}</strong>
+      <p>{note}</p>
+    </article>
+  );
+}
 
 export function SalesDashboardPage() {
   const { shopId, role } = useActiveShop();
@@ -31,7 +108,7 @@ export function SalesDashboardPage() {
 }
 
 function SalesWorkspace({ userId }: { userId: string }) {
-  const { shopId, role } = useActiveShop();
+  const { shopId, role, shop } = useActiveShop();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [today, setToday] = useState(() => salesBusinessDate());
   useEffect(() => {
@@ -66,283 +143,375 @@ function SalesWorkspace({ userId }: { userId: string }) {
   const denied =
     isAxiosError(query.error) &&
     [401, 403, 404].includes(query.error.response?.status ?? 0);
+  const report = query.isSuccess && valid ? query.data : null;
+  const segments = report
+    ? paymentShares(report.paymentBreakdown, report.totalSales)
+    : [];
+  const prettyDate = valid
+    ? dateFormat.format(new Date(`${date}T00:00:00+08:00`))
+    : "Choose a date";
+
   return (
     <section className="sales-dashboard" aria-labelledby="sales-title">
       <header className="sales-header">
         <div>
-          <p className="section-label">DAILY PERFORMANCE</p>
-          <h1 id="sales-title">Sales dashboard</h1>
-          <p>Sales and eligible orders for your selected business day.</p>
+          <p className="sales-eyebrow">
+            <span aria-hidden="true" /> THE BUSINESS OF A GOOD DAY
+          </p>
+          <h1 id="sales-title">
+            Sales dashboard<span aria-hidden="true">.</span>
+          </h1>
+          <p className="sales-intro">
+            A little clarity for your everyday. <strong>{shop.name}</strong>
+          </p>
         </div>
         <button
-          className="secondary-button"
+          className="secondary-button sales-refresh"
           disabled={!valid || query.isFetching}
           onClick={() => void query.refetch()}
         >
-          <FiRefreshCw aria-hidden="true" /> Refresh sales
+          <FiRefreshCw
+            aria-hidden="true"
+            className={query.isFetching ? "sales-refreshing" : undefined}
+          />{" "}
+          Refresh sales
         </button>
       </header>
-      <div className="sales-date-controls">
-        <label htmlFor="sales-date">
-          Business date
-          <input
-            id="sales-date"
-            type="date"
-            value={date}
-            aria-describedby="sales-timezone"
-            onChange={(event) =>
-              setSelectedDate(
-                event.target.value === today ? null : event.target.value,
-              )
-            }
-          />
-        </label>
-        <button
-          className="secondary-button"
-          onClick={() => {
-            setToday(salesBusinessDate());
-            setSelectedDate(null);
-          }}
-        >
-          Today
-        </button>
-        <p id="sales-timezone">
-          Asia/Manila (UTC+8) · Midnight inclusive to next midnight exclusive.
+      <div className="sales-toolbar">
+        <div className="sales-period">
+          <FiCalendar aria-hidden="true" />
+          <label htmlFor="sales-date">
+            Business date
+            <input
+              id="sales-date"
+              type="date"
+              value={date}
+              aria-describedby="sales-timezone"
+              onChange={(event) =>
+                setSelectedDate(
+                  event.target.value === today ? null : event.target.value,
+                )
+              }
+            />
+          </label>
+          <button
+            className="sales-today"
+            aria-pressed={date === today}
+            onClick={() => {
+              setToday(salesBusinessDate());
+              setSelectedDate(null);
+            }}
+          >
+            Today
+          </button>
+        </div>
+        <span id="sales-timezone" className="sales-timezone">
+          Manila <span>UTC+8</span>
+        </span>
+        <p className="sales-sync">
+          <FiClock aria-hidden="true" />
+          {report ? (
+            <>Updated {updateFormat.format(query.dataUpdatedAt)}</>
+          ) : (
+            "Updates every 15 seconds"
+          )}
         </p>
       </div>
-      {!valid ? (
-        <InlineMessage>Choose a valid business date.</InlineMessage>
-      ) : (
+      {!valid && <InlineMessage>Choose a valid business date.</InlineMessage>}
+      {valid && query.isPending && (
+        <InlineMessage tone="info">Loading sales…</InlineMessage>
+      )}
+      {valid && query.isError && (
+        <div className="sales-error">
+          <InlineMessage>
+            {denied
+              ? "Your access to this shop’s sales reports is unavailable."
+              : "We couldn’t refresh sales. Retry to load the saved report."}
+          </InlineMessage>
+          <button
+            className="secondary-button"
+            disabled={query.isFetching}
+            onClick={() => void query.refetch()}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      {report && (
         <>
-          {query.isPending && (
-            <InlineMessage tone="info">Loading sales…</InlineMessage>
-          )}
-          {query.isError && (
-            <div>
-              <InlineMessage>
-                {denied
-                  ? "Your access to this shop’s sales reports is unavailable."
-                  : "We couldn’t refresh sales. Retry to load the saved total."}
-              </InlineMessage>
-              <button
-                className="secondary-button"
-                disabled={query.isFetching}
-                onClick={() => void query.refetch()}
-              >
-                Retry
-              </button>
-            </div>
-          )}
-          {query.isSuccess && (
-            <div className="sales-metrics" aria-busy={query.isFetching}>
-              <article
-                className="sales-total"
-                aria-labelledby="sales-total-label"
-                aria-busy={query.isFetching}
-              >
-                <FiTrendingUp aria-hidden="true" />
-                <p id="sales-total-label" className="section-label">
+          <div className="sales-summary" aria-busy={query.isFetching}>
+            <article className="sales-hero" aria-labelledby="sales-total-label">
+              <div className="sales-hero-top">
+                <h2 id="sales-total-label">
                   {date === today ? "Today’s Sales" : "Gross Sales"}
-                </p>
-                <p className="sales-business-date">{date} · Asia/Manila</p>
-                <strong className="sales-amount">
-                  {formatCartPrice(query.data.totalSales)}
-                </strong>
-                {query.data.completedOrders === 0 && (
-                  <p>No eligible completed orders for this business day.</p>
-                )}
-                <p>
-                  Saved totals from confirmed, paid and completed orders,
-                  counted by completion time.
-                </p>
-                <p className="sales-updated">
-                  Updated{" "}
-                  {new Intl.DateTimeFormat("en-PH", {
-                    timeZone: "Asia/Manila",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  }).format(query.dataUpdatedAt)}{" "}
-                  · Refreshes every 15 seconds
-                </p>
-              </article>
-              <article
-                className="sales-total"
-                aria-labelledby="sales-orders-label"
-              >
-                <FiClipboard aria-hidden="true" />
-                <h2 id="sales-orders-label" className="section-label">
-                  Number of Orders
                 </h2>
-                <p className="sales-business-date">{date} · Asia/Manila</p>
-                <strong className="sales-amount">
-                  {new Intl.NumberFormat("en-PH").format(
-                    query.data.completedOrders,
-                  )}
-                </strong>
-                <p>
-                  Confirmed, paid and completed orders in this business day,
-                  counted once per order by completion time.
+                <span className="sales-hero-icon">
+                  <FiTrendingUp aria-hidden="true" />
+                </span>
+              </div>
+              <p className="sales-hero-date">{prettyDate}</p>
+              <strong className="sales-amount">
+                {formatCartPrice(report.totalSales)}
+              </strong>
+              <div className="sales-hero-footer">
+                <span>
+                  <FiCheck aria-hidden="true" /> Completed & paid
+                </span>
+                <span>PHP</span>
+              </div>
+              {report.completedOrders === 0 && (
+                <p className="sales-hero-empty">
+                  No eligible completed orders for this business day.
                 </p>
-                {query.data.completedOrders === 0 && (
-                  <p>No eligible orders for this business day.</p>
-                )}
-              </article>
-              <article
-                className="sales-total"
-                aria-labelledby="sales-average-label"
-              >
-                <FiBarChart2 aria-hidden="true" />
-                <h2 id="sales-average-label" className="section-label">
-                  Average Order Value
-                </h2>
-                <p className="sales-business-date">{date} · Asia/Manila</p>
-                <strong className="sales-amount">
-                  {formatCartPrice(
-                    calculateAverageOrderValue(
-                      query.data.totalSales,
-                      query.data.completedOrders,
-                    ),
-                  )}
-                </strong>
-                <p>
-                  Gross sales divided by eligible orders, rounded to the nearest
-                  cent.
-                </p>
-                {query.data.completedOrders === 0 && (
-                  <p>No eligible orders; average is ₱0.00.</p>
-                )}
-              </article>
-              <article
-                className="sales-total"
-                aria-labelledby="sales-items-label"
-              >
-                <FiShoppingBag aria-hidden="true" />
-                <h2 id="sales-items-label" className="section-label">
-                  Items Sold
-                </h2>
-                <p className="sales-business-date">{date} · Asia/Manila</p>
-                <strong className="sales-amount">
-                  {new Intl.NumberFormat("en-PH").format(query.data.itemsSold)}
-                </strong>
-                <p>
-                  Total item quantities from eligible completed orders. Options
-                  and add-ons are included with their item.
-                </p>
-                {query.data.completedOrders === 0 && (
-                  <p>No eligible items for this business day.</p>
-                )}
-              </article>
-            </div>
-          )}
-          {query.isSuccess && (
-            <section
-              className="sales-payment-breakdown"
-              aria-labelledby="sales-payments-title"
-              aria-busy={query.isFetching}
-            >
-              <h2 id="sales-payments-title">Payment Breakdown</h2>
-              <p className="sales-business-date">{date} · Asia/Manila</p>
-              <p>
-                Eligible completed orders by recorded payment method. Cash
-                totals exclude change.
-              </p>
-              {query.data.completedOrders === 0 && (
-                <p>No eligible payments for this business day.</p>
               )}
-              <table>
-                <caption className="sales-payment-caption">
+            </article>
+            <Metric
+              id="sales-orders-label"
+              title="Number of Orders"
+              value={countFormat.format(report.completedOrders)}
+              note="Paid & completed orders."
+              Icon={FiClipboard}
+              number="01"
+            />
+            <Metric
+              id="sales-average-label"
+              title="Average Order Value"
+              value={formatCartPrice(
+                calculateAverageOrderValue(
+                  report.totalSales,
+                  report.completedOrders,
+                ),
+              )}
+              note={
+                report.completedOrders === 0
+                  ? "No eligible orders; average is ₱0.00."
+                  : "Per completed order."
+              }
+              Icon={FiBarChart2}
+              number="02"
+            />
+            <Metric
+              id="sales-items-label"
+              title="Items Sold"
+              value={countFormat.format(report.itemsSold)}
+              note="Total units sold."
+              Icon={FiShoppingBag}
+              number="03"
+            />
+          </div>
+          <div className="sales-detail-grid" aria-busy={query.isFetching}>
+            <section
+              className="sales-payments"
+              aria-labelledby="sales-payments-title"
+            >
+              <header className="sales-panel-heading">
+                <div>
+                  <p className="sales-kicker">THE PAYMENT MIX</p>
+                  <h2 id="sales-payments-title">Payment Breakdown</h2>
+                </div>
+                <span className="sales-panel-emblem">
+                  <FiCreditCard aria-hidden="true" />
+                </span>
+              </header>
+              <div className="sales-payment-visual">
+                <div className="sales-payment-ring" aria-hidden="true">
+                  <svg viewBox="0 0 160 160">
+                    <circle
+                      className="sales-ring-track"
+                      cx="80"
+                      cy="80"
+                      r="64"
+                      fill="none"
+                      strokeWidth="13"
+                    />
+                    {segments.map((segment, index) => (
+                      <circle
+                        key={segment.paymentMethod}
+                        className={`sales-method-${index}`}
+                        cx="80"
+                        cy="80"
+                        r="64"
+                        fill="none"
+                        strokeWidth="13"
+                        pathLength="100"
+                        strokeDasharray={`${segment.share} ${100 - segment.share}`}
+                        strokeDashoffset={-segment.offset}
+                        transform="rotate(-90 80 80)"
+                      />
+                    ))}
+                  </svg>
+                  <div>
+                    <strong>
+                      {countFormat.format(report.completedOrders)}
+                    </strong>
+                    <span>orders</span>
+                  </div>
+                </div>
+                <div className="sales-payment-context">
+                  <span className="sales-kicker">GROSS SALES</span>
+                  <strong>{formatCartPrice(report.totalSales)}</strong>
+                  <p>
+                    Every payment, accounted for.
+                    <br />
+                    The ring shows your sales mix.
+                  </p>
+                </div>
+              </div>
+              {report.completedOrders === 0 && (
+                <p className="sales-empty-note">
+                  No eligible payments for this business day.
+                </p>
+              )}
+              <table className="sales-payment-table">
+                <caption className="sr-only">
                   Sales and order counts by payment method
                 </caption>
                 <thead>
                   <tr>
-                    <th scope="col">Payment method</th>
+                    <th scope="col">Method</th>
                     <th scope="col">Orders</th>
                     <th scope="col">Sales</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {query.data.paymentBreakdown.map((entry) => (
+                  {segments.map((entry, index) => (
                     <tr key={entry.paymentMethod}>
                       <th scope="row">
-                        {
-                          {
-                            CASH: "Cash",
-                            GCASH_MANUAL: "GCash (manual)",
-                            CARD_MANUAL: "Card (manual)",
-                            OTHER: "Other",
-                          }[entry.paymentMethod]
-                        }
+                        <span
+                          className={`sales-method-dot sales-method-${index}`}
+                          aria-hidden="true"
+                        />
+                        {paymentLabels[entry.paymentMethod]}
+                        <span className="sales-method-track" aria-hidden="true">
+                          <span
+                            className={`sales-method-${index}`}
+                            style={
+                              { "--share": `${entry.share}%` } as CSSProperties
+                            }
+                          />
+                        </span>
                       </th>
-                      <td>
-                        {new Intl.NumberFormat("en-PH").format(entry.orders)}
-                      </td>
+                      <td>{countFormat.format(entry.orders)}</td>
                       <td>{formatCartPrice(entry.totalSales)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              <p className="sales-panel-footnote">
+                Order totals only. Cash change is excluded.
+              </p>
             </section>
-          )}
-          {query.isSuccess && (
             <section
               className="sales-recent-orders"
               aria-labelledby="sales-recent-title"
-              aria-busy={query.isFetching}
             >
-              <div className="sales-recent-header">
-                <h2 id="sales-recent-title">Recent Orders</h2>
+              <header className="sales-panel-heading">
+                <div>
+                  <p className="sales-kicker">FRESH FROM THE COUNTER</p>
+                  <h2 id="sales-recent-title">Recent Orders</h2>
+                </div>
                 {role === "OWNER" && (
                   <Link
-                    className="secondary-button"
+                    className="sales-history-link"
                     to={`${shopPath(shopId)}/orders/completed`}
                   >
-                    View completed orders
+                    View completed orders <FiArrowUpRight aria-hidden="true" />
                   </Link>
                 )}
-              </div>
-              <p className="sales-business-date">
-                {date} · Latest 10 completions · Times in Manila
+              </header>
+              <p className="sales-recent-caption">
+                Latest 10 completions <span>· Times in Manila</span>
               </p>
-              {query.data.recentOrders.length === 0 ? (
-                <p>No completed orders for this business day.</p>
+              {report.recentOrders.length === 0 ? (
+                <div className="sales-feed-empty">
+                  <FiClipboard aria-hidden="true" />
+                  <h3>A quiet moment.</h3>
+                  <p>No completed orders for this business day.</p>
+                </div>
               ) : (
-                <ol
-                  className="sales-recent-list"
-                  aria-label="Recent completed orders, newest first"
-                >
-                  {query.data.recentOrders.map((order) => (
-                    <li key={order.id}>
-                      <div className="sales-recent-identity">
-                        {role === "OWNER" ? (
-                          <Link
-                            to={`${shopPath(shopId)}/orders/${encodeURIComponent(order.id)}`}
+                <>
+                  <div className="sales-feed-columns" aria-hidden="true">
+                    <span>Order</span>
+                    <span>Amount</span>
+                    <span>Completed</span>
+                  </div>
+                  <ol
+                    className="sales-recent-list"
+                    aria-label="Recent completed orders, newest first"
+                  >
+                    {report.recentOrders.map((order) => (
+                      <li key={order.id}>
+                        <div className="sales-recent-identity">
+                          <span
+                            className="sales-receipt-icon"
+                            aria-hidden="true"
                           >
-                            {order.orderNumber}
-                          </Link>
-                        ) : (
-                          <strong>{order.orderNumber}</strong>
-                        )}
-                        <span className="sales-recent-status">
-                          Completed · Paid
-                        </span>
-                      </div>
-                      <strong>{formatCartPrice(order.totalPrice)}</strong>
-                      <time dateTime={order.completedAt}>
-                        {formatReceiptDateTime(order.completedAt)}
-                      </time>
-                    </li>
-                  ))}
-                </ol>
+                            <FiClipboard />
+                          </span>
+                          <div>
+                            {role === "OWNER" ? (
+                              <Link
+                                to={`${shopPath(shopId)}/orders/${encodeURIComponent(order.id)}`}
+                              >
+                                {order.orderNumber}
+                                <FiArrowUpRight aria-hidden="true" />
+                              </Link>
+                            ) : (
+                              <strong>{order.orderNumber}</strong>
+                            )}
+                            <span className="sales-recent-status">
+                              <FiCheck aria-hidden="true" />
+                              Completed · Paid
+                            </span>
+                          </div>
+                        </div>
+                        <strong className="sales-order-amount">
+                          {formatCartPrice(order.totalPrice)}
+                        </strong>
+                        <time dateTime={order.completedAt}>
+                          {formatReceiptDateTime(order.completedAt)}
+                        </time>
+                      </li>
+                    ))}
+                  </ol>
+                </>
               )}
+              <div className="sales-feed-footer">
+                <span>
+                  <FiCheck aria-hidden="true" /> Saved, paid & completed
+                </span>
+                <span>{report.recentOrders.length} shown</span>
+              </div>
             </section>
-          )}
+          </div>
         </>
       )}
-      <p className="sales-definition">
-        Gross sales include all recorded payment methods. Refunds and expenses
-        are not deducted. Cash change is excluded.
-      </p>
+      <footer className="sales-report-footer">
+        <span>
+          <FiClock aria-hidden="true" /> Refreshes every 15 seconds
+        </span>
+        <details>
+          <summary>
+            How sales are counted <FiChevronDown aria-hidden="true" />
+          </summary>
+          <div>
+            <p>
+              Asia/Manila (UTC+8) · Midnight inclusive to next midnight
+              exclusive.
+            </p>
+            <p>
+              Only confirmed, paid and completed orders count, using their
+              completion time. Gross sales use saved order totals; refunds and
+              expenses are not deducted.
+            </p>
+            <p>
+              Average order value is sales divided by eligible orders, rounded
+              to the nearest cent. Items Sold sums item quantities; options and
+              add-ons are part of their item.
+            </p>
+          </div>
+        </details>
+      </footer>
     </section>
   );
 }
