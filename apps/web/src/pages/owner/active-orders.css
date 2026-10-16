@@ -4,6 +4,52 @@
   padding-bottom: 28px;
   color: var(--color-text);
 }
+.owner-orders-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 1400px;
+  margin: 0 auto 24px;
+}
+.owner-orders-navigation a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+.owner-orders-navigation a[aria-current="page"] {
+  background: var(--color-secondary);
+  border-color: var(--color-text);
+}
+.owner-orders-navigation a:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 3px;
+}
+.completed-orders-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  margin: 18px 0;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.completed-orders-summary p {
+  margin: 0;
+}
+.completed-orders-summary strong {
+  color: var(--color-text);
+  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+}
 .active-orders-header {
   display: flex;
   justify-content: space-between;
@@ -59,10 +105,9 @@
 }
 .active-order-card {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(150px, 1fr) minmax(
-      230px,
-      1.4fr
-    ) auto;
+  grid-template-columns:
+    minmax(160px, 1fr) minmax(150px, 1fr) minmax(230px, 1.4fr)
+    auto;
   align-items: center;
   gap: 20px;
   padding: 22px;

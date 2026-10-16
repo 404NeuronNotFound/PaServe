@@ -6,6 +6,8 @@ import { PublicProductService } from '../products/public-product.service.js';
 import { OrdersService } from './orders.service.js';
 import { ActiveOrdersController } from './active-orders.controller.js';
 import { ActiveOrdersService } from './active-orders.service.js';
+import { CompletedOrdersController } from './completed-orders.controller.js';
+import { CompletedOrdersService } from './completed-orders.service.js';
 import { CreateOrderDto } from './create-order.dto.js';
 import { TableContextService } from '../tables/table-context.service.js';
 import { OrderTokenService } from './order-token.service.js';
@@ -61,6 +63,7 @@ export class OrdersController {
   imports: [ShopMembersModule, RealtimeModule],
   controllers: [
     ActiveOrdersController,
+    CompletedOrdersController,
     OrdersController,
     NewOrderEventsController,
     ConfirmedOrderEventsController,
@@ -76,6 +79,7 @@ export class OrdersController {
   ],
   providers: [
     ActiveOrdersService,
+    CompletedOrdersService,
     OrdersService,
     CustomerOrderStatusService,
     PublicProductService,

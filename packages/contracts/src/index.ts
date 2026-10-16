@@ -129,6 +129,29 @@ export interface ActiveOrdersResponse {
   nextCursor: string | null;
 }
 
+/** Fulfilled history uses the same eligibility as completed-sales reporting. */
+export interface CompletedOrderSummary {
+  id: string;
+  shopId: string;
+  orderNumber: string;
+  mode: "DINE_IN" | "TAKEOUT";
+  tableNumber: string | null;
+  status: "CONFIRMED";
+  paymentStatus: "PAID";
+  preparationStatus: "COMPLETED";
+  paymentMethod: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER";
+  currency: "PHP";
+  totalPrice: string;
+  createdAt: string;
+  paidAt: string;
+  completedAt: string;
+}
+
+export interface CompletedOrdersResponse {
+  orders: CompletedOrderSummary[];
+  nextCursor: string | null;
+}
+
 export function canTransitionPreparationStatus(
   from: PreparationStatus,
   to: PreparationStatus,
