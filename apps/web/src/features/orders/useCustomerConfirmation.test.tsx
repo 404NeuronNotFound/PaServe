@@ -50,6 +50,58 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  window.history.replaceState({}, "", "/");
+});
+
+it("reopens a fresh private link for the same order after cookie access was denied", async () => {
+  fetchStatus.mockResolvedValue({ ok: false, status: 401 });
+  const { result } = renderHook(() => useCustomerConfirmation("cafe", orderId));
+  await flush();
+  expect(result.current.state).toBe("denied");
+  fetchStatus.mockImplementation(async (url: string) =>
+    url.endsWith("/tracking-session")
+      ? { ok: true, status: 201 }
+      : response(confirmed),
+  );
+  act(() => {
+    window.history.replaceState(
+      {},
+      "",
+      `/menu/cafe/orders/${orderId}#tracking=${token}`,
+    );
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+  await flush();
+  expect(window.location.hash).toBe("");
+  expect(result.current.order).toEqual(confirmed);
+  expect(result.current.state).toBe("current");
+});
+
+it("preserves progress bounds when a same-order private link restarts tracking", async () => {
+  fetchStatus.mockResolvedValue(response(confirmed));
+  const { result } = renderHook(() => useCustomerConfirmation("cafe", orderId));
+  await flush();
+  fetchStatus.mockImplementation(async (url: string) =>
+    url.endsWith("/tracking-session")
+      ? { ok: true, status: 201 }
+      : response({ ...pending, status: "REJECTED" }),
+  );
+  act(() => {
+    window.history.replaceState(
+      {},
+      "",
+      `/menu/cafe/orders/${orderId}#tracking=${token}`,
+    );
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+  await flush();
+  expect(result.current.order).toEqual(confirmed);
+  expect(result.current.state).toBe("stale");
+  fetchStatus.mockResolvedValue(response(confirmed));
+  act(() => window.dispatchEvent(new Event("focus")));
+  await flush();
+  expect(result.current.state).toBe("current");
+  expect(vi.mocked(subscribeOrderStream).mock.calls).toHaveLength(2);
 });
 
 it("fetches and renders confirmation immediately on the event without advancing the polling clock", async () => {
@@ -351,7 +403,9 @@ it("releases the live stream and recovery listeners after receipt access is deni
 it("treats rejection as terminal and cannot regress to pending", async () => {
   const rejected = { ...pending, status: "REJECTED" };
   fetchStatus.mockResolvedValue(response(rejected));
-  const { result } = renderHook(() => useCustomerConfirmation("cafe", orderId, token));
+  const { result } = renderHook(() =>
+    useCustomerConfirmation("cafe", orderId, token),
+  );
   await flush();
   expect(result.current.order).toEqual(rejected);
   const reads = fetchStatus.mock.calls.length;
@@ -359,7 +413,10 @@ it("treats rejection as terminal and cannot regress to pending", async () => {
   expect(stop).toHaveBeenCalledTimes(1);
   fetchStatus.mockResolvedValue(response(pending));
   act(() => {
-    vi.mocked(subscribeOrderStream).mock.calls[0][4]("resync", { shopId, orderId });
+    vi.mocked(subscribeOrderStream).mock.calls[0][4]("resync", {
+      shopId,
+      orderId,
+    });
     window.dispatchEvent(new Event("online"));
     vi.advanceTimersByTime(60_000);
   });
@@ -370,21 +427,37 @@ it("treats rejection as terminal and cannot regress to pending", async () => {
 
 it("does not stop confirmed tracking for an older rejected response", async () => {
   fetchStatus.mockResolvedValue(response(confirmed));
-  const { result } = renderHook(() => useCustomerConfirmation("cafe", orderId, token));
+  const { result } = renderHook(() =>
+    useCustomerConfirmation("cafe", orderId, token),
+  );
   await flush();
   fetchStatus.mockResolvedValue(response({ ...pending, status: "REJECTED" }));
-  act(() => vi.mocked(subscribeOrderStream).mock.calls[0][4]("resync", { shopId, orderId }));
+  act(() =>
+    vi
+      .mocked(subscribeOrderStream)
+      .mock.calls[0][4]("resync", { shopId, orderId }),
+  );
   await flush();
   expect(result.current.order).toEqual(confirmed);
-  expect(vi.mocked(subscribeOrderStream).mock.results[0].value).not.toHaveBeenCalled();
+  expect(
+    vi.mocked(subscribeOrderStream).mock.results[0].value,
+  ).not.toHaveBeenCalled();
 });
 
 it("isolates a changed shop from a delayed response for the previous shop", async () => {
   let complete!: (value: ReturnType<typeof response>) => void;
-  fetchStatus.mockImplementationOnce(() => new Promise((resolve) => { complete = resolve; }));
-  const { result, rerender } = renderHook(({ slug }) => useCustomerConfirmation(slug, orderId, token), {
-    initialProps: { slug: "cafe" },
-  });
+  fetchStatus.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+  );
+  const { result, rerender } = renderHook(
+    ({ slug }) => useCustomerConfirmation(slug, orderId, token),
+    {
+      initialProps: { slug: "cafe" },
+    },
+  );
   await flush();
   expect(fetchStatus).toHaveBeenCalledTimes(1);
   fetchStatus.mockResolvedValue({ ok: false, status: 404 });

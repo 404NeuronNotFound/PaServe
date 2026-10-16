@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CustomerOrderStatusResponse } from "@paserve/contracts";
 import { PREPARATION_STATUSES } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
@@ -30,6 +30,19 @@ export function useCustomerConfirmation(
   orderId: string,
   token: string | null = null,
 ) {
+  const [linkVersion, setLinkVersion] = useState(0);
+  const latest = useRef<{
+    key: string;
+    order: CustomerOrderStatusResponse["order"];
+  } | null>(null);
+  useEffect(() => {
+    const reopen = () => {
+      if (window.location.hash.startsWith("#tracking="))
+        setLinkVersion((value) => value + 1);
+    };
+    window.addEventListener("hashchange", reopen);
+    return () => window.removeEventListener("hashchange", reopen);
+  }, []);
   const [health, setHealth] = useState<{
     key: string;
     state: "current" | "stale" | "denied";
@@ -54,8 +67,9 @@ export function useCustomerConfirmation(
       denied = false,
       terminal = false;
     let request: AbortController | undefined;
-    let latestPhase = -1;
-    let latestUpdatedAt = -Infinity;
+    const previous = latest.current?.key === key ? latest.current.order : null;
+    let latestPhase = previous ? phase(previous) : -1;
+    let latestUpdatedAt = previous ? Date.parse(previous.updatedAt) : -Infinity;
     let unsubscribe = () => {};
     let subscribed = false;
     const recover = () => {
@@ -165,6 +179,7 @@ export function useCustomerConfirmation(
           setHealth({ key, state: "current" });
           latestPhase = nextPhase;
           latestUpdatedAt = nextUpdatedAt;
+          latest.current = { key, order };
           if (
             order.status === "REJECTED" ||
             order.preparationStatus === "COMPLETED"
@@ -238,7 +253,7 @@ export function useCustomerConfirmation(
       request?.abort();
       stopWatching();
     };
-  }, [shopSlug, orderId, token, key]);
+  }, [shopSlug, orderId, token, key, linkVersion]);
   const reference = token ? parseOrderQrToken(token, "order-tracking") : null;
   return {
     order: saved?.key === key ? saved.order : null,

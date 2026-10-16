@@ -187,6 +187,56 @@ describe('Confirmed order customer/staff HTTP access', () => {
       .set('Cookie', 'paserve_tracking=a; paserve_tracking=b')
       .expect(401);
   });
+  it.each(['expired', 'revoked', 'wrong-order', 'wrong-shop', 'tampered'])(
+    'does not establish or expose guest access using %s proof',
+    async (kind) => {
+      let token = tokens.issueTracking(order);
+      let slug = 'cafe',
+        target = id;
+      if (kind === 'expired') order.qrTokenExpiresAt = new Date(0);
+      if (kind === 'revoked') order.receiptAccessRevokedAt = new Date();
+      if (kind === 'wrong-order')
+        target = '75992537-5d60-4d22-8e1e-60a114644681';
+      if (kind === 'wrong-shop') slug = 'other';
+      if (kind === 'tampered') token += 'x';
+      const expected = kind.startsWith('wrong-') ? 404 : 403;
+      const denied = await request(app.getHttpServer())
+        .post(`/api/v1/menu/${slug}/orders/${target}/tracking-session`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(expected);
+      expect(denied.headers['set-cookie']).toBeUndefined();
+      for (const suffix of ['status', 'tracking-link', 'events']) {
+        const read = await customer(suffix, token, slug, target).expect(
+          expected,
+        );
+        expect(read.body.receipt).toBeUndefined();
+        expect(read.body.trackingToken).toBeUndefined();
+      }
+    },
+  );
+  it('does not trust a valid order cookie on a different shop/order or extend its expiry on redemption', async () => {
+    const token = tokens.issueTracking(order);
+    const path = `/api/v1/menu/cafe/orders/${id}`;
+    const established = await request(app.getHttpServer())
+      .post(`${path}/tracking-session`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+    const cookies = established.headers['set-cookie'] as unknown as string[];
+    expect(cookies[0]).toContain(
+      `Expires=${order.qrTokenExpiresAt.toUTCString()}`,
+    );
+    const cookie = cookies[0].split(';')[0];
+    await request(app.getHttpServer())
+      .get(
+        '/api/v1/menu/cafe/orders/75992537-5d60-4d22-8e1e-60a114644681/status',
+      )
+      .set('Cookie', cookie)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/menu/other/orders/${id}/status`)
+      .set('Cookie', cookie)
+      .expect(404);
+  });
   it('keeps receipt reads authorized and available when realtime is unavailable', async () => {
     relay.mockImplementationOnce(async () => {
       throw new ServiceUnavailableException({

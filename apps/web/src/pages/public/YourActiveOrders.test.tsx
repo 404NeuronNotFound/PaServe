@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { YourActiveOrders } from "./YourActiveOrders";
 import {
@@ -85,4 +85,78 @@ it("keeps staff-assistance guidance available when the tracking cookie is lost",
   expect(
     screen.getByText(/give the counter staff your order number/),
   ).toBeInTheDocument();
+});
+
+it.each(["focus", "online"])(
+  "refreshes completed orders on %s instead of keeping a stale active link",
+  async (event) => {
+    seed();
+    const saved = {
+      id,
+      orderNumber: "ORD-000042",
+      status: "CONFIRMED",
+      preparationStatus: "QUEUED",
+    };
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ order: saved, receipt: { shopSlug: "cafe" } }),
+    });
+    show();
+    await screen.findByRole("link", { name: "Your active order · ORD-000042" });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        order: { ...saved, preparationStatus: "COMPLETED" },
+        receipt: { shopSlug: "cafe" },
+      }),
+    });
+    act(() => window.dispatchEvent(new Event(event)));
+    await waitFor(() =>
+      expect(screen.queryByRole("link")).not.toBeInTheDocument(),
+    );
+    expect(readActiveOrders("cafe")).toEqual([]);
+  },
+);
+
+it("coalesces recovery events while a read is pending and drops queued work after unmount", async () => {
+  seed();
+  const response = (preparationStatus: string) => ({
+    ok: true,
+    json: async () => ({
+      order: {
+        id,
+        orderNumber: "ORD-000042",
+        status: "CONFIRMED",
+        preparationStatus,
+      },
+      receipt: { shopSlug: "cafe" },
+    }),
+  });
+  fetchMock.mockResolvedValue(response("QUEUED"));
+  const view = show();
+  await screen.findByRole("link", { name: "Your active order · ORD-000042" });
+  let finish!: (value: ReturnType<typeof response>) => void;
+  fetchMock.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  act(() => {
+    window.dispatchEvent(new Event("focus"));
+    window.dispatchEvent(new Event("online"));
+    window.dispatchEvent(new Event("online"));
+  });
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  view.unmount();
+  expect(fetchMock.mock.calls[1][1].signal.aborted).toBe(true);
+  await act(async () => {
+    finish(response("COMPLETED"));
+  });
+  expect(readActiveOrders("cafe")).toHaveLength(1);
+  act(() => {
+    window.dispatchEvent(new Event("focus"));
+    window.dispatchEvent(new Event("online"));
+  });
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });

@@ -139,6 +139,14 @@ describe('Cashier order QR verification', () => {
       .set('Authorization', 'Bearer staff-session')
       .send({ qrToken: token });
 
+  it('rejects tracking-only credentials at both cashier QR endpoints even for authorized staff', async () => {
+    const tracking = tokens.issueTracking(persisted);
+    await scan(tracking).expect(403);
+    await verify(tracking).expect(403);
+    expect(updateOrder).not.toHaveBeenCalled();
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
   it.each([
     'CONFIRMED',
     'REJECTED',

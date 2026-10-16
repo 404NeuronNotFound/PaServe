@@ -11,10 +11,12 @@ export const trackingPath = (slug: string, id: string) =>
   `/menu/${encodeURIComponent(slug)}/orders/${encodeURIComponent(id)}`;
 export const trackingApiUrl = (path: string) =>
   `${(api.defaults?.baseURL ?? "").replace(/\/$/, "")}${path}`;
-export const isTrackingOrderId = (id: string) => uuid.test(id);
+export const isTrackingOrderId = (id: unknown): id is string =>
+  typeof id === "string" && uuid.test(id);
 
 /** Navigation hints only. HttpOnly cookies, verified by the API, authorize reads. */
 export function readActiveOrders(slug: string): ActiveOrder[] {
+  const seen = new Set<string>();
   let values: unknown = memory.get(slug) ?? [];
   try {
     const raw = localStorage.getItem(key(slug));
@@ -27,11 +29,16 @@ export function readActiveOrders(slug: string): ActiveOrder[] {
       (entry): entry is ActiveOrder =>
         !!entry &&
         typeof entry === "object" &&
-        uuid.test(entry.id) &&
+        isTrackingOrderId(entry.id) &&
         isValidOrderNumber(entry.orderNumber) &&
         Number.isFinite(entry.expiresAt) &&
         entry.expiresAt > Date.now(),
     )
+    .filter(({ id }) => {
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    })
     .slice(0, 20)
     .map(({ id, orderNumber, expiresAt }) => ({ id, orderNumber, expiresAt }));
 }
@@ -50,7 +57,7 @@ export function rememberActiveOrder(
   expiresAt: number,
 ) {
   if (
-    !uuid.test(id) ||
+    !isTrackingOrderId(id) ||
     !isValidOrderNumber(orderNumber) ||
     !Number.isFinite(expiresAt) ||
     expiresAt <= Date.now()
@@ -73,11 +80,20 @@ export function forgetActiveOrder(slug: string, id: string) {
 
 // StrictMode/repeated mounts share an in-flight redemption without retaining secrets.
 const redemptions = new Map<string, Promise<void>>();
+function rememberRedemption(path: string, promise: Promise<void>) {
+  redemptions.set(path, promise);
+  void promise
+    .finally(() => {
+      if (redemptions.get(path) === promise) redemptions.delete(path);
+    })
+    .catch(() => {});
+  return promise;
+}
 export function redeemTrackingLink(slug: string, id: string): Promise<void> {
   const path = trackingPath(slug, id);
   const pending = redemptions.get(path);
-  if (pending) return pending;
-  if (!window.location.hash.startsWith("#tracking=")) return Promise.resolve();
+  if (!window.location.hash.startsWith("#tracking="))
+    return pending ?? Promise.resolve();
   const fragment = window.location.hash;
   window.history.replaceState(
     window.history.state,
@@ -88,21 +104,31 @@ export function redeemTrackingLink(slug: string, id: string): Promise<void> {
   try {
     token = decodeURIComponent(fragment.slice(10));
   } catch {
-    return Promise.reject(new Error("Invalid tracking link"));
+    return rememberRedemption(
+      path,
+      Promise.reject(new Error("Invalid tracking link")),
+    );
   }
   if (token.length > 1024 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/.test(token))
-    return Promise.reject(new Error("Invalid tracking link"));
-  const promise = fetch(trackingApiUrl(`${path}/tracking-session`), {
-    method: "POST",
-    credentials: "include",
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-    signal: AbortSignal.timeout(15_000),
-    referrerPolicy: "no-referrer",
-  }).then((response) => {
-    if (!response.ok) throw new Error("Tracking access unavailable");
-  });
-  redemptions.set(path, promise);
-  void promise.finally(() => redemptions.delete(path)).catch(() => {});
-  return promise;
+    return rememberRedemption(
+      path,
+      Promise.reject(new Error("Invalid tracking link")),
+    );
+  // Serialize exchanges for one order so an earlier response cannot overwrite
+  // the cookie established by a more recently opened private link.
+  const promise = (pending ? pending.catch(() => {}) : Promise.resolve())
+    .then(() =>
+      fetch(trackingApiUrl(`${path}/tracking-session`), {
+        method: "POST",
+        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(15_000),
+        referrerPolicy: "no-referrer",
+      }),
+    )
+    .then((response) => {
+      if (!response.ok) throw new Error("Tracking access unavailable");
+    });
+  return rememberRedemption(path, promise);
 }

@@ -13,52 +13,80 @@ export function YourActiveOrders({ shopSlug }: { shopSlug: string }) {
     readActiveOrders(shopSlug).map((order) => ({ ...order, verified: false })),
   );
   useEffect(() => {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15_000);
-    const entries = readActiveOrders(shopSlug);
-    void Promise.all(
-      entries.map(async (entry) => {
-        try {
-          const response = await fetch(
-            trackingApiUrl(`${trackingPath(shopSlug, entry.id)}/status`),
-            {
-              credentials: "include",
-              cache: "no-store",
-              signal: controller.signal,
-            },
-          );
-          if (!response.ok) return { ...entry, verified: false };
-          const data: CustomerOrderStatusResponse = await response.json();
-          if (
-            data.order?.id !== entry.id ||
-            data.order.orderNumber !== entry.orderNumber ||
-            !["PENDING_CONFIRMATION", "CONFIRMED", "REJECTED"].includes(
-              data.order.status,
-            ) ||
-            data.receipt?.shopSlug !== shopSlug
-          )
-            return { ...entry, verified: false };
-          if (
-            data.order.status === "REJECTED" ||
-            data.order.preparationStatus === "COMPLETED"
-          ) {
-            forgetActiveOrder(shopSlug, entry.id);
-            return null;
-          }
-          return { ...entry, verified: true };
-        } catch {
-          return { ...entry, verified: false };
+    let active = true,
+      loading = false,
+      again = false;
+    let controller: AbortController | undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    async function refresh() {
+      if (!active) return;
+      if (loading) {
+        again = true;
+        return;
+      }
+      loading = true;
+      const request = new AbortController();
+      controller = request;
+      timeout = setTimeout(() => request.abort(), 15_000);
+      try {
+        const entries = readActiveOrders(shopSlug);
+        const results = await Promise.all(
+          entries.map(async (entry) => {
+            try {
+              const response = await fetch(
+                trackingApiUrl(`${trackingPath(shopSlug, entry.id)}/status`),
+                {
+                  credentials: "include",
+                  cache: "no-store",
+                  signal: request.signal,
+                },
+              );
+              if (!response.ok) return { ...entry, verified: false };
+              const data: CustomerOrderStatusResponse = await response.json();
+              if (
+                data.order?.id !== entry.id ||
+                data.order.orderNumber !== entry.orderNumber ||
+                !["PENDING_CONFIRMATION", "CONFIRMED", "REJECTED"].includes(
+                  data.order.status,
+                ) ||
+                data.receipt?.shopSlug !== shopSlug
+              )
+                return { ...entry, verified: false };
+              if (
+                data.order.status === "REJECTED" ||
+                data.order.preparationStatus === "COMPLETED"
+              ) {
+                if (active) forgetActiveOrder(shopSlug, entry.id);
+                return null;
+              }
+              return { ...entry, verified: true };
+            } catch {
+              return { ...entry, verified: false };
+            }
+          }),
+        );
+        if (active) setOrders(results.filter((entry) => entry !== null));
+      } finally {
+        clearTimeout(timeout);
+        loading = false;
+        if (active && again) {
+          again = false;
+          void refresh();
         }
-      }),
-    )
-      .then((results) => {
-        if (!controller.signal.aborted)
-          setOrders(results.filter((entry) => entry !== null));
-      })
-      .finally(() => clearTimeout(timeout));
+      }
+    }
+    const recover = () => {
+      void refresh();
+    };
+    void refresh();
+    window.addEventListener("focus", recover);
+    window.addEventListener("online", recover);
     return () => {
-      controller.abort();
+      active = false;
+      controller?.abort();
       clearTimeout(timeout);
+      window.removeEventListener("focus", recover);
+      window.removeEventListener("online", recover);
     };
   }, [shopSlug]);
   if (!orders.length) return null;

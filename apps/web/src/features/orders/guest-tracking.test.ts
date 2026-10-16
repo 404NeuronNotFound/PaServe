@@ -51,6 +51,58 @@ it("keeps navigation usable in memory when browser storage is blocked", () => {
   expect(readActiveOrders("blocked-cafe")).toHaveLength(1);
 });
 
+it("ignores corrupt ID objects and duplicate navigation hints without crashing", () => {
+  const valid = { id, orderNumber: "ORD-000042", expiresAt: expiry };
+  localStorage.setItem(
+    "paserve-active-orders:v1:cafe",
+    JSON.stringify([
+      { ...valid, id: { toString: null, valueOf: null } },
+      valid,
+      valid,
+    ]),
+  );
+  expect(readActiveOrders("cafe")).toEqual([valid]);
+});
+
+it("removes a second private fragment immediately and serializes its exchange behind an in-flight redemption", async () => {
+  let finish!: (response: { ok: boolean }) => void;
+  const fetchMock = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    )
+    .mockResolvedValue({ ok: true });
+  vi.stubGlobal("fetch", fetchMock);
+  window.history.replaceState(
+    {},
+    "",
+    `/menu/cafe/orders/${id}#tracking=${token}`,
+  );
+  const first = redeemTrackingLink("cafe", id);
+  await Promise.resolve();
+  const secondToken = token.replace(/a$/, "b");
+  window.history.replaceState(
+    {},
+    "",
+    `/menu/cafe/orders/${id}#tracking=${secondToken}`,
+  );
+  const second = redeemTrackingLink("cafe", id);
+  try {
+    expect(window.location.hash).toBe("");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  } finally {
+    finish({ ok: true });
+    await Promise.all([first, second]);
+  }
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe(
+    `Bearer ${secondToken}`,
+  );
+});
+
 it("removes the private fragment before exchanging its credential, coalesces redemption and stores no secret", async () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true });
   vi.stubGlobal("fetch", fetchMock);
