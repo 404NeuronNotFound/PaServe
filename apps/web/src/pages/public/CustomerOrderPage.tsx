@@ -21,6 +21,7 @@ import { useCustomerConfirmation } from "../../features/orders/useCustomerConfir
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { GuestTrackingShare } from "./GuestTrackingShare";
 import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
+import { ReceiptOrderItems } from "./ReceiptOrderItems";
 
 export function CustomerOrderPage() {
   const { shopSlug = "", orderId = "" } = useParams();
@@ -154,6 +155,7 @@ export function CustomerOrderPage() {
                 }
                 orderNumber={receipt.orderNumber}
               />
+              <ReceiptOrderItems items={receipt.items} />
               <dl>
                 <div className="order-receipt-total">
                   <dt>

@@ -1,5 +1,6 @@
 import { afterEach, expect, it } from "vitest";
 import { readOrderReceipt, recoverOrderReceipt, orderReceipts } from "./order-receipt";
+import { cashierLine } from "../../test/cashier-fixtures";
 
 const receipt = {
   shopSlug: "cafe", shopName: "Current name", id: "order-a", orderNumber: "ORD-000001",
@@ -21,3 +22,18 @@ it("keeps legacy receipts usable without shop contact details", () => {
 it("rejects malformed shop details", () => {
   expect(readOrderReceipt("cafe", "order-a", { ...receipt, shopDetails: { ...details, phone: {} } })).toBeNull();
 });
+
+it("recovers separate saved item snapshots after storage/memory loss without extra fields", () => {
+  const source = { ...receipt, totalPrice: "271.00", items: [cashierLine, { ...cashierLine, secret: "private" }] };
+  recoverOrderReceipt("cafe", "order-a", source);
+  source.items[0] = { ...cashierLine, productName: "Changed menu name" };
+  orderReceipts.clearMemory();
+  const saved = readOrderReceipt("cafe", "order-a");
+  expect(saved?.items).toEqual([cashierLine, cashierLine]);
+  expect(JSON.stringify(saved)).not.toContain("private");
+});
+it.each([{ items: [] }, { items: [{ ...cashierLine, quantity: 3 }] }, { items: [{ ...cashierLine, totalPrice: "0.00" }] }])(
+  "rejects incomplete or inconsistent saved lines: %j", ({ items }) => {
+    expect(readOrderReceipt("cafe", "order-a", { ...receipt, totalPrice: "135.50", items })).toBeNull();
+  },
+);

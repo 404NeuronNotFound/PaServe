@@ -136,6 +136,13 @@ function setup(
   );
   return client;
 }
+it.each(["ORD-000042", "ORD-1000000", "ORD-9223372036854775807"])(
+  "displays the complete saved receipt/cashier reference %s on kitchen tickets",
+  async (orderNumber) => {
+    setup("KITCHEN", [ticket("first", orderNumber)]);
+    expect(await screen.findByRole("heading", { name: orderNumber })).toBeVisible();
+  },
+);
 it("refreshes queued orders when the shop's New Order subscription signals entry or reconnect", async () => {
   setup("KITCHEN");
   await screen.findByRole("article", { name: "Order ORD-000001" });

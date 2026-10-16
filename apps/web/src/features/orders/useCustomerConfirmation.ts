@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CustomerOrderStatusResponse } from "@paserve/contracts";
-import { PREPARATION_STATUSES } from "@paserve/contracts";
+import { isValidOrderNumber, PREPARATION_STATUSES } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import { parseOrderQrToken } from "./order-qr-reference";
 import { subscribeOrderStream } from "./new-order-events";
@@ -123,6 +123,7 @@ export function useCustomerConfirmation(
         if (
           !order ||
           order.id !== orderId ||
+          !isValidOrderNumber(order.orderNumber) ||
           !isTrackingOrderId(order.shopId) ||
           (reference && order.shopId !== reference.shopId) ||
           !["PENDING_CONFIRMATION", "CONFIRMED", "REJECTED"].includes(

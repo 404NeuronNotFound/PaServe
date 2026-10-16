@@ -2,12 +2,14 @@ import type {
   CustomerOrderResponse,
   PublicMenuResponse,
   ReceiptShopDetails,
+  ProductSelectionQuoteResponse,
 } from "@paserve/contracts";
 import { parseReceiptShopDetails } from "@paserve/contracts";
 import { createPendingOrderStorage } from "./pending-orders";
 import { isPublicTableContext } from "../shops/customer-table";
 import { captureCustomerOrderQr } from "./customer-order-qr";
 import { rememberActiveOrder } from "../orders/guest-tracking";
+import { parseReceiptItems } from "./receipt-items";
 import {
   isOrderNumber,
   isOrderReceiptId,
@@ -29,6 +31,7 @@ export interface OrderReceipt {
   currency: "PHP";
   /** Exact saved server total; never derived from current cart or menu prices. */
   totalPrice: string;
+  items?: ProductSelectionQuoteResponse[];
 }
 
 export const orderReceipts = createPendingOrderStorage(
@@ -49,6 +52,7 @@ export function saveOrderReceipt(
 ) {
   captureCustomerOrderQr(shopSlug, order);
   const shopDetails = parseReceiptShopDetails(order.shopDetails);
+  const items = parseReceiptItems(order.items, order.totalPrice);
   const receipt: OrderReceipt = {
     shopSlug,
     shopName: shopDetails?.name ?? shopName,
@@ -65,6 +69,7 @@ export function saveOrderReceipt(
     status: order.status,
     currency: order.currency,
     totalPrice: order.totalPrice,
+    ...(items ? { items } : {}),
   };
   orderReceipts.write(key(shopSlug, order.id), receipt);
   rememberActiveOrder(shopSlug, order.id, receipt.orderNumber, Date.parse(order.qrTokenExpiresAt ?? ""));
@@ -115,6 +120,8 @@ export function readOrderReceipt(
     // credentials, notes, or other request data through the receipt reader.
     const shopDetails = parseReceiptShopDetails(value.shopDetails);
     if (value.shopDetails != null && !shopDetails) return null;
+    const items = value.items === undefined ? null : parseReceiptItems(value.items, value.totalPrice);
+    if (value.items !== undefined && !items) return null;
     return {
       shopSlug,
       shopName: shopDetails?.name ?? value.shopName,
@@ -131,6 +138,7 @@ export function readOrderReceipt(
       status: "PENDING_CONFIRMATION",
       currency: "PHP",
       totalPrice: value.totalPrice,
+      ...(items ? { items } : {}),
     };
   } catch {
     return null;

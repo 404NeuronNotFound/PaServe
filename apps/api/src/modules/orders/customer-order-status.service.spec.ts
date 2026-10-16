@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import type { PrismaService } from '../../database/prisma.service.js';
 import { OrderTokenService } from './order-token.service.js';
 import { CustomerOrderStatusService } from './customer-order-status.service.js';
+import { Prisma } from '../../generated/prisma/client.js';
 
 describe('Customer receipt status access', () => {
   const tokens = new OrderTokenService(
@@ -29,6 +30,14 @@ describe('Customer receipt status access', () => {
     paymentStatus: 'UNPAID',
     mode: 'TAKEOUT',
     totalPrice: { toFixed: () => '12.00' },
+    orderItems: [{
+      lineNumber: 1, productSnapshotId: 'deleted-product', productNameSnapshot: 'Saved Coffee',
+      currency: 'PHP', quantity: 2, notes: 'Less ice' as string | null,
+      basePriceSnapshot: new Prisma.Decimal('4.00'), unitPriceSnapshot: new Prisma.Decimal('6.00'),
+      lineTotalSnapshot: new Prisma.Decimal('12.00'),
+      variantsSnapshot: [{ id: 'v', name: 'Large', optionGroupId: 'size', isDefault: false, priceAdjustment: '1.00' }],
+      addOnsSnapshot: [{ id: 'a', name: 'Milk', priceAdjustment: '1.00' }],
+    }],
     tableCode: null,
     tableNumber: null,
     ...tokens.metadata(),
@@ -72,6 +81,38 @@ describe('Customer receipt status access', () => {
     const result = await service.read('cafe', id, tokens.issueTracking(order));
     expect(result.receipt?.shopDetails).toBeNull();
     expect(result.receipt?.shopName).toBe('Cafe');
+  });
+
+  it('returns saved receipt lines and exact quantities, options and totals under the order/shop scope', async () => {
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
+    expect(result.receipt?.items).toEqual([{
+      productId: 'deleted-product', productName: 'Saved Coffee', currency: 'PHP',
+      quantity: 2, notes: 'Less ice', basePrice: '4.00', unitPrice: '6.00', totalPrice: '12.00',
+      variants: order.orderItems[0].variantsSnapshot, addOns: order.orderItems[0].addOnsSnapshot,
+    }]);
+    expect(database.order.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      select: expect.objectContaining({ orderItems: expect.objectContaining({
+        where: { shopId, orderId: id }, orderBy: { lineNumber: 'asc' },
+      }) }),
+    }));
+  });
+  it.each(['missing', 'gap', 'quantity', 'total'])(
+    'rejects %s saved receipt data without guessing from menu data',
+    async (kind) => {
+      if (kind === 'missing') order.orderItems = [];
+      if (kind === 'gap') order.orderItems[0].lineNumber = 2;
+      if (kind === 'quantity') order.orderItems[0].quantity = 3;
+      if (kind === 'total') order.totalPrice = { toFixed: () => '13.00' };
+      await expect(service.read('cafe', id, tokens.issueTracking(order)))
+        .rejects.toMatchObject({ response: { code: 'ORDER_DETAILS_UNAVAILABLE' } });
+    },
+  );
+  it('keeps repeated products as distinct saved lines in submission order', async () => {
+    order.orderItems.push({ ...order.orderItems[0], lineNumber: 2, notes: 'Second cup' });
+    order.totalPrice = { toFixed: () => '24.00' };
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
+    expect(result.receipt?.items).toHaveLength(2);
+    expect(result.receipt?.items?.map((item) => item.notes)).toEqual(['Less ice', 'Second cup']);
   });
 
   it('reads only the credential-bound order under its resolved shop', async () => {

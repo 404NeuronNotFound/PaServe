@@ -827,6 +827,8 @@ export interface CustomerReceiptSummary {
   status: "PENDING_CONFIRMATION";
   currency: "PHP";
   totalPrice: string;
+  /** Saved receipt lines in submission order; optional for older API responses. */
+  items?: ProductSelectionQuoteResponse[];
 }
 export interface OrderDecisionRequest extends VerifyOrderQrRequest {
   reviewVersion: string;

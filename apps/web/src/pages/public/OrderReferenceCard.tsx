@@ -19,6 +19,9 @@ export function OrderReferenceCard({
       role="group"
       aria-label="Order reference card"
     >
+      <p className="order-reference-number">
+        {`Order number: ${orderNumber ?? "Unavailable"}`}
+      </p>
       <div className="order-reference-perspective">
         <div
           className={`order-reference-turn${showNumber ? " is-flipped" : ""}`}

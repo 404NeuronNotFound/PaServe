@@ -29,6 +29,7 @@ it("starts on QR, flips by keyboard, preserves focus and hides inactive controls
     />,
   );
   await screen.findByRole("img", { name: "Order QR for ORD-000042" });
+  expect(screen.getByText("Order number: ORD-000042")).toBeVisible();
   expect(
     screen.queryByRole("button", { name: "Copy order number" }),
   ).not.toBeInTheDocument();
@@ -43,6 +44,7 @@ it("starts on QR, flips by keyboard, preserves focus and hides inactive controls
   ).toBeEnabled();
   expect(screen.queryByRole("img")).not.toBeInTheDocument();
   expect(flip).toHaveFocus();
+  expect(screen.getByText("Order number: ORD-000042")).toBeVisible();
   expect(
     screen.getByRole("region", { name: "Order number" }).parentElement,
   ).not.toHaveAttribute("inert");
@@ -78,6 +80,7 @@ it("keeps number fallback reachable without a QR credential", async () => {
     />,
   );
   expect(screen.getByText(/unavailable in this session/)).toBeInTheDocument();
+  expect(screen.getByText("Order number: ORD-000042")).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Show order number" }));
   expect(
     screen.getByRole("region", { name: "Order number" }),
@@ -106,4 +109,18 @@ it("expires the QR while its face is hidden instead of reviving it on flip", asy
   });
   expect(screen.getByText(/has expired/)).toBeInTheDocument();
   expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  expect(screen.getByText("Order number: ORD-000042")).toBeVisible();
+});
+
+it.each(["ORD-000001", "ORD-1000000", "ORD-9223372036854775807"])(
+  "displays the complete saved number %s without truncating or renumbering it",
+  (orderNumber) => {
+    render(<OrderReferenceCard credential={null} orderNumber={orderNumber} />);
+    expect(screen.getByText(`Order number: ${orderNumber}`)).toBeVisible();
+  },
+);
+it("shows an explicit unavailable state when a legacy receipt has no saved number", () => {
+  render(<OrderReferenceCard credential={null} orderNumber={null} />);
+  expect(screen.getByText("Order number: Unavailable")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "Copy order number" })).not.toBeInTheDocument();
 });

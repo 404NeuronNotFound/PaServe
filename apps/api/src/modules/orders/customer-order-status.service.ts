@@ -9,6 +9,8 @@ import { PREPARATION_STATUSES } from '@paserve/contracts';
 import { PrismaService } from '../../database/prisma.service.js';
 import { OrderTokenService } from './order-token.service.js';
 import { readReceiptShopDetails } from './receipt-shop-details.js';
+import { readPriceSnapshot } from './order-price-snapshots.js';
+import { Prisma } from '../../generated/prisma/client.js';
 
 @Injectable()
 export class CustomerOrderStatusService {
@@ -70,6 +72,23 @@ export class CustomerOrderStatusService {
         tableNumber: true,
         totalPrice: true,
         shopDetailsSnapshot: true,
+        orderItems: {
+          where: { shopId: shop.id, orderId },
+          orderBy: { lineNumber: 'asc' },
+          select: {
+            lineNumber: true,
+            productSnapshotId: true,
+            productNameSnapshot: true,
+            currency: true,
+            quantity: true,
+            notes: true,
+            basePriceSnapshot: true,
+            unitPriceSnapshot: true,
+            lineTotalSnapshot: true,
+            variantsSnapshot: true,
+            addOnsSnapshot: true,
+          },
+        },
       },
     });
     if (!order)
@@ -111,6 +130,20 @@ export class CustomerOrderStatusService {
         message: 'Unable to read the saved order status.',
       });
     const shopDetails = readReceiptShopDetails(order.shopDetailsSnapshot);
+    let items: NonNullable<CustomerOrderStatusResponse['receipt']>['items'];
+    try {
+      if (!order.orderItems.length || order.orderItems.length > 100 ||
+        order.orderItems.some((item, index) => item.lineNumber !== index + 1))
+        throw new Error('Invalid receipt lines.');
+      items = order.orderItems.map(readPriceSnapshot);
+      if (!items.reduce((sum, item) => sum.plus(item.totalPrice), new Prisma.Decimal(0))
+        .equals(order.totalPrice.toFixed(2))) throw new Error('Invalid receipt total.');
+    } catch {
+      throw new BadRequestException({
+        code: 'ORDER_DETAILS_UNAVAILABLE',
+        message: 'Unable to read the saved order items.',
+      });
+    }
     return {
       trackingExpiresAt: order.qrTokenExpiresAt.toISOString(),
       receipt: {
@@ -129,6 +162,7 @@ export class CustomerOrderStatusService {
         status: 'PENDING_CONFIRMATION',
         currency: 'PHP',
         totalPrice: order.totalPrice.toFixed(2),
+        items,
       },
       order: {
         id: order.id,

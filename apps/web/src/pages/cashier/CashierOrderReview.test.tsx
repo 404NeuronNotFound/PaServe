@@ -18,8 +18,16 @@ const order: VerifyOrderQrResponse["order"] = {
   reviewVersion: "a".repeat(64),
   items: [cashierLine],
 };
+it.each(["ORD-000042", "ORD-1000000", "ORD-9223372036854775807"])(
+  "displays the complete saved receipt/kitchen reference %s in cashier review",
+  (orderNumber) => {
+    render(<CashierOrderReview order={{ ...order, orderNumber }} onNext={vi.fn()} />);
+    expect(screen.getByText(orderNumber)).toBeVisible();
+  },
+);
 it("displays saved items, modifiers, notes, type/table, total and statuses", () => {
   render(<CashierOrderReview order={order} onNext={vi.fn()} />);
+  expect(screen.getByText("ORD-000042")).toBeVisible();
   expect(
     screen.getByRole("heading", { name: "Review order" }),
   ).toHaveFocus();

@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../dist/database/prisma.service.js';
 import { OrderQrService } from '../dist/modules/orders/order-qr.service.js';
 import { OrderTokenService } from '../dist/modules/orders/order-token.service.js';
+import { CustomerOrderStatusService } from '../dist/modules/orders/customer-order-status.service.js';
 
 // Every fixture and menu edit remains inside one rollback-only transaction.
 const prisma = new PrismaService();
@@ -40,6 +41,19 @@ try {
               'cashier-read-test-secret-at-least-32-characters',
           }),
         );
+        const group = await tx.productOptionGroup.create({
+          data: { shopId: shop.id, productId: product.id, name: 'Size' },
+        });
+        const variant = await tx.productVariant.create({
+          data: { shopId: shop.id, productId: product.id, optionGroupId: group.id,
+            name: 'Large', priceAdjustment: '10.00' },
+        });
+        const addOn = await tx.addOn.create({
+          data: { shopId: shop.id, name: 'Oat milk', priceAdjustment: '7.75' },
+        });
+        await tx.productAddOn.create({
+          data: { shopId: shop.id, productId: product.id, addOnId: addOn.id },
+        });
         const quote = {
           productId: product.id,
           productName: 'Saved Latte',
@@ -51,15 +65,15 @@ try {
           totalPrice: '135.50',
           variants: [
             {
-              id: randomUUID(),
+              id: variant.id,
               name: 'Large',
-              optionGroupId: randomUUID(),
+              optionGroupId: group.id,
               isDefault: false,
               priceAdjustment: '10.00',
             },
           ],
           addOns: [
-            { id: randomUUID(), name: 'Oat milk', priceAdjustment: '7.75' },
+            { id: addOn.id, name: 'Oat milk', priceAdjustment: '7.75' },
           ],
         };
         const order = await tx.order.create({
@@ -97,19 +111,37 @@ try {
         const initial = await cashier.scan(user.id, shop.id, token);
         assert.deepEqual(initial.order.items, [quote]);
         assert.equal(initial.order.totalPrice, '135.50');
+        const customer = new CustomerOrderStatusService(tx, tokens);
+        const tracking = tokens.issueTracking(order);
+        const initialReceipt = (await customer.read(slug, order.id, tracking)).receipt;
+        assert.deepEqual(initialReceipt.items, [quote]);
+        assert.equal(initialReceipt.totalPrice, '135.50');
         await tx.product.update({
           where: { id: product.id },
           data: { name: 'New menu name', price: '999.00' },
+        });
+        await tx.productVariant.update({
+          where: { id: variant.id, shopId: shop.id },
+          data: { name: 'Renamed variant', priceAdjustment: '99.00', isAvailable: false },
+        });
+        await tx.addOn.update({
+          where: { id: addOn.id, shopId: shop.id },
+          data: { name: 'Renamed add-on', priceAdjustment: '88.00', isAvailable: false },
         });
         assert.deepEqual(
           (await cashier.scan(user.id, shop.id, token)).order,
           initial.order,
         );
+        assert.deepEqual((await customer.read(slug, order.id, tracking)).receipt, initialReceipt);
+        await tx.productAddOn.deleteMany({ where: { shopId: shop.id, productId: product.id } });
+        await tx.addOn.delete({ where: { id: addOn.id, shopId: shop.id } });
+        await tx.productVariant.delete({ where: { id: variant.id, shopId: shop.id } });
         await tx.product.delete({ where: { id: product.id } });
         assert.deepEqual(
           (await cashier.scan(user.id, shop.id, token)).order,
           initial.order,
         );
+        assert.deepEqual((await customer.read(slug, order.id, tracking)).receipt, initialReceipt);
         const other = await tx.shop.create({
           data: { name: 'Other cashier shop', slug: `${slug}-other` },
         });
@@ -145,7 +177,7 @@ try {
     0,
   );
   console.log(
-    'Passed: real saved receipt loading, menu edit/deletion stability, shop isolation, role revocation and fixture rollback.',
+    'Passed: customer/cashier receipts preserve saved quantities, product/variant/add-on names and prices after real menu edits and deletions; shop isolation, role revocation and fixture rollback.',
   );
 } finally {
   await prisma.$disconnect();

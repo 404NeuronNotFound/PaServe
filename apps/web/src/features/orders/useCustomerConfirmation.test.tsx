@@ -53,6 +53,20 @@ afterEach(() => {
   window.history.replaceState({}, "", "/");
 });
 
+it.each(["", "000042", "ORD-000000", "ORD-9999999999999999999", orderId])(
+  "retains the verified order when a later read has an invalid readable number: %s",
+  async (orderNumber) => {
+    const { result } = renderHook(() => useCustomerConfirmation("cafe", orderId, token));
+    await flush();
+    expect(result.current.order?.orderNumber).toBe("ORD-000042");
+    fetchStatus.mockResolvedValue(response({ ...confirmed, orderNumber }));
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    await flush();
+    expect(result.current.state).toBe("stale");
+    expect(result.current.order?.orderNumber).toBe("ORD-000042");
+  },
+);
+
 it("reopens a fresh private link for the same order after cookie access was denied", async () => {
   fetchStatus.mockResolvedValue({ ok: false, status: 401 });
   const { result } = renderHook(() => useCustomerConfirmation("cafe", orderId));

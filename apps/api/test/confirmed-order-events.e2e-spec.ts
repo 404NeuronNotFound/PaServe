@@ -8,6 +8,7 @@ import { PrismaService } from '../src/database/prisma.service.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { OrderTokenService } from '../src/modules/orders/order-token.service.js';
 import { NewOrderEventsService } from '../src/modules/orders/new-order-events.service.js';
+import { Prisma } from '../src/generated/prisma/client.js';
 
 describe('Confirmed order customer/staff HTTP access', () => {
   const shopId = '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e';
@@ -19,6 +20,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
     membership = vi.fn();
   let relay: ReturnType<typeof vi.spyOn>;
   let order: {
+    orderItems: ReturnType<typeof savedItems>;
     mode: string;
     totalPrice: { toFixed: () => string };
     tableCode: null;
@@ -40,6 +42,12 @@ describe('Confirmed order customer/staff HTTP access', () => {
     completedAt: Date | null;
     queuedAt: Date | null;
   };
+  const savedItems = () => [{
+    lineNumber: 1, productSnapshotId: 'saved-product', productNameSnapshot: 'Saved Coffee',
+    currency: 'PHP', quantity: 1, notes: null,
+    basePriceSnapshot: new Prisma.Decimal('12.00'), unitPriceSnapshot: new Prisma.Decimal('12.00'),
+    lineTotalSnapshot: new Prisma.Decimal('12.00'), variantsSnapshot: [], addOnsSnapshot: [],
+  }];
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
@@ -80,6 +88,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
       orderNumber: 'ORD-000042',
       mode: 'TAKEOUT',
       totalPrice: { toFixed: () => '12.00' },
+      orderItems: savedItems(),
       tableCode: null,
       tableNumber: null,
       status: 'CONFIRMED',
@@ -161,6 +170,10 @@ describe('Confirmed order customer/staff HTTP access', () => {
       totalPrice: '12.00',
       mode: 'TAKEOUT',
     });
+    expect(receipt.body.receipt.items).toEqual([{
+      productId: 'saved-product', productName: 'Saved Coffee', quantity: 1, currency: 'PHP',
+      basePrice: '12.00', unitPrice: '12.00', totalPrice: '12.00', variants: [], addOns: [],
+    }]);
     expect(JSON.stringify(receipt.body)).not.toContain(token);
     const share = await request(app.getHttpServer())
       .get(`${path}/tracking-link`)

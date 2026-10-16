@@ -108,6 +108,16 @@
 .order-reference-perspective {
   perspective: 1400px;
 }
+.order-reference-number {
+  margin: 0 0 12px;
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
 .order-reference-turn {
   display: grid;
   transform-style: preserve-3d;
@@ -440,6 +450,36 @@
 }
 .order-receipt-details > dl {
   margin: 28px 0 0;
+}
+.receipt-order-items {
+  margin-top: 28px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.receipt-order-items h2 {
+  margin: 0 0 12px;
+  font: 600 1.25rem/1.4 Georgia, serif;
+}
+.receipt-order-items > ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.receipt-order-items > ol > li {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.receipt-order-items h3 { margin: 0 0 12px; font-size: 1rem; line-height: 1.5; }
+.receipt-order-items h4 { margin: 12px 0 4px; font-size: 0.875rem; }
+.receipt-order-items ul { margin: 0; padding-left: 20px; }
+.receipt-order-items p,
+.receipt-order-items ul { color: var(--color-muted); font-size: 0.875rem; line-height: 1.6; }
+.receipt-order-items .receipt-item-note { white-space: pre-line; }
+.receipt-order-items .receipt-item-total {
+  margin: 12px 0 0;
+  color: var(--color-text);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 .order-receipt-total {
   display: grid;

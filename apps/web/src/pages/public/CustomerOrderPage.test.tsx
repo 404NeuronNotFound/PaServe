@@ -18,6 +18,7 @@ import { api } from "../../lib/api/client";
 import { feedback } from "../../app/stores/feedback";
 import { clearCustomerOrderQrs } from "../../features/cart/customer-order-qr";
 import { subscribeOrderStream } from "../../features/orders/new-order-events";
+import { cashierLine } from "../../test/cashier-fixtures";
 
 vi.mock("../../features/orders/new-order-events", () => ({
   subscribeOrderStream: vi.fn(() => vi.fn()),
@@ -125,6 +126,34 @@ function setup(path = "/menu/cafe/orders/order-a") {
   );
 }
 
+it.each(["DINE_IN", "TAKEOUT"] as const)(
+  "keeps every saved %s receipt line and its options after refresh without menu repricing",
+  (mode) => {
+    const line = { ...cashierLine, variants: cashierLine.variants.map((option) => ({ ...option })) };
+    const plainLine = { ...cashierLine, variants: [], addOns: [], notes: undefined, unitPrice: "50.00", totalPrice: "100.00" };
+    const savedOrder: CustomerOrderResponse["order"] = mode === "DINE_IN"
+      ? { ...order, mode, table, items: [line, plainLine], totalPrice: "235.50" }
+      : { ...order, mode, table: null, items: [line, plainLine], totalPrice: "235.50" };
+    saveOrderReceipt("cafe", "Cafe", savedOrder);
+    line.productName = "Renamed menu item";
+    line.variants[0].name = "Renamed variant";
+    const view = setup();
+    expect(screen.getAllByRole("heading", { name: "2 × Saved Latte" })).toHaveLength(2);
+    expect(screen.getByText("Large")).toBeInTheDocument();
+    expect(screen.getByText("Oat milk")).toBeInTheDocument();
+    expect(screen.getByText("Line total: ₱135.50")).toBeInTheDocument();
+    expect(screen.getByText("Line total: ₱100.00")).toBeInTheDocument();
+    view.unmount();
+    orderReceipts.clearMemory();
+    setup();
+    expect(screen.getAllByRole("heading", { name: "2 × Saved Latte" })).toHaveLength(2);
+    expect(screen.getByText("Large")).toBeInTheDocument();
+    expect(screen.queryByText("Renamed menu item")).not.toBeInTheDocument();
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+  },
+);
+
 it("shows the saved shop identity in the customer receipt after refresh", () => {
   saveOrderReceipt("cafe", "Current menu name", { ...order, shopDetails: {
     name: "Original Cafe", address: "12 Old Street", phone: "09171234567",
@@ -152,6 +181,7 @@ it("opens a private tracking link on another device and reopens from the guest c
       shopSlug: "cafe", shopName: "Cafe", primaryColor: null, accentColor: null,
       id: orderId, orderNumber: "ORD-000042", mode: "TAKEOUT", table: null,
       status: "PENDING_CONFIRMATION", currency: "PHP", totalPrice: "12.00",
+      items: order.items,
     },
   };
   const fetchStatus = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => saved });
@@ -160,6 +190,8 @@ it("opens a private tracking link on another device and reopens from the guest c
   window.history.replaceState({}, "", `${path}#tracking=${trackingToken}`);
   const view = setup(path);
   await screen.findByRole("heading", { name: "Order confirmed" });
+  expect(screen.getByRole("heading", { name: "1 × Coffee" })).toBeInTheDocument();
+  expect(screen.getByText("Order number: ORD-000042")).toBeVisible();
   expect(window.location.hash).toBe("");
   expect(fetchStatus.mock.calls[0][0]).toBe(`${path}/tracking-session`);
   expect(fetchStatus.mock.calls[0][1]).toMatchObject({ method: "POST", credentials: "include", headers: { Authorization: `Bearer ${trackingToken}` } });
@@ -482,6 +514,7 @@ it("keeps the QR and order number after memory loss and a full reload", async ()
   clearCustomerOrderQrs();
   orderReceipts.clearMemory();
   setup(path);
+  expect(screen.getByText("Order number: ORD-000042")).toBeVisible();
   expect(screen.getByText("ORD-000042")).toBeInTheDocument();
   expect(
     await screen.findByRole("img", { name: "Order QR for ORD-000042" }),

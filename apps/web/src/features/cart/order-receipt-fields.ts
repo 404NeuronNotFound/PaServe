@@ -5,13 +5,8 @@ export function isOrderReceiptId(value: unknown): value is string {
   );
 }
 
-/** Match the server's positive signed-bigint numbering scope without losing precision. */
-export function isOrderNumber(value: unknown): value is string {
-  if (typeof value !== "string" || !/^ORD-\d{6,19}$(?![\s\S])/.test(value))
-    return false;
-  const sequence = BigInt(value.slice(4));
-  return sequence > 0n && sequence <= 9223372036854775807n;
-}
+/** Share the cashier/kitchen contract without changing the saved display value. */
+export { isValidOrderNumber as isOrderNumber } from "@paserve/contracts";
 
 export function isOrderTotal(value: unknown): value is string {
   return (
