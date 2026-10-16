@@ -83,6 +83,7 @@ export class CustomerOrderStatusService {
         order.status,
       ) ||
       !['UNPAID', 'PAID'].includes(order.paymentStatus) ||
+      (order.status !== 'CONFIRMED' && order.paymentStatus !== 'UNPAID') ||
       (order.status === 'CONFIRMED' &&
         (order.paymentStatus !== 'PAID' || !order.decidedAt)) ||
       (preparationStatus !== null &&

@@ -257,6 +257,11 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
   expect(activePreparation).not.toHaveClass("is-complete");
   expect(screen.queryByRole("heading", { name: "Order ready" })).not.toBeInTheDocument();
   expect(screen.queryByText(/Please collect it at the counter/)).not.toBeInTheDocument();
+  fetchStatus.mockResolvedValueOnce({ ok: false, status: 500 });
+  act(() => vi.mocked(subscribeOrderStream).mock.calls[0][4]("resync", { shopId, orderId }));
+  await screen.findByRole("note");
+  expect(screen.getByRole("note")).toHaveTextContent("The status shown may be out of date.");
+  expect(screen.getByText("Preparing")).toBeInTheDocument();
   act(() => {
     for (let i = 0; i < 3; i++)
       vi.mocked(subscribeOrderStream).mock.calls[0][4]("order_preparing", {
@@ -269,6 +274,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
       screen.getAllByRole("heading", { name: "Order in preparation" }),
     ).toHaveLength(1),
   );
+  await waitFor(() => expect(screen.queryByRole("note")).not.toBeInTheDocument());
   fetchStatus.mockResolvedValue({
     ok: true,
     status: 200,

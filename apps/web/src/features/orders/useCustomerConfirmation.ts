@@ -19,6 +19,10 @@ export function useCustomerConfirmation(
   orderId: string,
   token: string | null,
 ) {
+  const [health, setHealth] = useState<{
+    key: string;
+    state: "current" | "stale" | "denied";
+  } | null>(null);
   const [saved, setSaved] = useState<{
     key: string;
     order: CustomerOrderStatusResponse["order"];
@@ -33,6 +37,8 @@ export function useCustomerConfirmation(
       denied = false,
       terminal = false;
     let request: AbortController | undefined;
+    let latestPhase = -1;
+    let latestUpdatedAt = -Infinity;
     let unsubscribe = () => {};
     const recover = () => {
       void refresh();
@@ -65,6 +71,7 @@ export function useCustomerConfirmation(
         );
         if ([401, 403, 404].includes(response.status)) {
           denied = true;
+          if (active) setHealth({ key, state: "denied" });
           stopWatching();
           return;
         }
@@ -79,6 +86,7 @@ export function useCustomerConfirmation(
             order.status,
           ) ||
           !["UNPAID", "PAID"].includes(order.paymentStatus) ||
+          (order.status !== "CONFIRMED" && order.paymentStatus !== "UNPAID") ||
           !Number.isFinite(Date.parse(order.updatedAt)) ||
           (order.preparationStatus != null &&
             (!PREPARATION_STATUSES.includes(order.preparationStatus) ||
@@ -106,7 +114,19 @@ export function useCustomerConfirmation(
               !Number.isFinite(Date.parse(order.confirmedAt))))
         )
           throw new Error("Invalid order status");
-        if (active)
+        if (active) {
+          const nextPhase = phase(order);
+          const nextUpdatedAt = Date.parse(order.updatedAt);
+          if (
+            nextPhase < latestPhase ||
+            (nextPhase === latestPhase && nextUpdatedAt < latestUpdatedAt)
+          ) {
+            setHealth({ key, state: "stale" });
+            return;
+          }
+          setHealth({ key, state: "current" });
+          latestPhase = nextPhase;
+          latestUpdatedAt = nextUpdatedAt;
           setSaved((previous) =>
             previous?.key === key &&
             (phase(previous.order) > phase(order) ||
@@ -116,12 +136,16 @@ export function useCustomerConfirmation(
               ? previous
               : { key, order },
           );
-        if (active && order.preparationStatus === "COMPLETED") {
+        }
+        if (
+          active &&
+          (order.preparationStatus === "COMPLETED" || order.status === "REJECTED")
+        ) {
           terminal = true;
           stopWatching();
         }
       } catch {
-        /* Keep the last verified status; the counter remains available. */
+        if (active) setHealth({ key, state: "stale" });
       } finally {
         clearTimeout(timeout);
         loading = false;
@@ -153,5 +177,14 @@ export function useCustomerConfirmation(
       stopWatching();
     };
   }, [shopSlug, orderId, token, key]);
-  return saved?.key === key ? saved.order : null;
+  const reference = token ? parseOrderQrToken(token) : null;
+  return {
+    order: saved?.key === key ? saved.order : null,
+    state:
+      !reference || reference.orderId !== orderId
+        ? "unavailable"
+        : health?.key === key
+          ? health.state
+          : "loading",
+  };
 }

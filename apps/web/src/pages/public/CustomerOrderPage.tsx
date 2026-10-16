@@ -18,16 +18,18 @@ import { menuTheme } from "../../lib/menu-theme";
 import { readCustomerOrderQr } from "../../features/cart/customer-order-qr";
 import { OrderReferenceCard } from "./OrderReferenceCard";
 import { useCustomerConfirmation } from "../../features/orders/useCustomerConfirmation";
+import { InlineMessage } from "../../components/feedback/InlineMessage";
 
 export function CustomerOrderPage() {
   const { shopSlug = "", orderId = "" } = useParams();
   const receipt = readOrderReceipt(shopSlug, orderId);
   const qr = readCustomerOrderQr(shopSlug, orderId);
-  const savedStatus = useCustomerConfirmation(
+  const tracking = useCustomerConfirmation(
     shopSlug,
     orderId,
     receipt && qr?.orderNumber === receipt.orderNumber ? qr.qrToken : null,
   );
+  const savedStatus = tracking.order;
   const confirmed = savedStatus?.status === "CONFIRMED";
   const rejected = savedStatus?.status === "REJECTED";
   const preparation = confirmed ? savedStatus.preparationStatus : null;
@@ -295,6 +297,15 @@ export function CustomerOrderPage() {
                   </>
                 )}
               </div>
+              {tracking.state !== "current" && (
+                <InlineMessage tone="info" role="note" aria-live="polite" aria-atomic="true">
+                  {tracking.state === "loading"
+                    ? "Checking the latest order status. The receipt shows the last saved status."
+                    : tracking.state === "denied" || tracking.state === "unavailable"
+                      ? "Live tracking is unavailable for this receipt. The status shown may be out of date. Ask the counter staff for the latest update."
+                      : "Unable to refresh your order status. The status shown may be out of date. We will retry automatically; you can also ask the counter staff."}
+                </InlineMessage>
+              )}
               {completed && savedStatus?.completedAt && (
                 <p className="order-receipt-note">
                   Completed at{" "}

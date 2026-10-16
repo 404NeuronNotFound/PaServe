@@ -58,7 +58,7 @@ it("fetches and renders confirmation immediately on the event without advancing 
     useCustomerConfirmation("cafe", orderId, token),
   );
   await flush();
-  expect(result.current?.status).toBe("PENDING_CONFIRMATION");
+  expect(result.current.order?.status).toBe("PENDING_CONFIRMATION");
   fetchStatus.mockResolvedValue(response(confirmed));
   act(() =>
     vi
@@ -67,7 +67,7 @@ it("fetches and renders confirmation immediately on the event without advancing 
   );
   await flush();
   expect(fetchStatus).toHaveBeenCalledTimes(2);
-  expect(result.current).toEqual(confirmed);
+  expect(result.current.order).toEqual(confirmed);
   expect(Date.now()).toBe(started);
 });
 
@@ -79,29 +79,29 @@ it("requires a valid backend confirmation rather than inferring it from events o
   const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
   act(() => notify("order_confirmed", { shopId, orderId }));
   await flush();
-  expect(result.current).toEqual(pending);
+  expect(result.current.order).toEqual(pending);
   await act(async () => {
     await vi.advanceTimersByTimeAsync(60_000);
   });
   await flush();
-  expect(result.current).toEqual(pending);
+  expect(result.current.order).toEqual(pending);
 
   fetchStatus.mockResolvedValue({ ok: false, status: 500 });
   act(() => notify("order_confirmed", { shopId, orderId }));
   await flush();
-  expect(result.current).toEqual(pending);
+  expect(result.current.order).toEqual(pending);
 
   fetchStatus.mockResolvedValue(
     response({ ...confirmed, paymentStatus: "UNPAID" }),
   );
   act(() => notify("order_confirmed", { shopId, orderId }));
   await flush();
-  expect(result.current).toEqual(pending);
+  expect(result.current.order).toEqual(pending);
 
   fetchStatus.mockResolvedValue(response(confirmed));
   act(() => notify("order_confirmed", { shopId, orderId }));
   await flush();
-  expect(result.current).toEqual(confirmed);
+  expect(result.current.order).toEqual(confirmed);
 });
 
 it("coalesces duplicate events during a read and retains one confirmed state against older responses", async () => {
@@ -125,11 +125,11 @@ it("coalesces duplicate events during a read and retains one confirmed state aga
   await act(async () => complete(response(confirmed)));
   await flush();
   expect(fetchStatus).toHaveBeenCalledTimes(3); // initial + one active + one coalesced read
-  expect(result.current).toEqual(confirmed);
+  expect(result.current.order).toEqual(confirmed);
   fetchStatus.mockResolvedValue(response(pending));
   act(() => notify("resync", { shopId, orderId }));
   await flush();
-  expect(result.current).toEqual(confirmed);
+  expect(result.current.order).toEqual(confirmed);
 });
 
 it("updates preparation immediately and does not regress after duplicates or an older confirmation", async () => {
@@ -151,12 +151,12 @@ it("updates preparation immediately and does not regress after duplicates or an 
     for (let i = 0; i < 3; i++) notify("order_preparing", { shopId, orderId });
   });
   await flush();
-  expect(result.current).toEqual(preparing);
+  expect(result.current.order).toEqual(preparing);
   expect(Date.now()).toBe(started);
   fetchStatus.mockResolvedValue(response(confirmed));
   act(() => notify("resync", { shopId, orderId }));
   await flush();
-  expect(result.current).toEqual(preparing);
+  expect(result.current.order).toEqual(preparing);
 });
 
 it("updates READY on the event without polling and ignores duplicates and older preparation data", async () => {
@@ -184,12 +184,12 @@ it("updates READY on the event without polling and ignores duplicates and older 
     for (let i = 0; i < 3; i++) notify("order_ready", { shopId, orderId });
   });
   await flush();
-  expect(result.current).toEqual(ready);
+  expect(result.current.order).toEqual(ready);
   expect(Date.now()).toBe(started);
   fetchStatus.mockResolvedValue(response(preparing));
   act(() => notify("resync", { shopId, orderId }));
   await flush();
-  expect(result.current).toEqual(ready);
+  expect(result.current.order).toEqual(ready);
 });
 
 it("finalizes completion immediately, ignores stale phases, and stops all tracking after verified completion", async () => {
@@ -213,7 +213,7 @@ it("finalizes completion immediately, ignores stale phases, and stops all tracki
   );
   act(() => notify("resync", { shopId, orderId }));
   await flush();
-  expect(result.current).toEqual(ready);
+  expect(result.current.order).toEqual(ready);
   const completed = {
     ...ready,
     preparationStatus: "COMPLETED",
@@ -225,7 +225,7 @@ it("finalizes completion immediately, ignores stale phases, and stops all tracki
     );
     act(() => notify("order_completed", { shopId, orderId }));
     await flush();
-    expect(result.current).toEqual(ready);
+    expect(result.current.order).toEqual(ready);
     expect(stop).not.toHaveBeenCalled();
   }
   fetchStatus.mockResolvedValue(response(completed));
@@ -233,7 +233,7 @@ it("finalizes completion immediately, ignores stale phases, and stops all tracki
     for (let i = 0; i < 5; i++) notify("order_completed", { shopId, orderId });
   });
   await flush();
-  expect(result.current).toEqual(completed);
+  expect(result.current.order).toEqual(completed);
   expect(Date.now()).toBe(started);
   expect(stop).toHaveBeenCalledTimes(1);
   const reads = fetchStatus.mock.calls.length;
@@ -246,7 +246,7 @@ it("finalizes completion immediately, ignores stale phases, and stops all tracki
   });
   await flush();
   expect(fetchStatus).toHaveBeenCalledTimes(reads);
-  expect(result.current).toEqual(completed);
+  expect(result.current.order).toEqual(completed);
   unmount();
   expect(stop).toHaveBeenCalledTimes(1);
   fetchStatus.mockResolvedValue(response(completed));
@@ -254,7 +254,7 @@ it("finalizes completion immediately, ignores stale phases, and stops all tracki
     useCustomerConfirmation("cafe", orderId, token),
   );
   await flush();
-  expect(restored.result.current).toEqual(completed);
+  expect(restored.result.current.order).toEqual(completed);
   expect(
     vi.mocked(subscribeOrderStream).mock.results[1].value,
   ).toHaveBeenCalledTimes(1);
@@ -265,14 +265,14 @@ it("recovers saved confirmation through polling while the event stream stays una
     useCustomerConfirmation("cafe", orderId, token),
   );
   await flush();
-  expect(result.current?.status).toBe("PENDING_CONFIRMATION");
+  expect(result.current.order?.status).toBe("PENDING_CONFIRMATION");
   act(() => vi.mocked(subscribeOrderStream).mock.calls[0][5]("retrying"));
   fetchStatus.mockResolvedValue(response(confirmed));
   await act(async () => {
     await vi.advanceTimersByTimeAsync(15_000);
   });
   await flush();
-  expect(result.current).toEqual(confirmed);
+  expect(result.current.order).toEqual(confirmed);
   expect(fetchStatus).toHaveBeenCalledTimes(2);
 });
 
@@ -302,11 +302,12 @@ it.each(["polling", "focus", "online", "resync"])(
     };
     fetchStatus.mockResolvedValue(response(preparing));
     await recover();
-    expect(result.current).toEqual(preparing);
+    expect(result.current.order).toEqual(preparing);
 
     fetchStatus.mockResolvedValue({ ok: false, status: 500 });
     await recover();
-    expect(result.current).toEqual(preparing);
+    expect(result.current.order).toEqual(preparing);
+    expect(result.current.state).toBe("stale");
 
     const ready = {
       ...preparing,
@@ -316,13 +317,14 @@ it.each(["polling", "focus", "online", "resync"])(
     };
     fetchStatus.mockResolvedValue(response(ready));
     await recover();
-    expect(result.current).toEqual(ready);
+    expect(result.current.order).toEqual(ready);
+    expect(result.current.state).toBe("current");
     expect(fetchStatus).toHaveBeenCalledTimes(4);
   },
 );
 
 it("releases the live stream and recovery listeners after receipt access is denied", async () => {
-  const { unmount } = renderHook(() =>
+  const { result, unmount } = renderHook(() =>
     useCustomerConfirmation("cafe", orderId, token),
   );
   await flush();
@@ -332,6 +334,7 @@ it("releases the live stream and recovery listeners after receipt access is deni
   act(() => notify("resync", { shopId, orderId }));
   await flush();
   expect(stop).toHaveBeenCalledTimes(1);
+  expect(result.current.state).toBe("denied");
   act(() => {
     vi.advanceTimersByTime(60_000);
     window.dispatchEvent(new Event("focus"));
@@ -342,4 +345,51 @@ it("releases the live stream and recovery listeners after receipt access is deni
   expect(fetchStatus).toHaveBeenCalledTimes(2);
   unmount();
   expect(stop).toHaveBeenCalledTimes(1);
+});
+
+it("treats rejection as terminal and cannot regress to pending", async () => {
+  const rejected = { ...pending, status: "REJECTED" };
+  fetchStatus.mockResolvedValue(response(rejected));
+  const { result } = renderHook(() => useCustomerConfirmation("cafe", orderId, token));
+  await flush();
+  expect(result.current.order).toEqual(rejected);
+  const reads = fetchStatus.mock.calls.length;
+  const stop = vi.mocked(subscribeOrderStream).mock.results[0].value;
+  expect(stop).toHaveBeenCalledTimes(1);
+  fetchStatus.mockResolvedValue(response(pending));
+  act(() => {
+    vi.mocked(subscribeOrderStream).mock.calls[0][4]("resync", { shopId, orderId });
+    window.dispatchEvent(new Event("online"));
+    vi.advanceTimersByTime(60_000);
+  });
+  await flush();
+  expect(fetchStatus).toHaveBeenCalledTimes(reads);
+  expect(result.current.order).toEqual(rejected);
+});
+
+it("does not stop confirmed tracking for an older rejected response", async () => {
+  fetchStatus.mockResolvedValue(response(confirmed));
+  const { result } = renderHook(() => useCustomerConfirmation("cafe", orderId, token));
+  await flush();
+  fetchStatus.mockResolvedValue(response({ ...pending, status: "REJECTED" }));
+  act(() => vi.mocked(subscribeOrderStream).mock.calls[0][4]("resync", { shopId, orderId }));
+  await flush();
+  expect(result.current.order).toEqual(confirmed);
+  expect(vi.mocked(subscribeOrderStream).mock.results[0].value).not.toHaveBeenCalled();
+});
+
+it("isolates a changed shop from a delayed response for the previous shop", async () => {
+  let complete!: (value: ReturnType<typeof response>) => void;
+  fetchStatus.mockImplementationOnce(() => new Promise((resolve) => { complete = resolve; }));
+  const { result, rerender } = renderHook(({ slug }) => useCustomerConfirmation(slug, orderId, token), {
+    initialProps: { slug: "cafe" },
+  });
+  fetchStatus.mockResolvedValue({ ok: false, status: 404 });
+  rerender({ slug: "other-shop" });
+  await flush();
+  expect(result.current.state).toBe("denied");
+  await act(async () => complete(response(confirmed)));
+  await flush();
+  expect(result.current.order).toBeNull();
+  expect(result.current.state).toBe("denied");
 });

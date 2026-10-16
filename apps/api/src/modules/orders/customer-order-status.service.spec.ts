@@ -168,4 +168,11 @@ describe('Customer receipt status access', () => {
       service.read('cafe', id, tokens.issue(order)),
     ).rejects.toMatchObject({ response: { code: 'INVALID_ORDER_STATE' } });
   });
+  it.each(['PENDING_CONFIRMATION', 'REJECTED'])('rejects contradictory paid %s state', async (status) => {
+    order.status = status;
+    order.paymentStatus = 'PAID';
+    await expect(service.read('cafe', id, tokens.issue(order))).rejects.toMatchObject({
+      response: { code: 'INVALID_ORDER_STATE' },
+    });
+  });
 });
