@@ -100,6 +100,44 @@ describe('order receipt tokens', () => {
     id: 'e47f6994-a303-4a7b-87b0-2386d5198828',
     shopId: '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e',
   });
+  it('separates tracking and cashier credentials, including their revocation lifecycles', () => {
+    const saved = {
+      ...referenceOrder(),
+      receiptAccessRevokedAt: null as Date | null,
+    };
+    const tracking = service.issueTracking(saved);
+    const cashier = service.issue(saved);
+    expect(tracking).not.toBe(cashier);
+    expect(service.issueTracking(saved)).toBe(tracking);
+    expect(service.resolveTrackingReference(tracking, saved.shopId)).toEqual({
+      orderId: saved.id,
+    });
+    expect(() => service.verifyTracking(tracking, saved)).not.toThrow();
+    expect(() => service.verify(tracking, saved)).toThrow();
+    expect(() => service.resolveReference(tracking, saved.shopId)).toThrow();
+    expect(() => service.verifyTracking(cashier, saved)).toThrow();
+    expect(() =>
+      service.resolveTrackingReference(cashier, saved.shopId),
+    ).toThrow();
+    expect(() =>
+      service.verifyTracking(tracking, {
+        ...saved,
+        qrTokenRevokedAt: new Date(),
+      }),
+    ).not.toThrow();
+    expect(() =>
+      service.verifyTracking(tracking, {
+        ...saved,
+        receiptAccessRevokedAt: new Date(),
+      }),
+    ).toThrow();
+    expect(() => service.verifyTracking(`${tracking}x`, saved)).toThrow();
+    expect(() =>
+      service.resolveTrackingReference(tracking, 'another-shop'),
+    ).toThrow();
+    vi.spyOn(Date, 'now').mockReturnValue(saved.qrTokenExpiresAt.getTime());
+    expect(() => service.verifyTracking(tracking, saved)).toThrow();
+  });
   it('resolves only the signed order ID for the active shop', () => {
     const saved = referenceOrder();
     expect(

@@ -27,6 +27,7 @@ import { CompletedSalesService } from './completed-sales.service.js';
 import { NewOrderEventsController } from './new-order-events.controller.js';
 import { RealtimeModule } from '../realtime/realtime.module.js';
 import { CustomerOrderStatusService } from './customer-order-status.service.js';
+import { setTrackingCookie } from './guest-tracking-cookie.js';
 import {
   ConfirmedOrderEventsController,
   CustomerOrderStatusController,
@@ -36,13 +37,22 @@ import {
 export class OrdersController {
   constructor(private readonly orders: OrdersService) {}
   @Post()
-  create(
+  async create(
     @Param('shopSlug') slug: string,
     @Body() dto: CreateOrderDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     res.setHeader('Cache-Control', 'no-store');
-    return this.orders.create(slug, dto);
+    const { trackingToken, order } = await this.orders.create(slug, dto);
+    if (order.qrTokenExpiresAt)
+      setTrackingCookie(
+        res,
+        slug,
+        order.id,
+        trackingToken,
+        new Date(order.qrTokenExpiresAt),
+      );
+    return { order };
   }
 }
 @Module({

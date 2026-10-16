@@ -28,14 +28,14 @@ export class CustomerOrderStatusService {
       });
     const shop = await this.prisma.shop.findFirst({
       where: { slug, isActive: true },
-      select: { id: true },
+      select: { id: true, name: true, primaryColor: true, accentColor: true },
     });
     if (!shop)
       throw new NotFoundException({
         code: 'ORDER_NOT_ACCESSIBLE',
         message: 'This order is unavailable.',
       });
-    const reference = this.tokens.resolveReference(credential, shop.id);
+    const reference = this.tokens.resolveTrackingReference(credential, shop.id);
     if (reference.orderId !== orderId)
       throw new NotFoundException({
         code: 'ORDER_NOT_ACCESSIBLE',
@@ -64,6 +64,10 @@ export class CustomerOrderStatusService {
         preparationReadyAt: true,
         completedAt: true,
         queuedAt: true,
+        mode: true,
+        tableCode: true,
+        tableNumber: true,
+        totalPrice: true,
       },
     });
     if (!order)
@@ -73,7 +77,7 @@ export class CustomerOrderStatusService {
       });
     // Verify canonical signature, nonce, shop/order binding, expiry, and receipt
     // revocation. Staff scan consumption never grants write authority here.
-    this.tokens.verifyReceipt(credential, order);
+    this.tokens.verifyTracking(credential, order);
     const preparationStatus = order.preparationStatus ?? null;
     const startedAt = order.preparationStartedAt ?? null;
     const readyAt = order.preparationReadyAt ?? null;
@@ -105,6 +109,23 @@ export class CustomerOrderStatusService {
         message: 'Unable to read the saved order status.',
       });
     return {
+      trackingExpiresAt: order.qrTokenExpiresAt.toISOString(),
+      receipt: {
+        shopSlug: slug,
+        shopName: shop.name,
+        primaryColor: shop.primaryColor,
+        accentColor: shop.accentColor,
+        id: order.id,
+        orderNumber: order.orderNumber,
+        mode: order.mode as 'DINE_IN' | 'TAKEOUT',
+        table:
+          order.mode === 'DINE_IN'
+            ? { code: order.tableCode!, number: order.tableNumber! }
+            : null,
+        status: 'PENDING_CONFIRMATION',
+        currency: 'PHP',
+        totalPrice: order.totalPrice.toFixed(2),
+      },
       order: {
         id: order.id,
         shopId: order.shopId,

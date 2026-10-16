@@ -5,6 +5,7 @@ import type {
 import { createPendingOrderStorage } from "./pending-orders";
 import { isPublicTableContext } from "../shops/customer-table";
 import { captureCustomerOrderQr } from "./customer-order-qr";
+import { rememberActiveOrder } from "../orders/guest-tracking";
 import {
   isOrderNumber,
   isOrderReceiptId,
@@ -61,14 +62,16 @@ export function saveOrderReceipt(
     totalPrice: order.totalPrice,
   };
   orderReceipts.write(key(shopSlug, order.id), receipt);
+  rememberActiveOrder(shopSlug, order.id, receipt.orderNumber, Date.parse(order.qrTokenExpiresAt ?? ""));
 }
 
 export function readOrderReceipt(
   shopSlug: string,
   orderId: string,
+  source?: unknown,
 ): OrderReceipt | null {
   try {
-    const value = JSON.parse(
+    const value = source ?? JSON.parse(
       orderReceipts.read(key(shopSlug, orderId)) ?? "null",
     );
     // Upgrade older display-only receipts; server confirmations require the new status.
@@ -124,4 +127,11 @@ export function readOrderReceipt(
   } catch {
     return null;
   }
+}
+
+/** Only call with a credential-protected server response. */
+export function recoverOrderReceipt(shopSlug: string, orderId: string, source: unknown): OrderReceipt | null {
+  const receipt = readOrderReceipt(shopSlug, orderId, source);
+  if (receipt) orderReceipts.write(key(shopSlug, orderId), receipt);
+  return receipt;
 }

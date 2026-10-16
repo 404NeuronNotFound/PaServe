@@ -9,6 +9,7 @@ export type OrderQrReference = {
 /** Parse references only. The server must verify signature, membership and state. */
 export function parseOrderQrToken(
   raw: string,
+  purpose: "order-receipt" | "order-tracking" = "order-receipt",
 ): (OrderQrReference & { expiresAt: number }) | null {
   const qrToken = raw.trim();
   if (
@@ -31,7 +32,7 @@ export function parseOrderQrToken(
     if (
       !claims ||
       claims.v !== 1 ||
-      claims.purpose !== "order-receipt" ||
+      claims.purpose !== purpose ||
       typeof claims.shopId !== "string" ||
       !uuid.test(claims.shopId) ||
       typeof claims.orderId !== "string" ||

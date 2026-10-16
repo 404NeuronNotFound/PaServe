@@ -767,6 +767,8 @@ export interface VerifyOrderQrResponse {
 }
 /** Minimal credential-protected customer read model, without staff/payment details. */
 export interface CustomerOrderStatusResponse {
+  receipt?: CustomerReceiptSummary;
+  trackingExpiresAt?: string;
   order: {
     id: string;
     shopId: string;
@@ -780,6 +782,20 @@ export interface CustomerOrderStatusResponse {
     completedAt: string | null;
     updatedAt: string;
   };
+}
+/** Display data for reopening a credential-protected guest receipt. */
+export interface CustomerReceiptSummary {
+  shopSlug: string;
+  shopName: string;
+  primaryColor: string | null;
+  accentColor: string | null;
+  id: string;
+  orderNumber: string;
+  mode: "DINE_IN" | "TAKEOUT";
+  table: { code: string; number: string } | null;
+  status: "PENDING_CONFIRMATION";
+  currency: "PHP";
+  totalPrice: string;
 }
 export interface OrderDecisionRequest extends VerifyOrderQrRequest {
   reviewVersion: string;

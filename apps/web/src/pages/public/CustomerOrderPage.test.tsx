@@ -71,6 +71,7 @@ const close = Object.getOwnPropertyDescriptor(
 beforeEach(() => {
   vi.resetAllMocks();
   sessionStorage.clear();
+  localStorage.clear();
   orderReceipts.clearMemory();
   clearCustomerOrderQrs();
   pendingOrders.clearMemory();
@@ -93,6 +94,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  window.history.replaceState({}, "", "/");
   if (show)
     Object.defineProperty(HTMLDialogElement.prototype, "showModal", show);
   else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
@@ -122,6 +124,48 @@ function setup(path = "/menu/cafe/orders/order-a") {
     </QueryClientProvider>,
   );
 }
+
+it("opens a private tracking link on another device and reopens from the guest cookie without a saved receipt or cashier QR", async () => {
+  const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828";
+  const shopId = "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e";
+  const trackingToken = `${Buffer.from(JSON.stringify({ v: 1, purpose: "order-tracking", shopId, orderId, nonce: "75992537-5d60-4d22-8e1e-60a114644681", exp: Date.parse("2030-01-01T00:00:00Z") })).toString("base64url")}.${"a".repeat(43)}`;
+  const saved = {
+    order: {
+      id: orderId, shopId, orderNumber: "ORD-000042", status: "CONFIRMED", paymentStatus: "PAID",
+      confirmedAt: "2026-10-15T01:01:00Z", preparationStatus: "QUEUED", updatedAt: "2026-10-15T01:01:00Z",
+    },
+    trackingExpiresAt: "2030-01-01T00:00:00Z",
+    receipt: {
+      shopSlug: "cafe", shopName: "Cafe", primaryColor: null, accentColor: null,
+      id: orderId, orderNumber: "ORD-000042", mode: "TAKEOUT", table: null,
+      status: "PENDING_CONFIRMATION", currency: "PHP", totalPrice: "12.00",
+    },
+  };
+  const fetchStatus = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => saved });
+  vi.stubGlobal("fetch", fetchStatus);
+  const path = `/menu/cafe/orders/${orderId}`;
+  window.history.replaceState({}, "", `${path}#tracking=${trackingToken}`);
+  const view = setup(path);
+  await screen.findByRole("heading", { name: "Order confirmed" });
+  expect(window.location.hash).toBe("");
+  expect(fetchStatus.mock.calls[0][0]).toBe(`${path}/tracking-session`);
+  expect(fetchStatus.mock.calls[0][1]).toMatchObject({ method: "POST", credentials: "include", headers: { Authorization: `Bearer ${trackingToken}` } });
+  expect(screen.getByText("ORD-000042")).toBeInTheDocument();
+  expect(screen.queryByRole("img", { name: "Order QR for ORD-000042" })).not.toBeInTheDocument();
+  expect(localStorage.getItem("paserve-active-orders:v1:cafe")).not.toContain(trackingToken);
+  expect(sessionStorage.getItem(`paserve-order-receipt:v1:cafe:${orderId}`)).not.toContain(trackingToken);
+  view.unmount();
+  orderReceipts.clearMemory();
+  clearCustomerOrderQrs();
+  sessionStorage.clear();
+  fetchStatus.mockClear();
+  setup(path);
+  await screen.findByRole("heading", { name: "Order confirmed" });
+  expect(fetchStatus.mock.calls[0][0]).toBe(`${path}/status`);
+  expect(fetchStatus.mock.calls[0][1]).toMatchObject({ credentials: "include", headers: {} });
+  expect(screen.getByText("₱12.00")).toBeInTheDocument();
+  expect(api.post).not.toHaveBeenCalled();
+});
 
 it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confirmed, queued and later stages without manual refresh", async (mode) => {
   const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828",
@@ -195,9 +239,8 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
     screen.queryByText(/Your order is not yet in the kitchen queue/),
   ).not.toBeInTheDocument();
   expect(screen.getByText("ORD-000042")).toBeInTheDocument();
-  expect(fetchStatus.mock.lastCall?.[1].headers.Authorization).toBe(
-    `Bearer ${token}`,
-  );
+  expect(fetchStatus.mock.lastCall?.[1].headers.Authorization).toBeUndefined();
+  expect(fetchStatus.mock.lastCall?.[1].credentials).toBe("include");
   // Repeated delivery must replace/refetch the same saved status, never append
   // another receipt, progress step, notification, or state-changing request.
   const callsBeforeDuplicates = fetchStatus.mock.calls.length;
@@ -647,7 +690,7 @@ it.each([
       screen.getByRole("heading", { name: "Order receipt unavailable" }),
     ).toHaveFocus();
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "check it before placing another",
+      "check it using your order number before placing another",
     );
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(api.get).not.toHaveBeenCalled();

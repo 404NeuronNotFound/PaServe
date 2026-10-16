@@ -140,6 +140,12 @@ describe('dine-in order submission', () => {
           { ...body.items[0], quantity: 1, notes: 'Separate cup' },
         ],
       }).expect(201);
+      const trackingCookies = result.headers['set-cookie'] as unknown as string[];
+      expect(trackingCookies[0]).toContain('paserve_tracking=');
+      expect(trackingCookies[0]).toContain('HttpOnly');
+      expect(trackingCookies[0]).toContain('SameSite=Strict');
+      expect(trackingCookies[0]).toContain('Path=/api/v1/menu/cafe/orders/order-a');
+      expect(result.body.order).not.toHaveProperty('trackingToken');
       expect(transaction).toHaveBeenCalledTimes(1);
       expect(createItems).toHaveBeenCalledTimes(1);
       const rows = createItems.mock.calls[0][0].data;

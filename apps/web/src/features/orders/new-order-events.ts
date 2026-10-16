@@ -40,6 +40,7 @@ export function subscribeOrderStream(
   onStatus: (status: LiveOrderStatus) => void,
   staff = false,
   publicStream = false,
+  cookieSession = false,
 ) {
   const channelScope = Object.freeze({ ...scope });
   const accepted = new Set(
@@ -58,7 +59,7 @@ export function subscribeOrderStream(
   async function connect() {
     if (stopped) return;
     const token = getToken();
-    if (!token && !publicStream) {
+    if (!token && !publicStream && !cookieSession) {
       onStatus("denied");
       return;
     }

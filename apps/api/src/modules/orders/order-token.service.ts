@@ -12,18 +12,22 @@ type TokenOrder = Pick<
 const invalidOrderToken = () =>
   new ForbiddenException({
     code: 'ORDER_TOKEN_INVALID',
-    message: 'This order QR is invalid or expired.',
+    message: 'This order credential is invalid or expired.',
   });
 
 @Injectable()
 export class OrderTokenService {
   private readonly key: Buffer;
+  private readonly trackingKey: Buffer;
   constructor(config: ConfigService) {
     const secret = config.get<string>('JWT_ACCESS_SECRET') ?? '';
     if (secret.length < 32)
       throw new Error('JWT_ACCESS_SECRET must contain at least 32 characters.');
     this.key = createHmac('sha256', secret)
       .update('paserve:order-receipt:v1')
+      .digest();
+    this.trackingKey = createHmac('sha256', secret)
+      .update('paserve:order-tracking:v1')
       .digest();
   }
   metadata() {
@@ -33,21 +37,42 @@ export class OrderTokenService {
     };
   }
   issue(order: TokenOrder): string {
+    return this.issueCredential(order, false);
+  }
+  issueTracking(order: TokenOrder): string {
+    return this.issueCredential(order, true);
+  }
+  private issueCredential(order: TokenOrder, tracking: boolean): string {
     const payload = Buffer.from(
       JSON.stringify({
         v: 1,
-        purpose: 'order-receipt',
+        purpose: tracking ? 'order-tracking' : 'order-receipt',
         shopId: order.shopId,
         orderId: order.id,
         nonce: order.qrTokenNonce,
         exp: order.qrTokenExpiresAt.getTime(),
       }),
     ).toString('base64url');
-    return `${payload}.${createHmac('sha256', this.key).update(payload).digest('base64url')}`;
+    return `${payload}.${createHmac(
+      'sha256',
+      tracking ? this.trackingKey : this.key,
+    )
+      .update(payload)
+      .digest('base64url')}`;
   }
   /** Resolve only a signed reference within the caller's validated route shop.
    * Persisted expiry, revocation and canonical binding still require verify(). */
   resolveReference(token: string, shopId: string): { orderId: string } {
+    return this.resolveCredential(token, shopId, false);
+  }
+  resolveTrackingReference(token: string, shopId: string): { orderId: string } {
+    return this.resolveCredential(token, shopId, true);
+  }
+  private resolveCredential(
+    token: string,
+    shopId: string,
+    tracking: boolean,
+  ): { orderId: string } {
     if (
       typeof token !== 'string' ||
       token.length > 1024 ||
@@ -55,7 +80,10 @@ export class OrderTokenService {
     )
       throw invalidOrderToken();
     const [payload, signature] = token.split('.');
-    const expected = createHmac('sha256', this.key)
+    const expected = createHmac(
+      'sha256',
+      tracking ? this.trackingKey : this.key,
+    )
       .update(payload)
       .digest('base64url');
     if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected)))
@@ -71,7 +99,7 @@ export class OrderTokenService {
         Object.keys(claims).sort().join(',') !==
           'exp,nonce,orderId,purpose,shopId,v' ||
         claims.v !== 1 ||
-        claims.purpose !== 'order-receipt' ||
+        claims.purpose !== (tracking ? 'order-tracking' : 'order-receipt') ||
         claims.shopId !== shopId ||
         typeof claims.orderId !== 'string' ||
         !isUUID(claims.orderId) ||
@@ -87,21 +115,24 @@ export class OrderTokenService {
       throw invalidOrderToken();
     }
   }
-  // The caller must resolve this persisted order under the target shop first.
-  /** A consumed staff-scanning credential can still prove read-only receipt
-   * ownership. Receipt revocation is independent of the cashier scan lifecycle.
-   * This method must never authorize staff decisions or payment. */
-  verifyReceipt(
+  verify(token: string, order: TokenOrder): void {
+    this.verifyCredential(token, order, false);
+  }
+  verifyTracking(
     token: string,
     order: TokenOrder & { receiptAccessRevokedAt: Date | null },
   ): void {
-    this.verify(token, {
-      ...order,
-      qrTokenRevokedAt: order.receiptAccessRevokedAt,
-    });
+    this.verifyCredential(
+      token,
+      { ...order, qrTokenRevokedAt: order.receiptAccessRevokedAt },
+      true,
+    );
   }
-
-  verify(token: string, order: TokenOrder): void {
+  private verifyCredential(
+    token: string,
+    order: TokenOrder,
+    tracking: boolean,
+  ): void {
     const expiresAt =
       order.qrTokenExpiresAt instanceof Date
         ? order.qrTokenExpiresAt.getTime()
@@ -116,7 +147,7 @@ export class OrderTokenService {
       expiresAt <= Date.now()
     )
       throw invalidOrderToken();
-    const expected = Buffer.from(this.issue(order));
+    const expected = Buffer.from(this.issueCredential(order, tracking));
     const received = Buffer.from(token);
     if (
       received.length !== expected.length ||

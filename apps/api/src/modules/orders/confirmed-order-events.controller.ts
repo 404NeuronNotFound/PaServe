@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   Req,
   Res,
@@ -13,6 +14,10 @@ import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import { AuthService } from '../auth/auth.service.js';
 import { NewOrderEventsService } from './new-order-events.service.js';
 import { CustomerOrderStatusService } from './customer-order-status.service.js';
+import {
+  setTrackingCookie,
+  trackingCredential,
+} from './guest-tracking-cookie.js';
 
 function bearer(request: Request) {
   const match = /^Bearer (\S+)$/i.exec(request.headers.authorization ?? '');
@@ -40,7 +45,40 @@ export class CustomerOrderStatusController {
     @Res({ passthrough: true }) response: Response,
   ) {
     response.setHeader('Cache-Control', 'no-store');
-    return this.status.read(slug, orderId, bearer(request));
+    response.setHeader('Referrer-Policy', 'no-referrer');
+    return this.status.read(slug, orderId, trackingCredential(request));
+  }
+
+  @Post('tracking-session')
+  async establish(
+    @Param('shopSlug') slug: string,
+    @Param('orderId') orderId: string,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('Referrer-Policy', 'no-referrer');
+    const token = bearer(request);
+    const saved = await this.status.read(slug, orderId, token);
+    const claims = JSON.parse(
+      Buffer.from(token.split('.')[0], 'base64url').toString('utf8'),
+    ) as { exp: number };
+    setTrackingCookie(response, slug, orderId, token, new Date(claims.exp));
+    return saved;
+  }
+
+  @Get('tracking-link')
+  async share(
+    @Param('shopSlug') slug: string,
+    @Param('orderId') orderId: string,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('Referrer-Policy', 'no-referrer');
+    const token = trackingCredential(request);
+    await this.status.read(slug, orderId, token);
+    return { trackingToken: token };
   }
 
   @Get('events')
@@ -50,7 +88,8 @@ export class CustomerOrderStatusController {
     @Req() request: Request,
     @Res() response: Response,
   ) {
-    const token = bearer(request);
+    const token = trackingCredential(request);
+    response.setHeader('Referrer-Policy', 'no-referrer');
     const saved = await this.status.read(slug, orderId, token);
     const { shopId } = saved.order;
     return this.events.relay(

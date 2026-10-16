@@ -21,6 +21,9 @@ import {
   readPriceSnapshot,
 } from './order-price-snapshots.js';
 
+/** Internal checkout result; the controller moves proof into an HttpOnly cookie. */
+type CreatedGuestOrder = CustomerOrderResponse & { trackingToken: string };
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -30,10 +33,7 @@ export class OrdersService {
     private readonly tokens: OrderTokenService,
   ) {}
 
-  async create(
-    slug: string,
-    dto: CreateOrderDto,
-  ): Promise<CustomerOrderResponse> {
+  async create(slug: string, dto: CreateOrderDto): Promise<CreatedGuestOrder> {
     const mode = dto.mode ?? 'DINE_IN';
     const unavailable = () =>
       new NotFoundException({
@@ -78,7 +78,7 @@ export class OrdersService {
     const response = async (
       order: Order,
       tx: Prisma.TransactionClient,
-    ): Promise<CustomerOrderResponse> => {
+    ): Promise<CreatedGuestOrder> => {
       if (order.requestHash !== hash)
         throw new ConflictException({
           code: 'ORDER_REQUEST_CONFLICT',
@@ -129,10 +129,14 @@ export class OrdersService {
         createdAt: order.createdAt.toISOString(),
       };
       if (order.mode === 'TAKEOUT')
-        return { order: { ...common, mode: 'TAKEOUT', table: null } };
+        return {
+          trackingToken: this.tokens.issueTracking(order),
+          order: { ...common, mode: 'TAKEOUT', table: null },
+        };
       if (!order.tableCode || !order.tableNumber || !order.tableId)
         throw new Error('Invalid persisted dine-in table binding.');
       return {
+        trackingToken: this.tokens.issueTracking(order),
         order: {
           ...common,
           mode: 'DINE_IN',

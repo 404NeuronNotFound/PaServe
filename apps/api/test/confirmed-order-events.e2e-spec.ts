@@ -19,6 +19,10 @@ describe('Confirmed order customer/staff HTTP access', () => {
     membership = vi.fn();
   let relay: ReturnType<typeof vi.spyOn>;
   let order: {
+    mode: string;
+    totalPrice: { toFixed: () => string };
+    tableCode: null;
+    tableNumber: null;
     id: string;
     shopId: string;
     orderNumber: string;
@@ -74,6 +78,10 @@ describe('Confirmed order customer/staff HTTP access', () => {
       id,
       shopId,
       orderNumber: 'ORD-000042',
+      mode: 'TAKEOUT',
+      totalPrice: { toFixed: () => '12.00' },
+      tableCode: null,
+      tableNumber: null,
       status: 'CONFIRMED',
       paymentStatus: 'PAID',
       decidedAt: new Date(),
@@ -88,7 +96,9 @@ describe('Confirmed order customer/staff HTTP access', () => {
       queuedAt: null,
     };
     findShop.mockImplementation(async ({ where }) =>
-      where.slug === 'cafe' ? { id: shopId } : null,
+      where.slug === 'cafe'
+        ? { id: shopId, name: 'Cafe', primaryColor: null, accentColor: null }
+        : null,
     );
     findOrder.mockImplementation(async ({ where }) =>
       where.id === id && where.shopId === shopId ? order : null,
@@ -107,7 +117,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
   });
   const customer = (
     suffix: string,
-    token = tokens.issue(order),
+    token = tokens.issueTracking(order),
     slug = 'cafe',
     orderId = id,
   ) =>
@@ -124,6 +134,58 @@ describe('Confirmed order customer/staff HTTP access', () => {
       paymentStatus: 'PAID',
     });
     expect(Object.keys(result.body.order)).not.toContain('qrTokenNonce');
+  });
+  it('establishes a persistent order-scoped HttpOnly tracking session and reopens the receipt using only its cookie', async () => {
+    const token = tokens.issueTracking(order);
+    const path = `/api/v1/menu/cafe/orders/${id}`;
+    const established = await request(app.getHttpServer())
+      .post(`${path}/tracking-session`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+    const cookies = established.headers['set-cookie'] as unknown as string[];
+    expect(cookies).toHaveLength(1);
+    expect(cookies[0]).toContain('HttpOnly');
+    expect(cookies[0]).toContain('SameSite=Strict');
+    expect(cookies[0]).toContain(`Path=${path}`);
+    expect(cookies[0]).toContain('Expires=');
+    expect(established.headers['cache-control']).toBe('no-store');
+    const cookie = cookies[0].split(';')[0];
+    const receipt = await request(app.getHttpServer())
+      .get(`${path}/status`)
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(receipt.body.receipt).toMatchObject({
+      shopSlug: 'cafe',
+      shopName: 'Cafe',
+      id,
+      totalPrice: '12.00',
+      mode: 'TAKEOUT',
+    });
+    expect(JSON.stringify(receipt.body)).not.toContain(token);
+    const share = await request(app.getHttpServer())
+      .get(`${path}/tracking-link`)
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(share.body.trackingToken).toBe(token);
+    expect(share.headers['cache-control']).toBe('no-store');
+    order.receiptAccessRevokedAt = new Date();
+    await request(app.getHttpServer())
+      .get(`${path}/tracking-link`)
+      .set('Cookie', cookie)
+      .expect(403);
+  });
+  it('rejects cashier credentials for guest sessions, status and sharing, and rejects ambiguous cookies', async () => {
+    const cashier = tokens.issue(order);
+    await customer('status', cashier).expect(403);
+    await customer('tracking-link', cashier).expect(403);
+    await request(app.getHttpServer())
+      .post(`/api/v1/menu/cafe/orders/${id}/tracking-session`)
+      .set('Authorization', `Bearer ${cashier}`)
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/v1/menu/cafe/orders/${id}/status`)
+      .set('Cookie', 'paserve_tracking=a; paserve_tracking=b')
+      .expect(401);
   });
   it('keeps receipt reads authorized and available when realtime is unavailable', async () => {
     relay.mockImplementationOnce(async () => {
@@ -226,7 +288,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
       .get(`/api/v1/menu/cafe/orders/${id}/status`)
       .expect(401);
     await customer('status', 'invalid').expect(403);
-    const token = tokens.issue(order);
+    const token = tokens.issueTracking(order);
     order.receiptAccessRevokedAt = new Date();
     await customer('events', token).expect(403);
     order.receiptAccessRevokedAt = null;
@@ -235,10 +297,10 @@ describe('Confirmed order customer/staff HTTP access', () => {
     expect(relay).not.toHaveBeenCalled();
   });
   it('binds customer reads and streams to the route shop and exact order', async () => {
-    await customer('status', tokens.issue(order), 'other').expect(404);
+    await customer('status', tokens.issueTracking(order), 'other').expect(404);
     await customer(
       'events',
-      tokens.issue(order),
+      tokens.issueTracking(order),
       'cafe',
       '55b18d73-f2fb-4fe6-bb1c-30cf385c3b24',
     ).expect(404);

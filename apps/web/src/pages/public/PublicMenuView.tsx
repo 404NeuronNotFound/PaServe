@@ -18,6 +18,7 @@ import { ShopBanner } from "../../components/shops/ShopBanner";
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import "./public-menu.css";
 import { CurrentTable } from "./CurrentTable";
+import { YourActiveOrders } from "./YourActiveOrders";
 
 export function PublicMenuView({
   menu,
@@ -89,6 +90,7 @@ export function PublicMenuView({
         </span>
         {!preview && <AppearanceToggle />}
       </div>
+      {!preview && <YourActiveOrders key={shop.slug} shopSlug={shop.slug} />}
       <div className="menu-shop-hero">
         <ShopBanner url={shop.bannerUrl} name={shop.name} />
         <header className="public-menu-header">

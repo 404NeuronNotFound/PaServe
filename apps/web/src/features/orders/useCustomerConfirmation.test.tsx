@@ -11,7 +11,7 @@ vi.mock("../../lib/api/client", () => ({
 }));
 const shopId = "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e";
 const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828";
-const token = `${Buffer.from(JSON.stringify({ v: 1, purpose: "order-receipt", shopId, orderId, nonce: "75992537-5d60-4d22-8e1e-60a114644681", exp: Date.parse("2030-01-01T00:00:00Z") })).toString("base64url")}.${"a".repeat(43)}`;
+const token = `${Buffer.from(JSON.stringify({ v: 1, purpose: "order-tracking", shopId, orderId, nonce: "75992537-5d60-4d22-8e1e-60a114644681", exp: Date.parse("2030-01-01T00:00:00Z") })).toString("base64url")}.${"a".repeat(43)}`;
 const pending = {
   id: orderId,
   shopId,
@@ -121,6 +121,7 @@ it("coalesces duplicate events during a read and retains one confirmed state aga
   act(() => {
     for (let i = 0; i < 5; i++) notify("order_confirmed", { shopId, orderId });
   });
+  await flush();
   expect(fetchStatus).toHaveBeenCalledTimes(2);
   await act(async () => complete(response(confirmed)));
   await flush();
@@ -384,6 +385,8 @@ it("isolates a changed shop from a delayed response for the previous shop", asyn
   const { result, rerender } = renderHook(({ slug }) => useCustomerConfirmation(slug, orderId, token), {
     initialProps: { slug: "cafe" },
   });
+  await flush();
+  expect(fetchStatus).toHaveBeenCalledTimes(1);
   fetchStatus.mockResolvedValue({ ok: false, status: 404 });
   rerender({ slug: "other-shop" });
   await flush();

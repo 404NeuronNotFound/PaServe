@@ -914,3 +914,5 @@
 @media (max-width: 640px) {
   .public-menu .menu-shop-hero .shop-banner { aspect-ratio: 3 / 1; }
 }
+.guest-active-orders { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); }
+.guest-active-orders p { flex-basis: 100%; margin: 0; color: var(--color-muted); font-size: 0.8125rem; }

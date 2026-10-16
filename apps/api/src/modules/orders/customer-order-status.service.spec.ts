@@ -26,6 +26,10 @@ describe('Customer receipt status access', () => {
     orderNumber: 'ORD-000042',
     status: 'PENDING_CONFIRMATION',
     paymentStatus: 'UNPAID',
+    mode: 'TAKEOUT',
+    totalPrice: { toFixed: () => '12.00' },
+    tableCode: null,
+    tableNumber: null,
     ...tokens.metadata(),
     qrTokenRevokedAt: null as Date | null,
     receiptAccessRevokedAt: null as Date | null,
@@ -42,12 +46,17 @@ describe('Customer receipt status access', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     order = fixture();
-    database.shop.findFirst.mockResolvedValue({ id: shopId });
+    database.shop.findFirst.mockResolvedValue({
+      id: shopId,
+      name: 'Cafe',
+      primaryColor: null,
+      accentColor: null,
+    });
     database.order.findFirst.mockImplementation(async () => order);
   });
 
   it('reads only the credential-bound order under its resolved shop', async () => {
-    const result = await service.read('cafe', id, tokens.issue(order));
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
     expect(database.order.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id, shopId, shop: { id: shopId, isActive: true } },
@@ -69,7 +78,7 @@ describe('Customer receipt status access', () => {
     ]);
   });
   it('allows read-only receipt access after scan consumption while staff verification stays revoked', async () => {
-    const token = tokens.issue(order);
+    const token = tokens.issueTracking(order);
     order.status = 'CONFIRMED';
     order.paymentStatus = 'PAID';
     order.decidedAt = new Date();
@@ -89,7 +98,7 @@ describe('Customer receipt status access', () => {
     order.preparationStatus = 'PREPARING';
     order.queuedAt = order.decidedAt;
     order.preparationStartedAt = new Date(order.decidedAt.getTime() + 1000);
-    const result = await service.read('cafe', id, tokens.issue(order));
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
     expect(result.order).toMatchObject({
       preparationStatus: 'PREPARING',
       preparationStartedAt: order.preparationStartedAt.toISOString(),
@@ -97,7 +106,7 @@ describe('Customer receipt status access', () => {
     expect(result.order).not.toHaveProperty('preparationStartedBy');
     order.preparationStartedAt = null;
     await expect(
-      service.read('cafe', id, tokens.issue(order)),
+      service.read('cafe', id, tokens.issueTracking(order)),
     ).rejects.toMatchObject({ response: { code: 'INVALID_ORDER_STATE' } });
   });
   it('returns saved readiness and rejects an invalid readiness timeline', async () => {
@@ -108,7 +117,7 @@ describe('Customer receipt status access', () => {
     order.preparationStatus = 'READY';
     order.preparationStartedAt = new Date(order.decidedAt.getTime() + 1000);
     order.preparationReadyAt = new Date(order.decidedAt.getTime() + 2000);
-    const result = await service.read('cafe', id, tokens.issue(order));
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
     expect(result.order).toMatchObject({
       preparationStatus: 'READY',
       preparationReadyAt: order.preparationReadyAt.toISOString(),
@@ -116,7 +125,7 @@ describe('Customer receipt status access', () => {
     expect(result.order).not.toHaveProperty('preparationReadyBy');
     order.preparationReadyAt = order.decidedAt;
     await expect(
-      service.read('cafe', id, tokens.issue(order)),
+      service.read('cafe', id, tokens.issueTracking(order)),
     ).rejects.toMatchObject({ response: { code: 'INVALID_ORDER_STATE' } });
   });
   it('returns saved completion and rejects missing or out-of-order completion time', async () => {
@@ -128,7 +137,7 @@ describe('Customer receipt status access', () => {
     order.preparationStartedAt = new Date(order.decidedAt.getTime() + 1000);
     order.preparationReadyAt = new Date(order.decidedAt.getTime() + 2000);
     order.completedAt = new Date(order.decidedAt.getTime() + 3000);
-    const result = await service.read('cafe', id, tokens.issue(order));
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
     expect(result.order).toMatchObject({
       preparationStatus: 'COMPLETED',
       completedAt: order.completedAt.toISOString(),
@@ -137,7 +146,7 @@ describe('Customer receipt status access', () => {
     for (const invalid of [null, order.decidedAt]) {
       order.completedAt = invalid;
       await expect(
-        service.read('cafe', id, tokens.issue(order)),
+        service.read('cafe', id, tokens.issueTracking(order)),
       ).rejects.toMatchObject({ response: { code: 'INVALID_ORDER_STATE' } });
     }
   });
@@ -148,7 +157,7 @@ describe('Customer receipt status access', () => {
     'expired',
     'receipt-revoked',
   ])('rejects %s credentials', async (kind) => {
-    const token = tokens.issue(order);
+    const token = tokens.issueTracking(order);
     let target = id,
       credential = token;
     if (kind === 'wrong-order') target = '75992537-5d60-4d22-8e1e-60a114644681';
@@ -165,14 +174,19 @@ describe('Customer receipt status access', () => {
     order.status = 'CONFIRMED';
     order.decidedAt = new Date();
     await expect(
-      service.read('cafe', id, tokens.issue(order)),
+      service.read('cafe', id, tokens.issueTracking(order)),
     ).rejects.toMatchObject({ response: { code: 'INVALID_ORDER_STATE' } });
   });
-  it.each(['PENDING_CONFIRMATION', 'REJECTED'])('rejects contradictory paid %s state', async (status) => {
-    order.status = status;
-    order.paymentStatus = 'PAID';
-    await expect(service.read('cafe', id, tokens.issue(order))).rejects.toMatchObject({
-      response: { code: 'INVALID_ORDER_STATE' },
-    });
-  });
+  it.each(['PENDING_CONFIRMATION', 'REJECTED'])(
+    'rejects contradictory paid %s state',
+    async (status) => {
+      order.status = status;
+      order.paymentStatus = 'PAID';
+      await expect(
+        service.read('cafe', id, tokens.issueTracking(order)),
+      ).rejects.toMatchObject({
+        response: { code: 'INVALID_ORDER_STATE' },
+      });
+    },
+  );
 });

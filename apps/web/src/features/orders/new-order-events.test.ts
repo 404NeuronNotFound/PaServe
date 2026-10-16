@@ -158,6 +158,16 @@ it("stops on denied access and requests an authorized refresh", async () => {
   expect(fetchMock).toHaveBeenCalledOnce();
 });
 
+it("supports a guest HttpOnly cookie stream without a staff or cashier bearer token", async () => {
+  const events = vi.fn();
+  stop = subscribeOrderStream("/menu/cafe/orders/order-a/events", { shopId: "shop-a", orderId: "order-a" }, "order_ready", () => null, events, status, false, false, true);
+  await flush();
+  const [, options] = fetchMock.mock.calls[0];
+  expect(options.credentials).toBe("include");
+  expect(options.headers.Authorization).toBeUndefined();
+  expect(status).not.toHaveBeenCalledWith("denied");
+});
+
 it("refreshes expired credentials and reconnects with the replacement token", async () => {
   fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }));
   vi.mocked(refreshSession).mockImplementation(async () => {

@@ -19,16 +19,16 @@ import { readCustomerOrderQr } from "../../features/cart/customer-order-qr";
 import { OrderReferenceCard } from "./OrderReferenceCard";
 import { useCustomerConfirmation } from "../../features/orders/useCustomerConfirmation";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { GuestTrackingShare } from "./GuestTrackingShare";
 
 export function CustomerOrderPage() {
   const { shopSlug = "", orderId = "" } = useParams();
-  const receipt = readOrderReceipt(shopSlug, orderId);
   const qr = readCustomerOrderQr(shopSlug, orderId);
   const tracking = useCustomerConfirmation(
     shopSlug,
     orderId,
-    receipt && qr?.orderNumber === receipt.orderNumber ? qr.qrToken : null,
   );
+  const receipt = tracking.receipt ?? readOrderReceipt(shopSlug, orderId);
   const savedStatus = tracking.order;
   const confirmed = savedStatus?.status === "CONFIRMED";
   const rejected = savedStatus?.status === "REJECTED";
@@ -171,6 +171,9 @@ export function CustomerOrderPage() {
                   ? "Payment confirmed by the cashier."
                   : "Payment has not been confirmed by the cashier."}
               </p>
+              {tracking.state === "current" && (
+                <GuestTrackingShare key={`share:${shopSlug}:${orderId}`} shopSlug={shopSlug} orderId={orderId} orderNumber={receipt.orderNumber} />
+              )}
             </section>
             <section
               className="order-receipt-next"
@@ -302,7 +305,7 @@ export function CustomerOrderPage() {
                   {tracking.state === "loading"
                     ? "Checking the latest order status. The receipt shows the last saved status."
                     : tracking.state === "denied" || tracking.state === "unavailable"
-                      ? "Live tracking is unavailable for this receipt. The status shown may be out of date. Ask the counter staff for the latest update."
+                      ? "Live tracking is unavailable for this receipt. The status shown may be out of date. Open your private tracking link again or ask the counter staff for the latest update."
                       : "Unable to refresh your order status. The status shown may be out of date. We will retry automatically; you can also ask the counter staff."}
                 </InlineMessage>
               )}
@@ -338,15 +341,19 @@ export function CustomerOrderPage() {
             </div>
           </footer>
         </article>
+      ) : tracking.state === "loading" ? (
+        <section className="order-receipt-card order-receipt-unavailable" role="status">
+          Loading your order…
+        </section>
       ) : (
         <section className="order-receipt-card order-receipt-unavailable">
           <h1 ref={heading} tabIndex={-1}>
             Order receipt unavailable
           </h1>
           <p role="alert">
-            This receipt is not saved in this browser session. If you already
-            submitted an order, ask the counter to check it before placing
-            another.
+            We could not reopen this receipt. Open your private tracking link,
+            or ask the counter to check it using your order number before placing
+            another order.
           </p>
           <Link className="secondary-button" to={menuUrl}>
             <FiArrowLeft aria-hidden="true" /> Back to menu

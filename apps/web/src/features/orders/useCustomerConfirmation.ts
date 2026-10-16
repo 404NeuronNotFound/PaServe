@@ -4,6 +4,17 @@ import { PREPARATION_STATUSES } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import { parseOrderQrToken } from "./order-qr-reference";
 import { subscribeOrderStream } from "./new-order-events";
+import {
+  readOrderReceipt,
+  recoverOrderReceipt,
+  type OrderReceipt,
+} from "../cart/order-receipt";
+import {
+  forgetActiveOrder,
+  isTrackingOrderId,
+  redeemTrackingLink,
+  rememberActiveOrder,
+} from "./guest-tracking";
 
 function phase(order: CustomerOrderStatusResponse["order"]) {
   return order.status === "CONFIRMED"
@@ -17,7 +28,7 @@ function phase(order: CustomerOrderStatusResponse["order"]) {
 export function useCustomerConfirmation(
   shopSlug: string,
   orderId: string,
-  token: string | null,
+  token: string | null = null,
 ) {
   const [health, setHealth] = useState<{
     key: string;
@@ -26,11 +37,17 @@ export function useCustomerConfirmation(
   const [saved, setSaved] = useState<{
     key: string;
     order: CustomerOrderStatusResponse["order"];
+    receipt: OrderReceipt | null;
   } | null>(null);
   const key = JSON.stringify([shopSlug, orderId, token]);
   useEffect(() => {
-    const reference = token ? parseOrderQrToken(token) : null;
-    if (!token || !reference || reference.orderId !== orderId) return;
+    const reference = token ? parseOrderQrToken(token, "order-tracking") : null;
+    if (
+      !isTrackingOrderId(orderId) ||
+      (token && (!reference || reference.orderId !== orderId))
+    )
+      return;
+    const established = redeemTrackingLink(shopSlug, orderId);
     let active = true,
       loading = false,
       again = false,
@@ -40,6 +57,7 @@ export function useCustomerConfirmation(
     let latestPhase = -1;
     let latestUpdatedAt = -Infinity;
     let unsubscribe = () => {};
+    let subscribed = false;
     const recover = () => {
       void refresh();
     };
@@ -61,10 +79,20 @@ export function useCustomerConfirmation(
       request = new AbortController();
       const timeout = setTimeout(() => request?.abort(), 15_000);
       try {
+        try {
+          await established;
+        } catch {
+          denied = true;
+          stopWatching();
+          throw new Error("Tracking link unavailable");
+        }
+        if (!active) return;
         const response = await fetch(
           `${(api.defaults?.baseURL ?? "").replace(/\/$/, "")}${path}/status`,
           {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            credentials: "include",
+            referrerPolicy: "no-referrer",
             signal: request.signal,
             cache: "no-store",
           },
@@ -81,7 +109,8 @@ export function useCustomerConfirmation(
         if (
           !order ||
           order.id !== orderId ||
-          order.shopId !== reference!.shopId ||
+          !isTrackingOrderId(order.shopId) ||
+          (reference && order.shopId !== reference.shopId) ||
           !["PENDING_CONFIRMATION", "CONFIRMED", "REJECTED"].includes(
             order.status,
           ) ||
@@ -124,9 +153,30 @@ export function useCustomerConfirmation(
             setHealth({ key, state: "stale" });
             return;
           }
+          const receipt = data.receipt
+            ? readOrderReceipt(shopSlug, orderId, data.receipt)
+            : null;
+          if (
+            data.receipt &&
+            (!receipt || receipt.orderNumber !== order.orderNumber)
+          )
+            throw new Error("Invalid saved receipt");
+          if (receipt) recoverOrderReceipt(shopSlug, orderId, receipt);
           setHealth({ key, state: "current" });
           latestPhase = nextPhase;
           latestUpdatedAt = nextUpdatedAt;
+          if (
+            order.status === "REJECTED" ||
+            order.preparationStatus === "COMPLETED"
+          )
+            forgetActiveOrder(shopSlug, orderId);
+          else if (data.trackingExpiresAt)
+            rememberActiveOrder(
+              shopSlug,
+              orderId,
+              order.orderNumber,
+              Date.parse(data.trackingExpiresAt),
+            );
           setSaved((previous) =>
             previous?.key === key &&
             (phase(previous.order) > phase(order) ||
@@ -134,18 +184,40 @@ export function useCustomerConfirmation(
                 Date.parse(previous.order.updatedAt) >
                   Date.parse(order.updatedAt)))
               ? previous
-              : { key, order },
+              : { key, order, receipt },
           );
+          if (!subscribed) {
+            subscribed = true;
+            unsubscribe = subscribeOrderStream(
+              `${path}/events`,
+              { shopId: order.shopId, orderId },
+              [
+                "order_confirmed",
+                "order_preparing",
+                "order_ready",
+                "order_completed",
+              ],
+              () => token,
+              () => {
+                void refresh();
+              },
+              () => {},
+              false,
+              false,
+              !token,
+            );
+          }
         }
         if (
           active &&
-          (order.preparationStatus === "COMPLETED" || order.status === "REJECTED")
+          (order.preparationStatus === "COMPLETED" ||
+            order.status === "REJECTED")
         ) {
           terminal = true;
           stopWatching();
         }
       } catch {
-        if (active) setHealth({ key, state: "stale" });
+        if (active) setHealth({ key, state: denied ? "denied" : "stale" });
       } finally {
         clearTimeout(timeout);
         loading = false;
@@ -156,16 +228,6 @@ export function useCustomerConfirmation(
       }
     }
     void refresh();
-    unsubscribe = subscribeOrderStream(
-      `${path}/events`,
-      { shopId: reference.shopId, orderId },
-      ["order_confirmed", "order_preparing", "order_ready", "order_completed"],
-      () => token,
-      () => {
-        void refresh();
-      },
-      () => {},
-    );
     const interval = setInterval(() => {
       void refresh();
     }, 15_000);
@@ -177,11 +239,13 @@ export function useCustomerConfirmation(
       stopWatching();
     };
   }, [shopSlug, orderId, token, key]);
-  const reference = token ? parseOrderQrToken(token) : null;
+  const reference = token ? parseOrderQrToken(token, "order-tracking") : null;
   return {
     order: saved?.key === key ? saved.order : null,
+    receipt: saved?.key === key ? saved.receipt : null,
     state:
-      !reference || reference.orderId !== orderId
+      !isTrackingOrderId(orderId) ||
+      (token && (!reference || reference.orderId !== orderId))
         ? "unavailable"
         : health?.key === key
           ? health.state

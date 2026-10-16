@@ -626,6 +626,10 @@
   flex-wrap: wrap;
   gap: 12px;
 }
+.guest-tracking-share { margin-top: 24px; }
+.guest-tracking-share summary { min-height: 44px; cursor: pointer; display: list-item; padding: 12px 0; font-weight: 650; }
+.guest-tracking-share .order-receipt-footer-actions { margin-top: 12px; }
+.guest-tracking-share img { display: block; max-width: 100%; height: auto; margin-top: 16px; border: 1px solid var(--color-border); border-radius: 12px; background: #fff; }
 .order-receipt-unavailable {
   padding: 36px;
 }
