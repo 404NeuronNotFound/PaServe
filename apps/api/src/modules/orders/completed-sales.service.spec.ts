@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { salesBusinessDate, salesBusinessDayBounds } from '@paserve/contracts';
+import {
+  SALES_PAYMENT_METHODS,
+  salesBusinessDate,
+  salesBusinessDayBounds,
+} from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { CompletedSalesService } from './completed-sales.service.js';
@@ -9,8 +13,9 @@ describe('Daily gross sales', () => {
     shopId = randomUUID();
   const aggregate = vi.fn();
   const aggregateItems = vi.fn();
+  const groupBy = vi.fn();
   const database = {
-    order: { aggregate },
+    order: { aggregate, groupBy },
     orderItem: { aggregate: aggregateItems },
   };
   const transaction = vi.fn(async (work: (tx: typeof database) => unknown) =>
@@ -27,6 +32,7 @@ describe('Daily gross sales', () => {
       _sum: { totalPrice: null },
     });
     aggregateItems.mockResolvedValue({ _sum: { quantity: null } });
+    groupBy.mockResolvedValue([]);
     transaction.mockImplementation(async (work) => work(database));
   });
 
@@ -66,6 +72,13 @@ describe('Daily gross sales', () => {
     expect(aggregate).not.toHaveBeenCalled();
   });
   it('returns exact saved totals and uses the same scoped eligibility as the period report', async () => {
+    groupBy.mockResolvedValue([
+      {
+        paymentMethod: 'CASH',
+        _count: { _all: 200 },
+        _sum: { totalPrice: new Prisma.Decimal('12345678901234.30') },
+      },
+    ]);
     aggregate.mockResolvedValue({
       _count: { _all: 200 },
       _sum: { totalPrice: new Prisma.Decimal('12345678901234.30') },
@@ -81,6 +94,11 @@ describe('Daily gross sales', () => {
       completedOrders: 200,
       totalSales: '12345678901234.30',
       itemsSold: 0,
+      paymentBreakdown: SALES_PAYMENT_METHODS.map((paymentMethod) => ({
+        paymentMethod,
+        orders: paymentMethod === 'CASH' ? 200 : 0,
+        totalSales: paymentMethod === 'CASH' ? '12345678901234.30' : '0.00',
+      })),
     });
     expect(aggregate).toHaveBeenCalledWith({
       where: {
@@ -119,6 +137,13 @@ describe('Daily gross sales', () => {
   });
 
   it('sums saved quantities with the same eligibility and a consistent snapshot', async () => {
+    groupBy.mockResolvedValue([
+      {
+        paymentMethod: 'CASH',
+        _count: { _all: 2 },
+        _sum: { totalPrice: new Prisma.Decimal('10.00') },
+      },
+    ]);
     aggregate.mockResolvedValue({
       _count: { _all: 2 },
       _sum: { totalPrice: new Prisma.Decimal('10.00') },
@@ -136,6 +161,66 @@ describe('Daily gross sales', () => {
     expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
       isolationLevel: 'RepeatableRead',
     });
+  });
+  it('groups methods with identical eligibility, fills missing methods and reconciles exact totals', async () => {
+    aggregate.mockResolvedValue({
+      _count: { _all: 4 },
+      _sum: { totalPrice: new Prisma.Decimal('0.30') },
+    });
+    groupBy.mockResolvedValue([
+      {
+        paymentMethod: 'GCASH_MANUAL',
+        _count: { _all: 1 },
+        _sum: { totalPrice: new Prisma.Decimal('0.20') },
+      },
+      {
+        paymentMethod: 'CASH',
+        _count: { _all: 2 },
+        _sum: { totalPrice: new Prisma.Decimal('0.10') },
+      },
+      {
+        paymentMethod: 'OTHER',
+        _count: { _all: 1 },
+        _sum: { totalPrice: new Prisma.Decimal('0.00') },
+      },
+    ]);
+    const result = await service.daily(actorId, shopId, '2026-10-16');
+    expect(result.paymentBreakdown).toEqual([
+      { paymentMethod: 'CASH', orders: 2, totalSales: '0.10' },
+      { paymentMethod: 'GCASH_MANUAL', orders: 1, totalSales: '0.20' },
+      { paymentMethod: 'CARD_MANUAL', orders: 0, totalSales: '0.00' },
+      { paymentMethod: 'OTHER', orders: 1, totalSales: '0.00' },
+    ]);
+    expect(groupBy).toHaveBeenCalledWith({
+      by: ['paymentMethod'],
+      where: aggregate.mock.calls[0][0].where,
+      _count: { _all: true },
+      _sum: { totalPrice: true },
+    });
+  });
+  it.each([null, 'UNKNOWN'])(
+    'fails closed for unsupported saved payment method %s',
+    async (paymentMethod) => {
+      groupBy.mockResolvedValue([
+        {
+          paymentMethod,
+          _count: { _all: 1 },
+          _sum: { totalPrice: new Prisma.Decimal(1) },
+        },
+      ]);
+      await expect(
+        service.daily(actorId, shopId, '2026-10-16'),
+      ).rejects.toThrow('Payment breakdown could not be calculated');
+    },
+  );
+  it('fails closed when payment groups do not reconcile', async () => {
+    aggregate.mockResolvedValue({
+      _count: { _all: 1 },
+      _sum: { totalPrice: new Prisma.Decimal(1) },
+    });
+    await expect(service.daily(actorId, shopId, '2026-10-16')).rejects.toThrow(
+      'does not match the sales summary',
+    );
   });
   it.each([-1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
     'fails closed for an invalid item aggregate %s',

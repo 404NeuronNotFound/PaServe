@@ -1232,7 +1232,14 @@ export function salesBusinessDayBounds(date: unknown): { from: string; to: strin
   return { from: new Date(start).toISOString(), to: new Date(start + 86_400_000).toISOString() };
 }
 
+export const SALES_PAYMENT_METHODS = ["CASH", "GCASH_MANUAL", "CARD_MANUAL", "OTHER"] as const;
+export interface PaymentBreakdownEntry {
+  paymentMethod: (typeof SALES_PAYMENT_METHODS)[number];
+  orders: number;
+  totalSales: string;
+}
 export interface DailySalesResponse extends CompletedSalesResponse {
+  paymentBreakdown: PaymentBreakdownEntry[];
   itemsSold: number;
   shopId: string;
   businessDate: string;

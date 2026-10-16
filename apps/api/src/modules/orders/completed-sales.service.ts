@@ -8,6 +8,7 @@ import {
   hasShopPermission,
   salesBusinessDayBounds,
   SALES_TIMEZONE,
+  SALES_PAYMENT_METHODS,
   type DailySalesResponse,
   type CompletedSalesResponse,
 } from '@paserve/contracts';
@@ -35,28 +36,73 @@ export class CompletedSalesService {
       });
     const start = new Date(bounds.from),
       end = new Date(bounds.to);
-    const { summary, itemsSold } = await this.prisma.$transaction(
-      async (tx) => {
-        const summary = await this.aggregate(actorId, shopId, start, end, tx);
-        const items = await tx.orderItem.aggregate({
-          where: {
-            shopId,
-            order: this.eligibleOrders(actorId, shopId, start, end),
-          },
-          _sum: { quantity: true },
-        });
-        const itemsSold = items._sum.quantity ?? 0;
-        if (!Number.isSafeInteger(itemsSold) || itemsSold < 0)
-          throw new InternalServerErrorException(
-            'Items sold could not be calculated.',
+    const { summary, itemsSold, paymentBreakdown } =
+      await this.prisma.$transaction(
+        async (tx) => {
+          const summary = await this.aggregate(actorId, shopId, start, end, tx);
+          const items = await tx.orderItem.aggregate({
+            where: {
+              shopId,
+              order: this.eligibleOrders(actorId, shopId, start, end),
+            },
+            _sum: { quantity: true },
+          });
+          const itemsSold = items._sum.quantity ?? 0;
+          if (!Number.isSafeInteger(itemsSold) || itemsSold < 0)
+            throw new InternalServerErrorException(
+              'Items sold could not be calculated.',
+            );
+          const groups = await tx.order.groupBy({
+            by: ['paymentMethod'],
+            where: this.eligibleOrders(actorId, shopId, start, end),
+            _count: { _all: true },
+            _sum: { totalPrice: true },
+          });
+          if (
+            groups.some(
+              (group) =>
+                !SALES_PAYMENT_METHODS.some(
+                  (method) => method === group.paymentMethod,
+                ),
+            )
+          ) {
+            throw new InternalServerErrorException(
+              'Payment breakdown could not be calculated.',
+            );
+          }
+          const paymentBreakdown = SALES_PAYMENT_METHODS.map(
+            (paymentMethod) => {
+              const group = groups.find(
+                (row) => row.paymentMethod === paymentMethod,
+              );
+              return {
+                paymentMethod,
+                orders: group?._count._all ?? 0,
+                totalSales: group?._sum.totalPrice?.toFixed(2) ?? '0.00',
+              };
+            },
           );
-        return { summary, itemsSold };
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-    );
+          const groupedTotal = paymentBreakdown.reduce(
+            (sum, group) => sum.plus(group.totalSales),
+            new Prisma.Decimal(0),
+          );
+          if (
+            paymentBreakdown.reduce((sum, group) => sum + group.orders, 0) !==
+              summary.completedOrders ||
+            !groupedTotal.equals(summary.totalSales)
+          ) {
+            throw new InternalServerErrorException(
+              'Payment breakdown does not match the sales summary.',
+            );
+          }
+          return { summary, itemsSold, paymentBreakdown };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      );
     return {
       ...summary,
       itemsSold,
+      paymentBreakdown,
       shopId,
       businessDate: date as string,
       timezone: SALES_TIMEZONE,

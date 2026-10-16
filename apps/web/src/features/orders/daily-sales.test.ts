@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { api } from "../../lib/api/client";
 import { getDailySales } from "./daily-sales";
+import { SALES_PAYMENT_METHODS } from "@paserve/contracts";
 
 const response = () => ({
   shopId: "shop-a",
@@ -12,7 +13,34 @@ const response = () => ({
   completedOrders: 30,
   itemsSold: 75,
   totalSales: "12345678901234.30",
+  paymentBreakdown: SALES_PAYMENT_METHODS.map((paymentMethod) => ({
+    paymentMethod,
+    orders: paymentMethod === "CASH" ? 30 : 0,
+    totalSales: paymentMethod === "CASH" ? "12345678901234.30" : "0.00",
+  })),
 });
+
+it.each([
+  undefined,
+  [],
+  [{ paymentMethod: "CASH", orders: 30, totalSales: "12345678901234.30" }],
+  response().paymentBreakdown.map((row) => ({ ...row, paymentMethod: "CASH" })),
+  response().paymentBreakdown.map((row) => ({ ...row, orders: -1 })),
+  response().paymentBreakdown.map((row) => ({ ...row, orders: 1.5 })),
+  response().paymentBreakdown.map((row) => ({ ...row, totalSales: "NaN" })),
+  response().paymentBreakdown.map((row) => ({ ...row, totalSales: "0.00" })),
+  response().paymentBreakdown.map((row) => ({ ...row, orders: 0 })),
+])(
+  "rejects malformed or non-reconciling payment groups %j",
+  async (paymentBreakdown) => {
+    vi.spyOn(api, "get").mockResolvedValue({
+      data: { ...response(), paymentBreakdown },
+    });
+    await expect(
+      getDailySales("shop-a", "2026-10-16", new AbortController().signal),
+    ).rejects.toThrow("Payment breakdown");
+  },
+);
 afterEach(() => vi.restoreAllMocks());
 it("requests the explicit business date and preserves large exact sales totals", async () => {
   const get = vi.spyOn(api, "get").mockResolvedValue({ data: response() });

@@ -11,6 +11,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import {
+  SALES_PAYMENT_METHODS,
   salesBusinessDayBounds,
   type CurrentUserResponse,
   type UserMembership,
@@ -23,6 +24,13 @@ import { SalesDashboardPage } from "./SalesDashboardPage";
 vi.mock("../../features/orders/daily-sales", () => ({
   getDailySales: vi.fn(),
 }));
+
+const breakdown = (totalSales = "0.30", orders = 2) =>
+  SALES_PAYMENT_METHODS.map((paymentMethod) => ({
+    paymentMethod,
+    orders: paymentMethod === "CASH" ? orders : 0,
+    totalSales: paymentMethod === "CASH" ? totalSales : "0.00",
+  }));
 
 it.each([
   ["0.00", 0, "₱0.00"],
@@ -40,6 +48,7 @@ it.each([
       timezone: "Asia/Manila",
       currency: "PHP",
       totalSales,
+      paymentBreakdown: breakdown(totalSales, completedOrders),
       completedOrders,
       itemsSold: completedOrders * 2,
     });
@@ -86,6 +95,7 @@ beforeEach(() => {
     completedOrders: 2,
     itemsSold: 7,
     totalSales: "0.30",
+    paymentBreakdown: breakdown(),
   }));
 });
 afterEach(() => {
@@ -97,7 +107,9 @@ it.each(["OWNER", "ADMIN", "MANAGER"] as const)(
   "shows today's exact gross total for %s using the Manila date",
   async (role) => {
     setup(role);
-    expect(await screen.findByText("₱0.30")).toBeVisible();
+    expect(
+      await screen.findByText("₱0.30", { selector: ".sales-amount" }),
+    ).toBeVisible();
     expect(screen.getByLabelText("Business date")).toHaveValue("2026-10-16");
     expect(screen.getByText("Today’s Sales")).toBeVisible();
     expect(screen.getByText(/Midnight inclusive/)).toBeVisible();
@@ -130,7 +142,7 @@ it.each(["CASHIER", "KITCHEN"] as const)(
 );
 it("loads the selected day, clears the total while pending, and returns to today", async () => {
   setup();
-  await screen.findByText("₱0.30");
+  await screen.findByText("₱0.30", { selector: ".sales-amount" });
   let resolve!: (value: Awaited<ReturnType<typeof getDailySales>>) => void;
   vi.mocked(getDailySales).mockImplementationOnce(
     () =>
@@ -141,7 +153,9 @@ it("loads the selected day, clears the total while pending, and returns to today
   fireEvent.change(screen.getByLabelText("Business date"), {
     target: { value: "2026-10-14" },
   });
-  expect(screen.queryByText("₱0.30")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("₱0.30", { selector: ".sales-amount" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("article", { name: "Items Sold" }),
   ).not.toBeInTheDocument();
@@ -161,9 +175,12 @@ it("loads the selected day, clears the total while pending, and returns to today
       completedOrders: 0,
       itemsSold: 0,
       totalSales: "0.00",
+      paymentBreakdown: breakdown("0.00", 0),
     }),
   );
-  expect((await screen.findAllByText("₱0.00"))[0]).toBeVisible();
+  expect(
+    (await screen.findAllByText("₱0.00", { selector: ".sales-amount" }))[0],
+  ).toBeVisible();
   expect(
     within(
       screen.getByRole("article", { name: "Average Order Value" }),
@@ -180,7 +197,9 @@ it("loads the selected day, clears the total while pending, and returns to today
     ),
   ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Today" }));
-  expect(await screen.findByText("₱0.30")).toBeVisible();
+  expect(
+    await screen.findByText("₱0.30", { selector: ".sales-amount" }),
+  ).toBeVisible();
   expect(
     within(screen.getByRole("article", { name: "Number of Orders" })).getByText(
       "2",
@@ -189,7 +208,7 @@ it("loads the selected day, clears the total while pending, and returns to today
 });
 it("hides a previous total on refresh failure and allows retry", async () => {
   setup();
-  await screen.findByText("₱0.30");
+  await screen.findByText("₱0.30", { selector: ".sales-amount" });
   vi.mocked(getDailySales).mockRejectedValueOnce(new Error("offline"));
   fireEvent.click(screen.getByRole("button", { name: "Refresh sales" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -201,16 +220,20 @@ it("hides a previous total on refresh failure and allows retry", async () => {
   expect(
     screen.queryByRole("article", { name: "Average Order Value" }),
   ).not.toBeInTheDocument();
-  expect(screen.queryByText("₱0.30")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("₱0.30", { selector: ".sales-amount" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("article", { name: "Number of Orders" }),
   ).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-  expect(await screen.findByText("₱0.30")).toBeVisible();
+  expect(
+    await screen.findByText("₱0.30", { selector: ".sales-amount" }),
+  ).toBeVisible();
 });
 it("hides totals when report access is revoked", async () => {
   setup();
-  await screen.findByText("₱0.30");
+  await screen.findByText("₱0.30", { selector: ".sales-amount" });
   vi.mocked(getDailySales).mockRejectedValueOnce(
     new AxiosError("denied", "ERR_BAD_REQUEST", undefined, undefined, {
       status: 403,
@@ -226,14 +249,16 @@ it("hides totals when report access is revoked", async () => {
   expect(
     screen.queryByRole("article", { name: "Average Order Value" }),
   ).not.toBeInTheDocument();
-  expect(screen.queryByText("₱0.30")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("₱0.30", { selector: ".sales-amount" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("article", { name: "Number of Orders" }),
   ).not.toBeInTheDocument();
 });
 it("does not retain another shop's total or date selection", async () => {
   const view = setup();
-  await screen.findByText("₱0.30");
+  await screen.findByText("₱0.30", { selector: ".sales-amount" });
   fireEvent.change(screen.getByLabelText("Business date"), {
     target: { value: "2026-10-14" },
   });
@@ -256,7 +281,7 @@ it("does not retain another shop's total or date selection", async () => {
 });
 it("advances the Today view across Manila midnight on focus", async () => {
   setup();
-  await screen.findByText("₱0.30");
+  await screen.findByText("₱0.30", { selector: ".sales-amount" });
   vi.setSystemTime(new Date("2026-10-16T16:00:00.000Z"));
   fireEvent(window, new Event("focus"));
   await waitFor(() =>
@@ -266,6 +291,43 @@ it("advances the Today view across Manila midnight on focus", async () => {
       expect.any(AbortSignal),
     ),
   );
+});
+
+it("shows totals and order counts for all four methods, including zero-value payments", async () => {
+  vi.mocked(getDailySales).mockResolvedValueOnce({
+    shopId: "a",
+    businessDate: "2026-10-16",
+    ...salesBusinessDayBounds("2026-10-16")!,
+    timezone: "Asia/Manila",
+    currency: "PHP",
+    totalSales: "600.00",
+    completedOrders: 7,
+    itemsSold: 10,
+    paymentBreakdown: [
+      { paymentMethod: "CASH", orders: 2, totalSales: "100.00" },
+      { paymentMethod: "GCASH_MANUAL", orders: 1, totalSales: "200.00" },
+      { paymentMethod: "CARD_MANUAL", orders: 3, totalSales: "300.00" },
+      { paymentMethod: "OTHER", orders: 1, totalSales: "0.00" },
+    ],
+  });
+  setup();
+  const region = await screen.findByRole("region", {
+    name: "Payment Breakdown",
+  });
+  const table = within(region).getByRole("table", {
+    name: "Sales and order counts by payment method",
+  });
+  for (const [label, count, amount] of [
+    ["Cash", "2", "₱100.00"],
+    ["GCash (manual)", "1", "₱200.00"],
+    ["Card (manual)", "3", "₱300.00"],
+    ["Other", "1", "₱0.00"],
+  ]) {
+    const row = within(table).getByRole("row", {
+      name: `${label} ${count} ${amount}`,
+    });
+    expect(row).toBeVisible();
+  }
 });
 
 it("displays the full eligible order count and refreshes it with the sales total", async () => {
@@ -278,15 +340,20 @@ it("displays the full eligible order count and refreshes it with the sales total
     completedOrders: 1234,
     itemsSold: 3456,
     totalSales: "0.00",
+    paymentBreakdown: breakdown("0.00", 1234),
   });
   setup();
-  expect(await screen.findByText("1,234")).toBeVisible();
+  expect(
+    await screen.findByText("1,234", { selector: ".sales-amount" }),
+  ).toBeVisible();
   expect(
     within(screen.getByRole("article", { name: "Items Sold" })).getByText(
       "3,456",
     ),
   ).toBeVisible();
-  expect(screen.getAllByText("₱0.00")).toHaveLength(2);
+  expect(
+    screen.getAllByText("₱0.00", { selector: ".sales-amount" }),
+  ).toHaveLength(2);
   expect(
     screen.queryByText("No eligible orders for this business day."),
   ).not.toBeInTheDocument();
@@ -299,13 +366,18 @@ it("displays the full eligible order count and refreshes it with the sales total
     completedOrders: 1235,
     itemsSold: 3458,
     totalSales: "1.00",
+    paymentBreakdown: breakdown("1.00", 1235),
   });
   fireEvent.click(screen.getByRole("button", { name: "Refresh sales" }));
-  expect(await screen.findByText("1,235")).toBeVisible();
+  expect(
+    await screen.findByText("1,235", { selector: ".sales-amount" }),
+  ).toBeVisible();
   expect(
     within(screen.getByRole("article", { name: "Items Sold" })).getByText(
       "3,458",
     ),
   ).toBeVisible();
-  expect(screen.getByText("₱1.00")).toBeVisible();
+  expect(
+    screen.getByText("₱1.00", { selector: ".sales-amount" }),
+  ).toBeVisible();
 });

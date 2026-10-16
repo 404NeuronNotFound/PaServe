@@ -85,6 +85,45 @@
   color: var(--color-muted);
   font-size: 13px;
 }
+.sales-payment-breakdown {
+  margin-top: 24px;
+  padding: clamp(18px, 3vw, 32px);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+.sales-payment-breakdown h2 {
+  margin-top: 0;
+  font:
+    400 28px/1.2 Georgia,
+    serif;
+}
+.sales-payment-breakdown table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.sales-payment-breakdown th,
+.sales-payment-breakdown td {
+  padding: 14px 6px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.sales-payment-breakdown th:first-child {
+  text-align: left;
+  width: 36%;
+}
+.sales-payment-breakdown th:nth-child(2) {
+  width: 20%;
+}
+.sales-payment-caption {
+  text-align: left;
+  padding-block: 12px;
+  color: var(--color-muted);
+  font-size: 13px;
+}
 .sales-amount {
   display: block;
   margin-block: 24px;

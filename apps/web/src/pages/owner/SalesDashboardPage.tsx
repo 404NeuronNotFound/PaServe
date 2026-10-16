@@ -233,6 +233,55 @@ function SalesWorkspace({ userId }: { userId: string }) {
               </article>
             </div>
           )}
+          {query.isSuccess && (
+            <section
+              className="sales-payment-breakdown"
+              aria-labelledby="sales-payments-title"
+              aria-busy={query.isFetching}
+            >
+              <h2 id="sales-payments-title">Payment Breakdown</h2>
+              <p className="sales-business-date">{date} · Asia/Manila</p>
+              <p>
+                Eligible completed orders by recorded payment method. Cash
+                totals exclude change.
+              </p>
+              {query.data.completedOrders === 0 && (
+                <p>No eligible payments for this business day.</p>
+              )}
+              <table>
+                <caption className="sales-payment-caption">
+                  Sales and order counts by payment method
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Payment method</th>
+                    <th scope="col">Orders</th>
+                    <th scope="col">Sales</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {query.data.paymentBreakdown.map((entry) => (
+                    <tr key={entry.paymentMethod}>
+                      <th scope="row">
+                        {
+                          {
+                            CASH: "Cash",
+                            GCASH_MANUAL: "GCash (manual)",
+                            CARD_MANUAL: "Card (manual)",
+                            OTHER: "Other",
+                          }[entry.paymentMethod]
+                        }
+                      </th>
+                      <td>
+                        {new Intl.NumberFormat("en-PH").format(entry.orders)}
+                      </td>
+                      <td>{formatCartPrice(entry.totalSales)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
         </>
       )}
       <p className="sales-definition">

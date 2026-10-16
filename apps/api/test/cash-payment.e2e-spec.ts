@@ -27,6 +27,7 @@ describe('Cash collection', () => {
     findQueue = vi.fn(),
     aggregateOrders = vi.fn(),
     aggregateItems = vi.fn(),
+    groupPayments = vi.fn(),
     updateOrder = vi.fn(),
     raw = vi.fn(),
     transaction = vi.fn();
@@ -37,6 +38,7 @@ describe('Cash collection', () => {
       updateMany: updateOrder,
       findMany: findQueue,
       aggregate: aggregateOrders,
+      groupBy: groupPayments,
     },
     $queryRaw: raw,
   };
@@ -159,6 +161,7 @@ describe('Cash collection', () => {
     );
     transaction.mockImplementation(async (work) => work(database));
     aggregateItems.mockResolvedValue({ _sum: { quantity: 7 } });
+    groupPayments.mockResolvedValue([{ paymentMethod: 'CASH', _count: { _all: 2 }, _sum: { totalPrice: new Prisma.Decimal('0.30') } }]);
     aggregateOrders.mockImplementation(async ({ where }) => {
       const eligible =
         active &&
@@ -1507,7 +1510,12 @@ describe('Cash collection', () => {
       .query({ date: '2026-10-16' })
       .set('Authorization', 'Bearer session').expect(200);
     expect(result.headers['cache-control']).toBe('no-store');
-    expect(result.body).toEqual({ shopId, businessDate: '2026-10-16', timezone: 'Asia/Manila', from: '2026-10-15T16:00:00.000Z', to: '2026-10-16T16:00:00.000Z', currency: 'PHP', completedOrders: 2, totalSales: '0.30', itemsSold: 7 });
+    expect(result.body).toEqual({ shopId, businessDate: '2026-10-16', timezone: 'Asia/Manila', from: '2026-10-15T16:00:00.000Z', to: '2026-10-16T16:00:00.000Z', currency: 'PHP', completedOrders: 2, totalSales: '0.30', itemsSold: 7, paymentBreakdown: [
+      { paymentMethod: 'CASH', orders: 2, totalSales: '0.30' },
+      { paymentMethod: 'GCASH_MANUAL', orders: 0, totalSales: '0.00' },
+      { paymentMethod: 'CARD_MANUAL', orders: 0, totalSales: '0.00' },
+      { paymentMethod: 'OTHER', orders: 0, totalSales: '0.00' },
+    ] });
     expect(aggregateOrders).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ shopId, status: 'CONFIRMED', paymentStatus: 'PAID', preparationStatus: 'COMPLETED', completedAt: { gte: new Date('2026-10-15T16:00:00.000Z'), lt: new Date('2026-10-16T16:00:00.000Z') } }) }));
   });
   it.each(['KITCHEN', 'CASHIER'] as const)('denies daily sales for %s', async (reportRole) => {

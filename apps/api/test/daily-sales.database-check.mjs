@@ -134,7 +134,12 @@ try {
     });
 
   const expected = [];
-  expected.push(await completed('2026-10-15T16:00:00.000Z', '0.10')); // Exactly start: included.
+  expected.push(
+    await completed('2026-10-15T16:00:00.000Z', '0.10', {
+      amountReceived: '1.00',
+      changeDue: '0.90',
+    }),
+  ); // Start included; tender/change must not inflate sales.
   expected.push(await completed('2026-10-16T15:59:59.999Z', '0.20')); // Last millisecond: included.
   for (const paymentMethod of ['GCASH_MANUAL', 'CARD_MANUAL', 'OTHER']) {
     expected.push(
@@ -232,7 +237,7 @@ try {
   // Independently filter persisted rows using PostgreSQL business-date conversion.
   // Do not reuse the service's bounds helper or its aggregate query.
   const { rows } = await client.query(
-    `SELECT id, "totalPrice"::text AS total FROM "${schema}".orders WHERE "shopId"=$1 AND status='CONFIRMED' AND "paymentStatus"='PAID' AND "preparationStatus"='COMPLETED' AND "completedBy" IS NOT NULL AND currency='PHP' AND (("completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila')::date=$2::date ORDER BY id`,
+    `SELECT id, "paymentMethod", "totalPrice"::text AS total FROM "${schema}".orders WHERE "shopId"=$1 AND status='CONFIRMED' AND "paymentStatus"='PAID' AND "preparationStatus"='COMPLETED' AND "completedBy" IS NOT NULL AND currency='PHP' AND (("completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila')::date=$2::date ORDER BY id`,
     [shop.id, '2026-10-16'],
   );
   assert.deepEqual(
@@ -248,6 +253,33 @@ try {
   assert.equal(report.totalSales, expectedTotal);
   assert.equal(report.totalSales, '10000000060.32');
   assert.equal(report.completedOrders, 37);
+  assert.equal(report.paymentBreakdown.length, 4);
+  for (const entry of report.paymentBreakdown) {
+    const methodOrders = rows.filter(
+      (row) => row.paymentMethod === entry.paymentMethod,
+    );
+    assert.equal(entry.orders, methodOrders.length);
+    assert.equal(
+      BigInt(entry.totalSales.replace('.', '')),
+      methodOrders.reduce(
+        (sum, row) => sum + BigInt(row.total.replace('.', '')),
+        0n,
+      ),
+    );
+  }
+  assert.deepEqual(report.paymentBreakdown, [
+    { paymentMethod: 'CASH', orders: 34, totalSales: '10000000030.29' },
+    { paymentMethod: 'GCASH_MANUAL', orders: 1, totalSales: '10.01' },
+    { paymentMethod: 'CARD_MANUAL', orders: 1, totalSales: '10.01' },
+    { paymentMethod: 'OTHER', orders: 1, totalSales: '10.01' },
+  ]);
+  const emptyPayments = (await sales.daily(actor.id, shop.id, '2026-10-18'))
+    .paymentBreakdown;
+  assert.ok(
+    emptyPayments.every(
+      (entry) => entry.orders === 0 && entry.totalSales === '0.00',
+    ),
+  );
   const savedItems = await client.query(
     `SELECT "orderId", "lineNumber", quantity FROM "${schema}".order_items WHERE "shopId"=$1 AND "orderId"=ANY($2::text[]) ORDER BY "orderId", "lineNumber"`,
     [shop.id, rows.map((row) => row.id)],
@@ -337,6 +369,7 @@ try {
       timezone: report.timezone,
       matchedOrders: rows.length,
       itemsSold: report.itemsSold,
+      paymentBreakdown: report.paymentBreakdown,
       grossSales: report.totalSales,
       checks:
         'Independent SQL reconciliation, exact cents, all payment methods, >25 orders, start/end boundaries, completion vs payment day, unfinished/unpaid/rejected/foreign exclusions, empty day and revoked access predicate',
