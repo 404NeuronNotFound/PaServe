@@ -9,6 +9,7 @@ const key = (slug: string) =>
   `paserve-active-orders:v1:${encodeURIComponent(slug)}`;
 export const trackingPath = (slug: string, id: string) =>
   `/menu/${encodeURIComponent(slug)}/orders/${encodeURIComponent(id)}`;
+export const receiptPath = (slug: string, id: string) => `${trackingPath(slug, id)}/receipt`;
 export const trackingApiUrl = (path: string) =>
   `${(api.defaults?.baseURL ?? "").replace(/\/$/, "")}${path}`;
 export const isTrackingOrderId = (id: unknown): id is string =>

@@ -439,7 +439,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
     : "Ready. Your order is ready for pickup. Please collect it at the counter.",
   );
   expect(screen.queryByText("Completed")).not.toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: "View receipt" })).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "View receipt" })).toHaveAttribute("href", `/menu/cafe/orders/${orderId}/receipt`);
   expect(
     screen.getAllByText(
       mode === "DINE_IN"
@@ -488,11 +488,10 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
     : "Completed. Your order has been collected. Thank you!",
   );
   const viewReceipt = screen.getByRole("link", { name: "View receipt" });
-  expect(viewReceipt).toHaveAttribute("href", "#order-receipt-details");
+  expect(viewReceipt).toHaveAttribute("href", `/menu/cafe/orders/${orderId}/receipt`);
   const readsBeforeReceipt = fetchStatus.mock.calls.length;
-  await userEvent.click(viewReceipt);
   const receiptRegion = screen.getByRole("region", { name: "Order receipt" });
-  expect(receiptRegion).toHaveFocus();
+  expect(receiptRegion).toBeInTheDocument();
   expect(receiptRegion).toHaveTextContent("ORD-000042");
   expect(receiptRegion).toHaveTextContent("₱12.00");
   expect(receiptRegion).toHaveTextContent("Payment confirmed by the cashier.");

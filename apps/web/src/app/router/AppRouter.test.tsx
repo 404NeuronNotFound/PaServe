@@ -26,8 +26,16 @@ beforeEach(() => {
   useCustomerTables.setState({ codes: {}, resolved: {} });
 });
 afterEach(() => {
+  vi.unstubAllGlobals();
   useCustomerTables.setState({ codes: {}, resolved: {} });
   window.history.replaceState(null, "", "/");
+});
+
+it('routes direct receipt links through guest access without requiring staff login', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403 }));
+  renderAt('/menu/cafe/orders/e47f6994-a303-4a7b-87b0-2386d5198828/receipt');
+  expect(await screen.findByRole('heading', { name: 'Receipt unavailable' })).toBeInTheDocument();
+  expect(getCurrentUser).not.toHaveBeenCalled();
 });
 
 it.each(["T12", "t_9dd21e8326b440b2a73f22d4f16c038a"])(

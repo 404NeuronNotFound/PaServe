@@ -12,7 +12,8 @@ import {
 } from "react-icons/fi";
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import { readOrderReceipt } from "../../features/cart/order-receipt";
-import { formatCartPrice } from "../../lib/money";
+import { receiptPath } from "../../features/orders/guest-tracking";
+import { ReceiptTotals } from "./ReceiptTotals";
 import "./customer-order-page.css";
 import { menuTheme } from "../../lib/menu-theme";
 import { readCustomerOrderQr } from "../../features/cart/customer-order-qr";
@@ -162,25 +163,7 @@ export function CustomerOrderPage() {
               <ReceiptPaymentMethod payment={receipt.payment} confirmed={confirmed} />
               <ReceiptTimestamps createdAt={receipt.createdAt} paidAt={receipt.paidAt}
                 completedAt={receipt.completedAt} paid={confirmed || receipt.payment != null} />
-              <dl>
-                {receipt.subtotalPrice !== undefined && (
-                  <div className="order-receipt-subtotal">
-                    <dt>Subtotal <span>(PHP)</span></dt>
-                    <dd>{formatCartPrice(receipt.subtotalPrice)}</dd>
-                  </div>
-                )}
-                <div className="order-receipt-total">
-                  <dt>
-                    Order total <span>(PHP)</span>
-                  </dt>
-                  <dd aria-describedby="order-total-note">
-                    {formatCartPrice(receipt.totalPrice)}
-                  </dd>
-                </div>
-              </dl>
-              <p id="order-total-note" className="order-receipt-note">
-                This is the total saved for your submitted order.
-              </p>
+              <ReceiptTotals receipt={receipt} />
               <p className="order-receipt-note">
                 <FiLock aria-hidden="true" />{" "}
                 {confirmed
@@ -344,14 +327,13 @@ export function CustomerOrderPage() {
                 : "Need an update? Ask the counter staff."}
             </p>
             <div className="order-receipt-footer-actions">
-              {completed && (
-                <a
+              {tracking.state === "current" && (
+                <Link
                   className="secondary-button"
-                  href="#order-receipt-details"
-                  onClick={() => receiptDetails.current?.focus()}
+                  to={receiptPath(shopSlug, orderId)}
                 >
                   View receipt
-                </a>
+                </Link>
               )}
               <Link className="primary-button" to={menuUrl}>
                 Back to menu <FiArrowUpRight aria-hidden="true" />
