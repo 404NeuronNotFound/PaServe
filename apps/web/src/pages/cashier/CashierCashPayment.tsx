@@ -6,9 +6,7 @@ import type {
   CashPaymentReviewResponse,
   VerifyOrderQrResponse,
 } from "@paserve/contracts";
-import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
-import { ReceiptOrderItems } from "../public/ReceiptOrderItems";
-import "./receipt-print.css";
+import { CashierPaidReceipt } from "./CashierPaidReceipt";
 import { formatReceiptDateTime, RECEIPT_TIME_ZONE } from "../../lib/receipt-date-time";
 import {
   PAYMENT_REFERENCE_PATTERN,
@@ -74,16 +72,7 @@ export function CashierCashPayment({
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [recordedHere, setRecordedHere] = useState(false);
-  const [printLayout, setPrintLayout] = useState("standard");
-  const [printError, setPrintError] = useState("");
-  function printReceipt() {
-    setPrintError("");
-    try {
-      window.print();
-    } catch {
-      setPrintError("Could not open the print dialog. Try printing again.");
-    }
-  }
+  const [showReceipt, setShowReceipt] = useState(false);
   const active = useRef(false),
     running = useRef(false);
   const controller = useRef<AbortController | null>(null);
@@ -164,7 +153,7 @@ export function CashierCashPayment({
   }, [loadReview]);
   useEffect(() => {
     if (review?.payment) resultHeading.current?.focus();
-  }, [review?.payment]);
+  }, [review?.payment, showReceipt]);
   async function refresh(open = false) {
     if (running.current || busy) return;
     running.current = true;
@@ -299,11 +288,12 @@ export function CashierCashPayment({
       if (active.current && !request.signal.aborted) setBusy(false);
     }
   }
+  if (showReceipt && review?.payment && review.order.status === "CONFIRMED" && review.order.paymentStatus === "PAID")
+    return <CashierPaidReceipt review={review} onBack={() => setShowReceipt(false)} />;
   if (review?.payment)
     return (
       <section
-        className="scanner-panel cashier-cash-result cashier-receipt-page"
-        data-print-layout={printLayout}
+        className="scanner-panel cashier-cash-result"
         aria-labelledby="cash-paid-title"
       >
         <span className="cashier-cash-emblem">
@@ -329,11 +319,6 @@ export function CashierCashPayment({
                 : "GCash payment recorded manually"}
         </h2>
         <p role="status">{review.order.orderNumber} is paid.</p>
-        <ReceiptShopDetails details={review.order.shopDetails} />
-        <p>{review.order.mode === "DINE_IN"
-          ? `Dine-in · Table ${review.order.tableNumber}`
-          : "Takeout / pickup"}</p>
-        <ReceiptOrderItems items={review.order.items} />
         {review.queue && (
           <p role="status">
             {review.queue.status === "QUEUED"
@@ -388,21 +373,11 @@ export function CashierCashPayment({
                   ? "Return the change to the customer."
                   : "This order already has a saved cash payment. Check with the cashier before handling any cash or change."}
         </p>
-        <section className="receipt-print-controls" aria-label="Receipt printing">
-          <label className="field">
-            Print layout
-            <select value={printLayout} onChange={(event) => setPrintLayout(event.target.value)}>
-              <option value="standard">Standard paper</option>
-              <option value="thermal-80">80 mm receipt</option>
-              <option value="thermal-58">58 mm receipt</option>
-            </select>
-          </label>
-          <button type="button" className="primary-button" onClick={printReceipt}>
-            Print receipt
+        {review.order.status === "CONFIRMED" && review.order.paymentStatus === "PAID" && (
+          <button type="button" className="secondary-button" onClick={() => setShowReceipt(true)}>
+            View receipt
           </button>
-          <p>Choose the matching paper size in your printer settings. Turn off browser headers and footers to keep the page address off the receipt.</p>
-          {printError && <InlineMessage>{printError}</InlineMessage>}
-        </section>
+        )}
         <button className="primary-button" onClick={onNext}>
           Scan another order
         </button>

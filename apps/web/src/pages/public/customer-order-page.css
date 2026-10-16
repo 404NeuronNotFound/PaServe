@@ -816,3 +816,23 @@
   .receipt-view-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .receipt-view-layout > aside { padding: 20px; }
 }
+
+/* Tracking keeps the order reference and live progress in a compact workspace. */
+.customer-tracking-page .order-receipt-card { overflow: hidden; }
+.customer-tracking-page .order-receipt-heading { align-items: flex-start; padding-bottom: 32px; }
+.customer-tracking-page .order-receipt-intro { max-width: 600px; font-size: 14px; }
+.customer-tracking-page .order-receipt-layout { align-items: start; gap: 32px; }
+.customer-tracking-page .order-receipt-details { padding-top: 4px; }
+.customer-tracking-page .order-reference-card { max-width: none; }
+.customer-tracking-page .order-reference-number { margin-bottom: 16px; color: var(--color-muted); font-size: 12px; letter-spacing: 0.025em; }
+.customer-tracking-page .order-receipt-next { padding: 28px; background: var(--color-canvas); border-radius: 24px; }
+.customer-tracking-page .order-receipt-next-topline { margin-bottom: 28px; }
+.customer-tracking-page .order-receipt-progress { margin-top: 28px; }
+.customer-tracking-page .order-receipt-next h2 { max-width: 340px; }
+.customer-tracking-page .order-receipt-details > .order-receipt-note { margin-top: 20px; padding: 14px 0 0; border-top: 1px solid var(--color-border); }
+.customer-tracking-page .guest-tracking-share { margin-top: 16px; font-size: 12px; }
+.customer-tracking-page .order-receipt-card footer { background: var(--color-canvas); }
+@media (max-width: 480px) {
+  .customer-tracking-page .order-receipt-next { padding: 24px 20px; }
+  .customer-tracking-page .order-receipt-layout { gap: 24px; }
+}

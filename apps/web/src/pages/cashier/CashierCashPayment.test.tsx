@@ -93,6 +93,28 @@ it("offers printing only after loading a saved paid receipt", async () => {
   await screen.findByRole("button", { name: "Record cash payment" });
   expect(screen.queryByRole("button", { name: "Print receipt" })).not.toBeInTheDocument();
   expect(screen.queryByLabelText("Print layout")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "View receipt" })).not.toBeInTheDocument();
+});
+it("unlocks View receipt only after the payment save succeeds, and returns to the payment summary", async () => {
+  let resolvePayment!: (value: typeof paid) => void;
+  vi.mocked(collectCashPayment).mockImplementation(() => new Promise((resolve) => { resolvePayment = resolve; }));
+  const { user } = await setup();
+  await user.type(screen.getByLabelText("Amount received (PHP)"), "200");
+  await user.click(screen.getByRole("button", { name: "Record cash payment" }));
+  const dialog = await screen.findByRole("dialog");
+  expect(screen.queryByRole("button", { name: "View receipt" })).not.toBeInTheDocument();
+  await user.click(within(dialog).getByRole("button", { name: "Record cash payment" }));
+  await waitFor(() => expect(collectCashPayment).toHaveBeenCalledOnce());
+  expect(screen.queryByRole("button", { name: "View receipt" })).not.toBeInTheDocument();
+  resolvePayment(paid);
+  await user.click(await screen.findByRole("button", { name: "View receipt" }));
+  expect(screen.getByRole("region", { name: "Order receipt" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Receipt ORD-000042" })).toHaveFocus();
+  await user.click(screen.getByRole("button", { name: "Back to payment" }));
+  expect(screen.queryByRole("region", { name: "Order receipt" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Print receipt" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "View receipt" })).toBeInTheDocument();
+  expect(collectCashPayment).toHaveBeenCalledOnce();
 });
 it.each(["standard", "thermal-80", "thermal-58"])(
   "prints the saved cashier receipt using %s without payment mutations",
@@ -100,10 +122,12 @@ it.each(["standard", "thermal-80", "thermal-58"])(
     vi.mocked(reviewCashPayment).mockResolvedValue(paid);
     const print = vi.spyOn(window, "print").mockImplementation(() => {});
     render(<CashierCashPayment shopId="shop-a" orderId="order-a" onNext={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Print receipt" })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "View receipt" }));
     await screen.findByRole("button", { name: "Print receipt" });
     const reads = vi.mocked(reviewCashPayment).mock.calls.length;
     await userEvent.selectOptions(screen.getByLabelText("Print layout"), layout);
-    expect(screen.getByRole("region", { name: "Cash payment recorded" })).toHaveAttribute("data-print-layout", layout);
+    expect(screen.getByRole("region", { name: "Receipt ORD-000042" })).toHaveAttribute("data-print-layout", layout);
     await userEvent.click(screen.getByRole("button", { name: "Print receipt" }));
     expect(print).toHaveBeenCalledExactlyOnceWith();
     expect(reviewCashPayment).toHaveBeenCalledTimes(reads);
@@ -112,17 +136,18 @@ it.each(["standard", "thermal-80", "thermal-58"])(
     expect(screen.getByText("Large")).toBeInTheDocument();
     expect(screen.getByText("Oat milk")).toBeInTheDocument();
     expect(screen.getByText("Line total: ₱135.50")).toBeInTheDocument();
-    expect(screen.getByText("₱200.00")).toBeInTheDocument();
-    expect(screen.getByText("₱64.50")).toBeInTheDocument();
+    expect(screen.getByText("Amount received (PHP): ₱200.00")).toBeInTheDocument();
+    expect(screen.getByText("Change (PHP): ₱64.50")).toBeInTheDocument();
   },
 );
 it("retains the saved cashier receipt when the print dialog fails", async () => {
   vi.mocked(reviewCashPayment).mockResolvedValue(paid);
   vi.spyOn(window, "print").mockImplementation(() => { throw new Error("Blocked"); });
   render(<CashierCashPayment shopId="shop-a" orderId="order-a" onNext={vi.fn()} />);
+  await userEvent.click(await screen.findByRole("button", { name: "View receipt" }));
   await userEvent.click(await screen.findByRole("button", { name: "Print receipt" }));
   expect(screen.getByText(/Could not open the print dialog/)).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Cash payment recorded" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Receipt ORD-000042" })).toBeInTheDocument();
 });
 it("shows preparation queue state only from a saved paid receipt", async () => {
   vi.mocked(reviewCashPayment).mockResolvedValue({

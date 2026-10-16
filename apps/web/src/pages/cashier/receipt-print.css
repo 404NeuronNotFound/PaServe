@@ -96,6 +96,39 @@
   .cashier-receipt-page h4 { font-size: 11pt !important; }
   .cashier-receipt-page p { max-width: none !important; font-size: inherit !important; }
   .cashier-receipt-page dl { display: block !important; }
+  .cashier-receipt-page .receipt-document {
+    max-width: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    filter: none;
+  }
+  .cashier-receipt-page .receipt-ticket-paper {
+    mask: none;
+    border-radius: 0;
+    padding: 0;
+  }
+  .cashier-receipt-page .receipt-ticket-celebration,
+  .cashier-receipt-page .receipt-ticket-perforation { display: none; }
+  .cashier-receipt-page .receipt-ticket-welcome { padding: 0 0 3mm; }
+  .cashier-receipt-page .receipt-document-body { padding: 0; }
+  .cashier-receipt-page .receipt-document-body { display: block; }
+  .cashier-receipt-page .receipt-document-identity,
+  .cashier-receipt-page .receipt-document-reference,
+  .cashier-receipt-page .receipt-document-body > section,
+  .cashier-receipt-page .receipt-ticket-settlement {
+    display: block;
+    padding: 3mm 0;
+    border: 0;
+  }
+  .cashier-receipt-page .receipt-document-seal { display: none; }
+  .cashier-receipt-page .receipt-document-reference strong { font-size: 14pt; }
+  .cashier-receipt-page .receipt-document-signoff { padding: 3mm 0; }
+  .cashier-receipt-page .receipt-payment-method {
+    padding: 3mm 0;
+    border-radius: 0;
+    border: 0;
+  }
   .cashier-receipt-page dl > div {
     display: block !important;
     margin-block: 3mm;

@@ -164,7 +164,7 @@ it.each([401, 403, 404])(
     ).not.toBeInTheDocument();
   },
 );
-it("clearly labels a saved unpaid receipt without showing payment settlement", async () => {
+it.each(["PENDING_CONFIRMATION", "CONFIRMED", "REJECTED"])("blocks direct receipt navigation for an unpaid %s order", async (status) => {
   const source = saved();
   fetchReceipt.mockResolvedValue({
     ok: true,
@@ -173,7 +173,7 @@ it("clearly labels a saved unpaid receipt without showing payment settlement", a
       ...source,
       order: {
         ...source.order,
-        status: "PENDING_CONFIRMATION",
+        status,
         paymentStatus: "UNPAID",
         confirmedAt: null,
         preparationStatus: null,
@@ -182,12 +182,13 @@ it("clearly labels a saved unpaid receipt without showing payment settlement", a
     }),
   });
   setup();
-  await screen.findByRole("heading", { name: "Receipt ORD-000042" });
-  expect(screen.getByText("Unpaid")).toBeInTheDocument();
-  expect(
-    screen.getByText("No payment method has been recorded."),
-  ).toBeInTheDocument();
-  expect(screen.queryByText(/Amount received \(PHP\)/)).not.toBeInTheDocument();
+  await screen.findByRole("heading", { name: "Receipt unavailable" });
+  expect(screen.getByRole("link", { name: "Back to order" })).toBeInTheDocument();
+  if (status === "PENDING_CONFIRMATION")
+    expect(screen.getByText(/after the cashier confirms your order and payment/)).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Order receipt" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/Amount received/)).not.toBeInTheDocument();
+
 });
 it("does not display receipt data from a mismatched protected order response", async () => {
   const source = saved();

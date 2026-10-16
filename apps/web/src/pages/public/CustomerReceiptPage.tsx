@@ -3,16 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import { FiCoffee } from "react-icons/fi";
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
-import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
 import { useCustomerConfirmation } from "../../features/orders/useCustomerConfirmation";
 import { trackingPath } from "../../features/orders/guest-tracking";
 import { menuTheme } from "../../lib/menu-theme";
-import { OrderNumber } from "./OrderNumber";
-import { ReceiptOrderItems } from "./ReceiptOrderItems";
-import { ReceiptPaymentMethod } from "./ReceiptPaymentMethod";
-import { ReceiptTimestamps } from "./ReceiptTimestamps";
-import { ReceiptTotals } from "./ReceiptTotals";
 import "./customer-order-page.css";
+import { ReceiptDocument } from "../../components/shops/ReceiptDocument";
 
 export function CustomerReceiptPage() {
   const { shopSlug = "", orderId = "" } = useParams();
@@ -40,7 +35,8 @@ function ReceiptRead({
   // This route requires a protected read. Cached display data alone never unlocks it.
   const denied =
     tracking.state === "denied" || tracking.state === "unavailable";
-  const receipt = denied ? null : tracking.receipt;
+  const paid = tracking.order?.status === "CONFIRMED" && tracking.order.paymentStatus === "PAID";
+  const receipt = !denied && paid ? tracking.receipt : null;
   const heading = useRef<HTMLHeadingElement>(null);
   const title = receipt
     ? `Receipt ${receipt.orderNumber} · ${receipt.shopName}`
@@ -49,7 +45,6 @@ function ReceiptRead({
     document.title = `${title} · PaServe`;
     heading.current?.focus();
   }, [title]);
-  const paid = tracking.order?.paymentStatus === "PAID";
   const menuUrl =
     receipt?.mode === "DINE_IN"
       ? `/${encodeURIComponent(shopSlug)}/table/${encodeURIComponent(receipt.table!.code)}`
@@ -74,7 +69,7 @@ function ReceiptRead({
         >
           <header className="order-receipt-heading">
             <div>
-              <p className="section-label">{receipt.shopName}</p>
+              <p className="section-label">Your digital copy</p>
               <h1 id="receipt-page-title" ref={heading} tabIndex={-1}>
                 Receipt {receipt.orderNumber}
               </h1>
@@ -84,17 +79,10 @@ function ReceiptRead({
                   : "Takeout / pickup"}
               </p>
             </div>
-            <p className="order-receipt-context">
-              {paid
-                ? "Paid"
-                : tracking.order?.status === "REJECTED"
-                  ? "Rejected · Unpaid"
-                  : "Unpaid"}
-            </p>
+            <p className="order-receipt-context">Digital receipt</p>
           </header>
           <section
             className="order-receipt-details receipt-view-details"
-            aria-label="Order receipt"
           >
             {tracking.state === "stale" && (
               <InlineMessage tone="info" role="note">
@@ -102,26 +90,7 @@ function ReceiptRead({
                 details.
               </InlineMessage>
             )}
-            <div className="receipt-view-layout">
-              <section aria-label="Shop and purchased items">
-                <ReceiptShopDetails details={receipt.shopDetails} />
-                <OrderNumber value={receipt.orderNumber} />
-                <ReceiptOrderItems items={receipt.items} />
-              </section>
-              <aside aria-label="Payment and totals">
-                <ReceiptPaymentMethod
-                  payment={receipt.payment}
-                  confirmed={paid}
-                />
-                <ReceiptTotals receipt={receipt} />
-                <ReceiptTimestamps
-                  createdAt={receipt.createdAt}
-                  paidAt={receipt.paidAt}
-                  completedAt={receipt.completedAt}
-                  paid={paid}
-                />
-              </aside>
-            </div>
+            <ReceiptDocument {...receipt} orderContext={receipt.mode === "DINE_IN" ? `Dine-in · Table ${receipt.table!.number}` : "Takeout / pickup"} />
           </section>
           <footer>
             <p>Keep this receipt for your records.</p>
@@ -159,7 +128,9 @@ function ReceiptRead({
               <InlineMessage>
                 {denied
                   ? "Receipt access is unavailable. Open your private tracking link in this browser, or ask the counter staff for help using your order number."
-                  : "We could not load this receipt. Try again when connected, or ask the counter staff for help."}
+                  : tracking.state === "current" && !paid
+                    ? "Your receipt will be available after the cashier confirms your order and payment. You can follow your order on the tracking page."
+                    : "We could not load this receipt. Try again when connected, or ask the counter staff for help."}
               </InlineMessage>
               <button
                 type="button"

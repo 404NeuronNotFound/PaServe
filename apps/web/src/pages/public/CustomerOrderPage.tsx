@@ -13,7 +13,6 @@ import {
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import { readOrderReceipt } from "../../features/cart/order-receipt";
 import { receiptPath } from "../../features/orders/guest-tracking";
-import { ReceiptTotals } from "./ReceiptTotals";
 import "./customer-order-page.css";
 import { menuTheme } from "../../lib/menu-theme";
 import { readCustomerOrderQr } from "../../features/cart/customer-order-qr";
@@ -21,10 +20,6 @@ import { OrderReferenceCard } from "./OrderReferenceCard";
 import { useCustomerConfirmation } from "../../features/orders/useCustomerConfirmation";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { GuestTrackingShare } from "./GuestTrackingShare";
-import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
-import { ReceiptOrderItems } from "./ReceiptOrderItems";
-import { ReceiptPaymentMethod } from "./ReceiptPaymentMethod";
-import { ReceiptTimestamps } from "./ReceiptTimestamps";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 
 export function CustomerOrderPage() {
@@ -83,7 +78,7 @@ export function CustomerOrderPage() {
     preparationCopy?.label ??
     (confirmed ? "Confirmed" : rejected ? "Rejected" : "Waiting for Confirmation");
   const heading = useRef<HTMLHeadingElement>(null);
-  const receiptDetails = useRef<HTMLElement>(null);
+  const paid = confirmed && savedStatus?.paymentStatus === "PAID";
   const menuUrl =
     receipt?.mode === "DINE_IN"
       ? `/${encodeURIComponent(shopSlug)}/table/${encodeURIComponent(receipt.table!.code)}`
@@ -98,14 +93,14 @@ export function CustomerOrderPage() {
 
   return (
     <main
-      className="customer-order-page"
+      className="customer-order-page customer-tracking-page"
       style={menuTheme(receipt?.primaryColor, receipt?.accentColor)}
     >
       <header className="order-receipt-topline">
         <span>
           <FiCoffee aria-hidden="true" /> PaServe
           <span className="order-receipt-brand-divider" aria-hidden="true" />
-          <span className="order-receipt-brand-note">Your receipt</span>
+          <span className="order-receipt-brand-note">Order tracking</span>
         </span>
         <AppearanceToggle />
       </header>
@@ -147,11 +142,9 @@ export function CustomerOrderPage() {
             <section
               className="order-receipt-details"
               id="order-receipt-details"
-              aria-label="Order receipt"
+              aria-label="Order reference"
               tabIndex={-1}
-              ref={receiptDetails}
             >
-              <ReceiptShopDetails details={receipt.shopDetails} />
               <OrderReferenceCard
                 key={`${shopSlug}:${orderId}`}
                 credential={
@@ -159,18 +152,11 @@ export function CustomerOrderPage() {
                 }
                 orderNumber={receipt.orderNumber}
               />
-              <ReceiptOrderItems items={receipt.items} />
-              <ReceiptPaymentMethod payment={receipt.payment} confirmed={confirmed} />
-              <ReceiptTimestamps createdAt={receipt.createdAt} paidAt={receipt.paidAt}
-                completedAt={receipt.completedAt} paid={confirmed || receipt.payment != null} />
-              <ReceiptTotals receipt={receipt} />
               <p className="order-receipt-note">
                 <FiLock aria-hidden="true" />{" "}
-                {confirmed
+                {paid
                   ? "Payment confirmed by the cashier."
-                  : receipt.payment
-                    ? "Payment method shown from your last saved receipt."
-                    : "Payment has not been confirmed by the cashier."}
+                  : "Payment has not been confirmed by the cashier."}
               </p>
               {tracking.state === "current" && (
                 <GuestTrackingShare key={`share:${shopSlug}:${orderId}`} shopSlug={shopSlug} orderId={orderId} orderNumber={receipt.orderNumber} />
@@ -214,7 +200,7 @@ export function CustomerOrderPage() {
               </h2>
               <p>
                 {completed ? (
-                  "Keep this receipt for your records."
+                  "Your order is complete. Thank you for stopping by."
                 ) : ready ? (
                   receipt.mode === "DINE_IN" ? (
                     `Please stay at Table ${receipt.table!.number} for service.`
@@ -327,7 +313,7 @@ export function CustomerOrderPage() {
                 : "Need an update? Ask the counter staff."}
             </p>
             <div className="order-receipt-footer-actions">
-              {tracking.state === "current" && (
+              {tracking.state === "current" && paid && (
                 <Link
                   className="secondary-button"
                   to={receiptPath(shopSlug, orderId)}

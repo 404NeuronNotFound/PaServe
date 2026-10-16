@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,7 +19,6 @@ import { api } from "../../lib/api/client";
 import { feedback } from "../../app/stores/feedback";
 import { clearCustomerOrderQrs } from "../../features/cart/customer-order-qr";
 import { subscribeOrderStream } from "../../features/orders/new-order-events";
-import { cashierLine } from "../../test/cashier-fixtures";
 
 vi.mock("../../features/orders/new-order-events", () => ({
   subscribeOrderStream: vi.fn(() => vi.fn()),
@@ -127,78 +126,23 @@ function setup(path = "/menu/cafe/orders/order-a") {
   );
 }
 
-it('shows the recorded cash tender after receipt recovery rather than using the order total', () => {
-  useCart.getState().add('cafe', quote);
-  saveOrderReceipt('cafe', 'Cafe', order);
-  recoverOrderReceipt('cafe', 'order-a', { ...readOrderReceipt('cafe', 'order-a'),
-    payment: { method: 'CASH', reference: null, description: null, amountReceived: '20.00', changeDue: '8.00' },
+it("keeps tracking focused on the order reference without receipt details or an unpaid receipt link", () => {
+  saveOrderReceipt("cafe", "Cafe", { ...order, shopDetails: { name: "Original Cafe", address: "12 Old Street", phone: null, contactEmail: null, website: null } });
+  recoverOrderReceipt("cafe", "order-a", { ...readOrderReceipt("cafe", "order-a"),
+    payment: { method: "CASH", reference: null, description: null, amountReceived: "20.00", changeDue: "8.00" },
   });
   orderReceipts.clearMemory();
   setup();
-  expect(screen.getByText('Amount received (PHP): ₱20.00')).toBeInTheDocument();
-  expect(screen.getByText('Change (PHP): ₱8.00')).toBeInTheDocument();
-  expect(screen.getByText('Payment method shown from your last saved receipt.')).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Order reference" })).toBeInTheDocument();
+  expect(screen.getByRole("group", { name: "Order reference card" })).toBeInTheDocument();
+  for (const name of ["Order items", "Payment method", "Date / Time"])
+    expect(screen.queryByRole("heading", { name })).not.toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Shop details" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "View receipt" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/Amount received/)).not.toBeInTheDocument();
+  expect(screen.getByText("Payment has not been confirmed by the cashier.")).toBeInTheDocument();
+  expect(readOrderReceipt("cafe", "order-a")?.payment?.amountReceived).toBe("20.00");
   expect(api.post).not.toHaveBeenCalled();
-});
-
-it.each(["0.00", "0.30", "9999999999.99"])(
-  "shows authoritative subtotal and total %s after refresh without cart estimates", (totalPrice) => {
-    useCart.getState().add("cafe", quote);
-    saveOrderReceipt("cafe", "Cafe", { ...order, totalPrice, subtotalPrice: totalPrice,
-      items: [{ ...quote, basePrice: totalPrice, unitPrice: totalPrice, totalPrice }],
-    });
-    orderReceipts.clearMemory();
-    setup();
-    const receipt = screen.getByRole("region", { name: "Order receipt" });
-    const total = receipt.querySelector(".order-receipt-total")!;
-    const subtotal = receipt.querySelector(".order-receipt-subtotal")!;
-    const formatted = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(Number(totalPrice));
-    expect(within(total as HTMLElement).getByText(formatted)).toBeInTheDocument();
-    expect(within(subtotal as HTMLElement).getByText(formatted)).toBeInTheDocument();
-    expect(within(receipt).queryByText(/^Tax/)).not.toBeInTheDocument();
-    expect(within(receipt).queryByText(/^Discount/)).not.toBeInTheDocument();
-  },
-);
-
-it.each(["DINE_IN", "TAKEOUT"] as const)(
-  "keeps every saved %s receipt line and its options after refresh without menu repricing",
-  (mode) => {
-    const line = { ...cashierLine, variants: cashierLine.variants.map((option) => ({ ...option })) };
-    const plainLine = { ...cashierLine, variants: [], addOns: [], notes: undefined, unitPrice: "50.00", totalPrice: "100.00" };
-    const savedOrder: CustomerOrderResponse["order"] = mode === "DINE_IN"
-      ? { ...order, mode, table, items: [line, plainLine], totalPrice: "235.50" }
-      : { ...order, mode, table: null, items: [line, plainLine], totalPrice: "235.50" };
-    saveOrderReceipt("cafe", "Cafe", savedOrder);
-    line.productName = "Renamed menu item";
-    line.variants[0].name = "Renamed variant";
-    const view = setup();
-    expect(screen.getAllByRole("heading", { name: "2 × Saved Latte" })).toHaveLength(2);
-    expect(screen.getByText("Large")).toBeInTheDocument();
-    expect(screen.getByText("Oat milk")).toBeInTheDocument();
-    expect(screen.getByText("Line total: ₱135.50")).toBeInTheDocument();
-    expect(screen.getByText("Line total: ₱100.00")).toBeInTheDocument();
-    view.unmount();
-    orderReceipts.clearMemory();
-    setup();
-    expect(screen.getAllByRole("heading", { name: "2 × Saved Latte" })).toHaveLength(2);
-    expect(screen.getByText("Large")).toBeInTheDocument();
-    expect(screen.queryByText("Renamed menu item")).not.toBeInTheDocument();
-    expect(api.get).not.toHaveBeenCalled();
-    expect(api.post).not.toHaveBeenCalled();
-  },
-);
-
-it("shows the saved shop identity in the customer receipt after refresh", () => {
-  saveOrderReceipt("cafe", "Current menu name", { ...order, shopDetails: {
-    name: "Original Cafe", address: "12 Old Street", phone: "09171234567",
-    contactEmail: "hello@example.com", website: "https://example.com",
-  } });
-  orderReceipts.clearMemory();
-  setup();
-  expect(screen.getByRole("region", { name: "Shop details" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Original Cafe" })).toBeInTheDocument();
-  expect(screen.getByText("12 Old Street")).toBeInTheDocument();
-  expect(screen.queryByText("Current menu name")).not.toBeInTheDocument();
 });
 
 it("opens a private tracking link on another device and reopens from the guest cookie without a saved receipt or cashier QR", async () => {
@@ -226,11 +170,11 @@ it("opens a private tracking link on another device and reopens from the guest c
   window.history.replaceState({}, "", `${path}#tracking=${trackingToken}`);
   const view = setup(path);
   await screen.findByRole("heading", { name: "Order confirmed" });
-  expect(screen.getByRole("heading", { name: "1 × Coffee" })).toBeInTheDocument();
-  expect(screen.getByText("Card (manual)")).toBeInTheDocument();
-  expect(screen.getByText("Card receipt reference: 00001234")).toBeInTheDocument();
-  expect(screen.getByText('Timezone: Asia/Manila · en-PH')).toBeInTheDocument();
-  expect(screen.getByText(/Oct 15, 2026.*09:01:00.*AM.*GMT\+8/)).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "1 × Coffee" })).not.toBeInTheDocument();
+  expect(screen.queryByText("Card (manual)")).not.toBeInTheDocument();
+  expect(screen.queryByText("Card receipt reference: 00001234")).not.toBeInTheDocument();
+  expect(screen.queryByText('Timezone: Asia/Manila · en-PH')).not.toBeInTheDocument();
+  expect(screen.queryByText(/Oct 15, 2026.*09:01:00.*AM.*GMT\+8/)).not.toBeInTheDocument();
   expect(screen.getByText("Order number: ORD-000042")).toBeVisible();
   expect(window.location.hash).toBe("");
   expect(fetchStatus.mock.calls[0][0]).toBe(`${path}/tracking-session`);
@@ -248,7 +192,7 @@ it("opens a private tracking link on another device and reopens from the guest c
   await screen.findByRole("heading", { name: "Order confirmed" });
   expect(fetchStatus.mock.calls[0][0]).toBe(`${path}/status`);
   expect(fetchStatus.mock.calls[0][1]).toMatchObject({ credentials: "include", headers: {} });
-  expect(screen.getByText("₱12.00")).toBeInTheDocument();
+  expect(screen.queryByText("₱12.00")).not.toBeInTheDocument();
   expect(api.post).not.toHaveBeenCalled();
 });
 
@@ -285,6 +229,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
   expect(
     screen.getByRole("heading", { name: "Waiting for Confirmation" }),
   ).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "View receipt" })).not.toBeInTheDocument();
   fetchStatus.mockResolvedValue({
     ok: true,
     status: 200,
@@ -490,10 +435,10 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
   const viewReceipt = screen.getByRole("link", { name: "View receipt" });
   expect(viewReceipt).toHaveAttribute("href", `/menu/cafe/orders/${orderId}/receipt`);
   const readsBeforeReceipt = fetchStatus.mock.calls.length;
-  const receiptRegion = screen.getByRole("region", { name: "Order receipt" });
+  const receiptRegion = screen.getByRole("region", { name: "Order reference" });
   expect(receiptRegion).toBeInTheDocument();
   expect(receiptRegion).toHaveTextContent("ORD-000042");
-  expect(receiptRegion).toHaveTextContent("₱12.00");
+  expect(receiptRegion).not.toHaveTextContent("₱12.00");
   expect(receiptRegion).toHaveTextContent("Payment confirmed by the cashier.");
   expect(fetchStatus).toHaveBeenCalledTimes(readsBeforeReceipt);
   for (const [url, options] of fetchStatus.mock.calls) {
@@ -507,7 +452,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
     name: mode === "DINE_IN" ? "Ready for table service" : "Collect your order at the counter",
   })).not.toBeInTheDocument();
   expect(
-    screen.getByText("Keep this receipt for your records."),
+    screen.getByText("Your order is complete. Thank you for stopping by."),
   ).toBeInTheDocument();
   expect(
     document.querySelector('time[datetime="2026-10-15T01:04:00Z"]'),
@@ -601,7 +546,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
     });
     await waitFor(() => expect(title).toHaveFocus());
     expect(screen.getByText("ORD-000042")).toBeInTheDocument();
-    expect(screen.getByText("₱12.00")).toBeInTheDocument();
+    expect(screen.queryByText("₱12.00")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Waiting for Confirmation");
     expect(
       screen.getByText(
@@ -659,15 +604,13 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
       "--menu-primary: #6A426C; --menu-accent: #FAFF00",
     );
     expect(screen.getByText("ORD-000042")).toBeInTheDocument();
-    expect(screen.getByText("₱12.00")).toBeInTheDocument();
+    expect(screen.queryByText("₱12.00")).not.toBeInTheDocument();
     expect(screen.queryByText("₱99.00")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Waiting for Confirmation");
     expect(screen.getByRole("status")).toHaveTextContent(
       "Your order is not yet in the kitchen queue.",
     );
-    expect(screen.getByText("₱12.00")).toHaveAccessibleDescription(
-      "This is the total saved for your submitted order.",
-    );
+    expect(readOrderReceipt("cafe", "order-a")?.totalPrice).toBe("12.00");
     expect(api.post).toHaveBeenCalledTimes(1);
   },
 );
