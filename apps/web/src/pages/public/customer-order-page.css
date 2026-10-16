@@ -621,6 +621,11 @@
   font-size: 0.8125rem;
   line-height: 1.6;
 }
+.order-receipt-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 .order-receipt-unavailable {
   padding: 36px;
 }
@@ -687,7 +692,9 @@
     padding: 20px;
     gap: 16px;
   }
-  .order-receipt-card footer .primary-button {
+  .order-receipt-footer-actions,
+  .order-receipt-card footer .primary-button,
+  .order-receipt-card footer .secondary-button {
     width: 100%;
   }
 }

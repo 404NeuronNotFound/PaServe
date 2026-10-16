@@ -64,7 +64,10 @@ export function CustomerOrderPage() {
               label: "Completed",
               heading: "Order completed",
               title: "Your order is fulfilled",
-              message: "Your order is complete. Thank you!",
+              message:
+                receipt?.mode === "DINE_IN"
+                  ? "Your order has been served. Thank you!"
+                  : "Your order has been collected. Thank you!",
               step: "Order fulfilled.",
             }
           : null;
@@ -72,6 +75,7 @@ export function CustomerOrderPage() {
     preparationCopy?.label ??
     (confirmed ? "Confirmed" : rejected ? "Rejected" : "Waiting for Confirmation");
   const heading = useRef<HTMLHeadingElement>(null);
+  const receiptDetails = useRef<HTMLElement>(null);
   const menuUrl =
     receipt?.mode === "DINE_IN"
       ? `/${encodeURIComponent(shopSlug)}/table/${encodeURIComponent(receipt.table!.code)}`
@@ -132,7 +136,13 @@ export function CustomerOrderPage() {
             </p>
           </header>
           <div className="order-receipt-layout">
-            <div className="order-receipt-details">
+            <section
+              className="order-receipt-details"
+              id="order-receipt-details"
+              aria-label="Order receipt"
+              tabIndex={-1}
+              ref={receiptDetails}
+            >
               <OrderReferenceCard
                 key={`${shopSlug}:${orderId}`}
                 credential={
@@ -159,17 +169,17 @@ export function CustomerOrderPage() {
                   ? "Payment confirmed by the cashier."
                   : "Payment has not been confirmed by the cashier."}
               </p>
-            </div>
+            </section>
             <section
               className="order-receipt-next"
               aria-labelledby="order-receipt-next-title"
             >
               <div className="order-receipt-next-topline">
                 <span className="order-receipt-next-icon" aria-hidden="true">
-                  {ready ? <FiCheckCircle /> : <FiSmartphone />}
+                  {ready || completed ? <FiCheckCircle /> : <FiSmartphone />}
                 </span>
                 <span className="order-receipt-status-label">
-                  {ready ? (
+                  {ready || completed ? (
                     <FiCheckCircle aria-hidden="true" />
                   ) : (
                     <FiClock aria-hidden="true" />
@@ -177,7 +187,9 @@ export function CustomerOrderPage() {
                 </span>
               </div>
               <p className="section-label">
-                {preparation === "PREPARING"
+                {completed
+                  ? "Fulfilled"
+                  : preparation === "PREPARING"
                   ? "In the kitchen"
                   : ready
                     ? "Ready for you"
@@ -299,9 +311,20 @@ export function CustomerOrderPage() {
                 ? "Thank you for your order."
                 : "Need an update? Ask the counter staff."}
             </p>
-            <Link className="primary-button" to={menuUrl}>
-              Back to menu <FiArrowUpRight aria-hidden="true" />
-            </Link>
+            <div className="order-receipt-footer-actions">
+              {completed && (
+                <a
+                  className="secondary-button"
+                  href="#order-receipt-details"
+                  onClick={() => receiptDetails.current?.focus()}
+                >
+                  View receipt
+                </a>
+              )}
+              <Link className="primary-button" to={menuUrl}>
+                Back to menu <FiArrowUpRight aria-hidden="true" />
+              </Link>
+            </div>
           </footer>
         </article>
       ) : (
