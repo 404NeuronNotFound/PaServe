@@ -1504,13 +1504,15 @@ describe('Cash collection', () => {
   });
   it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)('serves daily gross sales for %s with an explicit Manila period', async (reportRole) => {
     role = reportRole;
+    const recent = { id: orderId, shopId, orderNumber: 'ORD-000042', status: 'CONFIRMED', paymentStatus: 'PAID', preparationStatus: 'COMPLETED', currency: 'PHP', totalPrice: new Prisma.Decimal('0.10'), completedAt: new Date('2026-10-16T00:05:00.000Z') };
+    findQueue.mockResolvedValueOnce([recent]);
     aggregateOrders.mockResolvedValueOnce({ _count: { _all: 2 }, _sum: { totalPrice: new Prisma.Decimal('0.30') } });
     const result = await request(app.getHttpServer())
       .get(`/api/v1/shops/${shopId}/reports/daily-sales`)
       .query({ date: '2026-10-16' })
       .set('Authorization', 'Bearer session').expect(200);
     expect(result.headers['cache-control']).toBe('no-store');
-    expect(result.body).toEqual({ shopId, businessDate: '2026-10-16', timezone: 'Asia/Manila', from: '2026-10-15T16:00:00.000Z', to: '2026-10-16T16:00:00.000Z', currency: 'PHP', completedOrders: 2, totalSales: '0.30', itemsSold: 7, paymentBreakdown: [
+    expect(result.body).toEqual({ shopId, businessDate: '2026-10-16', timezone: 'Asia/Manila', from: '2026-10-15T16:00:00.000Z', to: '2026-10-16T16:00:00.000Z', currency: 'PHP', completedOrders: 2, totalSales: '0.30', itemsSold: 7, recentOrders: [{ ...recent, totalPrice: '0.10', completedAt: '2026-10-16T00:05:00.000Z' }], paymentBreakdown: [
       { paymentMethod: 'CASH', orders: 2, totalSales: '0.30' },
       { paymentMethod: 'GCASH_MANUAL', orders: 0, totalSales: '0.00' },
       { paymentMethod: 'CARD_MANUAL', orders: 0, totalSales: '0.00' },

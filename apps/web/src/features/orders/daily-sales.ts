@@ -1,11 +1,17 @@
 import {
   SALES_TIMEZONE,
   SALES_PAYMENT_METHODS,
+  isReceiptTimestamp,
   salesBusinessDayBounds,
   type DailySalesResponse,
 } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import "../auth/api/session";
+import {
+  isOrderNumber,
+  isOrderReceiptId,
+  isOrderTotal,
+} from "../cart/order-receipt-fields";
 
 export async function getDailySales(
   shopId: string,
@@ -69,6 +75,38 @@ export async function getDailySales(
     throw new Error(
       "Payment breakdown does not match the sales summary. Please refresh.",
     );
+  }
+  if (
+    !Array.isArray(data.recentOrders) ||
+    data.recentOrders.length > Math.min(10, data.completedOrders)
+  ) {
+    throw new Error("Recent orders could not be verified. Please refresh.");
+  }
+  const ids = new Set<string>();
+  for (const [index, order] of data.recentOrders.entries()) {
+    const previous = data.recentOrders[index - 1];
+    if (
+      !order ||
+      !isOrderReceiptId(order.id) ||
+      ids.has(order.id) ||
+      order.shopId !== shopId ||
+      !isOrderNumber(order.orderNumber) ||
+      order.status !== "CONFIRMED" ||
+      order.paymentStatus !== "PAID" ||
+      order.preparationStatus !== "COMPLETED" ||
+      order.currency !== "PHP" ||
+      !isOrderTotal(order.totalPrice) ||
+      !isReceiptTimestamp(order.completedAt) ||
+      Date.parse(order.completedAt) < Date.parse(bounds.from) ||
+      Date.parse(order.completedAt) >= Date.parse(bounds.to) ||
+      (previous &&
+        (Date.parse(order.completedAt) > Date.parse(previous.completedAt) ||
+          (Date.parse(order.completedAt) === Date.parse(previous.completedAt) &&
+            order.id > previous.id)))
+    ) {
+      throw new Error("Recent orders could not be verified. Please refresh.");
+    }
+    ids.add(order.id);
   }
   return data;
 }

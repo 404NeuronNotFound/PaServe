@@ -253,6 +253,37 @@ try {
   assert.equal(report.totalSales, expectedTotal);
   assert.equal(report.totalSales, '10000000060.32');
   assert.equal(report.completedOrders, 37);
+  const recentRows = await client.query(
+    `SELECT id, "orderNumber", "totalPrice"::text AS total, to_char("completedAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS time FROM "${schema}".orders WHERE id=ANY($1::text[]) ORDER BY "completedAt" DESC, id DESC LIMIT 10`,
+    [rows.map((row) => row.id)],
+  );
+  assert.equal(report.recentOrders.length, 10);
+  assert.deepEqual(
+    report.recentOrders.map((order) => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      total: order.totalPrice,
+      time: order.completedAt,
+    })),
+    recentRows.rows,
+  );
+  assert.ok(
+    report.recentOrders.every(
+      (order) =>
+        order.shopId === shop.id &&
+        order.status === 'CONFIRMED' &&
+        order.paymentStatus === 'PAID' &&
+        order.preparationStatus === 'COMPLETED',
+    ),
+  );
+  assert.deepEqual(
+    (await sales.daily(actor.id, shop.id, '2026-10-18')).recentOrders,
+    [],
+  );
+  assert.equal(
+    (await sales.daily(actor.id, foreign.id, '2026-10-16')).recentOrders.length,
+    1,
+  );
   assert.equal(report.paymentBreakdown.length, 4);
   for (const entry of report.paymentBreakdown) {
     const methodOrders = rows.filter(
@@ -369,6 +400,7 @@ try {
       timezone: report.timezone,
       matchedOrders: rows.length,
       itemsSold: report.itemsSold,
+      recentOrders: report.recentOrders.length,
       paymentBreakdown: report.paymentBreakdown,
       grossSales: report.totalSales,
       checks:

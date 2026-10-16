@@ -14,8 +14,9 @@ describe('Daily gross sales', () => {
   const aggregate = vi.fn();
   const aggregateItems = vi.fn();
   const groupBy = vi.fn();
+  const findMany = vi.fn();
   const database = {
-    order: { aggregate, groupBy },
+    order: { aggregate, groupBy, findMany },
     orderItem: { aggregate: aggregateItems },
   };
   const transaction = vi.fn(async (work: (tx: typeof database) => unknown) =>
@@ -33,6 +34,7 @@ describe('Daily gross sales', () => {
     });
     aggregateItems.mockResolvedValue({ _sum: { quantity: null } });
     groupBy.mockResolvedValue([]);
+    findMany.mockResolvedValue([]);
     transaction.mockImplementation(async (work) => work(database));
   });
 
@@ -94,6 +96,7 @@ describe('Daily gross sales', () => {
       completedOrders: 200,
       totalSales: '12345678901234.30',
       itemsSold: 0,
+      recentOrders: [],
       paymentBreakdown: SALES_PAYMENT_METHODS.map((paymentMethod) => ({
         paymentMethod,
         orders: paymentMethod === 'CASH' ? 200 : 0,
@@ -127,6 +130,63 @@ describe('Daily gross sales', () => {
     const dailyQuery = aggregate.mock.calls[0][0];
     await service.summary(actorId, shopId, daily.from, daily.to);
     expect(aggregate.mock.calls[1][0]).toEqual(dailyQuery);
+  });
+  it('reads only ten recent eligible completions with stable ordering and a minimal projection', async () => {
+    aggregate.mockResolvedValue({
+      _count: { _all: 1 },
+      _sum: { totalPrice: new Prisma.Decimal('0.10') },
+    });
+    groupBy.mockResolvedValue([
+      {
+        paymentMethod: 'CASH',
+        _count: { _all: 1 },
+        _sum: { totalPrice: new Prisma.Decimal('0.10') },
+      },
+    ]);
+    const id = randomUUID();
+    findMany.mockResolvedValue([
+      {
+        id,
+        shopId,
+        orderNumber: 'ORD-000042',
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        preparationStatus: 'COMPLETED',
+        currency: 'PHP',
+        totalPrice: new Prisma.Decimal('0.10'),
+        completedAt: new Date('2026-10-16T00:00:00.000Z'),
+      },
+    ]);
+    const result = await service.daily(actorId, shopId, '2026-10-16');
+    expect(result.recentOrders).toEqual([
+      {
+        id,
+        shopId,
+        orderNumber: 'ORD-000042',
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        preparationStatus: 'COMPLETED',
+        currency: 'PHP',
+        totalPrice: '0.10',
+        completedAt: '2026-10-16T00:00:00.000Z',
+      },
+    ]);
+    expect(findMany).toHaveBeenCalledWith({
+      where: aggregate.mock.calls[0][0].where,
+      orderBy: [{ completedAt: 'desc' }, { id: 'desc' }],
+      take: 10,
+      select: {
+        id: true,
+        shopId: true,
+        orderNumber: true,
+        status: true,
+        paymentStatus: true,
+        preparationStatus: true,
+        currency: true,
+        totalPrice: true,
+        completedAt: true,
+      },
+    });
   });
   it('returns zero for an empty day', async () => {
     expect(await service.daily(actorId, shopId, '2026-10-16')).toMatchObject({

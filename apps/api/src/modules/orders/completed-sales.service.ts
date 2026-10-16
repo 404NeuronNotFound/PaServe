@@ -9,6 +9,7 @@ import {
   salesBusinessDayBounds,
   SALES_TIMEZONE,
   SALES_PAYMENT_METHODS,
+  type RecentSalesOrder,
   type DailySalesResponse,
   type CompletedSalesResponse,
 } from '@paserve/contracts';
@@ -36,7 +37,7 @@ export class CompletedSalesService {
       });
     const start = new Date(bounds.from),
       end = new Date(bounds.to);
-    const { summary, itemsSold, paymentBreakdown } =
+    const { summary, itemsSold, paymentBreakdown, recentOrders } =
       await this.prisma.$transaction(
         async (tx) => {
           const summary = await this.aggregate(actorId, shopId, start, end, tx);
@@ -95,7 +96,38 @@ export class CompletedSalesService {
               'Payment breakdown does not match the sales summary.',
             );
           }
-          return { summary, itemsSold, paymentBreakdown };
+          const savedRecent = await tx.order.findMany({
+            where: this.eligibleOrders(actorId, shopId, start, end),
+            orderBy: [{ completedAt: 'desc' }, { id: 'desc' }],
+            take: 10,
+            select: {
+              id: true,
+              shopId: true,
+              orderNumber: true,
+              status: true,
+              paymentStatus: true,
+              preparationStatus: true,
+              currency: true,
+              totalPrice: true,
+              completedAt: true,
+            },
+          });
+          const recentOrders = savedRecent.map((order): RecentSalesOrder => {
+            if (!order.completedAt)
+              throw new InternalServerErrorException(
+                'Recent orders could not be loaded.',
+              );
+            return {
+              ...order,
+              status: 'CONFIRMED',
+              paymentStatus: 'PAID',
+              preparationStatus: 'COMPLETED',
+              currency: 'PHP',
+              totalPrice: order.totalPrice.toFixed(2),
+              completedAt: order.completedAt.toISOString(),
+            };
+          });
+          return { summary, itemsSold, paymentBreakdown, recentOrders };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
       );
@@ -103,6 +135,7 @@ export class CompletedSalesService {
       ...summary,
       itemsSold,
       paymentBreakdown,
+      recentOrders,
       shopId,
       businessDate: date as string,
       timezone: SALES_TIMEZONE,

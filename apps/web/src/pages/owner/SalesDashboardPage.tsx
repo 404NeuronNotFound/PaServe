@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import {
@@ -14,12 +15,13 @@ import {
   FiRefreshCw,
   FiTrendingUp,
 } from "react-icons/fi";
-import { useActiveShop } from "../../features/shops/active-shop";
+import { shopPath, useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getDailySales } from "../../features/orders/daily-sales";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 import "./sales-dashboard.css";
+import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 
 export function SalesDashboardPage() {
   const { shopId, role } = useActiveShop();
@@ -280,6 +282,59 @@ function SalesWorkspace({ userId }: { userId: string }) {
                   ))}
                 </tbody>
               </table>
+            </section>
+          )}
+          {query.isSuccess && (
+            <section
+              className="sales-recent-orders"
+              aria-labelledby="sales-recent-title"
+              aria-busy={query.isFetching}
+            >
+              <div className="sales-recent-header">
+                <h2 id="sales-recent-title">Recent Orders</h2>
+                {role === "OWNER" && (
+                  <Link
+                    className="secondary-button"
+                    to={`${shopPath(shopId)}/orders/completed`}
+                  >
+                    View completed orders
+                  </Link>
+                )}
+              </div>
+              <p className="sales-business-date">
+                {date} · Latest 10 completions · Times in Manila
+              </p>
+              {query.data.recentOrders.length === 0 ? (
+                <p>No completed orders for this business day.</p>
+              ) : (
+                <ol
+                  className="sales-recent-list"
+                  aria-label="Recent completed orders, newest first"
+                >
+                  {query.data.recentOrders.map((order) => (
+                    <li key={order.id}>
+                      <div className="sales-recent-identity">
+                        {role === "OWNER" ? (
+                          <Link
+                            to={`${shopPath(shopId)}/orders/${encodeURIComponent(order.id)}`}
+                          >
+                            {order.orderNumber}
+                          </Link>
+                        ) : (
+                          <strong>{order.orderNumber}</strong>
+                        )}
+                        <span className="sales-recent-status">
+                          Completed · Paid
+                        </span>
+                      </div>
+                      <strong>{formatCartPrice(order.totalPrice)}</strong>
+                      <time dateTime={order.completedAt}>
+                        {formatReceiptDateTime(order.completedAt)}
+                      </time>
+                    </li>
+                  ))}
+                </ol>
+              )}
             </section>
           )}
         </>

@@ -1239,11 +1239,23 @@ export interface PaymentBreakdownEntry {
   totalSales: string;
 }
 export interface DailySalesResponse extends CompletedSalesResponse {
+  recentOrders: RecentSalesOrder[];
   paymentBreakdown: PaymentBreakdownEntry[];
   itemsSold: number;
   shopId: string;
   businessDate: string;
   timezone: typeof SALES_TIMEZONE;
+}
+export interface RecentSalesOrder {
+  id: string;
+  shopId: string;
+  orderNumber: string;
+  status: "CONFIRMED";
+  paymentStatus: "PAID";
+  preparationStatus: "COMPLETED";
+  currency: "PHP";
+  totalPrice: string;
+  completedAt: string;
 }
 export interface RestaurantTable {
   id: string;

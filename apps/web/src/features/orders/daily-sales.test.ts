@@ -1,7 +1,10 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { api } from "../../lib/api/client";
 import { getDailySales } from "./daily-sales";
-import { SALES_PAYMENT_METHODS } from "@paserve/contracts";
+import {
+  SALES_PAYMENT_METHODS,
+  type RecentSalesOrder,
+} from "@paserve/contracts";
 
 const response = () => ({
   shopId: "shop-a",
@@ -12,12 +15,60 @@ const response = () => ({
   currency: "PHP",
   completedOrders: 30,
   itemsSold: 75,
+  recentOrders: [],
   totalSales: "12345678901234.30",
   paymentBreakdown: SALES_PAYMENT_METHODS.map((paymentMethod) => ({
     paymentMethod,
     orders: paymentMethod === "CASH" ? 30 : 0,
     totalSales: paymentMethod === "CASH" ? "12345678901234.30" : "0.00",
   })),
+});
+
+const recent = (changes: Partial<RecentSalesOrder> = {}): RecentSalesOrder => ({
+  id: "order-z",
+  shopId: "shop-a",
+  orderNumber: "ORD-000042",
+  status: "CONFIRMED",
+  paymentStatus: "PAID",
+  preparationStatus: "COMPLETED",
+  currency: "PHP",
+  totalPrice: "123.45",
+  completedAt: "2026-10-16T00:00:00.000Z",
+  ...changes,
+});
+it("accepts a recent-order feed with stable descending ties and saved amounts", async () => {
+  const recentOrders = [recent(), recent({ id: "order-a" })];
+  vi.spyOn(api, "get").mockResolvedValue({
+    data: { ...response(), recentOrders },
+  });
+  expect(
+    (await getDailySales("shop-a", "2026-10-16", new AbortController().signal))
+      .recentOrders,
+  ).toEqual(recentOrders);
+});
+it.each([
+  undefined,
+  [null],
+  [recent({ shopId: "shop-b" })],
+  [recent({ id: "../bad" })],
+  [recent({ totalPrice: "NaN" })],
+  [recent({ completedAt: "2026-10-16T16:00:00.000Z" })],
+  [recent({ completedAt: "2026-10-15T15:59:59.999Z" })],
+  [recent({ preparationStatus: "QUEUED" } as never)],
+  [recent(), recent()],
+  [recent({ id: "order-a" }), recent()],
+  [
+    recent(),
+    recent({ id: "order-a", completedAt: "2026-10-16T01:00:00.000Z" }),
+  ],
+  Array.from({ length: 11 }, (_, index) => recent({ id: `order-${index}` })),
+])("rejects invalid recent-order data %j", async (recentOrders) => {
+  vi.spyOn(api, "get").mockResolvedValue({
+    data: { ...response(), recentOrders },
+  });
+  await expect(
+    getDailySales("shop-a", "2026-10-16", new AbortController().signal),
+  ).rejects.toThrow("Recent orders could not be verified");
 });
 
 it.each([

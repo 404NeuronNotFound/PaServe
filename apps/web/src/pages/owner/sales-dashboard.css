@@ -85,6 +85,72 @@
   color: var(--color-muted);
   font-size: 13px;
 }
+.sales-recent-orders {
+  margin-top: 24px;
+  padding: clamp(18px, 3vw, 32px);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background: var(--color-surface);
+}
+.sales-recent-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sales-recent-header h2 {
+  margin: 0;
+  font:
+    400 28px/1.2 Georgia,
+    serif;
+}
+.sales-recent-list {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+.sales-recent-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.6fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 18px 0;
+  border-top: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+}
+.sales-recent-identity {
+  display: grid;
+  gap: 8px;
+}
+.sales-recent-identity a {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 44px;
+  align-items: center;
+  color: var(--color-text);
+  font-weight: 600;
+}
+.sales-recent-identity a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+.sales-recent-status {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.sales-recent-list time {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+@media (max-width: 650px) {
+  .sales-recent-list li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .sales-recent-list time {
+    grid-column: 1 / -1;
+  }
+}
 .sales-payment-breakdown {
   margin-top: 24px;
   padding: clamp(18px, 3vw, 32px);
