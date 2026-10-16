@@ -242,91 +242,6 @@ function StaffWorkspace({ userId }: { userId: string }) {
         </div>
       </header>
       <div className="staff-grid">
-        <section
-          className="staff-panel staff-invite-panel"
-          aria-labelledby="invite-staff-title"
-        >
-          <header className="staff-invite-heading">
-            <span className="staff-invite-icon">
-              <FiUserPlus aria-hidden="true" />
-            </span>
-            <p className="section-label">GROW YOUR TEAM</p>
-            <h2 id="invite-staff-title">Invite staff</h2>
-            <p>Give the right person the right access.</p>
-          </header>
-          <div className="staff-invite-body">
-            <form
-              className="registration-form"
-              onSubmit={(event) => void submit(event)}
-              noValidate
-            >
-              <div className="field">
-                <label htmlFor="staff-email">Staff email address</label>
-                <input
-                  id="staff-email"
-                  type="email"
-                  autoComplete="email"
-                  maxLength={254}
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  disabled={busy}
-                  required
-                  placeholder="name@example.com"
-                />
-              </div>
-              <SelectField
-                id="staff-role"
-                label="Shop role"
-                value={role}
-                options={roles}
-                onChange={(value) => setRole(value as StaffRole)}
-                disabled={busy}
-                describedBy="staff-role-description"
-              />
-              <p id="staff-role-description" className="staff-role-description">
-                {roleDescriptions[role]}
-              </p>
-              <button className="primary-button" disabled={busy}>
-                {busy ? "Saving…" : "Create invitation link"}
-                <FiArrowUpRight aria-hidden="true" />
-              </button>
-            </form>
-            <p className="staff-hint">
-              <FiLock aria-hidden="true" />
-              They sign in with their own account. Share the link directly with
-              the person you invite.
-            </p>
-            <details className="staff-invite-guidance">
-              <summary>How invitation links work</summary>
-              <p>
-                Links expire after 7 days. Creating another invitation for the
-                same email replaces the previous unaccepted link.
-              </p>
-            </details>
-            {error && <InlineMessage>{error}</InlineMessage>}
-            {link && (
-              <div className="staff-link field">
-                <label htmlFor="invitation-link">
-                  Invitation link — save it before leaving this page
-                </label>
-                <input
-                  id="invitation-link"
-                  value={link}
-                  readOnly
-                  onFocus={(event) => event.target.select()}
-                />
-                <button
-                  className="secondary-button"
-                  onClick={() => void copy()}
-                  disabled={copying || busy}
-                >
-                  <FiLink aria-hidden="true" />
-                  {copying ? "Copying…" : "Copy invitation link"}
-                </button>
-              </div>
-            )}
-          </div>
-        </section>
         <div className="staff-team-panels">
           <section className="staff-panel" aria-labelledby="staff-list-title">
             <header className="staff-panel-heading">
@@ -510,6 +425,91 @@ function StaffWorkspace({ userId }: { userId: string }) {
             )}
           </section>
         </div>
+        <section
+          className="staff-panel staff-invite-panel"
+          aria-labelledby="invite-staff-title"
+        >
+          <header className="staff-invite-heading">
+            <span className="staff-invite-icon">
+              <FiUserPlus aria-hidden="true" />
+            </span>
+            <p className="section-label">GROW YOUR TEAM</p>
+            <h2 id="invite-staff-title">Invite staff</h2>
+            <p>Give the right person the right access.</p>
+          </header>
+          <div className="staff-invite-body">
+            <form
+              className="registration-form"
+              onSubmit={(event) => void submit(event)}
+              noValidate
+            >
+              <div className="field">
+                <label htmlFor="staff-email">Staff email address</label>
+                <input
+                  id="staff-email"
+                  type="email"
+                  autoComplete="email"
+                  maxLength={254}
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  disabled={busy}
+                  required
+                  placeholder="name@example.com"
+                />
+              </div>
+              <SelectField
+                id="staff-role"
+                label="Shop role"
+                value={role}
+                options={roles}
+                onChange={(value) => setRole(value as StaffRole)}
+                disabled={busy}
+                describedBy="staff-role-description"
+              />
+              <p id="staff-role-description" className="staff-role-description">
+                {roleDescriptions[role]}
+              </p>
+              <button className="primary-button" disabled={busy}>
+                {busy ? "Saving…" : "Create invitation link"}
+                <FiArrowUpRight aria-hidden="true" />
+              </button>
+            </form>
+            <p className="staff-hint">
+              <FiLock aria-hidden="true" />
+              They sign in with their own account. Share the link directly with
+              the person you invite.
+            </p>
+            <details className="staff-invite-guidance">
+              <summary>How invitation links work</summary>
+              <p>
+                Links expire after 7 days. Creating another invitation for the
+                same email replaces the previous unaccepted link.
+              </p>
+            </details>
+            {error && <InlineMessage>{error}</InlineMessage>}
+            {link && (
+              <div className="staff-link field">
+                <label htmlFor="invitation-link">
+                  Invitation link — save it before leaving this page
+                </label>
+                <input
+                  id="invitation-link"
+                  value={link}
+                  readOnly
+                  onFocus={(event) => event.target.select()}
+                />
+                <button
+                  className="secondary-button"
+                  onClick={() => void copy()}
+                  disabled={copying || busy}
+                >
+                  <FiLink aria-hidden="true" />
+                  {copying ? "Copying…" : "Copy invitation link"}
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
       <DecisionDialog
         open={Boolean(decision)}

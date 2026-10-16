@@ -303,6 +303,9 @@ export function DashboardFrame({
                   )}
                   {membership.role === "OWNER" && (
                     <>
+                      <NavLink to={`${shopPath(membership.shopId)}/orders`} onClick={closeNavigation}>
+                        <FiShoppingBag aria-hidden="true" /><span>Orders</span>
+                      </NavLink>
                       <NavLink to={`${shopPath(membership.shopId)}/staff`} onClick={closeNavigation}>
                         <FiUsers aria-hidden="true" /><span>Staff & invitations</span>
                       </NavLink>

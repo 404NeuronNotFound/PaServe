@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
-import { FiCheckCircle } from "react-icons/fi";
+import {
+  FiArrowRight,
+  FiCheckCircle,
+  FiFileText,
+  FiInfo,
+  FiPackage,
+} from "react-icons/fi";
 import type {
   ApiErrorResponse,
   CashPaymentReviewResponse,
   VerifyOrderQrResponse,
 } from "@paserve/contracts";
 import { CashierPaidReceipt } from "./CashierPaidReceipt";
-import { formatReceiptDateTime, RECEIPT_TIME_ZONE } from "../../lib/receipt-date-time";
+import {
+  formatReceiptDateTime,
+  RECEIPT_TIME_ZONE,
+} from "../../lib/receipt-date-time";
 import {
   PAYMENT_REFERENCE_PATTERN,
   CASH_AMOUNT_MAX,
@@ -291,105 +300,150 @@ export function CashierCashPayment({
     }
   }
   const receiptPayment = parseReceiptPaymentDetails(review?.payment);
-  if (showReceipt && !blocked && review?.payment && review.order.status === "CONFIRMED" && review.order.paymentStatus === "PAID")
-    return <CashierPaidReceipt review={review} validating={busy} onBack={() => setShowReceipt(false)} />;
+  if (
+    showReceipt &&
+    !blocked &&
+    review?.payment &&
+    review.order.status === "CONFIRMED" &&
+    review.order.paymentStatus === "PAID"
+  )
+    return (
+      <CashierPaidReceipt
+        review={review}
+        validating={busy}
+        onBack={() => setShowReceipt(false)}
+      />
+    );
   if (review?.payment)
     return (
       <section
         className="scanner-panel cashier-cash-result"
         aria-labelledby="cash-paid-title"
       >
-        <span className="cashier-cash-emblem">
-          <FiCheckCircle aria-hidden="true" />
-        </span>
-        <p className="section-label">
-          PAYMENT COMPLETE /{" "}
-          {review.payment.method === "OTHER"
-            ? "OTHER"
-            : review.payment.method === "CASH"
-              ? "CASH"
-              : review.payment.method === "CARD_MANUAL"
-                ? "CARD MANUAL"
-                : "GCASH MANUAL"}
-        </p>
-        <h2 id="cash-paid-title" ref={resultHeading} tabIndex={-1}>
-          {review.payment.method === "OTHER"
-            ? "Other payment recorded manually"
-            : review.payment.method === "CASH"
-              ? "Cash payment recorded"
-              : review.payment.method === "CARD_MANUAL"
-                ? "Card payment recorded manually"
-                : "GCash payment recorded manually"}
-        </h2>
-        <p role="status">{review.order.orderNumber} is paid.</p>
-        {review.queue && (
-          <p role="status">
-            {review.queue.status === "QUEUED"
-              ? "Queued for preparation."
-              : review.queue.status === "PREPARING"
-                ? "Preparation is in progress."
-                : review.queue.status === "COMPLETED"
-                  ? "Order fulfilled."
-                  : "Ready for collection."}
-          </p>
-        )}
-        <dl>
-          <div>
-            <dt>Payment recorded ({RECEIPT_TIME_ZONE})</dt>
-            <dd><time dateTime={review.payment.paidAt}>{formatReceiptDateTime(review.payment.paidAt)}</time></dd>
+        <header className="cashier-paid-header">
+          <div className="cashier-paid-heading">
+            <p className="section-label">Payment complete</p>
+            <h2 id="cash-paid-title" ref={resultHeading} tabIndex={-1}>
+              {review.payment.method === "OTHER"
+                ? "Other payment recorded manually"
+                : review.payment.method === "CASH"
+                  ? "Cash payment recorded"
+                  : review.payment.method === "CARD_MANUAL"
+                    ? "Card payment recorded manually"
+                    : "GCash payment recorded manually"}
+            </h2>
+            <p className="cashier-paid-order" role="status">
+              {review.order.orderNumber} is paid.
+            </p>
           </div>
-          {receiptPayment?.description && (
+          <span className="cashier-cash-emblem" aria-hidden="true">
+            <FiCheckCircle aria-hidden="true" />
+          </span>
+        </header>
+        <div className="cashier-paid-body">
+          <div className="cashier-paid-context">
+            <span className="cashier-paid-method">
+              <FiFileText aria-hidden="true" />
+              {review.payment.method === "OTHER"
+                ? "Other payment"
+                : review.payment.method === "CASH"
+                  ? "Cash"
+                  : review.payment.method === "CARD_MANUAL"
+                    ? "Card · Manual"
+                    : "GCash · Manual"}
+            </span>
+            {review.queue && (
+              <p className="cashier-paid-fulfillment" role="status">
+                <FiPackage aria-hidden="true" />
+                {review.queue.status === "QUEUED"
+                  ? "Queued for preparation."
+                  : review.queue.status === "PREPARING"
+                    ? "Preparation is in progress."
+                    : review.queue.status === "COMPLETED"
+                      ? "Order fulfilled."
+                      : "Ready for collection."}
+              </p>
+            )}
+          </div>
+          <dl>
+            <div className="cashier-paid-total">
+              <dt>Order total</dt>
+              <dd>{formatCartPrice(review.order.totalPrice)}</dd>
+            </div>
             <div>
-              <dt>Payment method description</dt>
-              <dd>{receiptPayment.description}</dd>
+              <dt>Payment recorded ({RECEIPT_TIME_ZONE})</dt>
+              <dd>
+                <time dateTime={review.payment.paidAt}>
+                  {formatReceiptDateTime(review.payment.paidAt)}
+                </time>
+              </dd>
             </div>
-          )}
-          <div>
-            <dt>Order total</dt>
-            <dd>{formatCartPrice(review.order.totalPrice)}</dd>
-          </div>
-          <div>
-            <dt>Amount received</dt>
-            <dd>{formatCartPrice(review.payment.amountReceived)}</dd>
-          </div>
-          {review.payment.method === "CASH" && (
-            <div className="cashier-cash-change">
-              <dt>Change due</dt>
-              <dd>{formatCartPrice(review.payment.changeDue)}</dd>
-            </div>
-          )}
-          {receiptPayment?.reference && (
+            {receiptPayment?.description && (
+              <div>
+                <dt>Payment method description</dt>
+                <dd>{receiptPayment.description}</dd>
+              </div>
+            )}
             <div>
-              <dt>Reference note / number</dt>
-              <dd>{receiptPayment.reference}</dd>
+              <dt>Amount received</dt>
+              <dd>{formatCartPrice(review.payment.amountReceived)}</dd>
             </div>
-          )}
-        </dl>
-        <p className="receipt-screen-only">
-          {review.payment.method === "OTHER"
-            ? "The cashier recorded full payment using the shop-specific method shown above. No gateway verification was performed."
-            : review.payment.method === "CARD_MANUAL"
-              ? "The cashier recorded this payment after checking completion on the external terminal. No gateway verification was performed."
-              : review.payment.method === "GCASH_MANUAL"
-                ? "The cashier recorded this payment after checking GCash receipt. No gateway verification was performed."
-                : recordedHere
-                  ? "Return the change to the customer."
-                  : "This order already has a saved cash payment. Check with the cashier before handling any cash or change."}
-        </p>
-        {error && <InlineMessage>{error}</InlineMessage>}
-        {blocked && (
-          <button type="button" className="secondary-button" disabled={busy} onClick={() => void refresh()}>
-            Refresh payment
-          </button>
-        )}
-        {!blocked && review.order.status === "CONFIRMED" && review.order.paymentStatus === "PAID" && (
-          <button type="button" className="secondary-button" disabled={busy} onClick={() => setShowReceipt(true)}>
-            View receipt
-          </button>
-        )}
-        <button className="primary-button" onClick={onNext}>
-          Scan another order
-        </button>
+            {review.payment.method === "CASH" && (
+              <div className="cashier-cash-change">
+                <dt>Change due</dt>
+                <dd>{formatCartPrice(review.payment.changeDue)}</dd>
+              </div>
+            )}
+            {receiptPayment?.reference && (
+              <div>
+                <dt>Reference note / number</dt>
+                <dd>{receiptPayment.reference}</dd>
+              </div>
+            )}
+          </dl>
+          <div className="cashier-paid-note receipt-screen-only">
+            <FiInfo aria-hidden="true" />
+            <p>
+              {review.payment.method === "OTHER"
+                ? "The cashier recorded full payment using the shop-specific method shown above. No gateway verification was performed."
+                : review.payment.method === "CARD_MANUAL"
+                  ? "The cashier recorded this payment after checking completion on the external terminal. No gateway verification was performed."
+                  : review.payment.method === "GCASH_MANUAL"
+                    ? "The cashier recorded this payment after checking GCash receipt. No gateway verification was performed."
+                    : recordedHere
+                      ? "Return the change to the customer."
+                      : "This order already has a saved cash payment. Check with the cashier before handling any cash or change."}
+            </p>
+          </div>
+          {error && <InlineMessage>{error}</InlineMessage>}
+          <div className="cashier-paid-actions">
+            {blocked && (
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={busy}
+                onClick={() => void refresh()}
+              >
+                Refresh payment
+              </button>
+            )}
+            {!blocked &&
+              review.order.status === "CONFIRMED" &&
+              review.order.paymentStatus === "PAID" && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={busy}
+                  onClick={() => setShowReceipt(true)}
+                >
+                  <FiFileText aria-hidden="true" /> View receipt
+                </button>
+              )}
+            <button className="primary-button" onClick={onNext}>
+              Scan another order <FiArrowRight aria-hidden="true" />
+            </button>
+          </div>
+        </div>
       </section>
     );
   const controls = (

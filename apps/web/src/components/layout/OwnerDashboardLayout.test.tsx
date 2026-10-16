@@ -205,6 +205,9 @@ it("uses one shared header/main and correct navigation across page outlets", asy
     await screen.findByRole("heading", { name: "Cafe A" }),
   ).toBeInTheDocument();
   const nav = screen.getByRole("navigation", { name: "Shop navigation" });
+  expect(within(nav).getByRole("link", { name: "Orders" })).toHaveAttribute(
+    "href", "/app/shops/a/orders",
+  );
   expect(within(nav).getByRole("link", { name: "Overview" })).toHaveAttribute(
     "aria-current",
     "page",
@@ -239,6 +242,7 @@ it("switches to an admin's shop and updates navigation and the page context", as
     await screen.findByRole("heading", { name: "Cafe B" }),
   ).toBeInTheDocument();
   expect(screen.getByText("Your role: admin")).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Orders" })).not.toBeInTheDocument();
   expect(
     within(
       screen.getByRole("navigation", { name: "Shop navigation" }),

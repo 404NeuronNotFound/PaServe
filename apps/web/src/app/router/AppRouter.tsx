@@ -20,6 +20,7 @@ import {
   ShopSelectionPage,
 } from "../../pages/owner/ShopSelectionPage";
 import { ActiveShopPage } from "../../pages/owner/ActiveShopPage";
+import { ActiveOrdersPage } from "../../pages/owner/ActiveOrdersPage";
 import { ShopSettingsPage } from "../../pages/owner/ShopSettingsPage";
 import { CategoriesPage } from "../../pages/owner/CategoriesPage";
 import { TablesPage } from "../../pages/owner/TablesPage";
@@ -66,6 +67,7 @@ export function AppRouter() {
           <Route path="shops/:shopId" element={<ActiveShopRoute />}>
             <Route element={<OwnerDashboardLayout />}>
               <Route index element={<ActiveShopPage />} />
+              <Route path="orders" element={<ActiveOrdersPage />} />
               <Route path="cashier" element={<CashierRoute />}>
                 <Route index element={<CashierPage />} />
               </Route>

@@ -108,6 +108,27 @@ export const SHOP_KITCHEN_PERMISSIONS = [
 export const PREPARATION_STATUSES = ["QUEUED", "PREPARING", "READY", "COMPLETED"] as const;
 export type PreparationStatus = (typeof PREPARATION_STATUSES)[number];
 
+/** Read-only owner overview; approval, payment and fulfillment stay independent. */
+export interface ActiveOrderSummary {
+  id: string;
+  shopId: string;
+  orderNumber: string;
+  mode: "DINE_IN" | "TAKEOUT";
+  tableNumber: string | null;
+  status: "PENDING_CONFIRMATION" | "CONFIRMED";
+  paymentStatus: "UNPAID" | "PAID";
+  preparationStatus: Exclude<PreparationStatus, "COMPLETED"> | null;
+  currency: "PHP";
+  totalPrice: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ActiveOrdersResponse {
+  orders: ActiveOrderSummary[];
+  nextCursor: string | null;
+}
+
 export function canTransitionPreparationStatus(
   from: PreparationStatus,
   to: PreparationStatus,

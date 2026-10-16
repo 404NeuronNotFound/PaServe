@@ -79,6 +79,23 @@
 .customer-receipt-page .order-receipt-heading .order-receipt-context { display: none; }
 .customer-receipt-page .receipt-view-details { padding: 0; }
 .customer-receipt-page .order-receipt-card footer { max-width: 620px; margin-inline: auto; border: 0; padding: 28px 0; }
+.customer-receipt-page .order-receipt-footer-actions {
+  width: 100%;
+  align-items: stretch;
+}
+.customer-receipt-page .order-receipt-footer-actions > :is(button, a) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 48px;
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
 .cashier-receipt-view { max-width: 620px; margin: 24px auto; }
 .cashier-receipt-view-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .cashier-receipt-view-heading h2 { margin: 0; font: 600 1.25rem/1.4 var(--font-sans, Arial, sans-serif); letter-spacing: -0.03em; }

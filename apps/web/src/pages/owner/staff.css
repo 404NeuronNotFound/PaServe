@@ -44,7 +44,7 @@
 }
 .phase-two .staff-grid {
   display: grid;
-  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.5fr);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
   gap: 24px;
   align-items: start;
 }
@@ -93,19 +93,25 @@
 }
 .phase-two .staff-invite-panel {
   padding: 0;
+  border-top: 3px solid var(--color-lime);
+  background: linear-gradient(
+    150deg,
+    var(--color-secondary),
+    var(--color-surface) 58%
+  );
 }
 .phase-two .staff-invite-heading {
   position: relative;
   padding: 28px;
   border-radius: 21px 21px 0 0;
-  background: var(--color-primary);
-  color: #fffefa;
+  background: transparent;
+  color: var(--color-text);
 }
 .phase-two .staff-invite-heading .section-label {
   margin: 0 0 18px;
   padding-right: 52px;
   font-size: 10px;
-  color: var(--color-lime);
+  color: var(--color-muted);
 }
 .phase-two .staff-invite-heading h2 {
   font-size: 32px;
@@ -113,7 +119,7 @@
 }
 .phase-two .staff-invite-heading > p:last-child {
   font-size: 13px;
-  color: #d6dfc8;
+  color: var(--color-muted);
   margin: 12px 0 0;
   line-height: 1.6;
 }
@@ -125,9 +131,10 @@
   place-items: center;
   width: 40px;
   height: 40px;
-  border: 1px solid #c9ef8340;
+  border: 1px solid var(--color-border);
   border-radius: 13px;
-  color: var(--color-lime);
+  background: var(--color-surface);
+  color: var(--color-text);
   font-size: 19px;
 }
 .phase-two .staff-invite-body {
@@ -316,14 +323,25 @@
 .phase-two .staff-actions {
   display: flex;
   gap: 8px;
-  align-items: end;
+  align-items: center;
   flex-wrap: wrap;
   flex-shrink: 0;
 }
-.phase-two .staff-actions .field {
-  width: 142px;
+.phase-two .staff-actions > .select-field,
+.phase-two .staff-actions > button.secondary-button {
+  width: 136px;
+  flex: 0 0 136px;
   min-width: 0;
   margin: 0;
+}
+.phase-two .staff-actions .select-field-trigger,
+.phase-two .staff-actions > button.secondary-button {
+  height: 48px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 11px;
+  font-size: 13px;
+  line-height: 1.4;
 }
 .phase-two .staff-actions button.secondary-button {
   display: inline-flex;
@@ -376,7 +394,6 @@
 }
 @media (max-width: 1150px) {
   .phase-two .staff-grid {
-    grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
     gap: 18px;
   }
   .phase-two .staff-list > li {
@@ -388,10 +405,15 @@
     padding-left: 52px;
   }
 }
-@media (max-width: 850px) {
+@media (max-width: 1000px) {
   .phase-two .staff-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
+  .phase-two .staff-invite-panel {
+    grid-row: 1;
+  }
+}
+@media (max-width: 850px) {
   .phase-two .staff-heading h1 {
     font-size: 34px;
   }
@@ -406,9 +428,10 @@
   .phase-two .staff-actions {
     padding-left: 0;
   }
-  .phase-two .staff-actions .field {
-    flex: 1;
-    min-width: 120px;
+  .phase-two .staff-actions > .select-field,
+  .phase-two .staff-actions > button.secondary-button {
+    flex: 1 1 112px;
+    width: 100%;
   }
   .phase-two .staff-avatar {
     width: 34px;

@@ -4,6 +4,8 @@ import type { Response } from 'express';
 import { PublicProductRepository } from '../products/public-product.repository.js';
 import { PublicProductService } from '../products/public-product.service.js';
 import { OrdersService } from './orders.service.js';
+import { ActiveOrdersController } from './active-orders.controller.js';
+import { ActiveOrdersService } from './active-orders.service.js';
 import { CreateOrderDto } from './create-order.dto.js';
 import { TableContextService } from '../tables/table-context.service.js';
 import { OrderTokenService } from './order-token.service.js';
@@ -58,6 +60,7 @@ export class OrdersController {
 @Module({
   imports: [ShopMembersModule, RealtimeModule],
   controllers: [
+    ActiveOrdersController,
     OrdersController,
     NewOrderEventsController,
     ConfirmedOrderEventsController,
@@ -72,6 +75,7 @@ export class OrdersController {
     CompletedSalesController,
   ],
   providers: [
+    ActiveOrdersService,
     OrdersService,
     CustomerOrderStatusService,
     PublicProductService,
