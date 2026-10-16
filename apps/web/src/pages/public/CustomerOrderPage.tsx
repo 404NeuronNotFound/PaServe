@@ -38,8 +38,8 @@ export function CustomerOrderPage() {
           label: "Preparing",
           heading: "Order in preparation",
           title: "We're preparing your order",
-          message: "The kitchen has started preparing your order.",
-          step: "Preparation started.",
+          message: "The kitchen is actively preparing your order.",
+          step: "Preparation in progress.",
         }
       : preparation === "READY"
         ? {
@@ -166,7 +166,11 @@ export function CustomerOrderPage() {
                 </span>
               </div>
               <p className="section-label">
-                {confirmed ? "With your team" : "At the counter"}
+                {preparation === "PREPARING"
+                  ? "In the kitchen"
+                  : confirmed
+                    ? "With your team"
+                    : "At the counter"}
               </p>
               <h2 id="order-receipt-next-title">
                 {preparationCopy
@@ -180,6 +184,8 @@ export function CustomerOrderPage() {
               <p>
                 {completed ? (
                   "Keep this receipt for your records."
+                ) : preparation === "PREPARING" ? (
+                  "Preparation times vary. Watch this page for the Ready status."
                 ) : confirmed ? (
                   "Keep your order number handy for pickup or table service."
                 ) : rejected ? (

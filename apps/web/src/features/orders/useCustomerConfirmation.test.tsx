@@ -276,6 +276,51 @@ it("recovers saved confirmation through polling while the event stream stays una
   expect(fetchStatus).toHaveBeenCalledTimes(2);
 });
 
+it.each(["polling", "focus", "online", "resync"])(
+  "recovers preparation and readiness through %s after a failed read",
+  async (trigger) => {
+    fetchStatus.mockResolvedValue(response(confirmed));
+    const { result } = renderHook(() =>
+      useCustomerConfirmation("cafe", orderId, token),
+    );
+    await flush();
+    const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
+    act(() => vi.mocked(subscribeOrderStream).mock.calls[0][5]("retrying"));
+    async function recover() {
+      await act(async () => {
+        if (trigger === "polling") await vi.advanceTimersByTimeAsync(15_000);
+        else if (trigger === "resync") notify("resync", { shopId, orderId });
+        else window.dispatchEvent(new Event(trigger));
+      });
+      await flush();
+    }
+    const preparing = {
+      ...confirmed,
+      preparationStatus: "PREPARING",
+      preparationStartedAt: "2026-10-15T01:02:00Z",
+      updatedAt: "2026-10-15T01:02:00Z",
+    };
+    fetchStatus.mockResolvedValue(response(preparing));
+    await recover();
+    expect(result.current).toEqual(preparing);
+
+    fetchStatus.mockResolvedValue({ ok: false, status: 500 });
+    await recover();
+    expect(result.current).toEqual(preparing);
+
+    const ready = {
+      ...preparing,
+      preparationStatus: "READY",
+      preparationReadyAt: "2026-10-15T01:03:00Z",
+      updatedAt: "2026-10-15T01:03:00Z",
+    };
+    fetchStatus.mockResolvedValue(response(ready));
+    await recover();
+    expect(result.current).toEqual(ready);
+    expect(fetchStatus).toHaveBeenCalledTimes(4);
+  },
+);
+
 it("releases the live stream and recovery listeners after receipt access is denied", async () => {
   const { unmount } = renderHook(() =>
     useCustomerConfirmation("cafe", orderId, token),

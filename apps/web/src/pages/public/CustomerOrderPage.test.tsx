@@ -187,7 +187,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
   expect(queueStep).toHaveAttribute("aria-current", "step");
   expect(queueStep).not.toHaveClass("is-complete");
   expect(screen.queryByText("Preparing")).not.toBeInTheDocument();
-  expect(screen.queryByText("Preparation started.")).not.toBeInTheDocument();
+  expect(screen.queryByText("Preparation in progress.")).not.toBeInTheDocument();
   expect(
     screen.queryByRole("heading", { name: "Waiting for Confirmation" }),
   ).not.toBeInTheDocument();
@@ -245,7 +245,18 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
   await screen.findByRole("heading", { name: "Order in preparation" });
   expect(screen.queryByText("Waiting for preparation to start.")).not.toBeInTheDocument();
   expect(screen.getByText("Preparing")).toBeInTheDocument();
-  expect(screen.getByText("Preparation started.")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Preparing. The kitchen is actively preparing your order.",
+  );
+  expect(screen.getByText("In the kitchen")).toBeInTheDocument();
+  expect(screen.getByText(
+    "Preparation times vary. Watch this page for the Ready status.",
+  )).toBeInTheDocument();
+  const activePreparation = screen.getByText("Preparation in progress.").closest("li");
+  expect(activePreparation).toHaveAttribute("aria-current", "step");
+  expect(activePreparation).not.toHaveClass("is-complete");
+  expect(screen.queryByRole("heading", { name: "Order ready" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/Please collect it at the counter/)).not.toBeInTheDocument();
   act(() => {
     for (let i = 0; i < 3; i++)
       vi.mocked(subscribeOrderStream).mock.calls[0][4]("order_preparing", {
@@ -289,6 +300,10 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
     ),
   ).toHaveLength(2);
   expect(screen.queryByText("Preparing")).not.toBeInTheDocument();
+  expect(screen.queryByText("Preparation in progress.")).not.toBeInTheDocument();
+  expect(screen.queryByText(
+    "Preparation times vary. Watch this page for the Ready status.",
+  )).not.toBeInTheDocument();
   expect(screen.getAllByText("ORD-000042")).toHaveLength(1);
   expect(api.post).not.toHaveBeenCalled();
   fetchStatus.mockResolvedValue({
