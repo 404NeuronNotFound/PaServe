@@ -76,6 +76,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   if (originalModal)
     Object.defineProperty(
       HTMLDialogElement.prototype,
@@ -86,6 +87,42 @@ afterEach(() => {
   if (originalClose)
     Object.defineProperty(HTMLDialogElement.prototype, "close", originalClose);
   else Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
+});
+it("offers printing only after loading a saved paid receipt", async () => {
+  render(<CashierCashPayment shopId="shop-a" orderId="order-a" onNext={vi.fn()} />);
+  await screen.findByRole("button", { name: "Record cash payment" });
+  expect(screen.queryByRole("button", { name: "Print receipt" })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Print layout")).not.toBeInTheDocument();
+});
+it.each(["standard", "thermal-80", "thermal-58"])(
+  "prints the saved cashier receipt using %s without payment mutations",
+  async (layout) => {
+    vi.mocked(reviewCashPayment).mockResolvedValue(paid);
+    const print = vi.spyOn(window, "print").mockImplementation(() => {});
+    render(<CashierCashPayment shopId="shop-a" orderId="order-a" onNext={vi.fn()} />);
+    await screen.findByRole("button", { name: "Print receipt" });
+    const reads = vi.mocked(reviewCashPayment).mock.calls.length;
+    await userEvent.selectOptions(screen.getByLabelText("Print layout"), layout);
+    expect(screen.getByRole("region", { name: "Cash payment recorded" })).toHaveAttribute("data-print-layout", layout);
+    await userEvent.click(screen.getByRole("button", { name: "Print receipt" }));
+    expect(print).toHaveBeenCalledExactlyOnceWith();
+    expect(reviewCashPayment).toHaveBeenCalledTimes(reads);
+    expect(collectCashPayment).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "2 × Saved Latte" })).toBeInTheDocument();
+    expect(screen.getByText("Large")).toBeInTheDocument();
+    expect(screen.getByText("Oat milk")).toBeInTheDocument();
+    expect(screen.getByText("Line total: ₱135.50")).toBeInTheDocument();
+    expect(screen.getByText("₱200.00")).toBeInTheDocument();
+    expect(screen.getByText("₱64.50")).toBeInTheDocument();
+  },
+);
+it("retains the saved cashier receipt when the print dialog fails", async () => {
+  vi.mocked(reviewCashPayment).mockResolvedValue(paid);
+  vi.spyOn(window, "print").mockImplementation(() => { throw new Error("Blocked"); });
+  render(<CashierCashPayment shopId="shop-a" orderId="order-a" onNext={vi.fn()} />);
+  await userEvent.click(await screen.findByRole("button", { name: "Print receipt" }));
+  expect(screen.getByText(/Could not open the print dialog/)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Cash payment recorded" })).toBeInTheDocument();
 });
 it("shows preparation queue state only from a saved paid receipt", async () => {
   vi.mocked(reviewCashPayment).mockResolvedValue({

@@ -93,8 +93,17 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   window.history.replaceState({}, "", "/");
+});
+
+it("keeps customer receipts viewable without cashier print controls", async () => {
+  setup();
+  await screen.findByRole("heading", { name: "Receipt ORD-000042" });
+  expect(screen.queryByRole("button", { name: "Print receipt" })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Print layout")).not.toBeInTheDocument();
+  expect(screen.getByText("Line total: ₱135.50")).toBeInTheDocument();
 });
 
 it.each(["DINE_IN", "TAKEOUT"] as const)(
@@ -150,6 +159,9 @@ it.each([401, 403, 404])(
       screen.queryByRole("region", { name: "Order receipt" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("12 Main Street")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Print receipt" }),
+    ).not.toBeInTheDocument();
   },
 );
 it("clearly labels a saved unpaid receipt without showing payment settlement", async () => {

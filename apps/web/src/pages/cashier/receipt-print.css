@@ -1,0 +1,121 @@
+.cashier-receipt-page .receipt-print-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-block: 24px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-canvas);
+}
+.cashier-receipt-page .receipt-print-controls label { flex: 1 1 180px; }
+.cashier-receipt-page .receipt-print-controls select { min-height: 44px; width: 100%; }
+.cashier-receipt-page .receipt-print-controls p,
+.cashier-receipt-page .receipt-print-controls > .feedback-inline {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.cashier-receipt-page .receipt-order-items { text-align: left; }
+.cashier-receipt-page .receipt-order-items ol { padding-left: 24px; }
+.cashier-receipt-page .receipt-order-items li { overflow-wrap: anywhere; }
+
+/* Paper size is selected in the browser/printer driver. */
+@page cashier-receipt-standard { size: auto; margin: 12mm; }
+@page cashier-receipt-thermal { size: auto; margin: 0; }
+
+@media print {
+  /* Remove workspace siblings and reset every scrolling/layout ancestor so
+     only the saved payment receipt occupies printed pages. */
+  body:has(.cashier-receipt-page) #root
+    *:not(.cashier-receipt-page):not(.cashier-receipt-page *):not(:has(.cashier-receipt-page)),
+  body:has(.cashier-receipt-page) .feedback-banners,
+  body:has(.cashier-receipt-page) .feedback-overlay {
+    display: none !important;
+  }
+  html:has(.cashier-receipt-page),
+  body:has(.cashier-receipt-page),
+  body:has(.cashier-receipt-page) #root,
+  body:has(.cashier-receipt-page) #root *:has(.cashier-receipt-page) {
+    display: block !important;
+    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    transform: none !important;
+    background: #fff !important;
+  }
+  .cashier-receipt-page {
+    page: cashier-receipt-standard;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-sizing: border-box;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+    text-align: left !important;
+    font: 11pt/1.4 Arial, sans-serif !important;
+  }
+  .cashier-receipt-page,
+  .cashier-receipt-page *,
+  .cashier-receipt-page *::before,
+  .cashier-receipt-page *::after {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+    overflow-wrap: anywhere;
+  }
+  .cashier-receipt-page .cashier-cash-emblem,
+  .cashier-receipt-page .receipt-print-controls,
+  .cashier-receipt-page .receipt-screen-only,
+  .cashier-receipt-page button,
+  .cashier-receipt-page a { display: none !important; }
+  .cashier-receipt-page :is(h2, h3, h4) {
+    font-family: Arial, sans-serif !important;
+    letter-spacing: normal !important;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .cashier-receipt-page h2 { font-size: 15pt !important; }
+  .cashier-receipt-page h3 { font-size: 12pt !important; }
+  .cashier-receipt-page h4 { font-size: 11pt !important; }
+  .cashier-receipt-page p { max-width: none !important; font-size: inherit !important; }
+  .cashier-receipt-page dl { display: block !important; }
+  .cashier-receipt-page dl > div {
+    display: block !important;
+    margin-block: 3mm;
+    padding: 0 !important;
+  }
+  .cashier-receipt-page dd { margin: 0; font-size: inherit !important; }
+  .cashier-receipt-page .receipt-order-items > ol > li { padding-block: 2mm; }
+  .cashier-receipt-page .receipt-order-items > ol > li,
+  .cashier-receipt-page .receipt-shop-details,
+  .cashier-receipt-page dl > div {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .cashier-receipt-page[data-print-layout^="thermal-"] {
+    page: cashier-receipt-thermal;
+    padding: 2mm !important;
+    font-size: 9pt !important;
+  }
+  .cashier-receipt-page[data-print-layout="thermal-80"] { width: 72mm !important; }
+  .cashier-receipt-page[data-print-layout="thermal-58"] { width: 50mm !important; }
+  .cashier-receipt-page[data-print-layout^="thermal-"] h2 { font-size: 12pt !important; }
+  .cashier-receipt-page[data-print-layout^="thermal-"] :is(h3, h4) { font-size: 10pt !important; }
+}

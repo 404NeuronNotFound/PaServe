@@ -7,6 +7,8 @@ import type {
   VerifyOrderQrResponse,
 } from "@paserve/contracts";
 import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
+import { ReceiptOrderItems } from "../public/ReceiptOrderItems";
+import "./receipt-print.css";
 import { formatReceiptDateTime, RECEIPT_TIME_ZONE } from "../../lib/receipt-date-time";
 import {
   PAYMENT_REFERENCE_PATTERN,
@@ -72,6 +74,16 @@ export function CashierCashPayment({
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [recordedHere, setRecordedHere] = useState(false);
+  const [printLayout, setPrintLayout] = useState("standard");
+  const [printError, setPrintError] = useState("");
+  function printReceipt() {
+    setPrintError("");
+    try {
+      window.print();
+    } catch {
+      setPrintError("Could not open the print dialog. Try printing again.");
+    }
+  }
   const active = useRef(false),
     running = useRef(false);
   const controller = useRef<AbortController | null>(null);
@@ -290,7 +302,8 @@ export function CashierCashPayment({
   if (review?.payment)
     return (
       <section
-        className="scanner-panel cashier-cash-result"
+        className="scanner-panel cashier-cash-result cashier-receipt-page"
+        data-print-layout={printLayout}
         aria-labelledby="cash-paid-title"
       >
         <span className="cashier-cash-emblem">
@@ -317,6 +330,10 @@ export function CashierCashPayment({
         </h2>
         <p role="status">{review.order.orderNumber} is paid.</p>
         <ReceiptShopDetails details={review.order.shopDetails} />
+        <p>{review.order.mode === "DINE_IN"
+          ? `Dine-in · Table ${review.order.tableNumber}`
+          : "Takeout / pickup"}</p>
+        <ReceiptOrderItems items={review.order.items} />
         {review.queue && (
           <p role="status">
             {review.queue.status === "QUEUED"
@@ -360,7 +377,7 @@ export function CashierCashPayment({
             </div>
           )}
         </dl>
-        <p>
+        <p className="receipt-screen-only">
           {review.payment.method === "OTHER"
             ? "The cashier recorded full payment using the shop-specific method shown above. No gateway verification was performed."
             : review.payment.method === "CARD_MANUAL"
@@ -371,6 +388,21 @@ export function CashierCashPayment({
                   ? "Return the change to the customer."
                   : "This order already has a saved cash payment. Check with the cashier before handling any cash or change."}
         </p>
+        <section className="receipt-print-controls" aria-label="Receipt printing">
+          <label className="field">
+            Print layout
+            <select value={printLayout} onChange={(event) => setPrintLayout(event.target.value)}>
+              <option value="standard">Standard paper</option>
+              <option value="thermal-80">80 mm receipt</option>
+              <option value="thermal-58">58 mm receipt</option>
+            </select>
+          </label>
+          <button type="button" className="primary-button" onClick={printReceipt}>
+            Print receipt
+          </button>
+          <p>Choose the matching paper size in your printer settings. Turn off browser headers and footers to keep the page address off the receipt.</p>
+          {printError && <InlineMessage>{printError}</InlineMessage>}
+        </section>
         <button className="primary-button" onClick={onNext}>
           Scan another order
         </button>
