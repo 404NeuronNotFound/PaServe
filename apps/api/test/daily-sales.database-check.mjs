@@ -193,6 +193,26 @@ try {
   assert.equal(report.totalSales, '10000000060.32');
   assert.equal(report.completedOrders, 37);
   assert.equal(
+    (await sales.daily(actor.id, shop.id, '2026-10-16')).completedOrders,
+    37,
+    'Refreshing does not double-count orders',
+  );
+  assert.equal(
+    (await sales.daily(actor.id, shop.id, '2026-10-17')).completedOrders,
+    1,
+    'Next midnight belongs to the next period',
+  );
+  assert.equal(
+    (await sales.daily(actor.id, shop.id, '2026-10-18')).completedOrders,
+    0,
+    'Empty periods count zero orders',
+  );
+  assert.equal(
+    (await sales.daily(actor.id, foreign.id, '2026-10-16')).completedOrders,
+    1,
+    'Counts remain scoped to the selected shop',
+  );
+  assert.equal(
     (await sales.daily(actor.id, shop.id, '2026-10-17')).totalSales,
     '900.00',
   );

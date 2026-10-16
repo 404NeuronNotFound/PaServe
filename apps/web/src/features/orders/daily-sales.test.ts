@@ -32,6 +32,9 @@ it.each([
   { totalSales: 123 },
   { totalSales: "1.234" },
   { completedOrders: -1 },
+  { completedOrders: 1.5 },
+  { completedOrders: "2" },
+  { completedOrders: Number.MAX_SAFE_INTEGER + 1 },
   { completedOrders: 0 },
 ])("rejects a mismatched or malformed report: %j", async (change) => {
   vi.spyOn(api, "get").mockResolvedValue({

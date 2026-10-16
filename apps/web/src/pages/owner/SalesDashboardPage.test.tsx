@@ -6,6 +6,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError } from "axios";
@@ -71,6 +72,11 @@ it.each(["OWNER", "ADMIN", "MANAGER"] as const)(
     expect(screen.getByLabelText("Business date")).toHaveValue("2026-10-16");
     expect(screen.getByText("Today’s Sales")).toBeVisible();
     expect(screen.getByText(/Midnight inclusive/)).toBeVisible();
+    expect(
+      within(
+        screen.getByRole("article", { name: "Number of Orders" }),
+      ).getByText("2"),
+    ).toBeVisible();
   },
 );
 it.each(["CASHIER", "KITCHEN"] as const)(
@@ -97,6 +103,9 @@ it("loads the selected day, clears the total while pending, and returns to today
     target: { value: "2026-10-14" },
   });
   expect(screen.queryByText("₱0.30")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("article", { name: "Number of Orders" }),
+  ).not.toBeInTheDocument();
   await act(async () =>
     resolve({
       shopId: "a",
@@ -111,8 +120,18 @@ it("loads the selected day, clears the total while pending, and returns to today
   expect(await screen.findByText("₱0.00")).toBeVisible();
   expect(screen.getByText(/No eligible completed orders/)).toBeVisible();
   expect(screen.getByText("Gross Sales")).toBeVisible();
+  expect(
+    within(screen.getByRole("article", { name: "Number of Orders" })).getByText(
+      "0",
+    ),
+  ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Today" }));
   expect(await screen.findByText("₱0.30")).toBeVisible();
+  expect(
+    within(screen.getByRole("article", { name: "Number of Orders" })).getByText(
+      "2",
+    ),
+  ).toBeVisible();
 });
 it("hides a previous total on refresh failure and allows retry", async () => {
   setup();
@@ -123,6 +142,9 @@ it("hides a previous total on refresh failure and allows retry", async () => {
     "couldn’t refresh",
   );
   expect(screen.queryByText("₱0.30")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("article", { name: "Number of Orders" }),
+  ).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
   expect(await screen.findByText("₱0.30")).toBeVisible();
 });
@@ -139,6 +161,9 @@ it("hides totals when report access is revoked", async () => {
     "access to this shop’s sales reports is unavailable",
   );
   expect(screen.queryByText("₱0.30")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("article", { name: "Number of Orders" }),
+  ).not.toBeInTheDocument();
 });
 it("does not retain another shop's total or date selection", async () => {
   const view = setup();
@@ -175,4 +200,34 @@ it("advances the Today view across Manila midnight on focus", async () => {
       expect.any(AbortSignal),
     ),
   );
+});
+
+it("displays the full eligible order count and refreshes it with the sales total", async () => {
+  vi.mocked(getDailySales).mockResolvedValueOnce({
+    shopId: "a",
+    businessDate: "2026-10-16",
+    ...salesBusinessDayBounds("2026-10-16")!,
+    timezone: "Asia/Manila",
+    currency: "PHP",
+    completedOrders: 1234,
+    totalSales: "0.00",
+  });
+  setup();
+  expect(await screen.findByText("1,234")).toBeVisible();
+  expect(screen.getByText("₱0.00")).toBeVisible();
+  expect(
+    screen.queryByText("No eligible orders for this business day."),
+  ).not.toBeInTheDocument();
+  vi.mocked(getDailySales).mockResolvedValueOnce({
+    shopId: "a",
+    businessDate: "2026-10-16",
+    ...salesBusinessDayBounds("2026-10-16")!,
+    timezone: "Asia/Manila",
+    currency: "PHP",
+    completedOrders: 1235,
+    totalSales: "1.00",
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Refresh sales" }));
+  expect(await screen.findByText("1,235")).toBeVisible();
+  expect(screen.getByText("₱1.00")).toBeVisible();
 });

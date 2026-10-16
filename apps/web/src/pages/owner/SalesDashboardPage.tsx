@@ -7,7 +7,7 @@ import {
   salesBusinessDayBounds,
   type CurrentUserResponse,
 } from "@paserve/contracts";
-import { FiRefreshCw, FiTrendingUp } from "react-icons/fi";
+import { FiClipboard, FiRefreshCw, FiTrendingUp } from "react-icons/fi";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getDailySales } from "../../features/orders/daily-sales";
@@ -64,7 +64,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
         <div>
           <p className="section-label">DAILY PERFORMANCE</p>
           <h1 id="sales-title">Sales dashboard</h1>
-          <p>Gross sales for your selected business day.</p>
+          <p>Sales and eligible orders for your selected business day.</p>
         </div>
         <button
           className="secondary-button"
@@ -126,37 +126,61 @@ function SalesWorkspace({ userId }: { userId: string }) {
             </div>
           )}
           {query.isSuccess && (
-            <article
-              className="sales-total"
-              aria-labelledby="sales-total-label"
-              aria-busy={query.isFetching}
-            >
-              <FiTrendingUp aria-hidden="true" />
-              <p id="sales-total-label" className="section-label">
-                {date === today ? "Today’s Sales" : "Gross Sales"}
-              </p>
-              <p className="sales-business-date">{date} · Asia/Manila</p>
-              <strong className="sales-amount">
-                {formatCartPrice(query.data.totalSales)}
-              </strong>
-              {query.data.completedOrders === 0 && (
-                <p>No eligible completed orders for this business day.</p>
-              )}
-              <p>
-                Saved totals from confirmed, paid and completed orders, counted
-                by completion time.
-              </p>
-              <p className="sales-updated">
-                Updated{" "}
-                {new Intl.DateTimeFormat("en-PH", {
-                  timeZone: "Asia/Manila",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                }).format(query.dataUpdatedAt)}{" "}
-                · Refreshes every 15 seconds
-              </p>
-            </article>
+            <div className="sales-metrics" aria-busy={query.isFetching}>
+              <article
+                className="sales-total"
+                aria-labelledby="sales-total-label"
+                aria-busy={query.isFetching}
+              >
+                <FiTrendingUp aria-hidden="true" />
+                <p id="sales-total-label" className="section-label">
+                  {date === today ? "Today’s Sales" : "Gross Sales"}
+                </p>
+                <p className="sales-business-date">{date} · Asia/Manila</p>
+                <strong className="sales-amount">
+                  {formatCartPrice(query.data.totalSales)}
+                </strong>
+                {query.data.completedOrders === 0 && (
+                  <p>No eligible completed orders for this business day.</p>
+                )}
+                <p>
+                  Saved totals from confirmed, paid and completed orders,
+                  counted by completion time.
+                </p>
+                <p className="sales-updated">
+                  Updated{" "}
+                  {new Intl.DateTimeFormat("en-PH", {
+                    timeZone: "Asia/Manila",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  }).format(query.dataUpdatedAt)}{" "}
+                  · Refreshes every 15 seconds
+                </p>
+              </article>
+              <article
+                className="sales-total"
+                aria-labelledby="sales-orders-label"
+              >
+                <FiClipboard aria-hidden="true" />
+                <h2 id="sales-orders-label" className="section-label">
+                  Number of Orders
+                </h2>
+                <p className="sales-business-date">{date} · Asia/Manila</p>
+                <strong className="sales-amount">
+                  {new Intl.NumberFormat("en-PH").format(
+                    query.data.completedOrders,
+                  )}
+                </strong>
+                <p>
+                  Confirmed, paid and completed orders in this business day,
+                  counted once per order by completion time.
+                </p>
+                {query.data.completedOrders === 0 && (
+                  <p>No eligible orders for this business day.</p>
+                )}
+              </article>
+            </div>
           )}
         </>
       )}
