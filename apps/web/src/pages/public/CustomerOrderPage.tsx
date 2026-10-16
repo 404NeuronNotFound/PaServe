@@ -111,7 +111,7 @@ export function CustomerOrderPage() {
                 {preparationCopy
                   ? preparationCopy.message
                   : confirmed
-                    ? "Your payment is recorded. Your order has been sent to the kitchen."
+                    ? "The counter accepted your order and confirmed your payment. Your order is waiting for kitchen preparation."
                     : rejected
                       ? "Please ask the counter staff for help."
                       : "Your order has been saved. Cashier verification and payment are still required."}
@@ -236,7 +236,7 @@ export function CustomerOrderPage() {
                       {preparationCopy
                         ? preparationCopy.step
                         : confirmed
-                          ? "Sent to the kitchen."
+                          ? "Waiting for preparation to start."
                           : "Not queued yet."}
                     </p>
                   </div>
@@ -247,7 +247,7 @@ export function CustomerOrderPage() {
                 {preparationCopy ? (
                   preparationCopy.message
                 ) : confirmed ? (
-                  "The cashier confirmed your order and payment. Your order has been sent to the kitchen."
+                  "The counter accepted your order and confirmed your payment. The kitchen will start preparing it next."
                 ) : rejected ? (
                   "This order was rejected. Ask the counter staff for assistance."
                 ) : (

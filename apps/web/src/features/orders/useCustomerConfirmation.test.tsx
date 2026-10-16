@@ -71,6 +71,39 @@ it("fetches and renders confirmation immediately on the event without advancing 
   expect(Date.now()).toBe(started);
 });
 
+it("requires a valid backend confirmation rather than inferring it from events or elapsed time", async () => {
+  const { result } = renderHook(() =>
+    useCustomerConfirmation("cafe", orderId, token),
+  );
+  await flush();
+  const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
+  act(() => notify("order_confirmed", { shopId, orderId }));
+  await flush();
+  expect(result.current).toEqual(pending);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_000);
+  });
+  await flush();
+  expect(result.current).toEqual(pending);
+
+  fetchStatus.mockResolvedValue({ ok: false, status: 500 });
+  act(() => notify("order_confirmed", { shopId, orderId }));
+  await flush();
+  expect(result.current).toEqual(pending);
+
+  fetchStatus.mockResolvedValue(
+    response({ ...confirmed, paymentStatus: "UNPAID" }),
+  );
+  act(() => notify("order_confirmed", { shopId, orderId }));
+  await flush();
+  expect(result.current).toEqual(pending);
+
+  fetchStatus.mockResolvedValue(response(confirmed));
+  act(() => notify("order_confirmed", { shopId, orderId }));
+  await flush();
+  expect(result.current).toEqual(confirmed);
+});
+
 it("coalesces duplicate events during a read and retains one confirmed state against older responses", async () => {
   const { result } = renderHook(() =>
     useCustomerConfirmation("cafe", orderId, token),

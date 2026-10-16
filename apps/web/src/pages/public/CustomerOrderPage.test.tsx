@@ -123,13 +123,15 @@ function setup(path = "/menu/cafe/orders/order-a") {
   );
 }
 
-it("updates a pending receipt to the server-confirmed paid state without manual refresh", async () => {
+it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confirmed, queued and later stages without manual refresh", async (mode) => {
   const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828",
     shopId = "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e";
   const expiresAt = Date.parse("2030-01-01T00:00:00Z");
   const token = `${Buffer.from(JSON.stringify({ v: 1, purpose: "order-receipt", shopId, orderId, nonce: "75992537-5d60-4d22-8e1e-60a114644681", exp: expiresAt })).toString("base64url")}.${"a".repeat(43)}`;
+  const saved: CustomerOrderResponse["order"] =
+    mode === "DINE_IN" ? { ...order, mode, table } : order;
   saveOrderReceipt("cafe", "Cafe", {
-    ...order,
+    ...saved,
     id: orderId,
     qrToken: token,
     qrTokenExpiresAt: new Date(expiresAt).toISOString(),
@@ -163,6 +165,7 @@ it("updates a pending receipt to the server-confirmed paid state without manual 
         status: "CONFIRMED",
         paymentStatus: "PAID",
         confirmedAt: "2026-10-15T01:01:00Z",
+        preparationStatus: "QUEUED",
         updatedAt: "2026-10-15T01:01:00Z",
       },
     }),
@@ -174,6 +177,17 @@ it("updates a pending receipt to the server-confirmed paid state without manual 
   );
   await screen.findByRole("heading", { name: "Order confirmed" });
   expect(screen.getByText("Confirmed and paid.")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Confirmed. The counter accepted your order and confirmed your payment. The kitchen will start preparing it next.",
+  );
+  expect(screen.getByText("Confirmed")).toBeInTheDocument();
+  expect(screen.getByText("Payment confirmed by the cashier.")).toBeInTheDocument();
+  expect(screen.getByText("Confirmed and paid.").closest("li")).toHaveClass("is-complete");
+  const queueStep = screen.getByText("Waiting for preparation to start.").closest("li");
+  expect(queueStep).toHaveAttribute("aria-current", "step");
+  expect(queueStep).not.toHaveClass("is-complete");
+  expect(screen.queryByText("Preparing")).not.toBeInTheDocument();
+  expect(screen.queryByText("Preparation started.")).not.toBeInTheDocument();
   expect(
     screen.queryByRole("heading", { name: "Waiting for Confirmation" }),
   ).not.toBeInTheDocument();
@@ -229,6 +243,7 @@ it("updates a pending receipt to the server-confirmed paid state without manual 
       .mock.calls[0][4]("order_preparing", { shopId, orderId }),
   );
   await screen.findByRole("heading", { name: "Order in preparation" });
+  expect(screen.queryByText("Waiting for preparation to start.")).not.toBeInTheDocument();
   expect(screen.getByText("Preparing")).toBeInTheDocument();
   expect(screen.getByText("Preparation started.")).toBeInTheDocument();
   act(() => {
@@ -268,7 +283,9 @@ it("updates a pending receipt to the server-confirmed paid state without manual 
   expect(screen.getByText("Ready")).toBeInTheDocument();
   expect(
     screen.getAllByText(
-      "Your order is ready for pickup. Please collect it at the counter.",
+      mode === "DINE_IN"
+        ? "Your order is ready for table service."
+        : "Your order is ready for pickup. Please collect it at the counter.",
     ),
   ).toHaveLength(2);
   expect(screen.queryByText("Preparing")).not.toBeInTheDocument();
