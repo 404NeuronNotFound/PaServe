@@ -20,6 +20,8 @@ describe('Confirmed order customer/staff HTTP access', () => {
     membership = vi.fn();
   let relay: ReturnType<typeof vi.spyOn>;
   let order: {
+    amountReceived: Prisma.Decimal | null;
+    changeDue: Prisma.Decimal | null;
     paymentMethod: string | null;
     paymentReference: string | null;
     paymentDescription: string | null;
@@ -97,6 +99,8 @@ describe('Confirmed order customer/staff HTTP access', () => {
       status: 'CONFIRMED',
       paymentStatus: 'PAID',
       paymentMethod: 'CASH',
+      amountReceived: null,
+      changeDue: null,
       paymentReference: null,
       paymentDescription: null,
       decidedAt: new Date(),
@@ -139,6 +143,12 @@ describe('Confirmed order customer/staff HTTP access', () => {
     request(app.getHttpServer())
       .get(`/api/v1/menu/${slug}/orders/${orderId}/${suffix}`)
       .set('Authorization', `Bearer ${token}`);
+  it('returns saved cash tender in protected receipts with an exact overpayment', async () => {
+    order.amountReceived = new Prisma.Decimal('20.00'); order.changeDue = new Prisma.Decimal('8.00');
+    const result = await customer('status').expect(200);
+    expect(result.body.receipt.totalPrice).toBe('12.00');
+    expect(result.body.receipt.payment.amountReceived).toBe('20.00');
+  });
   it.each(['GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
     'does not serialize card numbers or credentials in %s receipt details', async (method) => {
       order.paymentMethod = method;

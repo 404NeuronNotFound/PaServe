@@ -4,6 +4,25 @@ import { parseReceiptPaymentDetails } from "@paserve/contracts";
 import { ReceiptPaymentMethod } from "./ReceiptPaymentMethod";
 
 afterEach(cleanup);
+it.each([['0.00', '₱0.00'], ['20.00', '₱20.00'], ['9999999999.99', '₱9,999,999,999.99']])(
+  'displays saved cash tender %s exactly', (amountReceived, formatted) => {
+    render(<ReceiptPaymentMethod payment={{ method: 'CASH', reference: null, description: null, amountReceived }} confirmed />);
+    expect(screen.getByText(`Amount received (PHP): ${formatted}`)).toBeInTheDocument();
+  },
+);
+it.each(['-1.00', 'NaN', '20', '10000000000.00'])(
+  'rejects malformed cash tender %s', (amountReceived) => {
+    expect(parseReceiptPaymentDetails({ method: 'CASH', amountReceived })).toBeNull();
+  },
+);
+it.each(['GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
+  'does not show cash tender for %s', (method) => {
+    const payment = parseReceiptPaymentDetails({ method, amountReceived: '20.00' });
+    render(<ReceiptPaymentMethod payment={payment} confirmed />);
+    expect(screen.queryByText(/Amount received/)).not.toBeInTheDocument();
+    expect(payment).not.toHaveProperty('amountReceived');
+  },
+);
 it.each([
   ["CASH", "Cash"], ["GCASH_MANUAL", "GCash (manual)"], ["CARD_MANUAL", "Card (manual)"], ["OTHER", "Other"],
 ])("shows the recorded %s method and only relevant details", (method, label) => {
@@ -21,6 +40,8 @@ it("distinguishes unpaid and older confirmed receipts without guessing a method"
   expect(screen.getByText("No payment method has been recorded.")).toBeInTheDocument();
   view.rerender(<ReceiptPaymentMethod confirmed />);
   expect(screen.getByText("The recorded payment method is unavailable.")).toBeInTheDocument();
+  view.rerender(<ReceiptPaymentMethod payment={{ method: 'CASH', reference: null, description: null }} confirmed />);
+  expect(screen.getByText('Amount received is unavailable in this saved receipt.')).toBeInTheDocument();
 });
 it.each(["4111111111111111", "CVV 123", "<script>bad</script>", "unsafe\nreference"])(
   "omits unsafe card reference %s", (reference) => {

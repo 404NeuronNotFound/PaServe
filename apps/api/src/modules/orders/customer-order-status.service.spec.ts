@@ -53,6 +53,8 @@ describe('Customer receipt status access', () => {
     paidBy: 'private-actor',
     paymentMethod: 'CASH' as string | null,
     paymentDescription: null as string | null,
+    amountReceived: null as Prisma.Decimal | null,
+    changeDue: null as Prisma.Decimal | null,
     paymentReference: 'private-reference',
   });
   beforeEach(() => {
@@ -86,10 +88,32 @@ describe('Customer receipt status access', () => {
   });
 
   it('does not expose a method or stale reference before payment', async () => {
+    order.amountReceived = new Prisma.Decimal('20.00'); order.changeDue = new Prisma.Decimal('8.00');
     const result = await service.read('cafe', id, tokens.issueTracking(order));
     expect(result.receipt?.payment).toBeNull();
     expect(JSON.stringify(result)).not.toContain('private-reference');
   });
+  it('returns the cash tender rather than substituting the order total', async () => {
+    order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
+    order.amountReceived = new Prisma.Decimal('20.00'); order.changeDue = new Prisma.Decimal('8.00');
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
+    expect(result.receipt?.payment?.amountReceived).toBe('20.00');
+    expect(result.receipt?.totalPrice).toBe('12.00');
+  });
+  it('rejects cash tender inconsistent with the saved settlement', async () => {
+    order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
+    order.amountReceived = new Prisma.Decimal('11.00'); order.changeDue = new Prisma.Decimal('0.00');
+    await expect(service.read('cafe', id, tokens.issueTracking(order)))
+      .rejects.toMatchObject({ response: { code: 'INVALID_PAYMENT_DETAILS' } });
+  });
+  it.each(['GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
+    'does not project cash tender for %s', async (method) => {
+      order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
+      order.paymentMethod = method; order.amountReceived = new Prisma.Decimal('20.00');
+      const result = await service.read('cafe', id, tokens.issueTracking(order));
+      expect(result.receipt?.payment).not.toHaveProperty('amountReceived');
+    },
+  );
   it.each(['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
     'returns only safe recorded customer payment details for %s', async (method) => {
       order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();

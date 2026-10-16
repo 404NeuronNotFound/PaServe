@@ -5,7 +5,7 @@ import type {
   ProductSelectionQuoteResponse,
   ReceiptPaymentDetails,
 } from "@paserve/contracts";
-import { parseReceiptPaymentDetails, parseReceiptShopDetails } from "@paserve/contracts";
+import { cashAmountCents, parseReceiptPaymentDetails, parseReceiptShopDetails } from "@paserve/contracts";
 import { createPendingOrderStorage } from "./pending-orders";
 import { isPublicTableContext } from "../shops/customer-table";
 import { captureCustomerOrderQr } from "./customer-order-qr";
@@ -130,6 +130,8 @@ export function readOrderReceipt(
     if (value.items !== undefined && !items) return null;
     const payment = value.payment == null ? null : parseReceiptPaymentDetails(value.payment);
     if (value.payment != null && !payment) return null;
+    if (payment?.method === "CASH" && payment.amountReceived !== undefined &&
+      cashAmountCents(payment.amountReceived)! < cashAmountCents(value.totalPrice)!) return null;
     return {
       shopSlug,
       shopName: shopDetails?.name ?? value.shopName,

@@ -59,6 +59,8 @@ export class CustomerOrderStatusService {
         paymentMethod: true,
         paymentReference: true,
         paymentDescription: true,
+        amountReceived: true,
+        changeDue: true,
         decidedAt: true,
         updatedAt: true,
         qrTokenNonce: true,
@@ -147,6 +149,19 @@ export class CustomerOrderStatusService {
         message: 'Unable to read the saved order items.',
       });
     }
+    const payment = order.paymentStatus === 'PAID' ? parseReceiptPaymentDetails({
+      method: order.paymentMethod,
+      reference: order.paymentReference,
+      description: order.paymentDescription,
+      ...(order.paymentMethod === 'CASH' && order.amountReceived != null
+        ? { amountReceived: order.amountReceived.toFixed(2) } : {}),
+    }) : null;
+    if (payment?.method === 'CASH' && payment.amountReceived !== undefined &&
+      (!order.changeDue || order.changeDue.isNegative() ||
+        !order.amountReceived!.minus(order.changeDue).equals(order.totalPrice.toFixed(2)))) {
+      throw new BadRequestException({ code: 'INVALID_PAYMENT_DETAILS',
+        message: 'Unable to read the saved cash payment details.' });
+    }
     return {
       trackingExpiresAt: order.qrTokenExpiresAt.toISOString(),
       receipt: {
@@ -168,11 +183,7 @@ export class CustomerOrderStatusService {
         // Current orders have no tax/discount adjustments; this matches checkout.
         subtotalPrice: order.totalPrice.toFixed(2),
         items,
-        payment: order.paymentStatus === 'PAID' ? parseReceiptPaymentDetails({
-          method: order.paymentMethod,
-          reference: order.paymentReference,
-          description: order.paymentDescription,
-        }) : null,
+        payment,
       },
       order: {
         id: order.id,

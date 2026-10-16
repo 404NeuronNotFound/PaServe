@@ -7,6 +7,14 @@ const receipt = {
   mode: "TAKEOUT", table: null, status: "PENDING_CONFIRMATION", currency: "PHP", totalPrice: "12.00",
 };
 const details = { name: "Original Cafe", address: "12 Old Street", phone: "09171234567", contactEmail: null, website: null };
+it('retains exact saved cash tender after storage recovery', () => {
+  recoverOrderReceipt('cafe', 'order-a', { ...receipt, payment: { method: 'CASH', amountReceived: '20.00' } });
+  orderReceipts.clearMemory();
+  expect(readOrderReceipt('cafe', 'order-a')?.payment?.amountReceived).toBe('20.00');
+});
+it('rejects restored cash tender below the saved order total', () => {
+  expect(readOrderReceipt('cafe', 'order-a', { ...receipt, payment: { method: 'CASH', amountReceived: '11.00' } })).toBeNull();
+});
 it("restores exact supported subtotal/total and ignores unsupported financial fields", () => {
   recoverOrderReceipt("cafe", "order-a", { ...receipt, subtotalPrice: "12.00", taxPrice: "999.00", discountPrice: "1.00" });
   orderReceipts.clearMemory();

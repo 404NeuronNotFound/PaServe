@@ -10,6 +10,7 @@ import {
   orderReceipts,
   saveOrderReceipt,
   readOrderReceipt,
+  recoverOrderReceipt,
 } from "../../features/cart/order-receipt";
 import { pendingOrders } from "../../features/cart/pending-orders";
 import { useCart } from "../../features/cart/cart";
@@ -125,6 +126,18 @@ function setup(path = "/menu/cafe/orders/order-a") {
     </QueryClientProvider>,
   );
 }
+
+it('shows the recorded cash tender after receipt recovery rather than using the order total', () => {
+  saveOrderReceipt('cafe', 'Cafe', order);
+  recoverOrderReceipt('cafe', 'order-a', { ...readOrderReceipt('cafe', 'order-a'),
+    payment: { method: 'CASH', reference: null, description: null, amountReceived: '20.00' },
+  });
+  orderReceipts.clearMemory();
+  setup();
+  expect(screen.getByText('Amount received (PHP): ₱20.00')).toBeInTheDocument();
+  expect(screen.getByText('Payment method shown from your last saved receipt.')).toBeInTheDocument();
+  expect(api.post).not.toHaveBeenCalled();
+});
 
 it.each(["0.00", "0.30", "9999999999.99"])(
   "shows authoritative subtotal and total %s after refresh without cart estimates", (totalPrice) => {
