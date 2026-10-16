@@ -152,7 +152,7 @@ it("updates a pending receipt to the server-confirmed paid state without manual 
   setup(`/menu/cafe/orders/${orderId}`);
   await waitFor(() => expect(fetchStatus).toHaveBeenCalledOnce());
   expect(
-    screen.getByRole("heading", { name: "Order submitted" }),
+    screen.getByRole("heading", { name: "Waiting for Confirmation" }),
   ).toBeInTheDocument();
   fetchStatus.mockResolvedValue({
     ok: true,
@@ -174,6 +174,9 @@ it("updates a pending receipt to the server-confirmed paid state without manual 
   );
   await screen.findByRole("heading", { name: "Order confirmed" });
   expect(screen.getByText("Confirmed and paid.")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Waiting for Confirmation" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByText(/Your order is not yet in the kitchen queue/),
   ).not.toBeInTheDocument();
@@ -390,12 +393,27 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
       }),
     );
     const title = await screen.findByRole("heading", {
-      name: "Order submitted",
+      name: "Waiting for Confirmation",
     });
     await waitFor(() => expect(title).toHaveFocus());
     expect(screen.getByText("ORD-000042")).toBeInTheDocument();
     expect(screen.getByText("₱12.00")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Pending");
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for Confirmation");
+    expect(
+      screen.getByText(
+        "Your order has been saved. Cashier verification and payment are still required.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Payment has not been confirmed by the cashier."),
+    ).toBeInTheDocument();
+    expect(document.querySelector('[aria-current="step"]')).toHaveTextContent(
+      "Cashier verification & payment",
+    );
+    expect(document.querySelector('[aria-current="step"]')).not.toHaveClass(
+      "is-complete",
+    );
+    expect(screen.getByText("Not queued yet.")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
       "Your order is not yet in the kitchen queue.",
     );
@@ -439,7 +457,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
     expect(screen.getByText("ORD-000042")).toBeInTheDocument();
     expect(screen.getByText("₱12.00")).toBeInTheDocument();
     expect(screen.queryByText("₱99.00")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Pending");
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for Confirmation");
     expect(screen.getByRole("status")).toHaveTextContent(
       "Your order is not yet in the kitchen queue.",
     );
@@ -493,7 +511,7 @@ it.each([{ totalPrice: "1.00" }, { id: ".." }])(
       "not been confirmed",
     );
     expect(
-      screen.queryByRole("heading", { name: "Order submitted" }),
+      screen.queryByRole("heading", { name: "Waiting for Confirmation" }),
     ).not.toBeInTheDocument();
     expect(useCart.getState().shops.cafe).toHaveLength(1);
     expect(
@@ -579,7 +597,7 @@ it("retains an older saved receipt after the persisted status rename", () => {
   orderReceipts.clearMemory();
   setup();
   expect(screen.getByText("ORD-000042")).toBeInTheDocument();
-  expect(screen.getByRole("status")).toHaveTextContent("Pending");
+  expect(screen.getByRole("status")).toHaveTextContent("Waiting for Confirmation");
 });
 
 it.each(["invalid", "-1.00", "12.345", "12.00\n"])(

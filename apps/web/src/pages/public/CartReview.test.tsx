@@ -255,7 +255,7 @@ it("sends a pending order only once when confirmation is clicked repeatedly", as
   await act(async () => {
     finish(receipt);
   });
-  expect(screen.getByRole("status")).toHaveTextContent("Pending");
+  expect(screen.getByRole("status")).toHaveTextContent("Waiting for Confirmation");
 });
 it("preserves every selected modifier through review, Edit cart and a fresh review", async () => {
   useCart.setState({ shops: { ...useCart.getState().shops, cafe: [] } });

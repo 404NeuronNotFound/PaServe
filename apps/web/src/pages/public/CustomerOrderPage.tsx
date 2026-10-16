@@ -63,7 +63,7 @@ export function CustomerOrderPage() {
           : null;
   const statusLabel =
     preparationCopy?.label ??
-    (confirmed ? "Confirmed" : rejected ? "Rejected" : "Pending");
+    (confirmed ? "Confirmed" : rejected ? "Rejected" : "Waiting for Confirmation");
   const heading = useRef<HTMLHeadingElement>(null);
   const menuUrl =
     receipt?.mode === "DINE_IN"
@@ -105,7 +105,7 @@ export function CustomerOrderPage() {
                     ? "Order confirmed"
                     : rejected
                       ? "Order rejected"
-                      : "Order submitted"}
+                      : "Waiting for Confirmation"}
               </h1>
               <p className="order-receipt-intro">
                 {preparationCopy
@@ -114,7 +114,7 @@ export function CustomerOrderPage() {
                     ? "Your payment is recorded. Your order has been sent to the kitchen."
                     : rejected
                       ? "Please ask the counter staff for help."
-                      : "One more step before the kitchen."}
+                      : "Your order has been saved. Cashier verification and payment are still required."}
               </p>
             </div>
             <p className="order-receipt-context">
@@ -150,7 +150,7 @@ export function CustomerOrderPage() {
                 <FiLock aria-hidden="true" />{" "}
                 {confirmed
                   ? "Payment confirmed by the cashier."
-                  : "Submission does not confirm payment."}
+                  : "Payment has not been confirmed by the cashier."}
               </p>
             </div>
             <section
@@ -213,11 +213,11 @@ export function CustomerOrderPage() {
                 >
                   <span aria-hidden="true">02</span>
                   <div>
-                    <strong>Cashier confirmation &amp; payment</strong>
+                    <strong>Cashier verification &amp; payment</strong>
                     <p>
                       {confirmed
                         ? "Confirmed and paid."
-                        : "Confirm and pay at the counter."}
+                        : "Show your QR or order number to the cashier, then pay at the counter."}
                     </p>
                   </div>
                 </li>

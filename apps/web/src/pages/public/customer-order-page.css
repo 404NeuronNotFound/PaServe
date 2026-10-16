@@ -485,6 +485,7 @@
 }
 .order-receipt-next-topline {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -492,6 +493,7 @@
 }
 .order-receipt-next-icon {
   display: grid;
+  flex-shrink: 0;
   place-items: center;
   width: 44px;
   height: 44px;
@@ -502,6 +504,9 @@
 }
 .order-receipt-status-label {
   display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
@@ -511,6 +516,9 @@
   color: var(--menu-on-accent);
   font-size: 0.75rem;
   font-weight: 650;
+}
+.order-receipt-status-label svg {
+  flex-shrink: 0;
 }
 .order-receipt-next h2 {
   margin: 0;

@@ -219,7 +219,7 @@ it("preserves an uncertain request after a later 404 rather than allowing a dupl
   expect(vi.mocked(api.post).mock.calls[2][1]).toEqual(
     vi.mocked(api.post).mock.calls[0][1],
   );
-  expect(await screen.findByRole("status")).toHaveTextContent("Pending");
+  expect(await screen.findByRole("status")).toHaveTextContent("Waiting for Confirmation");
 });
 it("resolves a processed checkout retry without resubmitting the already saved cart", async () => {
   vi.mocked(api.post)
