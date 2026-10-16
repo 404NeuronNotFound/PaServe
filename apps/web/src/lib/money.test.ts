@@ -1,5 +1,9 @@
 import { expect, it } from "vitest";
-import { formatCartPrice, formatProductPrice } from "./money";
+import {
+  calculateAverageOrderValue,
+  formatCartPrice,
+  formatProductPrice,
+} from "./money";
 
 it.each([
   ["0", "₱0.00"],
@@ -22,3 +26,25 @@ it("formats combined totals above the per-product storage limit exactly", () => 
   expect(formatProductPrice("9899999999.01")).toBe("—");
   expect(formatCartPrice("1e9")).toBe("—");
 });
+
+it.each([
+  ["0.00", 0, "0.00"],
+  ["0.00", 5, "0.00"],
+  ["123.45", 1, "123.45"],
+  ["0.30", 2, "0.15"],
+  ["10.00", 3, "3.33"],
+  ["10.01", 3, "3.34"],
+  ["0.01", 2, "0.01"],
+  ["0.01", 3, "0.00"],
+  ["1.99", 2, "1.00"],
+  ["10000000060.32", 37, "270270271.90"],
+  ["9007199254740993.01", 2, "4503599627370496.51"],
+])("averages %s across %i eligible orders as %s", (sales, orders, expected) => {
+  expect(calculateAverageOrderValue(sales, orders)).toBe(expected);
+});
+it.each([-1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
+  "rejects invalid AOV counts %s",
+  (count) => {
+    expect(() => calculateAverageOrderValue("10.00", count)).toThrow();
+  },
+);

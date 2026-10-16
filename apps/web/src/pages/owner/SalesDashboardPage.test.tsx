@@ -23,6 +23,33 @@ import { SalesDashboardPage } from "./SalesDashboardPage";
 vi.mock("../../features/orders/daily-sales", () => ({
   getDailySales: vi.fn(),
 }));
+
+it.each([
+  ["0.00", 0, "₱0.00"],
+  ["10.00", 3, "₱3.33"],
+  ["10.01", 3, "₱3.34"],
+  ["1.99", 2, "₱1.00"],
+  ["10000000060.32", 37, "₱270,270,271.90"],
+])(
+  "renders mathematically correct currency for %s / %i",
+  async (totalSales, completedOrders, expected) => {
+    vi.mocked(getDailySales).mockResolvedValueOnce({
+      shopId: "a",
+      businessDate: "2026-10-16",
+      ...salesBusinessDayBounds("2026-10-16")!,
+      timezone: "Asia/Manila",
+      currency: "PHP",
+      totalSales,
+      completedOrders,
+    });
+    setup();
+    const card = await screen.findByRole("article", {
+      name: "Average Order Value",
+    });
+    expect(within(card).getByText(expected)).toBeVisible();
+  },
+);
+
 function setup(role: UserMembership["role"] = "OWNER") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -74,6 +101,11 @@ it.each(["OWNER", "ADMIN", "MANAGER"] as const)(
     expect(screen.getByText(/Midnight inclusive/)).toBeVisible();
     expect(
       within(
+        screen.getByRole("article", { name: "Average Order Value" }),
+      ).getByText("₱0.15"),
+    ).toBeVisible();
+    expect(
+      within(
         screen.getByRole("article", { name: "Number of Orders" }),
       ).getByText("2"),
     ).toBeVisible();
@@ -104,6 +136,9 @@ it("loads the selected day, clears the total while pending, and returns to today
   });
   expect(screen.queryByText("₱0.30")).not.toBeInTheDocument();
   expect(
+    screen.queryByRole("article", { name: "Average Order Value" }),
+  ).not.toBeInTheDocument();
+  expect(
     screen.queryByRole("article", { name: "Number of Orders" }),
   ).not.toBeInTheDocument();
   await act(async () =>
@@ -117,7 +152,12 @@ it("loads the selected day, clears the total while pending, and returns to today
       totalSales: "0.00",
     }),
   );
-  expect(await screen.findByText("₱0.00")).toBeVisible();
+  expect((await screen.findAllByText("₱0.00"))[0]).toBeVisible();
+  expect(
+    within(
+      screen.getByRole("article", { name: "Average Order Value" }),
+    ).getByText("₱0.00"),
+  ).toBeVisible();
   expect(screen.getByText(/No eligible completed orders/)).toBeVisible();
   expect(screen.getByText("Gross Sales")).toBeVisible();
   expect(
@@ -141,6 +181,9 @@ it("hides a previous total on refresh failure and allows retry", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "couldn’t refresh",
   );
+  expect(
+    screen.queryByRole("article", { name: "Average Order Value" }),
+  ).not.toBeInTheDocument();
   expect(screen.queryByText("₱0.30")).not.toBeInTheDocument();
   expect(
     screen.queryByRole("article", { name: "Number of Orders" }),
@@ -160,6 +203,9 @@ it("hides totals when report access is revoked", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "access to this shop’s sales reports is unavailable",
   );
+  expect(
+    screen.queryByRole("article", { name: "Average Order Value" }),
+  ).not.toBeInTheDocument();
   expect(screen.queryByText("₱0.30")).not.toBeInTheDocument();
   expect(
     screen.queryByRole("article", { name: "Number of Orders" }),
@@ -214,7 +260,7 @@ it("displays the full eligible order count and refreshes it with the sales total
   });
   setup();
   expect(await screen.findByText("1,234")).toBeVisible();
-  expect(screen.getByText("₱0.00")).toBeVisible();
+  expect(screen.getAllByText("₱0.00")).toHaveLength(2);
   expect(
     screen.queryByText("No eligible orders for this business day."),
   ).not.toBeInTheDocument();

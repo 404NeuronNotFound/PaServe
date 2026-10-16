@@ -7,12 +7,17 @@ import {
   salesBusinessDayBounds,
   type CurrentUserResponse,
 } from "@paserve/contracts";
-import { FiClipboard, FiRefreshCw, FiTrendingUp } from "react-icons/fi";
+import {
+  FiBarChart2,
+  FiClipboard,
+  FiRefreshCw,
+  FiTrendingUp,
+} from "react-icons/fi";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getDailySales } from "../../features/orders/daily-sales";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
-import { formatCartPrice } from "../../lib/money";
+import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 import "./sales-dashboard.css";
 
 export function SalesDashboardPage() {
@@ -178,6 +183,31 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 </p>
                 {query.data.completedOrders === 0 && (
                   <p>No eligible orders for this business day.</p>
+                )}
+              </article>
+              <article
+                className="sales-total"
+                aria-labelledby="sales-average-label"
+              >
+                <FiBarChart2 aria-hidden="true" />
+                <h2 id="sales-average-label" className="section-label">
+                  Average Order Value
+                </h2>
+                <p className="sales-business-date">{date} · Asia/Manila</p>
+                <strong className="sales-amount">
+                  {formatCartPrice(
+                    calculateAverageOrderValue(
+                      query.data.totalSales,
+                      query.data.completedOrders,
+                    ),
+                  )}
+                </strong>
+                <p>
+                  Gross sales divided by eligible orders, rounded to the nearest
+                  cent.
+                </p>
+                {query.data.completedOrders === 0 && (
+                  <p>No eligible orders; average is ₱0.00.</p>
                 )}
               </article>
             </div>
