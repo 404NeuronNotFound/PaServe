@@ -31,6 +31,7 @@ export function CustomerOrderPage() {
   const confirmed = savedStatus?.status === "CONFIRMED";
   const rejected = savedStatus?.status === "REJECTED";
   const preparation = confirmed ? savedStatus.preparationStatus : null;
+  const ready = preparation === "READY";
   const completed = preparation === "COMPLETED";
   const preparationCopy =
     preparation === "PREPARING"
@@ -45,12 +46,18 @@ export function CustomerOrderPage() {
         ? {
             label: "Ready",
             heading: "Order ready",
-            title: "Your order is ready",
+            title:
+              receipt?.mode === "DINE_IN"
+                ? "Ready for table service"
+                : "Collect your order at the counter",
             message:
               receipt?.mode === "DINE_IN"
                 ? "Your order is ready for table service."
                 : "Your order is ready for pickup. Please collect it at the counter.",
-            step: "Preparation complete.",
+            step:
+              receipt?.mode === "DINE_IN"
+                ? "Preparation complete. Ready to be served."
+                : "Preparation complete. Ready to collect.",
           }
         : preparation === "COMPLETED"
           ? {
@@ -159,18 +166,24 @@ export function CustomerOrderPage() {
             >
               <div className="order-receipt-next-topline">
                 <span className="order-receipt-next-icon" aria-hidden="true">
-                  <FiSmartphone />
+                  {ready ? <FiCheckCircle /> : <FiSmartphone />}
                 </span>
                 <span className="order-receipt-status-label">
-                  <FiClock aria-hidden="true" /> {statusLabel}
+                  {ready ? (
+                    <FiCheckCircle aria-hidden="true" />
+                  ) : (
+                    <FiClock aria-hidden="true" />
+                  )} {statusLabel}
                 </span>
               </div>
               <p className="section-label">
                 {preparation === "PREPARING"
                   ? "In the kitchen"
-                  : confirmed
-                    ? "With your team"
-                    : "At the counter"}
+                  : ready
+                    ? "Ready for you"
+                    : confirmed
+                      ? "With your team"
+                      : "At the counter"}
               </p>
               <h2 id="order-receipt-next-title">
                 {preparationCopy
@@ -184,6 +197,12 @@ export function CustomerOrderPage() {
               <p>
                 {completed ? (
                   "Keep this receipt for your records."
+                ) : ready ? (
+                  receipt.mode === "DINE_IN" ? (
+                    `Please stay at Table ${receipt.table!.number} for service.`
+                  ) : (
+                    "Have your order number ready when collecting your order."
+                  )
                 ) : preparation === "PREPARING" ? (
                   "Preparation times vary. Watch this page for the Ready status."
                 ) : confirmed ? (
@@ -248,7 +267,7 @@ export function CustomerOrderPage() {
                   </div>
                 </li>
               </ol>
-              <div className="order-receipt-status" role="status">
+              <div className="order-receipt-status" role="status" aria-atomic="true">
                 <span className="sr-only">{statusLabel}. </span>
                 {preparationCopy ? (
                   preparationCopy.message

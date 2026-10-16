@@ -292,6 +292,19 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
   );
   await screen.findByRole("heading", { name: "Order ready" });
   expect(screen.getByText("Ready")).toBeInTheDocument();
+  expect(screen.getByRole("heading", {
+    name: mode === "DINE_IN" ? "Ready for table service" : "Collect your order at the counter",
+  })).toBeInTheDocument();
+  expect(screen.getByText(mode === "DINE_IN"
+    ? "Please stay at Table Patio 4 for service."
+    : "Have your order number ready when collecting your order.",
+  )).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveAttribute("aria-atomic", "true");
+  expect(screen.getByRole("status")).toHaveTextContent(mode === "DINE_IN"
+    ? "Ready. Your order is ready for table service."
+    : "Ready. Your order is ready for pickup. Please collect it at the counter.",
+  );
+  expect(screen.queryByText("Completed")).not.toBeInTheDocument();
   expect(
     screen.getAllByText(
       mode === "DINE_IN"
@@ -335,6 +348,9 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
     screen.getAllByRole("heading", { name: "Order completed" }),
   ).toHaveLength(1);
   expect(screen.getByText("Completed")).toBeInTheDocument();
+  expect(screen.queryByRole("heading", {
+    name: mode === "DINE_IN" ? "Ready for table service" : "Collect your order at the counter",
+  })).not.toBeInTheDocument();
   expect(
     screen.getByText("Keep this receipt for your records."),
   ).toBeInTheDocument();
