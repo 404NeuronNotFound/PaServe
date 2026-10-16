@@ -12,7 +12,7 @@ vi.mock("../../features/shops/active-shop", () => ({
   }),
 }));
 vi.mock("./OrderQrScanner", () => ({
-  OrderQrScanner: () => <div>Order scanner</div>,
+  OrderQrScanner: ({ initialOrderNumber }: { initialOrderNumber?: string }) => <div>Order scanner<span data-testid="initial-order-number">{initialOrderNumber}</span></div>,
 }));
 vi.mock("../../features/orders/new-order-events", () => ({
   subscribeNewOrders: vi.fn(),
@@ -25,6 +25,11 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+});
+
+it.each([['ORD-000042', 'ORD-000042'], ['invalid', ''], ['ORD-000000', '']])('validates the owner handoff number %s without submitting it', (number, expected) => {
+  render(<MemoryRouter initialEntries={[`/cashier?orderNumber=${number}`]}><CashierPage /></MemoryRouter>);
+  expect(screen.getByTestId('initial-order-number').textContent).toBe(expected);
 });
 
 it("announces new cashier work without inventing arrivals on resynchronization", () => {

@@ -74,6 +74,7 @@ afterEach(cleanup);
 it("shows approval/payment, placed and updated Manila times, order age, type/table and exact total", async () => {
   setup();
   expect(await screen.findByText("ORD-000042")).toBeVisible();
+  expect(screen.getByRole("link", { name: "View details" })).toHaveAttribute("href", "/app/shops/a/orders/order-a");
   expect(
     screen.getByText("Pending confirmation", {
       selector: ".active-order-badge",

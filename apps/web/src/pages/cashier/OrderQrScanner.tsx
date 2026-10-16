@@ -32,7 +32,7 @@ import { CashierCashPayment } from "./CashierCashPayment";
 import { lookupCashPayment } from "../../features/cashier/cash-payment";
 import "./scanner.css";
 
-export function OrderQrScanner({ shopId }: { shopId: string }) {
+export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: string; initialOrderNumber?: string }) {
   const mounted = useRef(false);
   const processing = useRef(false);
   const request = useRef<AbortController | null>(null);
@@ -43,7 +43,7 @@ export function OrderQrScanner({ shopId }: { shopId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [pasted, setPasted] = useState("");
-  const [number, setNumber] = useState("");
+  const [number, setNumber] = useState(initialOrderNumber);
   const [paymentOrderId, setPaymentOrderId] = useState("");
   const [lostAccess, setLostAccess] = useState(false);
   const [expiredSession, setExpiredSession] = useState(false);

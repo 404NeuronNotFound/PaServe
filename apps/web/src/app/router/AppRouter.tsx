@@ -24,6 +24,7 @@ import { ActiveOrdersPage } from "../../pages/owner/ActiveOrdersPage";
 import { CompletedOrdersPage } from "../../pages/owner/CompletedOrdersPage";
 import { CancelledOrdersPage } from "../../pages/owner/CancelledOrdersPage";
 import { OrdersLayout } from "../../pages/owner/OrdersLayout";
+import { OrderDetailsPage } from "../../pages/owner/OrderDetailsPage";
 import { ShopSettingsPage } from "../../pages/owner/ShopSettingsPage";
 import { CategoriesPage } from "../../pages/owner/CategoriesPage";
 import { TablesPage } from "../../pages/owner/TablesPage";
@@ -74,6 +75,7 @@ export function AppRouter() {
                 <Route index element={<ActiveOrdersPage />} />
                 <Route path="completed" element={<CompletedOrdersPage />} />
                 <Route path="cancelled" element={<CancelledOrdersPage />} />
+                <Route path=":orderId" element={<OrderDetailsPage />} />
               </Route>
               <Route path="cashier" element={<CashierRoute />}>
                 <Route index element={<CashierPage />} />

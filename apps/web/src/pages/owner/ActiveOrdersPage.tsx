@@ -179,6 +179,7 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
                 <li key={order.id} className="active-order-card">
                   <div className="active-order-identity">
                     <h2>{order.orderNumber}</h2>
+                    <a className="owner-order-detail-link" href={`/app/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(order.id)}`}>View details</a>
                     <p>
                       {order.mode === "TAKEOUT"
                         ? "Takeout"

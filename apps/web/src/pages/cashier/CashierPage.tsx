@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { isValidOrderNumber } from "@paserve/contracts";
 import { FiArrowUpRight, FiCheck, FiShoppingBag } from "react-icons/fi";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { OrderQrScanner } from "./OrderQrScanner";
@@ -7,6 +8,9 @@ import { useNewOrderEvents } from "../../features/orders/useNewOrderEvents";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 
 export function CashierPage() {
+  const [params] = useSearchParams();
+  const requestedNumber = params.get("orderNumber");
+  const initialOrderNumber = isValidOrderNumber(requestedNumber) ? requestedNumber : "";
   const membership = useActiveShop();
   const [arrivalShop, setArrivalShop] = useState<string | null>(null);
   const liveStatus = useNewOrderEvents(
@@ -64,7 +68,7 @@ export function CashierPage() {
           <span>03</span> Confirm or reject
         </li>
       </ol>
-      <OrderQrScanner key={membership.shopId} shopId={membership.shopId} />
+      <OrderQrScanner key={`${membership.shopId}:${initialOrderNumber}`} shopId={membership.shopId} initialOrderNumber={initialOrderNumber} />
       {(liveStatus === "delayed" || liveStatus === "denied") && (
         <InlineMessage tone="warning" className="">
           {liveStatus === "denied"

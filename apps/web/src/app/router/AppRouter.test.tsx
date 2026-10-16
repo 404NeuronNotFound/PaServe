@@ -79,6 +79,7 @@ it.each([
   "/app/shops",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/cashier",
+  "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/orders/e47f6994-a303-4a7b-87b0-2386d5198828",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/menu-preview",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/add-ons",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/products/example/customize",

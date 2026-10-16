@@ -78,14 +78,22 @@ beforeEach(() => {
   });
 });
 afterEach(() => vi.restoreAllMocks());
-function setup() {
+function setup(initialOrderNumber = "") {
   const view = render(
     <MemoryRouter>
-      <OrderQrScanner shopId={shopId} />
+      <OrderQrScanner shopId={shopId} initialOrderNumber={initialOrderNumber} />
     </MemoryRouter>,
   );
   return { ...view, user: userEvent.setup() };
 }
+it("prefills an owner handoff without looking up or processing the order automatically", async () => {
+  const { user } = setup("ORD-000042");
+  expect(screen.getByLabelText("Find by order number")).toHaveValue("ORD-000042");
+  expect(lookupOrderNumber).not.toHaveBeenCalled();
+  expect(lookupCashPayment).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Find order" }));
+  await waitFor(() => expect(lookupOrderNumber).toHaveBeenCalledWith(shopId, "ORD-000042", expect.any(AbortSignal)));
+});
 function failure(
   status: number,
   code: string,

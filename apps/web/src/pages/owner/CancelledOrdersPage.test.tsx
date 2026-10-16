@@ -77,6 +77,7 @@ afterEach(cleanup);
 it("shows rejection accurately with captured reason/actor, saved total/table and Manila timestamps", async () => {
   setup();
   expect(await screen.findByText("ORD-000042")).toBeVisible();
+  expect(screen.getByRole("link", { name: "View details" })).toHaveAttribute("href", "/app/shops/a/orders/order-a");
   expect(
     screen.getByText("Rejected", { selector: ".active-order-badge" }),
   ).toBeVisible();

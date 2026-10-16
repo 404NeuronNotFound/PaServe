@@ -4,6 +4,8 @@ import type { Response } from 'express';
 import { PublicProductRepository } from '../products/public-product.repository.js';
 import { PublicProductService } from '../products/public-product.service.js';
 import { OrdersService } from './orders.service.js';
+import { OwnerOrderDetailsController } from './owner-order-details.controller.js';
+import { OwnerOrderDetailsService } from './owner-order-details.service.js';
 import { ActiveOrdersController } from './active-orders.controller.js';
 import { ActiveOrdersService } from './active-orders.service.js';
 import { CompletedOrdersController } from './completed-orders.controller.js';
@@ -64,6 +66,7 @@ export class OrdersController {
 @Module({
   imports: [ShopMembersModule, RealtimeModule],
   controllers: [
+    OwnerOrderDetailsController,
     ActiveOrdersController,
     CompletedOrdersController,
     CancelledOrdersController,
@@ -81,6 +84,7 @@ export class OrdersController {
     CompletedSalesController,
   ],
   providers: [
+    OwnerOrderDetailsService,
     ActiveOrdersService,
     CompletedOrdersService,
     CancelledOrdersService,

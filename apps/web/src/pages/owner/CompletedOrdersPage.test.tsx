@@ -78,6 +78,7 @@ afterEach(cleanup);
 it("shows fulfilled history, saved table/amount, recorded payment and Manila completion time", async () => {
   setup();
   expect(await screen.findByText("ORD-000042")).toBeVisible();
+  expect(screen.getByRole("link", { name: "View details / receipt" })).toHaveAttribute("href", "/app/shops/a/orders/order-a");
   expect(
     screen.getByText("Fulfilled", { selector: ".active-order-badge" }),
   ).toBeVisible();

@@ -848,6 +848,40 @@ export interface CreateTakeoutOrderRequest {
 }
 export type CreateCustomerOrderRequest = CreateDineInOrderRequest | CreateTakeoutOrderRequest;
 /** Public shop identity captured at checkout, independent of later settings edits. */
+/** Owner-only saved order projection; never includes customer bearer credentials. */
+export type OwnerOrderAction = "CASHIER" | "START_PREPARING" | "MARK_READY" | "COMPLETE" | "RECEIPT";
+export interface OwnerOrderDetailsResponse {
+  order: {
+    id: string;
+    shopId: string;
+    orderNumber: string;
+    mode: "DINE_IN" | "TAKEOUT";
+    tableNumber: string | null;
+    status: "PENDING_CONFIRMATION" | "CONFIRMED" | "REJECTED";
+    paymentStatus: "UNPAID" | "PAID";
+    preparationStatus: PreparationStatus | null;
+    currency: "PHP";
+    totalPrice: string;
+    shopDetails: ReceiptShopDetails | null;
+    /** Null means the saved snapshot failed validation, never a live menu fallback. */
+    items: ProductSelectionQuoteResponse[] | null;
+    snapshotIssue: string | null;
+    payment: ReceiptPaymentDetails | null;
+    rejectionReason: string | null;
+    createdAt: string;
+    updatedAt: string;
+    paidAt: string | null;
+    completedAt: string | null;
+    /** Recorded milestones, not a complete event journal or inferred transitions. */
+    history: {
+      status: "PLACED" | "CONFIRMED" | "REJECTED" | "PAID" | "QUEUED" | "PREPARING" | "READY" | "COMPLETED";
+      at: string;
+      actorId: string | null;
+    }[];
+    permittedActions: OwnerOrderAction[];
+  };
+}
+
 export interface ReceiptShopDetails {
   name: string;
   address: string | null;
