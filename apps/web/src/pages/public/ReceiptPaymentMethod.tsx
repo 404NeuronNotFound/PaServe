@@ -19,6 +19,9 @@ export function ReceiptPaymentMethod({ payment, confirmed }: {
           {payment.method === "CASH" && <p>{payment.amountReceived !== undefined
             ? `Amount received (PHP): ${formatCartPrice(payment.amountReceived)}`
             : "Amount received is unavailable in this saved receipt."}</p>}
+          {payment.method === "CASH" && <p>{payment.changeDue !== undefined
+            ? `Change (PHP): ${formatCartPrice(payment.changeDue)}`
+            : "Change is unavailable in this saved receipt."}</p>}
           {payment.description && <p>Method details: {payment.description}</p>}
           {payment.reference && <p>{payment.method === "GCASH_MANUAL" ? "GCash reference" : payment.method === "CARD_MANUAL" ? "Card receipt reference" : "Payment reference"}: {payment.reference}</p>}
         </>

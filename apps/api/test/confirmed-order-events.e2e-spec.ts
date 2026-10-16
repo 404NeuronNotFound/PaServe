@@ -143,11 +143,12 @@ describe('Confirmed order customer/staff HTTP access', () => {
     request(app.getHttpServer())
       .get(`/api/v1/menu/${slug}/orders/${orderId}/${suffix}`)
       .set('Authorization', `Bearer ${token}`);
-  it('returns saved cash tender in protected receipts with an exact overpayment', async () => {
-    order.amountReceived = new Prisma.Decimal('20.00'); order.changeDue = new Prisma.Decimal('8.00');
+  it.each([['20.00', '8.00'], ['12.00', '0.00']])('returns saved cash tender %s and backend change %s', async (amount, change) => {
+    order.amountReceived = new Prisma.Decimal(amount); order.changeDue = new Prisma.Decimal(change);
     const result = await customer('status').expect(200);
     expect(result.body.receipt.totalPrice).toBe('12.00');
-    expect(result.body.receipt.payment.amountReceived).toBe('20.00');
+    expect(result.body.receipt.payment.amountReceived).toBe(amount);
+    expect(result.body.receipt.payment.changeDue).toBe(change);
   });
   it.each(['GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
     'does not serialize card numbers or credentials in %s receipt details', async (method) => {

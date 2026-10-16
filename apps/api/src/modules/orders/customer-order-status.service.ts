@@ -154,7 +154,9 @@ export class CustomerOrderStatusService {
       reference: order.paymentReference,
       description: order.paymentDescription,
       ...(order.paymentMethod === 'CASH' && order.amountReceived != null
-        ? { amountReceived: order.amountReceived.toFixed(2) } : {}),
+        ? { amountReceived: order.amountReceived.toFixed(2),
+          ...(order.changeDue != null ? { changeDue: order.changeDue.toFixed(2) } : {}),
+        } : {}),
     }) : null;
     if (payment?.method === 'CASH' && payment.amountReceived !== undefined &&
       (!order.changeDue || order.changeDue.isNegative() ||

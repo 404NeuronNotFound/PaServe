@@ -4,6 +4,17 @@ import { parseReceiptPaymentDetails } from "@paserve/contracts";
 import { ReceiptPaymentMethod } from "./ReceiptPaymentMethod";
 
 afterEach(cleanup);
+it.each([['20.00', '8.00', '₱8.00'], ['12.00', '0.00', '₱0.00'], ['20.00', '0.30', '₱0.30']])(
+  'displays backend cash change %s / %s', (amountReceived, changeDue, formatted) => {
+    render(<ReceiptPaymentMethod payment={{ method: 'CASH', reference: null, description: null, amountReceived, changeDue }} confirmed />);
+    expect(screen.getByText(`Change (PHP): ${formatted}`)).toBeInTheDocument();
+  },
+);
+it.each(['-0.01', 'NaN', '8', '10000000000.00', '21.00'])(
+  'rejects invalid or excessive saved change %s', (changeDue) => {
+    expect(parseReceiptPaymentDetails({ method: 'CASH', amountReceived: '20.00', changeDue })).toBeNull();
+  },
+);
 it.each([['0.00', '₱0.00'], ['20.00', '₱20.00'], ['9999999999.99', '₱9,999,999,999.99']])(
   'displays saved cash tender %s exactly', (amountReceived, formatted) => {
     render(<ReceiptPaymentMethod payment={{ method: 'CASH', reference: null, description: null, amountReceived }} confirmed />);
@@ -17,10 +28,12 @@ it.each(['-1.00', 'NaN', '20', '10000000000.00'])(
 );
 it.each(['GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
   'does not show cash tender for %s', (method) => {
-    const payment = parseReceiptPaymentDetails({ method, amountReceived: '20.00' });
+    const payment = parseReceiptPaymentDetails({ method, amountReceived: '20.00', changeDue: '8.00' });
     render(<ReceiptPaymentMethod payment={payment} confirmed />);
     expect(screen.queryByText(/Amount received/)).not.toBeInTheDocument();
     expect(payment).not.toHaveProperty('amountReceived');
+    expect(payment).not.toHaveProperty('changeDue');
+    expect(screen.queryByText(/Change/)).not.toBeInTheDocument();
   },
 );
 it.each([
@@ -42,6 +55,7 @@ it("distinguishes unpaid and older confirmed receipts without guessing a method"
   expect(screen.getByText("The recorded payment method is unavailable.")).toBeInTheDocument();
   view.rerender(<ReceiptPaymentMethod payment={{ method: 'CASH', reference: null, description: null }} confirmed />);
   expect(screen.getByText('Amount received is unavailable in this saved receipt.')).toBeInTheDocument();
+  expect(screen.getByText('Change is unavailable in this saved receipt.')).toBeInTheDocument();
 });
 it.each(["4111111111111111", "CVV 123", "<script>bad</script>", "unsafe\nreference"])(
   "omits unsafe card reference %s", (reference) => {

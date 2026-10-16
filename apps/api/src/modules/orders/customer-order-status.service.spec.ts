@@ -98,6 +98,7 @@ describe('Customer receipt status access', () => {
     order.amountReceived = new Prisma.Decimal('20.00'); order.changeDue = new Prisma.Decimal('8.00');
     const result = await service.read('cafe', id, tokens.issueTracking(order));
     expect(result.receipt?.payment?.amountReceived).toBe('20.00');
+    expect(result.receipt?.payment?.changeDue).toBe('8.00');
     expect(result.receipt?.totalPrice).toBe('12.00');
   });
   it('rejects cash tender inconsistent with the saved settlement', async () => {
@@ -106,12 +107,19 @@ describe('Customer receipt status access', () => {
     await expect(service.read('cafe', id, tokens.issueTracking(order)))
       .rejects.toMatchObject({ response: { code: 'INVALID_PAYMENT_DETAILS' } });
   });
+  it('returns saved zero change for an exact cash payment', async () => {
+    order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
+    order.amountReceived = new Prisma.Decimal('12.00'); order.changeDue = new Prisma.Decimal('0.00');
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
+    expect(result.receipt?.payment?.changeDue).toBe('0.00');
+  });
   it.each(['GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(
     'does not project cash tender for %s', async (method) => {
       order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
       order.paymentMethod = method; order.amountReceived = new Prisma.Decimal('20.00');
       const result = await service.read('cafe', id, tokens.issueTracking(order));
       expect(result.receipt?.payment).not.toHaveProperty('amountReceived');
+      expect(result.receipt?.payment).not.toHaveProperty('changeDue');
     },
   );
   it.each(['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'])(

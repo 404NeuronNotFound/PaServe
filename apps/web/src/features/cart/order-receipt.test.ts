@@ -8,9 +8,15 @@ const receipt = {
 };
 const details = { name: "Original Cafe", address: "12 Old Street", phone: "09171234567", contactEmail: null, website: null };
 it('retains exact saved cash tender after storage recovery', () => {
-  recoverOrderReceipt('cafe', 'order-a', { ...receipt, payment: { method: 'CASH', amountReceived: '20.00' } });
+  recoverOrderReceipt('cafe', 'order-a', { ...receipt, payment: { method: 'CASH', amountReceived: '20.00', changeDue: '8.00' } });
   orderReceipts.clearMemory();
   expect(readOrderReceipt('cafe', 'order-a')?.payment?.amountReceived).toBe('20.00');
+  expect(readOrderReceipt('cafe', 'order-a')?.payment?.changeDue).toBe('8.00');
+});
+it('rejects inconsistent saved change instead of recalculating it for display', () => {
+  expect(readOrderReceipt('cafe', 'order-a', { ...receipt, payment: {
+    method: 'CASH', amountReceived: '20.00', changeDue: '7.00',
+  } })).toBeNull();
 });
 it('rejects restored cash tender below the saved order total', () => {
   expect(readOrderReceipt('cafe', 'order-a', { ...receipt, payment: { method: 'CASH', amountReceived: '11.00' } })).toBeNull();

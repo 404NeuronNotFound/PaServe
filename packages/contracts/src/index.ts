@@ -909,6 +909,8 @@ export interface ReceiptPaymentDetails {
   description: string | null;
   /** Exact saved cash tender; absent for non-cash and older receipt responses. */
   amountReceived?: string;
+  /** Backend-calculated saved cash change; never recomputed for display. */
+  changeDue?: string;
 }
 /** Free-text references must not turn the receipt into a credential display. */
 function isSafeReceiptPaymentText(value: string): boolean {
@@ -937,6 +939,10 @@ export function parseReceiptPaymentDetails(value: unknown): ReceiptPaymentDetail
   const method = raw.method as ReceiptPaymentDetails["method"];
   if (method === "CASH" && raw.amountReceived !== undefined &&
     (typeof raw.amountReceived !== "string" || !CASH_AMOUNT_PATTERN.test(raw.amountReceived))) return null;
+  if (method === "CASH" && raw.changeDue !== undefined &&
+    (typeof raw.changeDue !== "string" || !CASH_AMOUNT_PATTERN.test(raw.changeDue) ||
+      typeof raw.amountReceived !== "string" ||
+      cashAmountCents(raw.changeDue)! > cashAmountCents(raw.amountReceived)!)) return null;
   const reference = method !== "CASH" && typeof raw.reference === "string" && raw.reference.trim() &&
     PAYMENT_REFERENCE_PATTERN.test(raw.reference) &&
     isSafeReceiptPaymentText(raw.reference) &&
@@ -945,6 +951,7 @@ export function parseReceiptPaymentDetails(value: unknown): ReceiptPaymentDetail
     isSafeOtherPaymentText(raw.description, 80) && isSafeReceiptPaymentText(raw.description) ? raw.description : null;
   return { method, reference, description,
     ...(method === "CASH" && typeof raw.amountReceived === "string" ? { amountReceived: raw.amountReceived } : {}),
+    ...(method === "CASH" && typeof raw.changeDue === "string" ? { changeDue: raw.changeDue } : {}),
   };
 }
 /** Terminal receipt identifiers only; reject recognizable raw card details. */

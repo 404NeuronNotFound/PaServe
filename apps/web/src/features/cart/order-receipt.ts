@@ -132,6 +132,9 @@ export function readOrderReceipt(
     if (value.payment != null && !payment) return null;
     if (payment?.method === "CASH" && payment.amountReceived !== undefined &&
       cashAmountCents(payment.amountReceived)! < cashAmountCents(value.totalPrice)!) return null;
+    if (payment?.method === "CASH" && payment.changeDue !== undefined &&
+      cashAmountCents(payment.amountReceived)! - cashAmountCents(payment.changeDue)! !==
+        cashAmountCents(value.totalPrice)) return null;
     return {
       shopSlug,
       shopName: shopDetails?.name ?? value.shopName,

@@ -128,13 +128,15 @@ function setup(path = "/menu/cafe/orders/order-a") {
 }
 
 it('shows the recorded cash tender after receipt recovery rather than using the order total', () => {
+  useCart.getState().add('cafe', quote);
   saveOrderReceipt('cafe', 'Cafe', order);
   recoverOrderReceipt('cafe', 'order-a', { ...readOrderReceipt('cafe', 'order-a'),
-    payment: { method: 'CASH', reference: null, description: null, amountReceived: '20.00' },
+    payment: { method: 'CASH', reference: null, description: null, amountReceived: '20.00', changeDue: '8.00' },
   });
   orderReceipts.clearMemory();
   setup();
   expect(screen.getByText('Amount received (PHP): ₱20.00')).toBeInTheDocument();
+  expect(screen.getByText('Change (PHP): ₱8.00')).toBeInTheDocument();
   expect(screen.getByText('Payment method shown from your last saved receipt.')).toBeInTheDocument();
   expect(api.post).not.toHaveBeenCalled();
 });
