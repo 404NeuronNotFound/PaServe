@@ -254,6 +254,23 @@ it("hides a previously verified receipt when access is revoked", async () => {
   await screen.findByRole("heading", { name: "Receipt unavailable" });
   expect(screen.queryByText("12 Main Street")).not.toBeInTheDocument();
 });
+it("rechecks access to a completed receipt and hides it after revocation", async () => {
+  const source = saved();
+  const completedAt = "2026-10-16T00:04:00Z";
+  fetchReceipt.mockResolvedValue({
+    ok: true, status: 200, json: async () => ({
+      ...source,
+      order: { ...source.order, preparationStatus: "COMPLETED", preparationStartedAt: "2026-10-16T00:02:00Z", preparationReadyAt: "2026-10-16T00:03:00Z", completedAt, updatedAt: completedAt },
+      receipt: { ...source.receipt, completedAt },
+    }),
+  });
+  setup();
+  await screen.findByRole("heading", { name: "Receipt ORD-000042" });
+  fetchReceipt.mockResolvedValue({ ok: false, status: 403 });
+  act(() => window.dispatchEvent(new Event("focus")));
+  await screen.findByRole("heading", { name: "Receipt unavailable" });
+  expect(screen.queryByRole("region", { name: "Order receipt" })).not.toBeInTheDocument();
+});
 it("retries failed reads without any payment or order mutation", async () => {
   fetchReceipt.mockResolvedValue({ ok: false, status: 500 });
   setup();

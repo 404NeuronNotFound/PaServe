@@ -68,6 +68,11 @@ it("preserves numeric GCash transaction IDs and omits unsafe Other descriptions"
   expect(parseReceiptPaymentDetails({ method: "OTHER", description: "PIN 1234" })?.description).toBeNull();
   expect(parseReceiptPaymentDetails({ method: "UNKNOWN" })).toBeNull();
 });
+it.each(["4111.1111.1111.1111", "4111/1111/1111/1111", "4111–1111–1111–1111"])(
+  "omits a payment card disguised as a punctuated GCash reference: %s", (reference) => {
+    expect(parseReceiptPaymentDetails({ method: "GCASH_MANUAL", reference })?.reference).toBeNull();
+  },
+);
 it.each(["GCASH_MANUAL", "CARD_MANUAL", "OTHER"])(
   "omits card/payment credentials from %s references and descriptions", (method) => {
     const credentials = ["4111111111111111", "4111 1111 1111 1111", "４１１１１１１１１１１１１１１１",

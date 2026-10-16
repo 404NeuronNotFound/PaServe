@@ -1,5 +1,6 @@
 import {
   cashAmountCents,
+  isReceiptTimestamp,
   PAYMENT_REFERENCE_PATTERN,
   isSafeOtherPaymentText,
   isSafeManualCardReference,
@@ -45,8 +46,7 @@ function parseCash(
     (order.paymentStatus !== "PAID" ||
       !payment ||
       !PREPARATION_STATUSES.includes(data.queue.status) ||
-      typeof data.queue.queuedAt !== "string" ||
-      !Number.isFinite(Date.parse(data.queue.queuedAt)) ||
+      !isReceiptTimestamp(data.queue.queuedAt) ||
       Date.parse(data.queue.queuedAt) < Date.parse(payment.paidAt))
   )
     throw new Error(
@@ -70,8 +70,7 @@ function parseCash(
     ) ||
     typeof payment.paidBy !== "string" ||
     !payment.paidBy.trim() ||
-    typeof payment.paidAt !== "string" ||
-    !Number.isFinite(Date.parse(payment.paidAt)) ||
+    !isReceiptTimestamp(payment.paidAt) ||
     cashChange(payment.amountReceived, order.totalPrice) !==
       payment.changeDue ||
     cashAmountCents(payment.changeDue) === null ||

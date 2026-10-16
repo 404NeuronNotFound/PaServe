@@ -29,7 +29,9 @@ export function useCustomerConfirmation(
   shopSlug: string,
   orderId: string,
   token: string | null = null,
+  options: { watchTerminal?: boolean } = {},
 ) {
+  const watchTerminal = options.watchTerminal === true;
   const [linkVersion, setLinkVersion] = useState(0);
   const latest = useRef<{
     key: string;
@@ -230,6 +232,7 @@ export function useCustomerConfirmation(
         }
         if (
           active &&
+          !watchTerminal &&
           (order.preparationStatus === "COMPLETED" ||
             order.status === "REJECTED")
         ) {
@@ -258,7 +261,7 @@ export function useCustomerConfirmation(
       request?.abort();
       stopWatching();
     };
-  }, [shopSlug, orderId, token, key, linkVersion]);
+  }, [shopSlug, orderId, token, key, linkVersion, watchTerminal]);
   const reference = token ? parseOrderQrToken(token, "order-tracking") : null;
   return {
     order: saved?.key === key ? saved.order : null,

@@ -6,9 +6,10 @@ import { InlineMessage } from "../../components/feedback/InlineMessage";
 import "../public/customer-order-page.css";
 import "./receipt-print.css";
 
-export function CashierPaidReceipt({ review, onBack }: {
+export function CashierPaidReceipt({ review, onBack, validating = false }: {
   review: CashPaymentReviewResponse;
   onBack: () => void;
+  validating?: boolean;
 }) {
   const [layout, setLayout] = useState("standard");
   const [error, setError] = useState("");
@@ -16,6 +17,7 @@ export function CashierPaidReceipt({ review, onBack }: {
   useEffect(() => { heading.current?.focus(); }, []);
   if (!review.payment || review.order.status !== "CONFIRMED" || review.order.paymentStatus !== "PAID") return null;
   function print() {
+    if (validating) return;
     setError("");
     try { window.print(); }
     catch { setError("Could not open the print dialog. Try printing again."); }
@@ -36,7 +38,8 @@ export function CashierPaidReceipt({ review, onBack }: {
             <option value="standard">Standard paper</option><option value="thermal-80">80 mm receipt</option><option value="thermal-58">58 mm receipt</option>
           </select>
         </label>
-        <button type="button" className="primary-button" onClick={print}><FiPrinter aria-hidden="true" /> Print receipt</button>
+        <button type="button" className="primary-button" disabled={validating} onClick={print}><FiPrinter aria-hidden="true" /> Print receipt</button>
+        {validating && <p role="status">Checking receipt access…</p>}
         <p>Choose the matching paper size in your printer settings. Turn off browser headers and footers to keep the page address off the receipt.</p>
         {error && <InlineMessage>{error}</InlineMessage>}
       </section>

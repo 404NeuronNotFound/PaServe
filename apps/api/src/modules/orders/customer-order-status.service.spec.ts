@@ -88,6 +88,11 @@ describe('Customer receipt status access', () => {
     expect(result.receipt?.shopDetails).toBeNull();
     expect(result.receipt?.shopName).toBe('Cafe');
   });
+  it('returns a controlled receipt error for malformed saved shop details', async () => {
+    order.shopDetailsSnapshot = { name: 42 };
+    await expect(service.read('cafe', id, tokens.issueTracking(order)))
+      .rejects.toMatchObject({ status: 400, response: { code: 'RECEIPT_SHOP_DETAILS_UNAVAILABLE' } });
+  });
   it('returns saved UTC order/payment instants rather than status-update time', async () => {
     order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
     order.paidAt = new Date('2026-10-12T00:01:00Z');
@@ -169,7 +174,7 @@ describe('Customer receipt status access', () => {
     'omits payment credentials from the %s customer projection', async (method) => {
       order.status = 'CONFIRMED'; order.paymentStatus = 'PAID'; order.decidedAt = new Date();
       order.paymentMethod = method;
-      for (const reference of ['4111111111111111', 'Bearer private-token', 'password receipt-secret']) {
+      for (const reference of ['4111111111111111', '4111.1111.1111.1111', '4111/1111/1111/1111', 'Bearer private-token', 'password receipt-secret']) {
         order.paymentReference = reference; order.paymentDescription = reference;
         const result = await service.read('cafe', id, tokens.issueTracking(order));
         expect(result.receipt?.payment).toEqual({ method, reference: null, description: null });

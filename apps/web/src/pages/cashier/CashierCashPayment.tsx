@@ -13,6 +13,7 @@ import {
   CASH_AMOUNT_MAX,
   isSafeOtherPaymentText,
   isSafeManualCardReference,
+  parseReceiptPaymentDetails,
 } from "@paserve/contracts";
 import {
   reviewCashPayment,
@@ -185,6 +186,7 @@ export function CashierCashPayment({
     } catch (error) {
       if (active.current && !request.signal.aborted) {
         setBlocked(true);
+        setShowReceipt(false);
         setError(failureMessage(error));
       }
     } finally {
@@ -288,8 +290,9 @@ export function CashierCashPayment({
       if (active.current && !request.signal.aborted) setBusy(false);
     }
   }
-  if (showReceipt && review?.payment && review.order.status === "CONFIRMED" && review.order.paymentStatus === "PAID")
-    return <CashierPaidReceipt review={review} onBack={() => setShowReceipt(false)} />;
+  const receiptPayment = parseReceiptPaymentDetails(review?.payment);
+  if (showReceipt && !blocked && review?.payment && review.order.status === "CONFIRMED" && review.order.paymentStatus === "PAID")
+    return <CashierPaidReceipt review={review} validating={busy} onBack={() => setShowReceipt(false)} />;
   if (review?.payment)
     return (
       <section
@@ -335,10 +338,10 @@ export function CashierCashPayment({
             <dt>Payment recorded ({RECEIPT_TIME_ZONE})</dt>
             <dd><time dateTime={review.payment.paidAt}>{formatReceiptDateTime(review.payment.paidAt)}</time></dd>
           </div>
-          {review.payment.description && (
+          {receiptPayment?.description && (
             <div>
               <dt>Payment method description</dt>
-              <dd>{review.payment.description}</dd>
+              <dd>{receiptPayment.description}</dd>
             </div>
           )}
           <div>
@@ -355,10 +358,10 @@ export function CashierCashPayment({
               <dd>{formatCartPrice(review.payment.changeDue)}</dd>
             </div>
           )}
-          {review.payment.reference && (
+          {receiptPayment?.reference && (
             <div>
               <dt>Reference note / number</dt>
-              <dd>{review.payment.reference}</dd>
+              <dd>{receiptPayment.reference}</dd>
             </div>
           )}
         </dl>
@@ -373,8 +376,14 @@ export function CashierCashPayment({
                   ? "Return the change to the customer."
                   : "This order already has a saved cash payment. Check with the cashier before handling any cash or change."}
         </p>
-        {review.order.status === "CONFIRMED" && review.order.paymentStatus === "PAID" && (
-          <button type="button" className="secondary-button" onClick={() => setShowReceipt(true)}>
+        {error && <InlineMessage>{error}</InlineMessage>}
+        {blocked && (
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => void refresh()}>
+            Refresh payment
+          </button>
+        )}
+        {!blocked && review.order.status === "CONFIRMED" && review.order.paymentStatus === "PAID" && (
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => setShowReceipt(true)}>
             View receipt
           </button>
         )}

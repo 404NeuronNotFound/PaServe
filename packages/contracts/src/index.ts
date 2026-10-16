@@ -931,9 +931,9 @@ function isSafeReceiptPaymentText(value: string): boolean {
     /[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/.test(normalized) ||
     /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/.test(normalized)) return false;
   // Keep numeric transaction IDs, but omit recognized card numbers (Luhn),
-  // including those accidentally entered as GCash references.
-  return !(normalized.match(/\d(?:[ -]*\d){12,18}/g) ?? []).some((candidate) => {
-    const digits = candidate.replace(/[ -]/g, "");
+  // including punctuated numbers accidentally entered as GCash references.
+  return !(normalized.match(/\d(?:[^\p{L}\p{N}]*\d){12,18}/gu) ?? []).some((candidate) => {
+    const digits = candidate.replace(/\D/g, "");
     const checksum = [...digits].reverse().reduce((sum, digit, index) => {
       let number = Number(digit);
       if (index % 2) number *= 2;

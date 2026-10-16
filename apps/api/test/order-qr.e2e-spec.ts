@@ -331,6 +331,14 @@ describe('Cashier order QR verification', () => {
     expect(result.body.order.shopDetails).toEqual(details);
     expect(updateOrder).not.toHaveBeenCalled();
   });
+  it('returns a controlled receipt error instead of 500 for malformed saved shop details', async () => {
+    persisted.shopDetailsSnapshot = { name: 42 };
+    for (const result of [await verify().expect(400), await scan().expect(400)]) {
+      expect(result.body.code).toBe('RECEIPT_SHOP_DETAILS_UNAVAILABLE');
+    }
+    expect(updateOrder).not.toHaveBeenCalled();
+    expect(createOrder).not.toHaveBeenCalled();
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
     'resolves a scanned token for live %s and returns only saved order details',
     async (allowedRole) => {

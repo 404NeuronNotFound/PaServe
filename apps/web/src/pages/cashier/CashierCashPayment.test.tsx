@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   render,
+  act,
   screen,
   within,
   waitFor,
@@ -149,6 +150,37 @@ it("retains the saved cashier receipt when the print dialog fails", async () => 
   expect(screen.getByText(/Could not open the print dialog/)).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Receipt ORD-000042" })).toBeInTheDocument();
 });
+it("closes the paid receipt and prevents printing after access refresh fails", async () => {
+  vi.mocked(reviewCashPayment).mockResolvedValue(paid);
+  const print = vi.spyOn(window, "print").mockImplementation(() => {});
+  render(<CashierCashPayment shopId="shop-a" orderId="order-a" onNext={vi.fn()} />);
+  await userEvent.click(await screen.findByRole("button", { name: "View receipt" }));
+  vi.mocked(reviewCashPayment).mockRejectedValue(new Error("Access unavailable."));
+  act(() => window.dispatchEvent(new Event("focus")));
+  await screen.findByText("Access unavailable.");
+  expect(screen.queryByRole("button", { name: "Print receipt" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "View receipt" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Order receipt" })).not.toBeInTheDocument();
+  expect(print).not.toHaveBeenCalled();
+  vi.mocked(reviewCashPayment).mockResolvedValue(paid);
+  await userEvent.click(screen.getByRole("button", { name: "Refresh payment" }));
+  expect(await screen.findByRole("button", { name: "View receipt" })).toBeEnabled();
+  expect(screen.queryByRole("button", { name: "Print receipt" })).not.toBeInTheDocument();
+});
+it("disables printing while the cashier receipt access check is pending", async () => {
+  vi.mocked(reviewCashPayment).mockResolvedValue(paid);
+  const print = vi.spyOn(window, "print").mockImplementation(() => {});
+  render(<CashierCashPayment shopId="shop-a" orderId="order-a" onNext={vi.fn()} />);
+  await userEvent.click(await screen.findByRole("button", { name: "View receipt" }));
+  let finish!: (value: typeof paid) => void;
+  vi.mocked(reviewCashPayment).mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+  act(() => window.dispatchEvent(new Event("focus")));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Print receipt" })).toBeDisabled());
+  await userEvent.click(screen.getByRole("button", { name: "Print receipt" }));
+  expect(print).not.toHaveBeenCalled();
+  await act(async () => { finish(paid); });
+  await waitFor(() => expect(screen.getByRole("button", { name: "Print receipt" })).toBeEnabled());
+});
 it("shows preparation queue state only from a saved paid receipt", async () => {
   vi.mocked(reviewCashPayment).mockResolvedValue({
     ...paid,
@@ -160,6 +192,19 @@ it("shows preparation queue state only from a saved paid receipt", async () => {
   expect(await screen.findByText("Queued for preparation.")).toBeVisible();
   expect(screen.getByText('Payment recorded (Asia/Manila)')).toBeInTheDocument();
   expect(screen.getByText(/Oct 13, 2026.*08:00:00.*AM.*GMT\+8/)).toBeInTheDocument();
+});
+it.each(["GCASH_MANUAL", "OTHER"] as const)("redacts credentials from the %s payment summary and receipt", async (method) => {
+  vi.mocked(reviewCashPayment).mockResolvedValue({ ...paid,
+    payment: { ...paid.payment, method, amountReceived: order.totalPrice, changeDue: "0.00",
+      reference: "4111.1111.1111.1111", description: method === "OTHER" ? "password private-payment-secret" : null },
+  });
+  render(<CashierCashPayment shopId="shop-a" orderId="order-a" onNext={vi.fn()} />);
+  const view = await screen.findByRole("button", { name: "View receipt" });
+  expect(screen.queryByText(/4111/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/private-payment-secret/)).not.toBeInTheDocument();
+  await userEvent.click(view);
+  expect(screen.queryByText(/4111/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/private-payment-secret/)).not.toBeInTheDocument();
 });
 it("reopens a saved card payment as a paid receipt without collection instructions", async () => {
   vi.mocked(reviewCashPayment).mockResolvedValue({

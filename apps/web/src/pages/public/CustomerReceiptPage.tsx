@@ -31,7 +31,7 @@ function ReceiptRead({
   orderId: string;
   retry: () => void;
 }) {
-  const tracking = useCustomerConfirmation(shopSlug, orderId);
+  const tracking = useCustomerConfirmation(shopSlug, orderId, null, { watchTerminal: true });
   // This route requires a protected read. Cached display data alone never unlocks it.
   const denied =
     tracking.state === "denied" || tracking.state === "unavailable";

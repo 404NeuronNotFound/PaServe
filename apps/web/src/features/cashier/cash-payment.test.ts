@@ -44,6 +44,12 @@ const payment = {
 beforeEach(() => {
   vi.resetAllMocks();
 });
+it.each(["2026-10-13T08:00:00", "2026-02-30T00:00:00Z", "2026-10-13T08:00:00+08:00"])(
+  "rejects ambiguous or invalid saved payment timestamps: %s", async (paidAt) => {
+    vi.mocked(api.get).mockResolvedValue({ data: { order: { ...order, paymentStatus: "PAID" }, payment: { ...payment, paidAt } } });
+    await expect(reviewCashPayment(shopId, orderId, new AbortController().signal)).rejects.toThrow("could not be verified");
+  },
+);
 it.each([
   "4111.1111.1111.1111",
   "４１１１ １１１１ １１１１ １１１１",
