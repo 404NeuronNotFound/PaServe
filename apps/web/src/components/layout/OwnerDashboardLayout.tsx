@@ -7,25 +7,18 @@ import {
   type ReactNode,
 } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import {
   FiCoffee,
-  FiGrid,
-  FiSettings,
   FiUser,
   FiLogOut,
   FiMenu,
+  FiChevronLeft,
+  FiChevronRight,
   FiChevronDown,
   FiCheck,
-  FiLayers,
-  FiEye,
-  FiPackage,
-  FiShoppingBag,
-  FiSliders,
-  FiUsers,
 } from "react-icons/fi";
 import type { CurrentUserResponse, UserMembership } from "@paserve/contracts";
-import { hasShopPermission } from "@paserve/contracts";
 import { currentUserKey, logoutAccount } from "../../features/auth/api/session";
 import {
   rememberShop,
@@ -37,7 +30,7 @@ import { InlineMessage } from "../feedback/InlineMessage";
 import { feedback } from "../../app/stores/feedback";
 import "./dashboard-sidebar.css";
 import "./dashboard-header.css";
-import { canUseCashier } from "../../features/cashier/access";
+import { DashboardSidebarNavigation } from "./DashboardSidebarNavigation";
 
 export function OwnerDashboardLayout() {
   const membership = useActiveShop();
@@ -61,6 +54,33 @@ export function DashboardFrame({
   const user = client.getQueryData<CurrentUserResponse>(currentUserKey)?.user;
   const navigate = useNavigate();
   const [navigationOpen, setNavigationOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("paserve.sidebar.collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [mobile, setMobile] = useState(
+    () => window.matchMedia?.("(max-width: 760px)").matches ?? false,
+  );
+  useEffect(() => {
+    const query = window.matchMedia?.("(max-width: 760px)");
+    if (!query) return;
+    const update = () => setMobile(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  const rail = collapsed && !mobile;
+  function toggleSidebar() {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      localStorage.setItem("paserve.sidebar.collapsed", String(next));
+    } catch {
+      // Navigation still works when preference storage is unavailable.
+    }
+  }
   const navigationTrigger = useRef<HTMLButtonElement>(null);
   const accountMenu = useRef<HTMLDetailsElement>(null);
   const shopMenu = useRef<HTMLDetailsElement>(null);
@@ -126,7 +146,7 @@ export function DashboardFrame({
     items[next]?.focus();
   }
   return (
-    <div className="dashboard-shell phase-two">
+    <div className="dashboard-shell phase-two" data-sidebar-collapsed={rail}>
       <a className="skip-link" href="#dashboard-content">
         Skip to page content
       </a>
@@ -256,7 +276,20 @@ export function DashboardFrame({
             if (event.key === "Escape") closeNavigation();
           }}
         >
-          <p className="section-label dashboard-sidebar-label">YOUR SHOP</p>
+          <div className="dashboard-sidebar-toolbar">
+            <span className="dashboard-sidebar-label">WORKSPACE</span>
+            <button
+              type="button"
+              className="dashboard-sidebar-collapse"
+              onClick={toggleSidebar}
+              aria-label={rail ? "Expand sidebar" : "Collapse sidebar"}
+              title={rail ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!rail}
+              aria-controls="dashboard-navigation"
+            >
+              {rail ? <FiChevronRight aria-hidden="true" /> : <FiChevronLeft aria-hidden="true" />}
+            </button>
+          </div>
           {membership && (
             <div className="dashboard-sidebar-identity">
               <ShopLogo
@@ -272,132 +305,11 @@ export function DashboardFrame({
               </div>
             </div>
           )}
-          <nav aria-label="Shop navigation">
-            {membership && (
-              <div
-                className="dashboard-nav-group"
-                role="group"
-                aria-label="Workspace"
-              >
-                <p className="dashboard-nav-label">Workspace</p>
-                <div className="dashboard-nav-links">
-                  <NavLink
-                    end
-                    to={shopPath(membership.shopId)}
-                    onClick={closeNavigation}
-                  >
-                    <FiGrid aria-hidden="true" />
-                    <span>Overview</span>
-                  </NavLink>
-                  {canUseCashier(membership.role) && (
-                    <NavLink to={`${shopPath(membership.shopId)}/cashier`} onClick={closeNavigation}>
-                      <FiShoppingBag aria-hidden="true" />
-                      <span>Cashier</span>
-                    </NavLink>
-                  )}
-                  {hasShopPermission(membership.role, "shop.preparation.queue.read") && (
-                    <NavLink to={`${shopPath(membership.shopId)}/kitchen`} onClick={closeNavigation}>
-                      <FiCoffee aria-hidden="true" />
-                      <span>Kitchen / Barista</span>
-                    </NavLink>
-                  )}
-                  {membership.role === "OWNER" && (
-                    <>
-                      <NavLink to={`${shopPath(membership.shopId)}/orders`} onClick={closeNavigation}>
-                        <FiShoppingBag aria-hidden="true" /><span>Orders</span>
-                      </NavLink>
-                      <NavLink to={`${shopPath(membership.shopId)}/staff`} onClick={closeNavigation}>
-                        <FiUsers aria-hidden="true" /><span>Staff & invitations</span>
-                      </NavLink>
-                      <NavLink
-                        to={`${shopPath(membership.shopId)}/menu-preview`}
-                        onClick={closeNavigation}
-                      >
-                        <FiEye aria-hidden="true" />
-                        <span>Menu preview</span>
-                      </NavLink>
-                      <NavLink
-                        to={`${shopPath(membership.shopId)}/settings`}
-                        onClick={closeNavigation}
-                      >
-                        <FiSettings aria-hidden="true" />
-                        <span>Shop settings</span>
-                      </NavLink>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-            {membership &&
-              hasShopPermission(membership.role, "shop.menu.manage") && (
-                <div
-                  className="dashboard-nav-group"
-                  role="group"
-                  aria-label="Menu management"
-                >
-                  <p className="dashboard-nav-label">Menu</p>
-                  <div className="dashboard-nav-links">
-                    <NavLink
-                      to={`${shopPath(membership.shopId)}/products`}
-                      onClick={closeNavigation}
-                    >
-                      <FiPackage aria-hidden="true" />
-                      <span>Products</span>
-                    </NavLink>
-                    <NavLink
-                      to={`${shopPath(membership.shopId)}/categories`}
-                      onClick={closeNavigation}
-                    >
-                      <FiLayers aria-hidden="true" />
-                      <span>Categories</span>
-                    </NavLink>
-                    <NavLink
-                      to={`${shopPath(membership.shopId)}/add-ons`}
-                      onClick={closeNavigation}
-                    >
-                      <FiSliders aria-hidden="true" />
-                      <span>Add-ons</span>
-                    </NavLink>
-                  </div>
-                </div>
-              )}
-            {membership &&
-              hasShopPermission(membership.role, "shop.operations.manage") && (
-                <div
-                  className="dashboard-nav-group"
-                  role="group"
-                  aria-label="Restaurant management"
-                >
-                  <p className="dashboard-nav-label">Restaurant</p>
-                  <div className="dashboard-nav-links">
-                    <NavLink
-                      to={`${shopPath(membership.shopId)}/tables`}
-                      onClick={closeNavigation}
-                    >
-                      <FiGrid aria-hidden="true" />
-                      <span>Tables</span>
-                    </NavLink>
-                  </div>
-                </div>
-              )}
-            <div
-              className="dashboard-nav-group dashboard-nav-account"
-              role="group"
-              aria-label="Account"
-            >
-              <p className="dashboard-nav-label">Account</p>
-              <div className="dashboard-nav-links">
-                <NavLink end to="/app/shops" onClick={closeNavigation}>
-                  <FiShoppingBag aria-hidden="true" />
-                  <span>Your shops</span>
-                </NavLink>
-                <NavLink to="/app/account" onClick={closeNavigation}>
-                  <FiUser aria-hidden="true" />
-                  <span>Your account</span>
-                </NavLink>
-              </div>
-            </div>
-          </nav>
+          <DashboardSidebarNavigation
+            membership={membership}
+            rail={rail}
+            onNavigate={closeNavigation}
+          />
         </aside>
         <main
           className="dashboard-content"

@@ -80,7 +80,9 @@ beforeEach(() => {
 afterEach(() => {
   focusManager.setFocused(undefined);
   vi.resetAllMocks();
+  vi.unstubAllGlobals();
   sessionStorage.clear();
+  localStorage.removeItem("paserve.sidebar.collapsed");
   useFeedbackStore.getState().clear();
 });
 it("preserves a settings draft when returning to the browser window", async () => {
@@ -157,6 +159,7 @@ it("lets the owner inspect the menu within the authenticated workspace", async (
     setup();
     const user = userEvent.setup();
     await screen.findByRole("heading", { name: "Cafe A" });
+    await user.click(screen.getByRole("button", { name: "Menu & catalog" }));
     await user.click(screen.getByRole("link", { name: "Menu preview" }));
     expect(
       await screen.findByRole("heading", { name: "Menu preview" }),
@@ -212,6 +215,7 @@ it("uses one shared header/main and correct navigation across page outlets", asy
     "aria-current",
     "page",
   );
+  await user.click(within(nav).getByRole("button", { name: "Shop management" }));
   await user.click(within(nav).getByRole("link", { name: "Shop settings" }));
   expect(
     await screen.findByRole("heading", { name: "Shop settings" }),
@@ -275,17 +279,17 @@ it("groups shop work and personal navigation and keeps Products current on custo
   setup("/app/shops/a/products/latte/customize");
   await screen.findByRole("heading", { name: "Product customization" });
   const nav = screen.getByRole("navigation", { name: "Shop navigation" });
-  const workspace = within(nav).getByRole("group", { name: "Workspace" });
+  const workspace = within(nav).getByRole("group", { name: "Restaurant management" });
   const menu = within(nav).getByRole("group", { name: "Menu management" });
   const account = within(nav).getByRole("group", { name: "Account" });
   expect(
-    within(workspace).getByRole("link", { name: "Shop settings" }),
+    within(workspace).getByRole("link", { name: "Shop settings", hidden: true }),
   ).toBeInTheDocument();
   expect(
     within(menu)
       .getAllByRole("link")
       .map((link) => link.textContent),
-  ).toEqual(["Products", "Categories", "Add-ons"]);
+  ).toEqual(["Products", "Categories", "Add-ons", "Menu preview"]);
   expect(
     within(account).getByRole("link", { name: "Your shops" }),
   ).toHaveAttribute("href", "/app/shops");
@@ -298,6 +302,7 @@ it("groups shop work and personal navigation and keeps Products current on custo
 it.each(["ADMIN", "MANAGER", "CASHIER", "KITCHEN"] as const)(
   "preserves sidebar permissions for %s",
   async (role) => {
+    localStorage.setItem("paserve.sidebar.collapsed", "true");
     vi.mocked(getShopMembership).mockResolvedValue(member("a", role));
     setup();
     await screen.findByRole("heading", { name: "Cafe A" });
@@ -444,4 +449,84 @@ it("toggles navigation with an accessible control and Escape returns focus", asy
   await user.keyboard("{Escape}");
   expect(toggle).toHaveAttribute("aria-expanded", "false");
   expect(toggle).toHaveFocus();
+});
+
+it("collapses setup groups and toggles them with the keyboard", async () => {
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: "Cafe A" });
+  const toggle = screen.getByRole("button", { name: "Menu & catalog" });
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("link", { name: "Products" })).not.toBeInTheDocument();
+  toggle.focus();
+  await user.keyboard("{Enter}");
+  expect(toggle).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("link", { name: "Products" })).toHaveAttribute("href", "/app/shops/a/products");
+  await user.keyboard(" ");
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+});
+it("restores an icon rail preference and keeps every permitted destination accessible", async () => {
+  localStorage.setItem("paserve.sidebar.collapsed", "true");
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: "Cafe A" });
+  const expand = screen.getByRole("button", { name: "Expand sidebar" });
+  expect(expand).toHaveAttribute("aria-expanded", "false");
+  const nav = screen.getByRole("navigation", { name: "Shop navigation" });
+  expect(within(nav).getAllByRole("link")).toHaveLength(13);
+  expect(within(nav).getByRole("link", { name: "Products" })).toHaveAttribute("title", "Products");
+  await user.click(expand);
+  expect(localStorage.getItem("paserve.sidebar.collapsed")).toBe("false");
+  expect(screen.getByRole("button", { name: "Collapse sidebar" })).toHaveAttribute("aria-expanded", "true");
+  expect(screen.queryByRole("link", { name: "Products" })).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+  expect(localStorage.getItem("paserve.sidebar.collapsed")).toBe("true");
+});
+it("uses a distinct icon for every sidebar destination", async () => {
+  localStorage.setItem("paserve.sidebar.collapsed", "true");
+  setup();
+  await screen.findByRole("heading", { name: "Cafe A" });
+  const nav = screen.getByRole("navigation", { name: "Shop navigation" });
+  const icons = within(nav).getAllByRole("link").map(link => link.querySelector("svg")?.innerHTML);
+  expect(new Set(icons).size).toBe(icons.length);
+});
+
+it("uses full labels and working disclosures on mobile without losing the desktop preference", async () => {
+  let onChange: (() => void) | undefined;
+  const query = {
+    matches: false,
+    addEventListener: vi.fn((_type: string, callback: () => void) => { onChange = callback; }),
+    removeEventListener: vi.fn(),
+  };
+  vi.stubGlobal("matchMedia", vi.fn(() => query));
+  localStorage.setItem("paserve.sidebar.collapsed", "true");
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: "Cafe A" });
+  const shell = screen.getByRole("main").closest(".dashboard-shell");
+  expect(shell).toHaveAttribute("data-sidebar-collapsed", "true");
+  act(() => { query.matches = true; onChange?.(); });
+  expect(shell).toHaveAttribute("data-sidebar-collapsed", "false");
+  await user.click(screen.getByRole("button", { name: "Navigation" }));
+  expect(screen.queryByRole("link", { name: "Products" })).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Menu & catalog" }));
+  expect(screen.getByRole("link", { name: "Products" })).toBeInTheDocument();
+  act(() => { query.matches = false; onChange?.(); });
+  expect(shell).toHaveAttribute("data-sidebar-collapsed", "true");
+  expect(localStorage.getItem("paserve.sidebar.collapsed")).toBe("true");
+});
+
+it("still collapses when browser preference storage is blocked", async () => {
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: "Cafe A" });
+  const storage = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new Error("Storage blocked");
+  });
+  try {
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+  } finally {
+    storage.mockRestore();
+  }
 });
