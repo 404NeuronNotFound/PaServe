@@ -78,10 +78,14 @@ afterEach(cleanup);
 it("shows fulfilled history, saved table/amount, recorded payment and Manila completion time", async () => {
   setup();
   expect(await screen.findByText("ORD-000042")).toBeVisible();
-  expect(screen.getByText("Fulfilled")).toBeVisible();
+  expect(
+    screen.getByText("Fulfilled", { selector: ".active-order-badge" }),
+  ).toBeVisible();
   expect(screen.getByText("Confirmed · Paid")).toBeVisible();
   expect(screen.getByText("Dine-in · Table Patio 2")).toBeVisible();
-  expect(screen.getByText("Cash")).toBeVisible();
+  expect(
+    screen.getByText("Cash", { selector: ".active-order-payment" }),
+  ).toBeVisible();
   expect(screen.getAllByText("₱1,234,567.89")).toHaveLength(2);
   expect(screen.getByText(/Oct 16, 2026.*08:05:00/)).toBeVisible();
   expect(screen.getByText("Newest completions first")).toBeVisible();
@@ -102,8 +106,12 @@ it.each([
     });
     vi.mocked(getCompletedOrders).mockResolvedValue(data);
     setup();
-    expect(await screen.findByText(label)).toBeVisible();
-    expect(screen.getByText("Takeout")).toBeVisible();
+    expect(
+      await screen.findByText(label, { selector: ".active-order-payment" }),
+    ).toBeVisible();
+    expect(
+      screen.getByText("Takeout", { selector: ".active-order-identity p" }),
+    ).toBeVisible();
   },
 );
 it("sums only the current page using exact cents", async () => {
@@ -145,6 +153,7 @@ it("pages Next/Previous and restarts at the first page on refresh", async () => 
     "next",
     expect.any(AbortSignal),
     "",
+    {},
   );
   fireEvent.click(screen.getByRole("button", { name: "Previous" }));
   await screen.findByText("ORD-000042");
@@ -153,6 +162,7 @@ it("pages Next/Previous and restarts at the first page on refresh", async () => 
     null,
     expect.any(AbortSignal),
     "",
+    {},
   );
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
   await screen.findByText("No completed orders on this page");
@@ -163,6 +173,7 @@ it("pages Next/Previous and restarts at the first page on refresh", async () => 
     null,
     expect.any(AbortSignal),
     "",
+    {},
   );
 });
 it("refreshes history automatically when another order is fulfilled", async () => {
@@ -223,6 +234,7 @@ it("resets history and paging on shop, account and role changes", async () => {
       null,
       expect.any(AbortSignal),
       "",
+      {},
     ),
   );
   view.client.setQueryData(currentUserKey, {

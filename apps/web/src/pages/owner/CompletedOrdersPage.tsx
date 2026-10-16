@@ -18,6 +18,7 @@ import { sumPrices } from "../../features/cart/cart";
 import "./active-orders.css";
 import { useOrderListSearch } from "../../features/orders/useOrderListSearch";
 import { OrderSearch } from "./OrderSearch";
+import { OrderFilters } from "./OrderFilters";
 
 const paymentLabels: Record<CompletedOrderSummary["paymentMethod"], string> = {
   CASH: "Cash",
@@ -40,11 +41,20 @@ export function CompletedOrdersPage() {
 
 function CompletedOrdersWorkspace({ userId }: { userId: string }) {
   const { shopId, role } = useActiveShop();
-  const { search, cursors, setCursors, applySearch } = useOrderListSearch();
+  const {
+    search,
+    filters,
+    hasFilters,
+    cursors,
+    setCursors,
+    applySearch,
+    applyFilters,
+  } = useOrderListSearch();
   const cursor = cursors[cursors.length - 1];
   const query = useQuery({
-    queryKey: completedOrdersKey(userId, shopId, cursor, search),
-    queryFn: ({ signal }) => getCompletedOrders(shopId, cursor, signal, search),
+    queryKey: completedOrdersKey(userId, shopId, cursor, search, filters),
+    queryFn: ({ signal }) =>
+      getCompletedOrders(shopId, cursor, signal, search, filters),
     enabled: role === "OWNER",
     retry: false,
     gcTime: 0,
@@ -89,6 +99,7 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
         </button>
       </header>
       <OrderSearch search={search} onSearch={applySearch} />
+      <OrderFilters view="completed" filters={filters} onApply={applyFilters} />
       <div className="active-orders-toolbar">
         <span>
           <FiClock aria-hidden="true" /> Newest completions first
@@ -135,7 +146,7 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
             <div className="active-orders-empty">
               <FiArchive aria-hidden="true" />
               <h2>
-                {search
+                {search || hasFilters
                   ? cursor
                     ? "No matching orders on this page"
                     : "No matching orders"
@@ -144,8 +155,8 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
                     : "No completed orders yet"}
               </h2>
               <p>
-                {search
-                  ? "Try another order number or table label, or clear search."
+                {search || hasFilters
+                  ? "Try another search or adjust or clear the filters."
                   : cursor
                     ? "Go back or refresh to start again."
                     : "Orders appear here after your team confirms pickup or table service. Payment alone does not mark an order fulfilled."}

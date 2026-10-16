@@ -1,4 +1,7 @@
-import type { CancelledOrdersResponse } from "@paserve/contracts";
+import type {
+  CancelledOrdersResponse,
+  OwnerOrderFilters,
+} from "@paserve/contracts";
 import { isReceiptTimestamp } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import "../auth/api/session";
@@ -9,6 +12,7 @@ export const cancelledOrdersKey = (
   shopId: string,
   cursor: string | null,
   search = "",
+  filters: OwnerOrderFilters = {},
 ) =>
   [
     "owner-orders",
@@ -17,6 +21,7 @@ export const cancelledOrdersKey = (
     "cancelled",
     cursor,
     ...(search ? [search] : []),
+    ...(Object.keys(filters).length ? [filters] : []),
   ] as const;
 
 export function parseCancelledOrders(
@@ -83,11 +88,16 @@ export async function getCancelledOrders(
   cursor: string | null,
   signal: AbortSignal,
   search = "",
+  filters: OwnerOrderFilters = {},
 ) {
   const { data } = await api.get<CancelledOrdersResponse>(
     `/shops/${encodeURIComponent(shopId)}/orders/cancelled`,
     {
-      params: { ...(cursor ? { cursor } : {}), ...(search ? { search } : {}) },
+      params: {
+        ...filters,
+        ...(cursor ? { cursor } : {}),
+        ...(search ? { search } : {}),
+      },
       signal,
       timeout: AUTH_REQUEST_TIMEOUT_MS,
     },

@@ -1,4 +1,7 @@
-import type { ActiveOrdersResponse } from "@paserve/contracts";
+import type {
+  ActiveOrdersResponse,
+  OwnerOrderFilters,
+} from "@paserve/contracts";
 import { isReceiptTimestamp } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import "../auth/api/session";
@@ -9,6 +12,7 @@ export const activeOrdersKey = (
   shopId: string,
   cursor: string | null,
   search = "",
+  filters: OwnerOrderFilters = {},
 ) =>
   [
     "owner-orders",
@@ -17,6 +21,7 @@ export const activeOrdersKey = (
     "active",
     cursor,
     ...(search ? [search] : []),
+    ...(Object.keys(filters).length ? [filters] : []),
   ] as const;
 
 export function parseActiveOrders(
@@ -76,11 +81,16 @@ export async function getActiveOrders(
   cursor: string | null,
   signal: AbortSignal,
   search = "",
+  filters: OwnerOrderFilters = {},
 ) {
   const { data } = await api.get<ActiveOrdersResponse>(
     `/shops/${encodeURIComponent(shopId)}/orders/active`,
     {
-      params: { ...(cursor ? { cursor } : {}), ...(search ? { search } : {}) },
+      params: {
+        ...filters,
+        ...(cursor ? { cursor } : {}),
+        ...(search ? { search } : {}),
+      },
       signal,
       timeout: AUTH_REQUEST_TIMEOUT_MS,
     },

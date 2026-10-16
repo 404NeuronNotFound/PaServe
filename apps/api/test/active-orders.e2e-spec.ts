@@ -186,5 +186,67 @@ describe.each(['active', 'completed', 'cancelled'])(
       await get(shopId, '?search=ORD').expect(403);
       expect(findMany).not.toHaveBeenCalled();
     });
+    it('combines filters with search while retaining tenant and lifecycle scope', async () => {
+      await get(
+        shopId,
+        '?search=ORD&mode=DINE_IN&table=Patio&from=2026-10-16&to=2026-10-16&shopId=forged',
+      ).expect(200);
+      const where = findMany.mock.calls[0][0].where;
+      expect(where).toMatchObject({
+        shopId,
+        shop: { id: shopId },
+        status:
+          view === 'active'
+            ? { in: ['PENDING_CONFIRMATION', 'CONFIRMED'] }
+            : view === 'completed'
+              ? 'CONFIRMED'
+              : 'REJECTED',
+      });
+      expect(where.AND).toEqual(
+        expect.arrayContaining([
+          {
+            AND: expect.arrayContaining([
+              { mode: 'DINE_IN' },
+              {
+                mode: 'DINE_IN',
+                tableNumber: { equals: 'Patio', mode: 'insensitive' },
+              },
+              {
+                [view === 'completed' ? 'completedAt' : 'createdAt']: {
+                  gte: new Date('2026-10-15T16:00:00Z'),
+                  lt: new Date('2026-10-16T16:00:00Z'),
+                },
+              },
+            ]),
+          },
+        ]),
+      );
+    });
+    it('treats wildcard characters in exact table labels literally', async () => {
+      await get(shopId, '?table=Patio%20%25_').expect(200);
+      expect(findMany.mock.calls[0][0].where.AND).toEqual(
+        expect.arrayContaining([
+          {
+            AND: [
+              {
+                mode: 'DINE_IN',
+                tableNumber: { equals: 'Patio \\%\\_', mode: 'insensitive' },
+              },
+            ],
+          },
+        ]),
+      );
+    });
+    it.each([
+      '?mode=DINE_IN&mode=TAKEOUT',
+      '?from=2026-02-30',
+      '?from=2026-10-17&to=2026-10-16',
+      '?mode=TAKEOUT&table=Patio',
+      '?status=CANCELLED',
+      '?paymentMethod=STRIPE',
+    ])('rejects invalid filters: %s', async (suffix) => {
+      await get(shopId, suffix).expect(400);
+      expect(findMany).not.toHaveBeenCalled();
+    });
   },
 );

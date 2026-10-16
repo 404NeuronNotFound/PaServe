@@ -106,6 +106,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
         null,
         expect.any(AbortSignal),
         "pAtIo 2",
+        {},
       );
       expect(screen.getByRole("searchbox")).toHaveValue("pAtIo 2");
       expect(screen.getByText("Showing matches for “pAtIo 2”.")).toBeVisible();
@@ -116,6 +117,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
           null,
           expect.any(AbortSignal),
           "",
+          {},
         ),
       );
       expect(screen.getByRole("searchbox")).toHaveFocus();
@@ -135,6 +137,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
         "next",
         expect.any(AbortSignal),
         "ORD",
+        {},
       );
       search("Table B");
       await screen.findByText("No matching orders");
@@ -143,6 +146,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
         null,
         expect.any(AbortSignal),
         "Table B",
+        {},
       );
       expect(
         requests[view].mock.calls.some(
@@ -156,6 +160,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
         null,
         expect.any(AbortSignal),
         "Table B",
+        {},
       );
     });
     it("keeps a failed search available for retry without reverting to unfiltered data", async () => {
@@ -172,6 +177,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
         null,
         expect.any(AbortSignal),
         "桌 2",
+        {},
       );
     });
     it("validates length locally and clears the query when changing shops or roles", async () => {
@@ -192,6 +198,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
           null,
           expect.any(AbortSignal),
           "",
+          {},
         ),
       );
       rendered.rerender(rendered.page("b", "CASHIER"));

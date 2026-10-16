@@ -14,6 +14,7 @@ import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./active-orders.css";
 import { useOrderListSearch } from "../../features/orders/useOrderListSearch";
 import { OrderSearch } from "./OrderSearch";
+import { OrderFilters } from "./OrderFilters";
 
 export function CancelledOrdersPage() {
   const { shopId, role } = useActiveShop();
@@ -29,11 +30,20 @@ export function CancelledOrdersPage() {
 
 function CancelledOrdersWorkspace({ userId }: { userId: string }) {
   const { shopId, role } = useActiveShop();
-  const { search, cursors, setCursors, applySearch } = useOrderListSearch();
+  const {
+    search,
+    filters,
+    hasFilters,
+    cursors,
+    setCursors,
+    applySearch,
+    applyFilters,
+  } = useOrderListSearch();
   const cursor = cursors[cursors.length - 1];
   const query = useQuery({
-    queryKey: cancelledOrdersKey(userId, shopId, cursor, search),
-    queryFn: ({ signal }) => getCancelledOrders(shopId, cursor, signal, search),
+    queryKey: cancelledOrdersKey(userId, shopId, cursor, search, filters),
+    queryFn: ({ signal }) =>
+      getCancelledOrders(shopId, cursor, signal, search, filters),
     enabled: role === "OWNER",
     retry: false,
     gcTime: 0,
@@ -76,6 +86,7 @@ function CancelledOrdersWorkspace({ userId }: { userId: string }) {
         </button>
       </header>
       <OrderSearch search={search} onSearch={applySearch} />
+      <OrderFilters view="cancelled" filters={filters} onApply={applyFilters} />
       <div className="active-orders-toolbar">
         <span>
           <FiClock aria-hidden="true" /> Newest placement first
@@ -114,7 +125,7 @@ function CancelledOrdersWorkspace({ userId }: { userId: string }) {
             <div className="active-orders-empty">
               <FiXCircle aria-hidden="true" />
               <h2>
-                {search
+                {search || hasFilters
                   ? cursor
                     ? "No matching orders on this page"
                     : "No matching orders"
@@ -123,8 +134,8 @@ function CancelledOrdersWorkspace({ userId }: { userId: string }) {
                     : "No rejected orders yet"}
               </h2>
               <p>
-                {search
-                  ? "Try another order number or table label, or clear search."
+                {search || hasFilters
+                  ? "Try another search or adjust or clear the filters."
                   : cursor
                     ? "Go back or refresh to start again."
                     : "Orders rejected before confirmation appear here with any recorded reason and actor."}

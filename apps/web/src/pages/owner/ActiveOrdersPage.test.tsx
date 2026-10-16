@@ -74,7 +74,11 @@ afterEach(cleanup);
 it("shows approval/payment, placed and updated Manila times, order age, type/table and exact total", async () => {
   setup();
   expect(await screen.findByText("ORD-000042")).toBeVisible();
-  expect(screen.getByText("Pending confirmation")).toBeVisible();
+  expect(
+    screen.getByText("Pending confirmation", {
+      selector: ".active-order-badge",
+    }),
+  ).toBeVisible();
   expect(screen.getByText("Unpaid")).toBeVisible();
   expect(screen.getByText("Dine-in · Table Patio 2")).toBeVisible();
   expect(screen.getByText("₱1,234,567.89")).toBeVisible();
@@ -98,10 +102,13 @@ it.each(["QUEUED", "PREPARING", "READY"] as const)(
     expect(
       await screen.findByText(
         preparationStatus[0] + preparationStatus.slice(1).toLowerCase(),
+        { selector: ".active-order-badge" },
       ),
     ).toBeVisible();
     expect(screen.getByText("Confirmed · Paid")).toBeVisible();
-    expect(screen.getByText("Takeout")).toBeVisible();
+    expect(
+      screen.getByText("Takeout", { selector: ".active-order-identity p" }),
+    ).toBeVisible();
   },
 );
 it("shows a useful empty state", async () => {
@@ -124,14 +131,18 @@ it.each([
     Object.assign(data.orders[0], { status: "CONFIRMED", paymentStatus });
     vi.mocked(getActiveOrders).mockResolvedValue(data);
     setup();
-    expect(await screen.findByText(label)).toBeVisible();
+    expect(
+      await screen.findByText(label, { selector: ".active-order-badge" }),
+    ).toBeVisible();
     expect(screen.getByText(paymentLabel)).toBeVisible();
   },
 );
 
 it("replaces the displayed status with the current status after manual refetch", async () => {
   setup();
-  await screen.findByText("Pending confirmation");
+  await screen.findByText("Pending confirmation", {
+    selector: ".active-order-badge",
+  });
   const data = summary();
   Object.assign(data.orders[0], {
     status: "CONFIRMED",
@@ -140,9 +151,15 @@ it("replaces the displayed status with the current status after manual refetch",
   });
   vi.mocked(getActiveOrders).mockResolvedValue(data);
   fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-  expect(await screen.findByText("Ready")).toBeVisible();
+  expect(
+    await screen.findByText("Ready", { selector: ".active-order-badge" }),
+  ).toBeVisible();
   expect(screen.getByText("Confirmed · Paid")).toBeVisible();
-  expect(screen.queryByText("Pending confirmation")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("Pending confirmation", {
+      selector: ".active-order-badge",
+    }),
+  ).not.toBeInTheDocument();
 });
 
 it("returns to the preceding page using its original cursor", async () => {
@@ -161,6 +178,7 @@ it("returns to the preceding page using its original cursor", async () => {
     null,
     expect.any(AbortSignal),
     "",
+    {},
   );
 });
 
@@ -202,6 +220,7 @@ it("pages with the captured cursor and refreshes back to the first page", async 
     "next",
     expect.any(AbortSignal),
     "",
+    {},
   );
   fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
   await waitFor(() =>
@@ -210,6 +229,7 @@ it("pages with the captured cursor and refreshes back to the first page", async 
       null,
       expect.any(AbortSignal),
       "",
+      {},
     ),
   );
 });

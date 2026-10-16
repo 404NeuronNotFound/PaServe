@@ -4,6 +4,92 @@
   padding-bottom: 28px;
   color: var(--color-text);
 }
+.owner-order-filters {
+  margin-bottom: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+.owner-order-filters > summary {
+  min-height: 44px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+.owner-order-filters > summary:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+.owner-order-filters form {
+  padding: 4px 16px 16px;
+}
+.owner-order-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.owner-order-filter-grid label,
+.owner-order-fixed-filter > span {
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.owner-order-filter-grid input,
+.owner-order-filter-grid select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text);
+  background: var(--color-canvas);
+  font: inherit;
+}
+.owner-order-filter-grid input:focus-visible,
+.owner-order-filter-grid select:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+.owner-order-filter-grid input:disabled {
+  opacity: 0.65;
+}
+.owner-order-fixed-filter p {
+  margin: 7px 0 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.owner-order-filters form > p:not(.feedback-inline),
+.owner-order-filter-summary {
+  font-size: 12px;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+.owner-order-filter-summary {
+  margin: 0;
+  padding: 0 16px 16px;
+  overflow-wrap: anywhere;
+}
+.owner-order-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 800px) {
+  .owner-order-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .owner-order-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .owner-order-search {
   margin: 0 0 20px;
 }

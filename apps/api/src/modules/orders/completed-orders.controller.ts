@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { Roles } from '../shop-members/decorators/roles.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { CompletedOrdersService } from './completed-orders.service.js';
+import { ownerOrderFiltersFromQuery } from './owner-order-filters.js';
 
 @Controller('shops/:shopId/orders')
 export class CompletedOrdersController {
@@ -12,6 +13,7 @@ export class CompletedOrdersController {
   list(
     @Query('cursor') cursor: unknown,
     @Query('search') search: unknown,
+    @Query() query: Record<string, unknown>,
     @Req() request: ShopMemberRequest,
     @Res({ passthrough: true }) response: Response,
   ) {
@@ -21,6 +23,7 @@ export class CompletedOrdersController {
       request.shopMembership.shopId,
       cursor,
       search,
+      ownerOrderFiltersFromQuery(query),
     );
   }
 }

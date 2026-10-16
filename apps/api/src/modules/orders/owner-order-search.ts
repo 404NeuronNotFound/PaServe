@@ -2,6 +2,10 @@ import { BadRequestException } from '@nestjs/common';
 import { normalizeOwnerOrderSearch } from '@paserve/contracts';
 import type { Prisma } from '../../generated/prisma/client.js';
 
+export function escapeOwnerOrderLikeLiteral(value: string): string {
+  return value.replace(/[\\%_]/g, '\\$&');
+}
+
 /** Keep this OR inside the existing tenant/state/cursor predicates. */
 export function ownerOrderSearchWhere(
   value: unknown,
@@ -15,7 +19,7 @@ export function ownerOrderSearchWhere(
     });
   if (!search) return undefined;
   // Prisma contains uses LIKE: escape wildcards so user text stays literal.
-  const literal = search.replace(/[\\%_]/g, '\\$&');
+  const literal = escapeOwnerOrderLikeLiteral(search);
   return {
     OR: [
       { orderNumber: { contains: literal, mode: 'insensitive' } },

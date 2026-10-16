@@ -80,7 +80,9 @@ it("shows rejection accurately with captured reason/actor, saved total/table and
   expect(
     screen.getByText("Rejected", { selector: ".active-order-badge" }),
   ).toBeVisible();
-  expect(screen.getByText("Unpaid")).toBeVisible();
+  expect(
+    screen.getByText("Unpaid", { selector: ".active-order-payment" }),
+  ).toBeVisible();
   expect(screen.getByText("Dine-in · Table Patio 2")).toBeVisible();
   expect(screen.getByText("Item unavailable")).toBeVisible();
   expect(screen.getByText("Recorded actor ID")).toBeVisible();
@@ -103,7 +105,9 @@ it("shows Not captured for missing reason, actor and decision time without hidin
   setup();
   await screen.findByText("ORD-000042");
   expect(screen.getAllByText("Not captured")).toHaveLength(3);
-  expect(screen.getByText("Takeout")).toBeVisible();
+  expect(
+    screen.getByText("Takeout", { selector: ".active-order-identity p" }),
+  ).toBeVisible();
 });
 it("renders a captured reason as plain text", async () => {
   const data = summary();
@@ -137,6 +141,7 @@ it("pages Next/Previous and restarts at the first page on refresh", async () => 
     "next",
     expect.any(AbortSignal),
     "",
+    {},
   );
   fireEvent.click(screen.getByRole("button", { name: "Previous" }));
   await screen.findByText("ORD-000042");
@@ -145,6 +150,7 @@ it("pages Next/Previous and restarts at the first page on refresh", async () => 
     null,
     expect.any(AbortSignal),
     "",
+    {},
   );
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
   await screen.findByText("No rejected orders on this page");
@@ -155,6 +161,7 @@ it("pages Next/Previous and restarts at the first page on refresh", async () => 
     null,
     expect.any(AbortSignal),
     "",
+    {},
   );
 });
 it("refreshes history automatically when an order is rejected", async () => {

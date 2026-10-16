@@ -18,6 +18,7 @@ import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./active-orders.css";
 import { useOrderListSearch } from "../../features/orders/useOrderListSearch";
 import { OrderSearch } from "./OrderSearch";
+import { OrderFilters } from "./OrderFilters";
 
 export function ActiveOrdersPage() {
   const membership = useActiveShop();
@@ -54,12 +55,21 @@ function elapsed(createdAt: string, now: number) {
 
 function ActiveOrdersWorkspace({ userId }: { userId: string }) {
   const { shopId, role } = useActiveShop();
-  const { search, cursors, setCursors, applySearch } = useOrderListSearch();
+  const {
+    search,
+    filters,
+    hasFilters,
+    cursors,
+    setCursors,
+    applySearch,
+    applyFilters,
+  } = useOrderListSearch();
   const [now, setNow] = useState(Date.now);
   const cursor = cursors[cursors.length - 1];
   const query = useQuery({
-    queryKey: activeOrdersKey(userId, shopId, cursor, search),
-    queryFn: ({ signal }) => getActiveOrders(shopId, cursor, signal, search),
+    queryKey: activeOrdersKey(userId, shopId, cursor, search, filters),
+    queryFn: ({ signal }) =>
+      getActiveOrders(shopId, cursor, signal, search, filters),
     enabled: role === "OWNER",
     retry: false,
     gcTime: 0,
@@ -108,6 +118,7 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
         </button>
       </header>
       <OrderSearch search={search} onSearch={applySearch} />
+      <OrderFilters view="active" filters={filters} onApply={applyFilters} />
       <div className="active-orders-toolbar">
         <span>
           <FiClock aria-hidden="true" /> Oldest orders first
@@ -143,7 +154,7 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
             <div className="active-orders-empty">
               <FiShoppingBag aria-hidden="true" />
               <h2>
-                {search
+                {search || hasFilters
                   ? cursor
                     ? "No matching orders on this page"
                     : "No matching orders"
@@ -152,8 +163,8 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
                     : "No active orders right now"}
               </h2>
               <p>
-                {search
-                  ? "Try another order number or table label, or clear search."
+                {search || hasFilters
+                  ? "Try another search or adjust or clear the filters."
                   : cursor
                     ? "Orders may have been fulfilled. Go back or refresh to start again."
                     : "New orders will appear here while they await confirmation, payment, preparation, or fulfillment."}

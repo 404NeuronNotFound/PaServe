@@ -131,6 +131,59 @@ export interface ActiveOrdersResponse {
 
 export const OWNER_ORDER_SEARCH_MAX_LENGTH = 80;
 
+export type OwnerOrderView = "active" | "completed" | "cancelled";
+export const OWNER_ACTIVE_STATUS_FILTERS = ["PENDING_CONFIRMATION", "CONFIRMED", "AWAITING_PAYMENT", "AWAITING_PREPARATION", "QUEUED", "PREPARING", "READY"] as const;
+export const OWNER_PAYMENT_METHOD_FILTERS = ["CASH", "GCASH_MANUAL", "CARD_MANUAL", "OTHER", "UNRECORDED"] as const;
+export interface OwnerOrderFilters {
+  status?: (typeof OWNER_ACTIVE_STATUS_FILTERS)[number] | "COMPLETED" | "REJECTED";
+  mode?: "DINE_IN" | "TAKEOUT";
+  paymentMethod?: (typeof OWNER_PAYMENT_METHOD_FILTERS)[number];
+  /** Inclusive calendar dates in Asia/Manila; not device-local timestamps. */
+  from?: string;
+  to?: string;
+  /** Exact saved table label, case-insensitive. */
+  table?: string;
+}
+export const OWNER_ORDER_FILTER_FIELDS = ["status", "mode", "paymentMethod", "from", "to", "table"] as const;
+
+export function isOwnerOrderFilterDay(value: string): boolean {
+  if (!/^[1-9]\d{3}-\d{2}-\d{2}$/.test(value)) return false;
+  const time = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value && !value.startsWith("9999-");
+}
+
+/** Reject unknown fields/values; empty scalar selections mean no constraint. */
+export function normalizeOwnerOrderFilters(value: unknown, view: OwnerOrderView): OwnerOrderFilters | null {
+  if (value === undefined) return {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  if (Object.keys(source).some((key) => !OWNER_ORDER_FILTER_FIELDS.some((field) => field === key))) return null;
+  const normalized: Record<string, string> = {};
+  for (const field of OWNER_ORDER_FILTER_FIELDS) {
+    const raw = source[field];
+    if (raw === undefined || raw === "") continue;
+    if (typeof raw !== "string" || raw.length > 40 || /\p{Cc}/u.test(raw)) return null;
+    if (raw.trim()) normalized[field] = raw.trim();
+  }
+  if (normalized.status && !(view === "active" ? OWNER_ACTIVE_STATUS_FILTERS.some((status) => status === normalized.status)
+    : normalized.status === (view === "completed" ? "COMPLETED" : "REJECTED"))) return null;
+  if (normalized.mode && !["DINE_IN", "TAKEOUT"].includes(normalized.mode)) return null;
+  if (normalized.paymentMethod && (view === "cancelled" || !OWNER_PAYMENT_METHOD_FILTERS.some((method) => method === normalized.paymentMethod) ||
+    (view === "completed" && normalized.paymentMethod === "UNRECORDED"))) return null;
+  if ((normalized.from && !isOwnerOrderFilterDay(normalized.from)) || (normalized.to && !isOwnerOrderFilterDay(normalized.to)) ||
+    (normalized.from && normalized.to && normalized.from > normalized.to) || (normalized.table && normalized.mode === "TAKEOUT")) return null;
+  return normalized as OwnerOrderFilters;
+}
+
+/** Business-day bounds independent of browser/server timezone. To is inclusive. */
+export function ownerOrderDateBounds(filters: OwnerOrderFilters): { gte?: string; lt?: string } {
+  const midnight = (day: string) => Date.parse(`${day}T00:00:00.000Z`) - 8 * 60 * 60 * 1000;
+  return {
+    ...(filters.from ? { gte: new Date(midnight(filters.from)).toISOString() } : {}),
+    ...(filters.to ? { lt: new Date(midnight(filters.to) + 86400000).toISOString() } : {}),
+  };
+}
+
 /** Safe display-field query only; missing/blank means no search. */
 export function normalizeOwnerOrderSearch(value: unknown): string | null {
   if (value === undefined) return "";

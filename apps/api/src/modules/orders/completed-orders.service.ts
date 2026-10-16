@@ -12,6 +12,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import { ownerOrderSearchWhere } from './owner-order-search.js';
+import { ownerOrderFiltersWhere } from './owner-order-filters.js';
 
 @Injectable()
 export class CompletedOrdersService {
@@ -25,9 +26,11 @@ export class CompletedOrdersService {
     shopId: string,
     cursor?: unknown,
     search?: unknown,
+    filters?: unknown,
   ): Promise<CompletedOrdersResponse> {
     const access = shopAccessWhere(actorId, shopId, ['OWNER']);
     const searchWhere = ownerOrderSearchWhere(search);
+    const filtersWhere = ownerOrderFiltersWhere(filters, 'completed');
     let after: { completedAt: Date; id: string } | undefined;
     if (cursor !== undefined) {
       try {
@@ -67,7 +70,14 @@ export class CompletedOrdersService {
         completedAt: { not: null },
         completedBy: { not: null },
         currency: 'PHP',
-        ...(searchWhere ? { AND: [searchWhere] } : {}),
+        ...(searchWhere || filtersWhere
+          ? {
+              AND: [
+                ...(searchWhere ? [searchWhere] : []),
+                ...(filtersWhere ? [filtersWhere] : []),
+              ],
+            }
+          : {}),
         ...(after
           ? {
               OR: [

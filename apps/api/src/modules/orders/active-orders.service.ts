@@ -5,6 +5,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import { ownerOrderSearchWhere } from './owner-order-search.js';
+import { ownerOrderFiltersWhere } from './owner-order-filters.js';
 
 @Injectable()
 export class ActiveOrdersService {
@@ -18,9 +19,11 @@ export class ActiveOrdersService {
     shopId: string,
     cursor?: unknown,
     search?: unknown,
+    filters?: unknown,
   ): Promise<ActiveOrdersResponse> {
     const access = shopAccessWhere(actorId, shopId, ['OWNER']);
     const searchWhere = ownerOrderSearchWhere(search);
+    const filtersWhere = ownerOrderFiltersWhere(filters, 'active');
     let after: { createdAt: Date; id: string } | undefined;
     if (cursor !== undefined) {
       try {
@@ -59,6 +62,7 @@ export class ActiveOrdersService {
         completedAt: null,
         AND: [
           ...(searchWhere ? [searchWhere] : []),
+          ...(filtersWhere ? [filtersWhere] : []),
           {
             OR: [
               { preparationStatus: null },
