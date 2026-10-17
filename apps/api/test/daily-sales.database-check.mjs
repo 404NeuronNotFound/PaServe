@@ -650,6 +650,46 @@ try {
   assert.deepEqual(peakChecks[3].peakHours, [12]); // 04:00 UTC is noon Manila; item quantities do not multiply counts.
   const foreignHours = await sales.peakHours(actor.id, foreign.id, '2030-03-10', '2030-03-10');
   assert.equal(foreignHours.completedOrders, 1); assert.equal(foreignHours.totalSales, '99.00'); assert.deepEqual(foreignHours.peakHours, [0]);
+  const mixStart = Date.parse('2031-02-11T16:00:00.000Z');
+  const mixPayments = [
+    ['CASH', '10.00'], ['CASH', '20.00'], ['GCASH_MANUAL', '60.00'],
+    ['CARD_MANUAL', '3.33'], ['CARD_MANUAL', '3.33'], ['CARD_MANUAL', '3.34'], ['OTHER', '0.00'],
+  ];
+  for (const [index, [paymentMethod, amount]] of mixPayments.entries()) {
+    await completed(new Date(mixStart + index * 3_600_000).toISOString(), amount, {
+      paymentMethod, ...(paymentMethod === 'OTHER' ? { paymentDescription: 'Voucher' } : {}),
+      ...(index === 0 ? { amountReceived: '100.00', changeDue: '90.00' } : {}),
+    });
+  }
+  await completed('2031-02-11T15:59:59.999Z', '99.00');
+  await completed('2031-02-12T16:00:00.000Z', '0.00');
+  await completed('2031-02-12T01:00:00.000Z', '99.00', { shopId: foreign.id });
+  const paymentMixChecks = [];
+  for (const [startDate, endDate] of [['2031-02-12', '2031-02-12'], ['2031-02-12', '2031-02-13'], ['2031-02-13', '2031-02-13'], ['2031-02-14', '2031-02-14']]) {
+    const mix = await sales.custom(actor.id, shop.id, startDate, endDate);
+    const source = await client.query(
+      `SELECT o."paymentMethod" AS method, o."totalPrice"::text AS total FROM "${schema}".orders o
+       WHERE o."shopId"=$1 AND o.status='CONFIRMED' AND o."paymentStatus"='PAID'
+         AND o."preparationStatus"='COMPLETED' AND o."completedBy" IS NOT NULL AND o.currency='PHP'
+         AND ((o."completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila')::date BETWEEN $2::date AND $3::date`, [shop.id, startDate, endDate],
+    );
+    for (const method of mix.paymentBreakdown) {
+      const group = source.rows.filter((order) => order.method === method.paymentMethod);
+      assert.equal(method.orders, group.length);
+      assert.equal(BigInt(method.totalSales.replace('.', '')), group.reduce((n, order) => n + BigInt(order.total.replace('.', '')), 0n));
+    }
+    assert.equal(mix.completedOrders, source.rows.length);
+    assert.equal(BigInt(mix.totalSales.replace('.', '')), source.rows.reduce((n, order) => n + BigInt(order.total.replace('.', '')), 0n));
+    paymentMixChecks.push({ startDate, endDate, orders: mix.completedOrders, sales: mix.totalSales, methods: mix.paymentBreakdown });
+  }
+  assert.equal(paymentMixChecks[0].sales, '100.00'); assert.equal(paymentMixChecks[0].orders, 7);
+  assert.deepEqual(paymentMixChecks[0].methods, [
+    { paymentMethod: 'CASH', orders: 2, totalSales: '30.00' }, { paymentMethod: 'GCASH_MANUAL', orders: 1, totalSales: '60.00' },
+    { paymentMethod: 'CARD_MANUAL', orders: 3, totalSales: '10.00' }, { paymentMethod: 'OTHER', orders: 1, totalSales: '0.00' },
+  ]);
+  assert.equal(paymentMixChecks[1].orders, 8); assert.equal(paymentMixChecks[1].sales, '100.00');
+  assert.equal(paymentMixChecks[2].orders, 1); assert.equal(paymentMixChecks[2].sales, '0.00');
+  assert.equal(paymentMixChecks[3].orders, 0);
   await prisma.shopMember.update({
     where: { id: membership.id },
     data: { role: 'CASHIER' },
@@ -667,6 +707,7 @@ try {
   console.log(
     JSON.stringify({
       passed: true,
+      paymentMethods: { passed: true, criterion: 'Selected-period payment method counts and saved sales reconcile with detailed eligible orders, including zero-value and empty periods', checks: paymentMixChecks },
       peakHours: { passed: true, criterion: 'Eligible orders group by Manila completion hour and reconcile with detailed orders and the selected-period summary', checks: peakChecks },
       topProducts: { passed: true, criterion: 'Snapshot identifiers, latest saved names, quantity/revenue rankings and remainder totals reconcile with eligible detailed items', checks: rankingChecks },
       customSales: { passed: true, criterion: 'One selected start/end period applies consistently to summary, item quantities, payments and recent orders', checks: customChecks },

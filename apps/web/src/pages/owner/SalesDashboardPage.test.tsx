@@ -207,7 +207,7 @@ it("applies one custom range to cards, payments and recent orders only after App
   expect(
     within(screen.getByRole("region", { name: "Payment Breakdown" })).getByRole(
       "row",
-      { name: "Cash 2 ₱12.35" },
+      { name: "Cash 2 100.00% ₱12.35 100.00%" },
     ),
   ).toBeVisible();
   expect(
@@ -328,6 +328,134 @@ it("resets custom mode on a shop change", async () => {
   );
   expect(screen.queryByText(/Applied to all metrics/)).not.toBeInTheDocument();
   expect(getCustomSales).toHaveBeenCalledTimes(1);
+});
+it("analyzes the applied custom period by sales or order mix without another request", async () => {
+  const mixed = {
+    ...customReport(),
+    totalSales: "100.00",
+    completedOrders: 7,
+    paymentBreakdown: [
+      { paymentMethod: "CASH" as const, orders: 2, totalSales: "30.00" },
+      {
+        paymentMethod: "GCASH_MANUAL" as const,
+        orders: 1,
+        totalSales: "60.00",
+      },
+      { paymentMethod: "CARD_MANUAL" as const, orders: 3, totalSales: "10.00" },
+      { paymentMethod: "OTHER" as const, orders: 1, totalSales: "0.00" },
+    ],
+  };
+  vi.mocked(getCustomSales).mockResolvedValue(mixed);
+  setup();
+  chooseCustom();
+  fireEvent.click(screen.getByRole("button", { name: "Apply date range" }));
+  await screen.findByText("₱100.00", { selector: ".sales-amount" });
+  const region = screen.getByRole("region", { name: "Payment Breakdown" });
+  expect(
+    within(region).getByText("Largest sales total: GCash (manual) · ₱60.00."),
+  ).toBeVisible();
+  expect(
+    within(region).getByRole("row", { name: "Other 1 14.28% ₱0.00 0.00%" }),
+  ).toBeVisible();
+  expect(
+    region
+      .querySelector("circle.sales-method-1")
+      ?.getAttribute("stroke-dasharray")
+      ?.split(" ")[0],
+  ).toBe("60");
+  fireEvent.click(within(region).getByRole("button", { name: "Order share" }));
+  expect(
+    within(region).getByText("Most used: Card (manual) · 3 orders."),
+  ).toBeVisible();
+  expect(
+    region
+      .querySelector("circle.sales-method-2")
+      ?.getAttribute("stroke-dasharray")
+      ?.split(" ")[0],
+  ).toBe("42.86");
+  expect(
+    within(region).getByRole("row", {
+      name: "All methods 7 100.00% ₱100.00 100.00%",
+    }),
+  ).toBeVisible();
+  expect(getCustomSales).toHaveBeenCalledTimes(1);
+  fireEvent.change(screen.getByLabelText("Start date"), {
+    target: { value: "2026-10-14" },
+  });
+  expect(
+    within(region).getByText(/October 15, 2026.*October 17, 2026/),
+  ).toBeVisible();
+  expect(getCustomSales).toHaveBeenCalledTimes(1);
+});
+it("supports order mix when all eligible paid orders have zero sales", async () => {
+  vi.mocked(getDailySales).mockResolvedValueOnce({
+    shopId: "a",
+    businessDate: "2026-10-16",
+    ...salesBusinessDayBounds("2026-10-16")!,
+    timezone: "Asia/Manila",
+    currency: "PHP",
+    completedOrders: 2,
+    totalSales: "0.00",
+    itemsSold: 2,
+    recentOrders: [],
+    paymentBreakdown: SALES_PAYMENT_METHODS.map((paymentMethod) => ({
+      paymentMethod,
+      orders: paymentMethod === "GCASH_MANUAL" ? 2 : 0,
+      totalSales: "0.00",
+    })),
+  });
+  setup();
+  const region = await screen.findByRole("region", {
+    name: "Payment Breakdown",
+  });
+  expect(within(region).getByText(/Sales total is ₱0.00/)).toBeVisible();
+  expect(
+    within(region).getByRole("row", {
+      name: "GCash (manual) 2 100.00% ₱0.00 0.00%",
+    }),
+  ).toBeVisible();
+  fireEvent.click(within(region).getByRole("button", { name: "Order share" }));
+  expect(
+    within(region).getByText("Most used: GCash (manual) · 2 orders."),
+  ).toBeVisible();
+  expect(
+    region
+      .querySelector("circle.sales-method-1")
+      ?.getAttribute("stroke-dasharray"),
+  ).toBe("100 0");
+});
+it("reports tied leading methods using unrounded values", async () => {
+  vi.mocked(getDailySales).mockResolvedValueOnce({
+    shopId: "a",
+    businessDate: "2026-10-16",
+    ...salesBusinessDayBounds("2026-10-16")!,
+    timezone: "Asia/Manila",
+    currency: "PHP",
+    completedOrders: 3,
+    totalSales: "3.00",
+    itemsSold: 3,
+    recentOrders: [],
+    paymentBreakdown: SALES_PAYMENT_METHODS.map((paymentMethod, i) => ({
+      paymentMethod,
+      orders: i < 3 ? 1 : 0,
+      totalSales: i < 3 ? "1.00" : "0.00",
+    })),
+  });
+  setup();
+  const region = await screen.findByRole("region", {
+    name: "Payment Breakdown",
+  });
+  expect(
+    within(region).getByText(
+      "Largest sales total: Cash, GCash (manual), Card (manual) · ₱1.00 each.",
+    ),
+  ).toBeVisible();
+  fireEvent.click(within(region).getByRole("button", { name: "Order share" }));
+  expect(
+    within(region).getByText(
+      "Most used: Cash, GCash (manual), Card (manual) · 1 order each.",
+    ),
+  ).toBeVisible();
 });
 function setup(role: UserMembership["role"] = "OWNER") {
   const client = new QueryClient({
@@ -743,14 +871,14 @@ it("shows totals and order counts for all four methods, including zero-value pay
   const table = within(region).getByRole("table", {
     name: "Sales and order counts by payment method",
   });
-  for (const [label, count, amount] of [
-    ["Cash", "2", "₱100.00"],
-    ["GCash (manual)", "1", "₱200.00"],
-    ["Card (manual)", "3", "₱300.00"],
-    ["Other", "1", "₱0.00"],
+  for (const [label, count, orderShare, amount, salesShare] of [
+    ["Cash", "2", "28.57%", "₱100.00", "16.67%"],
+    ["GCash (manual)", "1", "14.29%", "₱200.00", "33.33%"],
+    ["Card (manual)", "3", "42.86%", "₱300.00", "50.00%"],
+    ["Other", "1", "14.28%", "₱0.00", "0.00%"],
   ]) {
     const row = within(table).getByRole("row", {
-      name: `${label} ${count} ${amount}`,
+      name: `${label} ${count} ${orderShare} ${amount} ${salesShare}`,
     });
     expect(row).toBeVisible();
   }

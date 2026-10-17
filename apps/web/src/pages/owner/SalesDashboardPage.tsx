@@ -8,7 +8,6 @@ import {
   salesBusinessDayBounds,
   salesDailyRange,
   type CurrentUserResponse,
-  type PaymentBreakdownEntry,
 } from "@paserve/contracts";
 import {
   FiArrowUpRight,
@@ -28,6 +27,10 @@ import { shopPath, useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getDailySales } from "../../features/orders/daily-sales";
 import { getCustomSales } from "../../features/orders/custom-sales";
+import {
+  calculatePaymentMix,
+  type PaymentMixBasis,
+} from "../../features/orders/payment-mix";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
@@ -60,23 +63,6 @@ function reportAccessUnavailable(error: unknown) {
   return (
     isAxiosError(error) && [401, 403, 404].includes(error.response?.status ?? 0)
   );
-}
-
-/** Bounded ratio for drawing only; displayed monetary values remain exact strings. */
-function paymentShares(entries: PaymentBreakdownEntry[], total: string) {
-  const cents = BigInt(total.replace(".", ""));
-  let offset = 0;
-  return entries.map((entry) => {
-    const share =
-      cents === 0n
-        ? 0
-        : Number(
-            (BigInt(entry.totalSales.replace(".", "")) * 1_000_000n) / cents,
-          ) / 10_000;
-    const segment = { ...entry, share, offset };
-    offset += share;
-    return segment;
-  });
 }
 
 function Metric({
@@ -120,6 +106,7 @@ export function SalesDashboardPage() {
 
 function SalesWorkspace({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
+  const [paymentBasis, setPaymentBasis] = useState<PaymentMixBasis>("SALES");
   const { shopId, role, shop } = useActiveShop();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [custom, setCustom] = useState(false);
@@ -176,9 +163,43 @@ function SalesWorkspace({ userId }: { userId: string }) {
     );
   const denied = reportAccessUnavailable(query.error);
   const report = query.isSuccess && valid ? query.data : null;
-  const segments = report
-    ? paymentShares(report.paymentBreakdown, report.totalSales)
+  const mix = report
+    ? calculatePaymentMix(
+        report.paymentBreakdown,
+        report.totalSales,
+        report.completedOrders,
+      )
     : [];
+  const segments = mix.map((entry, index) => {
+    const share =
+      (paymentBasis === "SALES"
+        ? entry.salesBasisPoints
+        : entry.orderBasisPoints) / 100;
+    const offset =
+      mix
+        .slice(0, index)
+        .reduce(
+          (total, previous) =>
+            total +
+            (paymentBasis === "SALES"
+              ? previous.salesBasisPoints
+              : previous.orderBasisPoints),
+          0,
+        ) / 100;
+    return { ...entry, share, offset };
+  });
+  const mixValues = mix.map((entry) =>
+    paymentBasis === "SALES"
+      ? BigInt(entry.totalSales.replace(".", ""))
+      : BigInt(entry.orders),
+  );
+  const largestMix = mixValues.reduce(
+    (n, value) => (value > n ? value : n),
+    0n,
+  );
+  const leadingMethods = mix.filter(
+    (_, index) => largestMix > 0n && mixValues[index] === largestMix,
+  );
   const formatDate = (value: string) =>
     dateFormat.format(new Date(`${value}T00:00:00+08:00`));
   const prettyDate = valid
@@ -460,6 +481,30 @@ function SalesWorkspace({ userId }: { userId: string }) {
                   <FiCreditCard aria-hidden="true" />
                 </span>
               </header>
+              <p className="sales-range-help">
+                {prettyDate} · Manila (UTC+8). Payment methods for the selected
+                report period.
+              </p>
+              <div
+                className="analytics-period-toggle sales-payment-basis"
+                role="group"
+                aria-label="Payment mix basis"
+              >
+                <button
+                  className="secondary-button"
+                  aria-pressed={paymentBasis === "SALES"}
+                  onClick={() => setPaymentBasis("SALES")}
+                >
+                  Sales share
+                </button>
+                <button
+                  className="secondary-button"
+                  aria-pressed={paymentBasis === "ORDERS"}
+                  onClick={() => setPaymentBasis("ORDERS")}
+                >
+                  Order share
+                </button>
+              </div>
               <div className="sales-payment-visual">
                 <div className="sales-payment-ring" aria-hidden="true">
                   <svg viewBox="0 0 160 160">
@@ -488,65 +533,151 @@ function SalesWorkspace({ userId }: { userId: string }) {
                     ))}
                   </svg>
                   <div>
-                    <strong>
-                      {countFormat.format(report.completedOrders)}
-                    </strong>
-                    <span>orders</span>
+                    <strong>{largestMix > 0n ? "100%" : "0%"}</strong>
+                    <span>
+                      {paymentBasis === "SALES" ? "sales mix" : "order mix"}
+                    </span>
                   </div>
                 </div>
                 <div className="sales-payment-context">
                   <span className="sales-kicker">GROSS SALES</span>
                   <strong>{formatCartPrice(report.totalSales)}</strong>
                   <p>
-                    Every payment, accounted for.
+                    {countFormat.format(report.completedOrders)} eligible
+                    orders.
                     <br />
-                    The ring shows your sales mix.
+                    The ring and bars show{" "}
+                    {paymentBasis === "SALES" ? "sales share" : "order share"}.
                   </p>
                 </div>
               </div>
+              {leadingMethods.length > 0 && (
+                <p className="sales-payment-insight" role="status">
+                  {paymentBasis === "SALES"
+                    ? "Largest sales total"
+                    : "Most used"}
+                  :{" "}
+                  {leadingMethods
+                    .map((entry) => paymentLabels[entry.paymentMethod])
+                    .join(", ")}{" "}
+                  ·{" "}
+                  {paymentBasis === "SALES"
+                    ? formatCartPrice(leadingMethods[0].totalSales)
+                    : `${countFormat.format(leadingMethods[0].orders)} ${leadingMethods[0].orders === 1 ? "order" : "orders"}`}
+                  {leadingMethods.length > 1 ? " each" : ""}.
+                </p>
+              )}
+              {report.completedOrders > 0 &&
+                report.totalSales === "0.00" &&
+                paymentBasis === "SALES" && (
+                  <InlineMessage tone="info">
+                    Sales total is ₱0.00, so sales shares are zero. Switch to
+                    Order share to see the payment mix by order count.
+                  </InlineMessage>
+                )}
               {report.completedOrders === 0 && (
                 <p className="sales-empty-note">
                   No eligible payments for this{" "}
                   {custom ? "date range" : "business day"}.
                 </p>
               )}
-              <table className="sales-payment-table">
-                <caption className="sr-only">
-                  Sales and order counts by payment method
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Method</th>
-                    <th scope="col">Orders</th>
-                    <th scope="col">Sales</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {segments.map((entry, index) => (
-                    <tr key={entry.paymentMethod}>
-                      <th scope="row">
-                        <span
-                          className={`sales-method-dot sales-method-${index}`}
-                          aria-hidden="true"
-                        />
-                        {paymentLabels[entry.paymentMethod]}
-                        <span className="sales-method-track" aria-hidden="true">
-                          <span
-                            className={`sales-method-${index}`}
-                            style={
-                              { "--share": `${entry.share}%` } as CSSProperties
-                            }
-                          />
-                        </span>
+              <div
+                className="sales-payment-table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-label="Payment method shares table"
+              >
+                <table className="sales-payment-table">
+                  <caption className="sr-only">
+                    Sales and order counts by payment method
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Method</th>
+                      <th scope="col">Orders</th>
+                      <th
+                        scope="col"
+                        className={
+                          paymentBasis === "ORDERS" ? "is-selected" : undefined
+                        }
+                      >
+                        Order share
                       </th>
-                      <td>{countFormat.format(entry.orders)}</td>
-                      <td>{formatCartPrice(entry.totalSales)}</td>
+                      <th scope="col">Sales</th>
+                      <th
+                        scope="col"
+                        className={
+                          paymentBasis === "SALES" ? "is-selected" : undefined
+                        }
+                      >
+                        Sales share
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {segments.map((entry, index) => (
+                      <tr key={entry.paymentMethod}>
+                        <th scope="row">
+                          <span
+                            className={`sales-method-dot sales-method-${index}`}
+                            aria-hidden="true"
+                          />
+                          {paymentLabels[entry.paymentMethod]}
+                          <span
+                            className="sales-method-track"
+                            aria-hidden="true"
+                          >
+                            <span
+                              className={`sales-method-${index}`}
+                              style={
+                                {
+                                  "--share": `${entry.share}%`,
+                                } as CSSProperties
+                              }
+                            />
+                          </span>
+                        </th>
+                        <td>{countFormat.format(entry.orders)}</td>
+                        <td
+                          className={
+                            paymentBasis === "ORDERS"
+                              ? "is-selected"
+                              : undefined
+                          }
+                        >
+                          {entry.orderShare}
+                        </td>
+                        <td>{formatCartPrice(entry.totalSales)}</td>
+                        <td
+                          className={
+                            paymentBasis === "SALES" ? "is-selected" : undefined
+                          }
+                        >
+                          {entry.salesShare}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th scope="row">All methods</th>
+                      <td>{countFormat.format(report.completedOrders)}</td>
+                      <td>
+                        {report.completedOrders > 0 ? "100.00%" : "0.00%"}
+                      </td>
+                      <td>{formatCartPrice(report.totalSales)}</td>
+                      <td>
+                        {report.totalSales === "0.00" ? "0.00%" : "100.00%"}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
               <p className="sales-panel-footnote">
-                Order totals only. Cash change is excluded.
+                Confirmed, paid, completed order totals only; cash tender/change
+                are excluded. Zero-value paid orders count toward order share.
+                Shares are rounded to 0.01% and adjusted to total 100% when the
+                basis is nonzero.
               </p>
             </section>
             <section

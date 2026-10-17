@@ -651,11 +651,37 @@
 .sales-payment-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  min-width: 540px;
+  table-layout: auto;
+}
+.sales-payment-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.sales-payment-basis {
+  margin-bottom: 12px;
+}
+.sales-payment-insight {
+  font-size: 13px;
+  line-height: 1.6;
+  margin-block: 14px;
+  overflow-wrap: anywhere;
+}
+.sales-payment-table .is-selected {
+  color: var(--color-text);
+  font-weight: 650;
+}
+.sales-payment-table tfoot th,
+.sales-payment-table tfoot td {
+  font-weight: 650;
+}
+.sales-payments :focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 3px;
 }
 .sales-payment-table th,
 .sales-payment-table td {
-  padding: 14px 0;
+  padding: 14px 7px;
   border-top: 1px solid var(--color-border);
   text-align: right;
   font-size: 12px;
@@ -671,10 +697,10 @@
 }
 .sales-payment-table th:first-child {
   text-align: left;
-  width: 48%;
+  width: 28%;
 }
 .sales-payment-table th:nth-child(2) {
-  width: 15%;
+  width: 12%;
 }
 .sales-payment-table tbody th {
   position: relative;
