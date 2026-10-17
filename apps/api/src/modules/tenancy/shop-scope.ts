@@ -1,5 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
-import { SHOP_ROLES, type ShopRole } from '@paserve/contracts';
+import {
+  SHOP_ROLES,
+  rolesForShopPermissions,
+  type ShopRole,
+  type ShopPermission,
+} from '@paserve/contracts';
 import { isUUID } from 'class-validator';
 
 /** Fail closed before constructing a Prisma filter; never allow omitted shop IDs. */
@@ -34,4 +39,17 @@ export function shopAccessWhere(
       },
     },
   };
+}
+
+/** Write-time authorization uses the same permission matrix as route guards. */
+export function shopPermissionWhere(
+  userId: string,
+  shopId: string,
+  ...permissions: readonly ShopPermission[]
+) {
+  return shopAccessWhere(
+    userId,
+    shopId,
+    rolesForShopPermissions(...permissions),
+  );
 }

@@ -1,21 +1,18 @@
+import { rolesForShopPermissions } from '@paserve/contracts';
 import {
   BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  SHOP_ROLES,
-  hasShopPermission,
-  type CompletePreparationResponse,
-} from '@paserve/contracts';
+import { type CompletePreparationResponse } from '@paserve/contracts';
 import { isUUID } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 
-export const PREPARATION_COMPLETE_ROLES = SHOP_ROLES.filter((role) =>
-  hasShopPermission(role, 'shop.preparation.status.update'),
+export const PREPARATION_COMPLETE_ROLES = rolesForShopPermissions(
+  'shop.preparation.status.update',
 );
 const changed = () =>
   new ConflictException({

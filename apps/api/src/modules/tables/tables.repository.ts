@@ -1,8 +1,9 @@
+import { rolesForShopPermissions } from '@paserve/contracts';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 
-const roles = ['OWNER', 'ADMIN'] as const;
+const roles = rolesForShopPermissions('shop.operations.manage');
 const tableSelect = {
   id: true,
   shopId: true,

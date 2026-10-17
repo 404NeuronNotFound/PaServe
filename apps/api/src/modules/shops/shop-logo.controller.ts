@@ -13,14 +13,14 @@ import type { Response } from 'express';
 import { SHOP_LOGO_LIMITS } from '@paserve/contracts';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { EmptyDto } from '../auth/dto/empty.dto.js';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { ShopLogoService } from './shop-logo.service.js';
 import type { ShopLogoFile } from './shop-logo.processor.js';
 
 @Controller('shops/:shopId/logo')
 @UseGuards(JwtAuthGuard)
-@Roles('OWNER')
+@Permissions('shop.settings.manage')
 export class ShopLogoController {
   constructor(private readonly logos: ShopLogoService) {}
 

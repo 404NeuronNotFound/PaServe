@@ -1,3 +1,4 @@
+import { rolesForShopPermissions } from '@paserve/contracts';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -7,7 +8,7 @@ import type {
   UpdateAddOnRequest,
 } from '@paserve/contracts';
 
-const roles = ['OWNER', 'ADMIN', 'MANAGER'] as const;
+const roles = rolesForShopPermissions('shop.menu.manage');
 const orderBy = [
   { sortOrder: 'asc' },
   { createdAt: 'asc' },

@@ -10,7 +10,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { CreateCategoryDto } from './create-category.dto.js';
 import { CategoriesService } from './categories.service.js';
@@ -24,7 +24,7 @@ import {
 } from '../tenancy/shop-resource.guard.js';
 
 @Controller('shops/:shopId/categories')
-@Roles('OWNER', 'ADMIN', 'MANAGER')
+@Permissions('shop.menu.manage')
 export class CategoriesController {
   constructor(private readonly categories: CategoriesService) {}
   @Patch('reorder')

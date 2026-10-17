@@ -1,3 +1,4 @@
+import { rolesForShopPermissions } from '@paserve/contracts';
 import {
   BadRequestException,
   ConflictException,
@@ -5,9 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  hasShopPermission,
   isValidOrderNumber,
-  SHOP_ROLES,
   type VerifyOrderQrResponse,
 } from '@paserve/contracts';
 import { isUUID } from 'class-validator';
@@ -19,10 +18,9 @@ import { readPriceSnapshot } from './order-price-snapshots.js';
 import { readReceiptShopDetails } from './receipt-shop-details.js';
 import { createHash } from 'node:crypto';
 
-export const ORDER_QR_ROLES = SHOP_ROLES.filter(
-  (role) =>
-    hasShopPermission(role, 'shop.orders.qr.scan') &&
-    hasShopPermission(role, 'shop.orders.read'),
+export const ORDER_QR_ROLES = rolesForShopPermissions(
+  'shop.orders.qr.scan',
+  'shop.orders.read',
 );
 
 @Injectable()

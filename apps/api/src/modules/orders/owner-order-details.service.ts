@@ -11,7 +11,7 @@ import { isUUID } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
-import { shopAccessWhere } from '../tenancy/shop-scope.js';
+import { shopPermissionWhere } from '../tenancy/shop-scope.js';
 import { readPriceSnapshot } from './order-price-snapshots.js';
 import { readReceiptShopDetails } from './receipt-shop-details.js';
 
@@ -33,7 +33,11 @@ export class OwnerOrderDetailsService {
         code: 'INVALID_ORDER_ID',
         message: 'A valid order ID is required.',
       });
-    const access = shopAccessWhere(actorId, shopId, ['OWNER']);
+    const access = shopPermissionWhere(
+      actorId,
+      shopId,
+      'shop.orders.overview.read',
+    );
     const saved = await this.prisma.order.findFirst({
       where: { id: orderId, shopId, shop: access },
       select: {

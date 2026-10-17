@@ -8,7 +8,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import { AuthService } from '../auth/auth.service.js';
@@ -111,7 +111,7 @@ export class ConfirmedOrderEventsController {
   ) {}
 
   @Get('confirmed-events')
-  @Roles('OWNER', 'ADMIN', 'MANAGER', 'CASHIER')
+  @Permissions('shop.orders.read')
   stream(@Req() request: ShopMemberRequest, @Res() response: Response) {
     const token = bearer(request),
       shopId = request.shopMembership.shopId;
@@ -132,7 +132,7 @@ export class ConfirmedOrderEventsController {
   }
 
   @Get('preparation-events')
-  @Roles('OWNER', 'ADMIN', 'MANAGER', 'KITCHEN')
+  @Permissions('shop.preparation.queue.read')
   preparationStream(
     @Req() request: ShopMemberRequest,
     @Res() response: Response,

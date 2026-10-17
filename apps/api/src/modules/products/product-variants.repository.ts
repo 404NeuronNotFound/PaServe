@@ -1,3 +1,4 @@
+import { rolesForShopPermissions } from '@paserve/contracts';
 import {
   BadRequestException,
   ConflictException,
@@ -16,7 +17,7 @@ import type {
   UpdateProductVariantRequest,
 } from '@paserve/contracts';
 
-const roles = ['OWNER', 'ADMIN', 'MANAGER'] as const;
+const roles = rolesForShopPermissions('shop.menu.manage');
 const orderBy = [
   { sortOrder: 'asc' },
   { createdAt: 'asc' },

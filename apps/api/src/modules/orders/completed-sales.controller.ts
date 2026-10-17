@@ -1,17 +1,14 @@
 import { Controller, Get, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
-import {
-  COMPLETED_SALES_ROLES,
-  CompletedSalesService,
-} from './completed-sales.service.js';
+import { CompletedSalesService } from './completed-sales.service.js';
 
 @Controller('shops/:shopId/reports')
 export class CompletedSalesController {
   constructor(private readonly sales: CompletedSalesService) {}
   @Get('sales-trends')
-  @Roles(...COMPLETED_SALES_ROLES)
+  @Permissions('shop.reports.read')
   salesTrends(
     @Query('startDate') startDate: unknown,
     @Query('endDate') endDate: unknown,
@@ -27,7 +24,7 @@ export class CompletedSalesController {
     );
   }
   @Get('average-prep-time')
-  @Roles(...COMPLETED_SALES_ROLES)
+  @Permissions('shop.reports.read')
   averagePrepTime(
     @Query('startDate') startDate: unknown,
     @Query('endDate') endDate: unknown,
@@ -43,7 +40,7 @@ export class CompletedSalesController {
     );
   }
   @Get('peak-hours')
-  @Roles(...COMPLETED_SALES_ROLES)
+  @Permissions('shop.reports.read')
   peakHours(
     @Query('startDate') startDate: unknown,
     @Query('endDate') endDate: unknown,
@@ -59,7 +56,7 @@ export class CompletedSalesController {
     );
   }
   @Get('top-products')
-  @Roles(...COMPLETED_SALES_ROLES)
+  @Permissions('shop.reports.read')
   topProducts(
     @Query('startDate') startDate: unknown,
     @Query('endDate') endDate: unknown,
@@ -77,7 +74,7 @@ export class CompletedSalesController {
     );
   }
   @Get('custom-sales')
-  @Roles(...COMPLETED_SALES_ROLES)
+  @Permissions('shop.reports.read')
   custom(
     @Query('startDate') startDate: unknown,
     @Query('endDate') endDate: unknown,
@@ -93,7 +90,7 @@ export class CompletedSalesController {
     );
   }
   @Get('monthly-analytics')
-  @Roles(...COMPLETED_SALES_ROLES)
+  @Permissions('shop.reports.read')
   monthlyAnalytics(
     @Query('startDate') startDate: unknown,
     @Query('endDate') endDate: unknown,
@@ -109,7 +106,7 @@ export class CompletedSalesController {
     );
   }
   @Get('weekly-analytics')
-  @Roles(...COMPLETED_SALES_ROLES)
+  @Permissions('shop.reports.read')
   weeklyAnalytics(
     @Query('startDate') startDate: unknown,
     @Query('endDate') endDate: unknown,
@@ -125,7 +122,7 @@ export class CompletedSalesController {
     );
   }
   @Get('daily-analytics')
-  @Roles(...COMPLETED_SALES_ROLES)
+  @Permissions('shop.reports.read')
   dailyAnalytics(
     @Query('startDate') startDate: unknown,
     @Query('endDate') endDate: unknown,
@@ -141,7 +138,7 @@ export class CompletedSalesController {
     );
   }
   @Get('daily-sales')
-  @Roles(...COMPLETED_SALES_ROLES)
+  @Permissions('shop.reports.read')
   daily(
     @Query('date') date: unknown,
     @Req() request: ShopMemberRequest,
@@ -155,7 +152,7 @@ export class CompletedSalesController {
     );
   }
   @Get('completed-sales')
-  @Roles(...COMPLETED_SALES_ROLES)
+  @Permissions('shop.reports.read')
   summary(
     @Query('from') from: unknown,
     @Query('to') to: unknown,

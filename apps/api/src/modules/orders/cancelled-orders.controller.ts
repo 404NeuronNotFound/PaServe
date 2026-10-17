@@ -1,6 +1,6 @@
 import { Controller, Get, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { CancelledOrdersService } from './cancelled-orders.service.js';
 import { ownerOrderFiltersFromQuery } from './owner-order-filters.js';
@@ -9,7 +9,7 @@ import { ownerOrderFiltersFromQuery } from './owner-order-filters.js';
 export class CancelledOrdersController {
   constructor(private readonly orders: CancelledOrdersService) {}
   @Get('cancelled')
-  @Roles('OWNER')
+  @Permissions('shop.orders.overview.read')
   list(
     @Query('cursor') cursor: unknown,
     @Query('search') search: unknown,

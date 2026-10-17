@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { UpdateShopRequest } from '@paserve/contracts';
-import { shopAccessWhere } from '../tenancy/shop-scope.js';
+import { shopPermissionWhere } from '../tenancy/shop-scope.js';
 export type ShopSettingsData = Pick<
   UpdateShopRequest,
   'name' | 'menuLayout' | 'acceptingOrders'
@@ -41,7 +41,7 @@ export class ShopsRepository {
 
   findSettings(userId: string, shopId: string) {
     return this.prisma.shop.findFirst({
-      where: shopAccessWhere(userId, shopId, ['OWNER']),
+      where: shopPermissionWhere(userId, shopId, 'shop.settings.manage'),
       select: settingsSelect,
     });
   }
@@ -54,7 +54,7 @@ export class ShopsRepository {
   ) {
     return this.prisma.shop.update({
       where: {
-        ...shopAccessWhere(userId, shopId, ['OWNER']),
+        ...shopPermissionWhere(userId, shopId, 'shop.settings.manage'),
         logoUrl: expectedLogoUrl,
       },
       data: { logoUrl },
@@ -65,7 +65,7 @@ export class ShopsRepository {
   updateSettings(userId: string, shopId: string, data: ShopSettingsData) {
     return this.prisma.shop.update({
       // Check ownership in the write too, in case it changed after the guard.
-      where: shopAccessWhere(userId, shopId, ['OWNER']),
+      where: shopPermissionWhere(userId, shopId, 'shop.settings.manage'),
       data,
       select: settingsSelect,
     });
@@ -79,7 +79,7 @@ export class ShopsRepository {
   ) {
     return this.prisma.shop.update({
       where: {
-        ...shopAccessWhere(userId, shopId, ['OWNER']),
+        ...shopPermissionWhere(userId, shopId, 'shop.settings.manage'),
         bannerUrl: expectedBannerUrl,
       },
       data: { bannerUrl },

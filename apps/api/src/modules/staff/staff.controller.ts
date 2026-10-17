@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import {
   JwtAuthGuard,
@@ -28,7 +28,7 @@ import {
 } from './staff.dto.js';
 
 @Controller('shops/:shopId/staff')
-@Roles('OWNER')
+@Permissions('shop.staff.manage')
 export class StaffController {
   constructor(private readonly staff: StaffService) {}
   @Get()

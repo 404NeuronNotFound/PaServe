@@ -15,7 +15,7 @@ import {
 } from '@paserve/contracts';
 import { Prisma, type StaffInvitation } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
-import { shopAccessWhere } from '../tenancy/shop-scope.js';
+import { shopPermissionWhere } from '../tenancy/shop-scope.js';
 import type {
   InviteStaffDto,
   StaffRoleDto,
@@ -125,7 +125,7 @@ export class StaffService {
       WHERE m."shopId" = ${shopId} AND m."userId" = ${actorId} FOR UPDATE OF m, u`;
     if (
       !(await tx.shop.findFirst({
-        where: shopAccessWhere(actorId, shopId, ['OWNER']),
+        where: shopPermissionWhere(actorId, shopId, 'shop.staff.manage'),
         select: { id: true },
       }))
     )
@@ -139,7 +139,10 @@ export class StaffService {
     return this.transaction(async (tx) => {
       await this.owner(tx, actorId, shopId);
       const members = await tx.shopMember.findMany({
-        where: { shopId, shop: shopAccessWhere(actorId, shopId, ['OWNER']) },
+        where: {
+          shopId,
+          shop: shopPermissionWhere(actorId, shopId, 'shop.staff.manage'),
+        },
         select: {
           id: true,
           userId: true,
@@ -150,7 +153,10 @@ export class StaffService {
         orderBy: { createdAt: 'asc' },
       });
       const invitations = await tx.staffInvitation.findMany({
-        where: { shopId, shop: shopAccessWhere(actorId, shopId, ['OWNER']) },
+        where: {
+          shopId,
+          shop: shopPermissionWhere(actorId, shopId, 'shop.staff.manage'),
+        },
         orderBy: { createdAt: 'desc' },
         take: 100,
       });
@@ -285,7 +291,7 @@ export class StaffService {
           id: memberId,
           shopId,
           role: member.role,
-          shop: shopAccessWhere(actorId, shopId, ['OWNER']),
+          shop: shopPermissionWhere(actorId, shopId, 'shop.staff.manage'),
         },
         data: { role: dto.role },
       });
@@ -340,7 +346,7 @@ export class StaffService {
           shopId,
           role: member.role,
           disabledAt: member.disabledAt ?? null,
-          shop: shopAccessWhere(actorId, shopId, ['OWNER']),
+          shop: shopPermissionWhere(actorId, shopId, 'shop.staff.manage'),
         },
         data: { disabledAt: dto.isEnabled ? null : new Date() },
       });
@@ -382,7 +388,7 @@ export class StaffService {
           id: memberId,
           shopId,
           role: member.role,
-          shop: shopAccessWhere(actorId, shopId, ['OWNER']),
+          shop: shopPermissionWhere(actorId, shopId, 'shop.staff.manage'),
         },
       });
       if (result.count !== 1) throw changed();
@@ -448,7 +454,11 @@ export class StaffService {
       );
       if (existing) throw invalidInvitation();
       const shop = await tx.shop.findFirst({
-        where: shopAccessWhere(invite.invitedBy, shopId, ['OWNER']),
+        where: shopPermissionWhere(
+          invite.invitedBy,
+          shopId,
+          'shop.staff.manage',
+        ),
         select: { id: true, name: true },
       });
       if (!shop) throw invalidInvitation();
@@ -472,7 +482,11 @@ export class StaffService {
       );
       if (
         !(await tx.shop.findFirst({
-          where: shopAccessWhere(invite.invitedBy, shopId, ['OWNER']),
+          where: shopPermissionWhere(
+            invite.invitedBy,
+            shopId,
+            'shop.staff.manage',
+          ),
           select: { id: true },
         }))
       )

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
-import { shopAccessWhere } from './shop-scope.js';
+import { shopAccessWhere, shopPermissionWhere } from './shop-scope.js';
 
 export const TENANT_RESOURCE_KINDS = [
   'product',
@@ -39,7 +39,7 @@ export class TenantResourcesRepository {
     if (kind === 'staffInvitation' || kind === 'staffAuditEvent') {
       const staffWhere = {
         ...where,
-        shop: shopAccessWhere(userId, shopId, ['OWNER']),
+        shop: shopPermissionWhere(userId, shopId, 'shop.staff.manage'),
       };
       return kind === 'staffInvitation'
         ? this.prisma.staffInvitation.findFirst({ where: staffWhere, select })

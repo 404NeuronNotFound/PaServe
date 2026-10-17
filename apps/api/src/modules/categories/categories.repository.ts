@@ -1,3 +1,4 @@
+import { rolesForShopPermissions } from '@paserve/contracts';
 import {
   Injectable,
   ConflictException,
@@ -8,7 +9,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 
-const roles = ['OWNER', 'ADMIN', 'MANAGER'] as const;
+const roles = rolesForShopPermissions('shop.menu.manage');
 const categorySelect = {
   id: true,
   shopId: true,

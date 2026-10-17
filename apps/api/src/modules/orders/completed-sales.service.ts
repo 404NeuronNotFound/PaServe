@@ -1,3 +1,4 @@
+import { rolesForShopPermissions } from '@paserve/contracts';
 import {
   BadRequestException,
   Injectable,
@@ -5,8 +6,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  SHOP_ROLES,
-  hasShopPermission,
   salesBusinessDayBounds,
   salesDailyRange,
   salesWeeklyRange,
@@ -33,9 +32,8 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import { Prisma } from '../../generated/prisma/client.js';
 
-export const COMPLETED_SALES_ROLES = SHOP_ROLES.filter((role) =>
-  hasShopPermission(role, 'shop.reports.read'),
-);
+export const COMPLETED_SALES_ROLES =
+  rolesForShopPermissions('shop.reports.read');
 @Injectable()
 export class CompletedSalesService {
   constructor(private readonly prisma: PrismaService) {}

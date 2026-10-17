@@ -15,7 +15,7 @@ import { ProductImageService } from './product-image.service.js';
 import type { ProductImageFile } from './product-image.processor.js';
 import { EmptyDto } from '../auth/dto/empty.dto.js';
 import type { Response } from 'express';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './create-product.dto.js';
@@ -31,7 +31,7 @@ import {
 } from '../tenancy/shop-resource.guard.js';
 
 @Controller('shops/:shopId/products')
-@Roles('OWNER', 'ADMIN', 'MANAGER')
+@Permissions('shop.menu.manage')
 export class ProductsController {
   constructor(
     private readonly products: ProductsService,
@@ -75,7 +75,7 @@ export class ProductsController {
     );
   }
   @Patch(':productId/available')
-  @Roles('OWNER', 'ADMIN', 'MANAGER', 'CASHIER')
+  @Permissions('shop.menu.availability.update')
   @ShopResource('product', 'productId')
   setAvailable(
     @Body() dto: ProductAvailableDto,
@@ -91,7 +91,7 @@ export class ProductsController {
     );
   }
   @Patch(':productId/hidden')
-  @Roles('OWNER', 'ADMIN', 'MANAGER')
+  @Permissions('shop.menu.manage')
   @ShopResource('product', 'productId')
   setHidden(
     @Body() dto: ProductAvailableDto,
@@ -107,7 +107,7 @@ export class ProductsController {
     );
   }
   @Patch(':productId/sold-out')
-  @Roles('OWNER', 'ADMIN', 'MANAGER', 'CASHIER')
+  @Permissions('shop.menu.availability.update')
   @ShopResource('product', 'productId')
   setSoldOut(
     @Body() dto: ProductAvailableDto,

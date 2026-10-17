@@ -16,6 +16,7 @@ import {
 } from "react-icons/fi";
 import {
   STAFF_ROLES,
+  hasShopPermission,
   type ApiErrorResponse,
   type CurrentUserResponse,
   type StaffRole,
@@ -37,6 +38,7 @@ import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { feedback } from "../../app/stores/feedback";
 import "./staff.css";
+import { PermissionMatrix } from "./PermissionMatrix";
 
 const roles = STAFF_ROLES.map((value) => ({
   value,
@@ -155,7 +157,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const [lostAccess, setLostAccess] = useState(false);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [search, setSearch] = useState("");
-  const authorized = membership.role === "OWNER" && !lostAccess;
+  const authorized =
+    hasShopPermission(membership.role, "shop.staff.manage") && !lostAccess;
   const query = useQuery({
     queryKey: ["staff", userId, shopId],
     queryFn: ({ signal }) => listStaff(shopId, signal),
@@ -336,6 +339,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
           </span>
         </div>
       </header>
+      <PermissionMatrix />
       <div className="staff-grid">
         <div className="staff-team-panels">
           <section className="staff-panel" aria-labelledby="staff-list-title">

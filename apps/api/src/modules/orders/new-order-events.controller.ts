@@ -1,3 +1,4 @@
+import { SHOP_ROLES } from '@paserve/contracts';
 import { Controller, Get, Query, Req, Res } from '@nestjs/common';
 import { IsIn } from 'class-validator';
 import type { Response } from 'express';
@@ -16,7 +17,7 @@ export class NewOrderEventsController {
   constructor(private readonly events: NewOrderEventsService) {}
 
   @Get('events')
-  @Roles('OWNER', 'ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN')
+  @Roles(...SHOP_ROLES)
   stream(
     @Query() query: NewOrderEventsQuery,
     @Req() request: ShopMemberRequest,

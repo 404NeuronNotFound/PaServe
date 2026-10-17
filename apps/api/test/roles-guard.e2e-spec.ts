@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../src/modules/auth/guards/jwt-auth.guard.js';
 import { invalidSession } from '../src/modules/auth/tokens.service.js';
 import { ShopMembersModule } from '../src/modules/shop-members/shop-members.module.js';
 import { Roles } from '../src/modules/shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../src/modules/shop-members/decorators/permissions.decorator.js';
 import { RolesGuard } from '../src/modules/shop-members/guards/roles.guard.js';
 import type { ShopMemberRequest } from '../src/modules/shop-members/guards/shop-membership.guard.js';
 import { PrismaService } from '../src/database/prisma.service.js';
@@ -51,6 +52,24 @@ class RoleFixtureController {
   @Get('cashier-only')
   @Roles('CASHIER')
   cashierOnly() {
+    return { allowed: true };
+  }
+
+  @Get('combined')
+  @Permissions('shop.orders.read', 'shop.preparation.queue.read')
+  combined() {
+    return { allowed: true };
+  }
+
+  @Get('staff')
+  @Permissions('shop.staff.manage')
+  staff() {
+    return { allowed: true };
+  }
+
+  @Get('empty-permissions')
+  @Permissions()
+  emptyPermissions() {
     return { allowed: true };
   }
 
@@ -145,6 +164,18 @@ describe('RolesGuard HTTP enforcement', () => {
     request(app.getHttpServer())
       .get(`/api/v1/roles-test/${target}/${action}`)
       .set('Authorization', `Bearer ${token}`);
+
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'] as const)(
+    'enforces every declared permission for live %s, ignoring cached owner claims',
+    async (liveRole) => {
+      role = liveRole;
+      await get('combined').expect(
+        ['OWNER', 'ADMIN', 'MANAGER'].includes(liveRole) ? 200 : 403,
+      );
+      await get('staff').expect(liveRole === 'OWNER' ? 200 : 403);
+      await get('empty-permissions').expect(403);
+    },
+  );
 
   it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'] as const)(
     'denies suspended %s across business routes despite cached owner claims',

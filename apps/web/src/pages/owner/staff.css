@@ -48,6 +48,42 @@
   gap: 24px;
   align-items: start;
 }
+.phase-two .staff-permissions summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: list-item;
+  font-weight: 600;
+}
+.phase-two .staff-permissions > p {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.phase-two .staff-permissions-scroll {
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.phase-two .staff-permissions table {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.phase-two .staff-permissions caption {
+  padding: 12px;
+  text-align: left;
+  color: var(--color-muted);
+}
+.phase-two .staff-permissions th,
+.phase-two .staff-permissions td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+.phase-two .staff-permissions thead {
+  background: var(--color-canvas);
+}
 .phase-two .staff-team-panels {
   display: grid;
   gap: 20px;

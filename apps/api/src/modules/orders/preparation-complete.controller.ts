@@ -9,19 +9,16 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
-import {
-  PREPARATION_COMPLETE_ROLES,
-  PreparationCompleteService,
-} from './preparation-complete.service.js';
+import { PreparationCompleteService } from './preparation-complete.service.js';
 
 @Controller('shops/:shopId/orders')
 export class PreparationCompleteController {
   constructor(private readonly preparation: PreparationCompleteService) {}
   @Post(':orderId/complete')
   @HttpCode(200)
-  @Roles(...PREPARATION_COMPLETE_ROLES)
+  @Permissions('shop.preparation.status.update')
   complete(
     @Param('orderId') orderId: string,
     @Body() body: unknown,

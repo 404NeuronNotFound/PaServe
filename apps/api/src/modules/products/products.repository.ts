@@ -1,3 +1,4 @@
+import { rolesForShopPermissions } from '@paserve/contracts';
 import {
   Injectable,
   ConflictException,
@@ -9,7 +10,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import type { ProductStatus } from '@paserve/contracts';
 
-const roles = ['OWNER', 'ADMIN', 'MANAGER'] as const;
+const roles = rolesForShopPermissions('shop.menu.manage');
 const productSelect = {
   id: true,
   shopId: true,
@@ -219,7 +220,7 @@ export class ProductsRepository {
           shopId,
           expectedStatus === 'HIDDEN' || status === 'HIDDEN'
             ? roles
-            : [...roles, 'CASHIER'],
+            : rolesForShopPermissions('shop.menu.availability.update'),
         ),
       },
       data: { status },

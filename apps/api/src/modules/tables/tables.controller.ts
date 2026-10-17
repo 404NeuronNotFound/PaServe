@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { CreateTableDto } from './create-table.dto.js';
 import { TablesService } from './tables.service.js';
 
 @Controller('shops/:shopId/tables')
-@Roles('OWNER', 'ADMIN')
+@Permissions('shop.operations.manage')
 export class TablesController {
   constructor(private readonly tables: TablesService) {}
   @Get()

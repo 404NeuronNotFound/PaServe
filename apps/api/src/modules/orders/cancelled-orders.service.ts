@@ -10,7 +10,7 @@ import type {
 import { isUUID } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
-import { shopAccessWhere } from '../tenancy/shop-scope.js';
+import { shopPermissionWhere } from '../tenancy/shop-scope.js';
 import { ownerOrderSearchWhere } from './owner-order-search.js';
 import { ownerOrderFiltersWhere } from './owner-order-filters.js';
 
@@ -28,7 +28,11 @@ export class CancelledOrdersService {
     search?: unknown,
     filters?: unknown,
   ): Promise<CancelledOrdersResponse> {
-    const access = shopAccessWhere(actorId, shopId, ['OWNER']);
+    const access = shopPermissionWhere(
+      actorId,
+      shopId,
+      'shop.orders.overview.read',
+    );
     const searchWhere = ownerOrderSearchWhere(search);
     const filtersWhere = ownerOrderFiltersWhere(filters, 'cancelled');
     let after: { createdAt: Date; id: string } | undefined;

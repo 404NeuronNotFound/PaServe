@@ -1,3 +1,4 @@
+import { rolesForShopPermissions } from '@paserve/contracts';
 import {
   BadRequestException,
   ConflictException,
@@ -6,8 +7,6 @@ import {
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import {
-  SHOP_ROLES,
-  hasShopPermission,
   isValidOrderNumber,
   type OrderDecisionResponse,
 } from '@paserve/contracts';
@@ -21,15 +20,13 @@ import type {
   RejectOrderNumberDto,
 } from './order-number-lookup.dto.js';
 
-export const ORDER_CONFIRM_ROLES = SHOP_ROLES.filter(
-  (role) =>
-    hasShopPermission(role, 'shop.orders.confirm') &&
-    hasShopPermission(role, 'shop.orders.read'),
+export const ORDER_CONFIRM_ROLES = rolesForShopPermissions(
+  'shop.orders.confirm',
+  'shop.orders.read',
 );
-export const ORDER_REJECT_ROLES = SHOP_ROLES.filter(
-  (role) =>
-    hasShopPermission(role, 'shop.orders.reject') &&
-    hasShopPermission(role, 'shop.orders.read'),
+export const ORDER_REJECT_ROLES = rolesForShopPermissions(
+  'shop.orders.reject',
+  'shop.orders.read',
 );
 const changed = () =>
   new ConflictException({

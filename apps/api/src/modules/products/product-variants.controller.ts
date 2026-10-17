@@ -12,7 +12,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import {
   ShopResource,
   type ShopResourceRequest,
@@ -28,7 +28,7 @@ import {
 } from './product-variants.dto.js';
 
 @Controller('shops/:shopId/products/:productId')
-@Roles('OWNER', 'ADMIN', 'MANAGER')
+@Permissions('shop.menu.manage')
 @ShopResource('product', 'productId')
 export class ProductVariantsController {
   constructor(private readonly variants: ProductVariantsService) {}

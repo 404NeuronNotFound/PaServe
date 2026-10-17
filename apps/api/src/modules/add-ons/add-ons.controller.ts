@@ -12,7 +12,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import {
   ShopResource,
@@ -29,7 +29,7 @@ import {
 } from './add-ons.dto.js';
 
 @Controller('shops/:shopId/add-ons')
-@Roles('OWNER', 'ADMIN', 'MANAGER')
+@Permissions('shop.menu.manage')
 export class AddOnsController {
   constructor(private readonly addOns: AddOnsService) {}
   @Delete(':addOnId')
@@ -106,7 +106,7 @@ export class AddOnsController {
   }
 }
 @Controller('shops/:shopId/products/:productId/add-ons')
-@Roles('OWNER', 'ADMIN', 'MANAGER')
+@Permissions('shop.menu.manage')
 @ShopResource('product', 'productId')
 export class ProductAddOnsController {
   constructor(private readonly addOns: AddOnsService) {}

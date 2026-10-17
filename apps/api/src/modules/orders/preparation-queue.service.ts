@@ -1,3 +1,4 @@
+import { rolesForShopPermissions } from '@paserve/contracts';
 import {
   BadRequestException,
   ConflictException,
@@ -5,8 +6,6 @@ import {
 } from '@nestjs/common';
 import { isUUID, isISO8601 } from 'class-validator';
 import {
-  SHOP_ROLES,
-  hasShopPermission,
   type PreparationQueueResponse,
   type PreparationStatus,
 } from '@paserve/contracts';
@@ -15,8 +14,8 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
 import { readPriceSnapshot } from './order-price-snapshots.js';
 
-export const PREPARATION_QUEUE_ROLES = SHOP_ROLES.filter((role) =>
-  hasShopPermission(role, 'shop.preparation.queue.read'),
+export const PREPARATION_QUEUE_ROLES = rolesForShopPermissions(
+  'shop.preparation.queue.read',
 );
 
 @Injectable()

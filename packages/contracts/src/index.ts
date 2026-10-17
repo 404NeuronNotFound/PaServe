@@ -47,8 +47,12 @@ export interface StaffMember {
   userId: string;
   email: string;
   role: ShopRole;
+  /** Account activity, independent of this shop's isEnabled access flag. */
   isActive: boolean;
+  /** Access to this shop; independent of User.isActive. */
+  isEnabled: boolean;
 }
+export interface UpdateStaffAccessRequest { isEnabled: boolean }
 export interface StaffInvitation {
   id: string;
   email: string;
@@ -265,8 +269,30 @@ export const SHOP_PERMISSIONS = [
   "shop.settings.manage",
   "shop.ownership.manage",
   "shop.billing.manage",
+  "shop.staff.manage",
+  "shop.orders.overview.read",
 ] as const;
 export type ShopPermission = (typeof SHOP_PERMISSIONS)[number];
+
+/** The authoritative role matrix. Roles are explicit grants, never numeric ranks. */
+export const SHOP_PERMISSION_MATRIX: Readonly<
+  Record<ShopRole, readonly ShopPermission[]>
+> = Object.freeze({
+  OWNER: Object.freeze([...SHOP_PERMISSIONS]),
+  ADMIN: Object.freeze([
+    ...SHOP_OPERATIONAL_PERMISSIONS,
+    ...SHOP_CASHIER_PERMISSIONS,
+    ...SHOP_KITCHEN_PERMISSIONS,
+    "shop.operations.manage",
+  ] as ShopPermission[]),
+  MANAGER: Object.freeze([
+    ...SHOP_OPERATIONAL_PERMISSIONS,
+    ...SHOP_CASHIER_PERMISSIONS,
+    ...SHOP_KITCHEN_PERMISSIONS,
+  ]),
+  CASHIER: Object.freeze([...SHOP_CASHIER_PERMISSIONS]),
+  KITCHEN: Object.freeze([...SHOP_KITCHEN_PERMISSIONS]),
+});
 
 export function isShopOwner(role: ShopRole): boolean {
   return role === "OWNER";
@@ -286,27 +312,27 @@ export function hasShopPermission(
   role: ShopRole,
   permission: ShopPermission,
 ): boolean {
-  if (isShopOwner(role)) return SHOP_PERMISSIONS.includes(permission);
-  const dailyOperation = SHOP_OPERATIONAL_PERMISSIONS.some(
-    (allowed) => allowed === permission,
+  return (
+    SHOP_ROLES.includes(role) &&
+    SHOP_PERMISSIONS.includes(permission) &&
+    SHOP_PERMISSION_MATRIX[role].includes(permission)
   );
-  const counterAction = SHOP_CASHIER_PERMISSIONS.some(
-    (allowed) => allowed === permission,
+}
+
+/** ALL requested permissions are required; empty/unknown policies fail closed. */
+export function rolesForShopPermissions(
+  ...permissions: readonly ShopPermission[]
+): readonly ShopRole[] {
+  if (
+    !permissions.length ||
+    permissions.some((permission) => !SHOP_PERMISSIONS.includes(permission))
+  )
+    return Object.freeze([]);
+  return Object.freeze(
+    SHOP_ROLES.filter((role) =>
+      permissions.every((permission) => hasShopPermission(role, permission)),
+    ),
   );
-  const preparationAction = SHOP_KITCHEN_PERMISSIONS.some(
-    (allowed) => allowed === permission,
-  );
-  if (role === "ADMIN")
-    return (
-      permission === "shop.operations.manage" ||
-      dailyOperation ||
-      counterAction ||
-      preparationAction
-    );
-  if (role === "MANAGER")
-    return dailyOperation || counterAction || preparationAction;
-  if (role === "CASHIER") return counterAction;
-  return role === "KITCHEN" && preparationAction;
 }
 
 export interface UserMembership {

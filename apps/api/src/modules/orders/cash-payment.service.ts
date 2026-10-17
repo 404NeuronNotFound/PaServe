@@ -1,3 +1,4 @@
+import { rolesForShopPermissions } from '@paserve/contracts';
 import {
   BadRequestException,
   ConflictException,
@@ -6,8 +7,6 @@ import {
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import {
-  SHOP_ROLES,
-  hasShopPermission,
   cashAmountCents,
   isValidOrderNumber,
   PAYMENT_REFERENCE_PATTERN,
@@ -26,13 +25,14 @@ import type { ManualCardPaymentDto } from './manual-card-payment.dto.js';
 import type { OtherPaymentDto } from './other-payment.dto.js';
 import type { CreatePaymentDto } from './create-payment.dto.js';
 
-export const CASH_PAYMENT_ROLES = SHOP_ROLES.filter(
-  (role) =>
-    hasShopPermission(role, 'shop.payments.record') &&
-    hasShopPermission(role, 'shop.orders.read'),
+export const CASH_PAYMENT_ROLES = rolesForShopPermissions(
+  'shop.payments.record',
+  'shop.orders.read',
 );
-export const CREATE_PAYMENT_ROLES = CASH_PAYMENT_ROLES.filter((role) =>
-  hasShopPermission(role, 'shop.orders.confirm'),
+export const CREATE_PAYMENT_ROLES = rolesForShopPermissions(
+  'shop.payments.record',
+  'shop.orders.read',
+  'shop.orders.confirm',
 );
 const conflict = (
   code = 'CASH_PAYMENT_CONFLICT',

@@ -9,12 +9,9 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
-import {
-  PREPARATION_READY_ROLES,
-  PreparationReadyService,
-} from './preparation-ready.service.js';
+import { PreparationReadyService } from './preparation-ready.service.js';
 
 @Controller('shops/:shopId/orders')
 export class PreparationReadyController {
@@ -22,7 +19,7 @@ export class PreparationReadyController {
 
   @Post(':orderId/mark-ready')
   @HttpCode(200)
-  @Roles(...PREPARATION_READY_ROLES)
+  @Permissions('shop.preparation.status.update')
   ready(
     @Param('orderId') orderId: string,
     @Body() body: unknown,

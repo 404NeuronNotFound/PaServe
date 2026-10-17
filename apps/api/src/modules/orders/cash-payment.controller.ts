@@ -9,13 +9,9 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
-import {
-  CashPaymentService,
-  CASH_PAYMENT_ROLES,
-  CREATE_PAYMENT_ROLES,
-} from './cash-payment.service.js';
+import { CashPaymentService } from './cash-payment.service.js';
 import { CashPaymentDto } from './cash-payment.dto.js';
 import { ManualGcashPaymentDto } from './manual-gcash-payment.dto.js';
 import { ManualCardPaymentDto } from './manual-card-payment.dto.js';
@@ -28,7 +24,11 @@ export class CashPaymentController {
   constructor(private readonly cash: CashPaymentService) {}
   @Post(':orderId/create-payment')
   @HttpCode(200)
-  @Roles(...CREATE_PAYMENT_ROLES)
+  @Permissions(
+    'shop.payments.record',
+    'shop.orders.read',
+    'shop.orders.confirm',
+  )
   create(
     @Param('orderId') orderId: string,
     @Body() dto: CreatePaymentDto,
@@ -45,7 +45,7 @@ export class CashPaymentController {
   }
   @Post(':orderId/other-payment')
   @HttpCode(200)
-  @Roles(...CASH_PAYMENT_ROLES)
+  @Permissions('shop.payments.record', 'shop.orders.read')
   recordOther(
     @Param('orderId') orderId: string,
     @Body() dto: OtherPaymentDto,
@@ -62,7 +62,7 @@ export class CashPaymentController {
   }
   @Post(':orderId/card-manual-payment')
   @HttpCode(200)
-  @Roles(...CASH_PAYMENT_ROLES)
+  @Permissions('shop.payments.record', 'shop.orders.read')
   recordCard(
     @Param('orderId') orderId: string,
     @Body() dto: ManualCardPaymentDto,
@@ -79,7 +79,7 @@ export class CashPaymentController {
   }
   @Post(':orderId/gcash-manual-payment')
   @HttpCode(200)
-  @Roles(...CASH_PAYMENT_ROLES)
+  @Permissions('shop.payments.record', 'shop.orders.read')
   recordGcash(
     @Param('orderId') orderId: string,
     @Body() dto: ManualGcashPaymentDto,
@@ -96,7 +96,7 @@ export class CashPaymentController {
   }
   @Post('cash-payment/lookup-number')
   @HttpCode(200)
-  @Roles(...CASH_PAYMENT_ROLES)
+  @Permissions('shop.payments.record', 'shop.orders.read')
   lookup(
     @Body() dto: LookupOrderNumberDto,
     @Req() request: ShopMemberRequest,
@@ -110,7 +110,7 @@ export class CashPaymentController {
     );
   }
   @Get(':orderId/cash-payment')
-  @Roles(...CASH_PAYMENT_ROLES)
+  @Permissions('shop.payments.record', 'shop.orders.read')
   review(
     @Param('orderId') orderId: string,
     @Req() request: ShopMemberRequest,
@@ -125,7 +125,7 @@ export class CashPaymentController {
   }
   @Post(':orderId/cash-payment')
   @HttpCode(200)
-  @Roles(...CASH_PAYMENT_ROLES)
+  @Permissions('shop.payments.record', 'shop.orders.read')
   collect(
     @Param('orderId') orderId: string,
     @Body() dto: CashPaymentDto,

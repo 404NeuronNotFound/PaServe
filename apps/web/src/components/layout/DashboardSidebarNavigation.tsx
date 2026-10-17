@@ -22,7 +22,13 @@ import { hasShopPermission, type UserMembership } from "@paserve/contracts";
 import { shopPath } from "../../features/shops/active-shop";
 import { canUseCashier } from "../../features/cashier/access";
 
-function NavigationGroup({ label, name, active, rail, children }: {
+function NavigationGroup({
+  label,
+  name,
+  active,
+  rail,
+  children,
+}: {
   label: string;
   name: string;
   active: boolean;
@@ -32,7 +38,11 @@ function NavigationGroup({ label, name, active, rail, children }: {
   const id = useId();
   const [expanded, setExpanded] = useState(active);
   return (
-    <div className="dashboard-nav-group dashboard-nav-disclosure" role="group" aria-label={name}>
+    <div
+      className="dashboard-nav-group dashboard-nav-disclosure"
+      role="group"
+      aria-label={name}
+    >
       <button
         type="button"
         className="dashboard-nav-group-toggle"
@@ -50,64 +60,114 @@ function NavigationGroup({ label, name, active, rail, children }: {
   );
 }
 
-export function DashboardSidebarNavigation({ membership, rail, onNavigate }: {
+export function DashboardSidebarNavigation({
+  membership,
+  rail,
+  onNavigate,
+}: {
   membership: UserMembership | null;
   rail: boolean;
   onNavigate: () => void;
 }) {
   const { pathname } = useLocation();
   const base = membership ? shopPath(membership.shopId) : "";
-  function destination(path: string, label: string, Icon: IconType, end = false) {
+  function destination(
+    path: string,
+    label: string,
+    Icon: IconType,
+    end = false,
+  ) {
     return (
-      <NavLink to={path} end={end} onClick={onNavigate} title={rail ? label : undefined}>
+      <NavLink
+        to={path}
+        end={end}
+        onClick={onNavigate}
+        title={rail ? label : undefined}
+      >
         <Icon aria-hidden="true" />
         <span>{label}</span>
       </NavLink>
     );
   }
-  const current = (paths: string[]) => paths.some(
-    (path) => pathname === `${base}/${path}` || pathname.startsWith(`${base}/${path}/`),
-  );
-  const menuActive = current(["products", "categories", "add-ons", "menu-preview"]);
+  const current = (paths: string[]) =>
+    paths.some(
+      (path) =>
+        pathname === `${base}/${path}` ||
+        pathname.startsWith(`${base}/${path}/`),
+    );
+  const menuActive = current([
+    "products",
+    "categories",
+    "add-ons",
+    "menu-preview",
+  ]);
   const managementActive = current(["tables", "staff", "settings"]);
-  return <nav aria-label="Shop navigation">
-    {membership && <div className="dashboard-nav-group" role="group" aria-label="Workspace">
-      <p className="dashboard-nav-label">Daily workspace</p>
-      <div className="dashboard-nav-links">
-        {destination(base, "Overview", FiGrid, true)}
-        {hasShopPermission(membership.role, "shop.reports.read") && destination(`${base}/sales`, "Sales dashboard", FiTrendingUp)}
-        {membership.role === "OWNER" && destination(`${base}/orders`, "Orders", FiClipboard)}
-        {canUseCashier(membership.role) && destination(`${base}/cashier`, "Cashier", FiCreditCard)}
-        {hasShopPermission(membership.role, "shop.preparation.queue.read") && destination(`${base}/kitchen`, "Kitchen / Barista", FiCoffee)}
-      </div>
-    </div>}
-    {membership && hasShopPermission(membership.role, "shop.menu.manage") &&
-      <NavigationGroup
-        key={`${base}-menu-${menuActive}`}
-        label="Menu & catalog" name="Menu management" rail={rail} active={menuActive}
+  return (
+    <nav aria-label="Shop navigation">
+      {membership && (
+        <div
+          className="dashboard-nav-group"
+          role="group"
+          aria-label="Workspace"
+        >
+          <p className="dashboard-nav-label">Daily workspace</p>
+          <div className="dashboard-nav-links">
+            {destination(base, "Overview", FiGrid, true)}
+            {hasShopPermission(membership.role, "shop.reports.read") &&
+              destination(`${base}/sales`, "Sales dashboard", FiTrendingUp)}
+            {hasShopPermission(membership.role, "shop.orders.overview.read") &&
+              destination(`${base}/orders`, "Orders", FiClipboard)}
+            {canUseCashier(membership.role) &&
+              destination(`${base}/cashier`, "Cashier", FiCreditCard)}
+            {hasShopPermission(
+              membership.role,
+              "shop.preparation.queue.read",
+            ) && destination(`${base}/kitchen`, "Kitchen / Barista", FiCoffee)}
+          </div>
+        </div>
+      )}
+      {membership && hasShopPermission(membership.role, "shop.menu.manage") && (
+        <NavigationGroup
+          key={`${base}-menu-${menuActive}`}
+          label="Menu & catalog"
+          name="Menu management"
+          rail={rail}
+          active={menuActive}
+        >
+          {destination(`${base}/products`, "Products", FiPackage)}
+          {destination(`${base}/categories`, "Categories", FiLayers)}
+          {destination(`${base}/add-ons`, "Add-ons", FiSliders)}
+          {hasShopPermission(membership.role, "shop.settings.manage") &&
+            destination(`${base}/menu-preview`, "Menu preview", FiEye)}
+        </NavigationGroup>
+      )}
+      {membership &&
+        hasShopPermission(membership.role, "shop.operations.manage") && (
+          <NavigationGroup
+            key={`${base}-management-${managementActive}`}
+            label="Shop management"
+            name="Restaurant management"
+            rail={rail}
+            active={managementActive}
+          >
+            {destination(`${base}/tables`, "Tables", FiLayout)}
+            {hasShopPermission(membership.role, "shop.staff.manage") &&
+              destination(`${base}/staff`, "Staff & invitations", FiUsers)}
+            {hasShopPermission(membership.role, "shop.settings.manage") &&
+              destination(`${base}/settings`, "Shop settings", FiSettings)}
+          </NavigationGroup>
+        )}
+      <div
+        className="dashboard-nav-group dashboard-nav-account"
+        role="group"
+        aria-label="Account"
       >
-        {destination(`${base}/products`, "Products", FiPackage)}
-        {destination(`${base}/categories`, "Categories", FiLayers)}
-        {destination(`${base}/add-ons`, "Add-ons", FiSliders)}
-        {membership.role === "OWNER" && destination(`${base}/menu-preview`, "Menu preview", FiEye)}
-      </NavigationGroup>}
-    {membership && hasShopPermission(membership.role, "shop.operations.manage") &&
-      <NavigationGroup
-        key={`${base}-management-${managementActive}`}
-        label="Shop management" name="Restaurant management" rail={rail} active={managementActive}
-      >
-        {destination(`${base}/tables`, "Tables", FiLayout)}
-        {membership.role === "OWNER" && <>
-          {destination(`${base}/staff`, "Staff & invitations", FiUsers)}
-          {destination(`${base}/settings`, "Shop settings", FiSettings)}
-        </>}
-      </NavigationGroup>}
-    <div className="dashboard-nav-group dashboard-nav-account" role="group" aria-label="Account">
-      <p className="dashboard-nav-label">Personal</p>
-      <div className="dashboard-nav-links">
-        {destination("/app/shops", "Your shops", FiHome, true)}
-        {destination("/app/account", "Your account", FiUser)}
+        <p className="dashboard-nav-label">Personal</p>
+        <div className="dashboard-nav-links">
+          {destination("/app/shops", "Your shops", FiHome, true)}
+          {destination("/app/account", "Your account", FiUser)}
+        </div>
       </div>
-    </div>
-  </nav>;
+    </nav>
+  );
 }

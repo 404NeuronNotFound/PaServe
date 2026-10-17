@@ -13,14 +13,14 @@ import type { Response } from 'express';
 import { SHOP_BANNER_LIMITS } from '@paserve/contracts';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { EmptyDto } from '../auth/dto/empty.dto.js';
-import { Roles } from '../shop-members/decorators/roles.decorator.js';
+import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { ShopBannerService } from './shop-banner.service.js';
 import type { ShopBannerFile } from './shop-banner.processor.js';
 
 @Controller('shops/:shopId/banner')
 @UseGuards(JwtAuthGuard)
-@Roles('OWNER')
+@Permissions('shop.settings.manage')
 export class ShopBannerController {
   constructor(private readonly banners: ShopBannerService) {}
 
