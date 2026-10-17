@@ -9,6 +9,11 @@ import { StaffService } from '../dist/modules/staff/staff.service.js';
 import { TenantResourcesRepository } from '../dist/modules/tenancy/tenant-resources.repository.js';
 import { ShopMembersRepository } from '../dist/modules/shop-members/shop-members.repository.js';
 import { ShopMembersService } from '../dist/modules/shop-members/shop-members.service.js';
+import {
+  SHOP_OPERATIONAL_PERMISSIONS,
+  SHOP_CASHIER_PERMISSIONS,
+  SHOP_KITCHEN_PERMISSIONS,
+} from '@paserve/contracts';
 
 // Only disposable schema objects and fixtures are committed; public data and
 // migration history are untouched. Always settle sessions before cleanup.
@@ -209,6 +214,44 @@ try {
       .role,
     'CASHIER',
   );
+  await staff.changeRole(ownerId, shopId, member.id, { role: 'MANAGER' });
+  for (const permission of [
+    ...SHOP_OPERATIONAL_PERMISSIONS,
+    ...SHOP_CASHIER_PERMISSIONS,
+    ...SHOP_KITCHEN_PERMISSIONS,
+  ])
+    assert.equal(
+      (await access.requirePermission(userId, shopId, permission)).role,
+      'MANAGER',
+    );
+  for (const permission of [
+    'shop.operations.manage',
+    'shop.settings.manage',
+    'shop.ownership.manage',
+    'shop.billing.manage',
+  ])
+    await assert.rejects(access.requirePermission(userId, shopId, permission), {
+      status: 403,
+    });
+  await assert.rejects(
+    access.requirePermission(userId, otherShop, 'shop.menu.manage'),
+    { status: 403 },
+  );
+  await assert.rejects(
+    staff.changeRole(userId, shopId, member.id, { role: 'ADMIN' }),
+    { status: 403 },
+  );
+  await staff.changeRole(ownerId, shopId, member.id, { role: 'CASHIER' });
+  for (const permission of SHOP_OPERATIONAL_PERMISSIONS)
+    await assert.rejects(access.requirePermission(userId, shopId, permission), {
+      status: 403,
+    });
+  assert.equal((await access.requireMembership(userId, shopId)).id, member.id);
+  assert.equal(
+    (await prisma.shopMember.findUnique({ where: { id: otherMembership.id } }))
+      .role,
+    'CASHIER',
+  );
   const roleEvents = await prisma.staffAuditEvent.findMany({
     where: { shopId, action: 'ROLE_CHANGED' },
     orderBy: { createdAt: 'asc' },
@@ -218,6 +261,8 @@ try {
     [
       ['CASHIER', 'ADMIN'],
       ['ADMIN', 'CASHIER'],
+      ['CASHIER', 'MANAGER'],
+      ['MANAGER', 'CASHIER'],
     ],
   );
   await assert.rejects(
@@ -326,7 +371,7 @@ try {
     });
   }
   console.log(
-    'Passed: migration, invitations, tenant isolation, concurrent acceptance, owner protection, admin assignment/downgrade, live permission removal, audit rollback and RLS.',
+    'Passed: migration, invitations, tenant isolation, concurrent acceptance, owner protection, admin/manager assignment and downgrade, live permission removal, audit rollback and RLS.',
   );
 } finally {
   if (prisma) await prisma.$disconnect();

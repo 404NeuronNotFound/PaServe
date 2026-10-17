@@ -322,6 +322,10 @@ it.each(["Manager", "Cashier", "Kitchen"])(
     await user.click(screen.getByRole("option", { name: nextRole }));
     const dialog = screen.getByRole("dialog", { name: "Remove admin role?" });
     expect(dialog).toHaveTextContent(/Their shop membership stays active/);
+    if (nextRole === "Manager")
+      expect(dialog).toHaveTextContent(
+        /Table management, staff management, settings, ownership, and billing are excluded/,
+      );
     expect(changeStaffRole).not.toHaveBeenCalled();
     await user.click(
       within(dialog).getByRole("button", { name: "Remove admin role" }),
@@ -334,6 +338,94 @@ it.each(["Manager", "Cashier", "Kitchen"])(
     expect(removeStaff).not.toHaveBeenCalled();
   },
 );
+
+it("explains operational manager access and confirms before assignment", async () => {
+  vi.mocked(changeStaffRole).mockImplementation(async () => {
+    vi.mocked(listStaff).mockResolvedValue({
+      ...data,
+      members: data.members.map((member) =>
+        member.id === "staff-member" ? { ...member, role: "MANAGER" } : member,
+      ),
+    });
+  });
+  const user = setup();
+  const chooseManager = async () => {
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "Role for staff@example.com",
+      }),
+    );
+    await user.click(screen.getByRole("option", { name: "Manager" }));
+  };
+  await chooseManager();
+  const dialog = screen.getByRole("dialog", { name: "Assign manager role?" });
+  expect(dialog).toHaveAccessibleDescription(
+    /staff@example.com will become a manager in Cafe A/,
+  );
+  expect(dialog).toHaveTextContent(
+    /Daily operations, menu, orders, reports, cashier, and kitchen/,
+  );
+  expect(dialog).toHaveTextContent(
+    /Table management, staff management, settings, ownership, and billing are excluded/,
+  );
+  expect(changeStaffRole).not.toHaveBeenCalled();
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(changeStaffRole).not.toHaveBeenCalled();
+  await chooseManager();
+  await user.click(screen.getByRole("button", { name: "Assign manager" }));
+  expect(changeStaffRole).toHaveBeenCalledExactlyOnceWith(
+    "shop-a",
+    "staff-member",
+    "MANAGER",
+  );
+  expect(
+    await screen.findByText("manager", { exact: true }),
+  ).toBeInTheDocument();
+  expect(removeStaff).not.toHaveBeenCalled();
+});
+
+it.each(["Cashier", "Kitchen"])(
+  "removes manager authority by assigning %s while retaining membership",
+  async (nextRole) => {
+    vi.mocked(listStaff).mockResolvedValue({
+      ...data,
+      members: data.members.map((member) =>
+        member.id === "staff-member" ? { ...member, role: "MANAGER" } : member,
+      ),
+    });
+    const user = setup();
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "Role for staff@example.com",
+      }),
+    );
+    await user.click(screen.getByRole("option", { name: nextRole }));
+    const dialog = screen.getByRole("dialog", { name: "Remove manager role?" });
+    expect(dialog).toHaveTextContent(/Their shop membership stays active/);
+    expect(changeStaffRole).not.toHaveBeenCalled();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Remove manager role" }),
+    );
+    expect(changeStaffRole).toHaveBeenCalledWith(
+      "shop-a",
+      "staff-member",
+      nextRole.toUpperCase(),
+    );
+    expect(removeStaff).not.toHaveBeenCalled();
+  },
+);
+
+it("shows the manager invitation permissions before an invitation is created", async () => {
+  const user = setup();
+  await user.click(await screen.findByRole("combobox", { name: "Shop role" }));
+  await user.click(screen.getByRole("option", { name: "Manager" }));
+  expect(
+    screen.getByRole("combobox", { name: "Shop role" }),
+  ).toHaveAccessibleDescription(
+    /Daily operations, menu, orders, reports, cashier, and kitchen/,
+  );
+  expect(inviteStaff).not.toHaveBeenCalled();
+});
 it("filters members by email or role and restores search focus on clear", async () => {
   const user = setup();
   const search = await screen.findByRole("textbox", {

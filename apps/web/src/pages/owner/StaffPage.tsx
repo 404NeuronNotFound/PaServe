@@ -57,10 +57,55 @@ type Decision = {
 const roleDescriptions: Record<StaffRole, string> = {
   CASHIER: "Order scanning and payment collection.",
   KITCHEN: "Kitchen preparation access.",
-  MANAGER: "Daily operations and order management.",
+  MANAGER:
+    "Daily operations, menu, orders, reports, cashier, and kitchen. Table management, staff management, settings, ownership, and billing are excluded.",
   ADMIN:
     "Shop operations, menu, tables, reports, cashier, and kitchen. Staff management, settings, ownership, and billing remain owner-only.",
 };
+
+function roleDecisionCopy(decision: Decision, shopName: string) {
+  const assignedRole =
+    decision.role === "ADMIN"
+      ? "an admin"
+      : decision.role === "MANAGER"
+        ? "a manager"
+        : decision.role?.toLowerCase();
+  const description = `${decision.email} will become ${assignedRole} in ${shopName}.`;
+  if (decision.role === "ADMIN")
+    return {
+      title: "Assign admin role?",
+      description: `${description} ${roleDescriptions.ADMIN}`,
+      confirmLabel: "Assign admin",
+      success: "Admin role assigned.",
+    };
+  if (decision.previousRole === "ADMIN")
+    return {
+      title: "Remove admin role?",
+      description: `${description} They will lose admin permissions. Their shop membership stays active with the selected role's permissions.${decision.role === "MANAGER" ? ` ${roleDescriptions.MANAGER}` : ""}`,
+      confirmLabel: "Remove admin role",
+      success: "Admin role removed.",
+    };
+  if (decision.role === "MANAGER")
+    return {
+      title: "Assign manager role?",
+      description: `${description} ${roleDescriptions.MANAGER}`,
+      confirmLabel: "Assign manager",
+      success: "Manager role assigned.",
+    };
+  if (decision.previousRole === "MANAGER")
+    return {
+      title: "Remove manager role?",
+      description: `${description} They will lose manager permissions. Their shop membership stays active with the selected role's permissions.`,
+      confirmLabel: "Remove manager role",
+      success: "Manager role removed.",
+    };
+  return {
+    title: "Change staff role?",
+    description,
+    confirmLabel: "Change role",
+    success: "Staff access updated.",
+  };
+}
 export function StaffPage() {
   const { shopId } = useActiveShop();
   const userId =
@@ -221,9 +266,10 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const pendingCount = query.data.invitations.filter(
     (invitation) => invitation.status === "PENDING",
   ).length;
-  const assigningAdmin = decision?.kind === "role" && decision.role === "ADMIN";
-  const removingAdmin =
-    decision?.kind === "role" && decision.previousRole === "ADMIN";
+  const roleDecision =
+    decision?.kind === "role"
+      ? roleDecisionCopy(decision, membership.shop.name)
+      : null;
   return (
     <section className="shop-context-content staff-workspace">
       <header className="staff-heading">
@@ -528,37 +574,25 @@ function StaffWorkspace({ userId }: { userId: string }) {
       <DecisionDialog
         open={Boolean(decision)}
         title={
-          assigningAdmin
-            ? "Assign admin role?"
-            : removingAdmin
-              ? "Remove admin role?"
-              : decision?.kind === "role"
-                ? "Change staff role?"
-                : decision?.kind === "remove"
-                  ? "Remove staff access?"
-                  : "Revoke invitation?"
+          roleDecision
+            ? roleDecision.title
+            : decision?.kind === "remove"
+              ? "Remove staff access?"
+              : "Revoke invitation?"
         }
         description={
-          assigningAdmin
-            ? `${decision?.email} will become an admin in ${membership.shop.name}. ${roleDescriptions.ADMIN}`
-            : removingAdmin
-              ? `${decision?.email} will become ${decision?.role?.toLowerCase()} in ${membership.shop.name} and lose admin permissions. Their shop membership stays active with the selected role's permissions.`
-              : decision?.kind === "role"
-                ? `${decision.email} will become ${decision.role?.toLowerCase()} in this shop.`
-                : decision?.kind === "remove"
-                  ? `${decision.email} will lose access to this shop. Their account and other shop memberships remain available.`
-                  : `The invitation for ${decision?.email} will stop working.`
+          roleDecision
+            ? roleDecision.description
+            : decision?.kind === "remove"
+              ? `${decision.email} will lose access to this shop. Their account and other shop memberships remain available.`
+              : `The invitation for ${decision?.email} will stop working.`
         }
         confirmLabel={
-          assigningAdmin
-            ? "Assign admin"
-            : removingAdmin
-              ? "Remove admin role"
-              : decision?.kind === "role"
-                ? "Change role"
-                : decision?.kind === "remove"
-                  ? "Remove access"
-                  : "Revoke invitation"
+          roleDecision
+            ? roleDecision.confirmLabel
+            : decision?.kind === "remove"
+              ? "Remove access"
+              : "Revoke invitation"
         }
         destructive={decision?.kind !== "role"}
         onClose={() => setDecision(null)}
@@ -572,11 +606,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 : decision.kind === "remove"
                   ? removeStaff(shopId, decision.id)
                   : revokeInvitation(shopId, decision.id),
-            assigningAdmin
-              ? "Admin role assigned."
-              : removingAdmin
-                ? "Admin role removed."
-                : "Staff access updated.",
+            roleDecision?.success ?? "Staff access updated.",
           );
         }}
       />

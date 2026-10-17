@@ -488,6 +488,10 @@ describe('Owner staff invitations through HTTP', () => {
     ['ADMIN', 'MANAGER'],
     ['ADMIN', 'CASHIER'],
     ['ADMIN', 'KITCHEN'],
+    ['CASHIER', 'MANAGER'],
+    ['KITCHEN', 'MANAGER'],
+    ['MANAGER', 'CASHIER'],
+    ['MANAGER', 'KITCHEN'],
   ] as const)(
     'allows OWNER to change %s to %s and audits the role transition',
     async (previousRole, nextRole) => {
@@ -523,24 +527,30 @@ describe('Owner staff invitations through HTTP', () => {
     },
   );
 
-  it('allows inviting ADMIN without granting membership before acceptance', async () => {
-    const response = await owner()
-      .post(`/api/v1/shops/${shopId}/staff/invitations`)
-      .set('Authorization', 'Bearer owner')
-      .send({ email: invite.email, role: 'ADMIN' })
-      .expect(201);
-    expect(response.body.invitation.role).toBe('ADMIN');
-    expect(tx.shopMember.create).not.toHaveBeenCalled();
-  });
+  it.each(['ADMIN', 'MANAGER'] as const)(
+    'allows inviting %s without granting membership before acceptance',
+    async (role) => {
+      const response = await owner()
+        .post(`/api/v1/shops/${shopId}/staff/invitations`)
+        .set('Authorization', 'Bearer owner')
+        .send({ email: invite.email, role })
+        .expect(201);
+      expect(response.body.invitation.role).toBe(role);
+      expect(tx.shopMember.create).not.toHaveBeenCalled();
+    },
+  );
 
-  it('creates ADMIN membership only when the invited account accepts', async () => {
-    invite.role = 'ADMIN';
-    const response = await accept().expect(200);
-    expect(response.body).toEqual({ shopId, role: 'ADMIN' });
-    expect(tx.shopMember.create).toHaveBeenCalledWith({
-      data: { shopId, userId, role: 'ADMIN' },
-    });
-  });
+  it.each(['ADMIN', 'MANAGER'] as const)(
+    'creates %s membership only when the invited account accepts',
+    async (role) => {
+      invite.role = role;
+      const response = await accept().expect(200);
+      expect(response.body).toEqual({ shopId, role });
+      expect(tx.shopMember.create).toHaveBeenCalledWith({
+        data: { shopId, userId, role },
+      });
+    },
+  );
 
   it.each(['OWNER', 'ADMIN'] as const)(
     'rejects %s claims when live ownership is lost during admin assignment',
