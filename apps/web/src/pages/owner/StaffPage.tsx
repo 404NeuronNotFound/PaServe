@@ -87,7 +87,7 @@ function roleDecisionCopy(decision: Decision, shopName: string) {
   if (decision.role === "KITCHEN")
     return {
       title: "Assign kitchen/barista role?",
-      description: `${description} ${roleDescriptions.KITCHEN} ${decision.previousRole === "CASHIER" ? "They will lose counter permissions." : decision.previousRole === "ADMIN" ? "They will lose admin permissions." : decision.previousRole === "MANAGER" ? "They will lose manager permissions." : ""} Their shop membership stays active with the selected role's permissions.`,
+      description: `${description} ${roleDescriptions.KITCHEN} ${decision.previousRole === "CASHIER" ? "They will lose counter permissions." : decision.previousRole === "ADMIN" ? "They will lose admin permissions." : decision.previousRole === "MANAGER" ? "They will lose manager permissions." : ""} Their membership keeps its current enabled or disabled status and uses the selected role's permissions.`,
       confirmLabel: "Assign kitchen/barista",
       success: "Kitchen/barista role assigned.",
     };
@@ -101,7 +101,7 @@ function roleDecisionCopy(decision: Decision, shopName: string) {
   if (decision.previousRole === "ADMIN")
     return {
       title: "Remove admin role?",
-      description: `${description} They will lose admin permissions. Their shop membership stays active with the selected role's permissions. ${permissionDescription}`,
+      description: `${description} They will lose admin permissions. Their membership keeps its current enabled or disabled status and uses the selected role's permissions. ${permissionDescription}`,
       confirmLabel: "Remove admin role",
       success: "Admin role removed.",
     };
@@ -115,14 +115,14 @@ function roleDecisionCopy(decision: Decision, shopName: string) {
   if (decision.previousRole === "MANAGER")
     return {
       title: "Remove manager role?",
-      description: `${description} They will lose manager permissions. Their shop membership stays active with the selected role's permissions. ${permissionDescription}`,
+      description: `${description} They will lose manager permissions. Their membership keeps its current enabled or disabled status and uses the selected role's permissions. ${permissionDescription}`,
       confirmLabel: "Remove manager role",
       success: "Manager role removed.",
     };
   if (decision.role === "CASHIER")
     return {
       title: "Assign cashier role?",
-      description: `${description} ${roleDescriptions.CASHIER}${decision.previousRole === "KITCHEN" ? " They will lose preparation permissions. Their shop membership stays active with the selected role's permissions." : ""}`,
+      description: `${description} ${roleDescriptions.CASHIER}${decision.previousRole === "KITCHEN" ? " They will lose preparation permissions. Their membership keeps its current enabled or disabled status and uses the selected role's permissions." : ""}`,
       confirmLabel: "Assign cashier",
       success: "Cashier role assigned.",
     };
@@ -209,6 +209,21 @@ function StaffWorkspace({ userId }: { userId: string }) {
       await client.invalidateQueries({ queryKey: ["cashier"] });
       await query.refetch();
     } catch (failure) {
+      if (
+        stillHere() &&
+        isAxiosError<ApiErrorResponse>(failure) &&
+        failure.response?.status === 404 &&
+        ["MEMBER_UNAVAILABLE", "INVITATION_UNAVAILABLE"].includes(
+          failure.response.data?.code ?? "",
+        )
+      ) {
+        // A stale target does not mean the acting owner lost shop access.
+        // Refresh through the server; a genuine access denial still hides staff.
+        setDecision(null);
+        setError(errorMessage(failure));
+        await query.refetch();
+        return;
+      }
       if (
         stillHere() &&
         isAxiosError(failure) &&

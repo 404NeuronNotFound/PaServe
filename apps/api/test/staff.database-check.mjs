@@ -38,7 +38,8 @@ try {
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
   await setup.query(`CREATE TABLE ${q('shops')} (
     "id" TEXT PRIMARY KEY, "name" TEXT NOT NULL, "slug" TEXT UNIQUE NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true, "logoUrl" TEXT)`);
+    "isActive" BOOLEAN NOT NULL DEFAULT true, "logoUrl" TEXT,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
   await setup.query(`CREATE TABLE ${q('auth_sessions')} (
     "id" TEXT PRIMARY KEY, "userId" TEXT NOT NULL REFERENCES ${q('users')}(id),
     "refreshTokenHash" TEXT NOT NULL, "expiresAt" TIMESTAMP(3) NOT NULL,
@@ -611,6 +612,86 @@ try {
     `ALTER TABLE ${q('staff_audit_events')} DROP CONSTRAINT test_acceptance_failure`,
   );
   await staff.accept(userId, shopId, atomic.token);
+
+  // Role edits must never turn a suspended membership back on.
+  const acceptedMember = await prisma.shopMember.findUniqueOrThrow({
+    where: { userId_shopId: { userId, shopId } },
+  });
+  await staff.setAccess(ownerId, shopId, acceptedMember.id, {
+    isEnabled: false,
+  });
+  await staff.changeRole(ownerId, shopId, acceptedMember.id, {
+    role: 'MANAGER',
+  });
+  const editedSuspendedMember = await prisma.shopMember.findUniqueOrThrow({
+    where: { id: acceptedMember.id },
+  });
+  assert.equal(editedSuspendedMember.role, 'MANAGER');
+  assert.ok(editedSuspendedMember.disabledAt instanceof Date);
+  await assert.rejects(
+    access.requirePermission(userId, shopId, 'shop.menu.manage'),
+    {
+      status: 404,
+    },
+  );
+
+  // A valid token cannot outlive the inviter's authority or account/shop activity.
+  // Direct fixture edits simulate changes outside the staff UI in this schema only.
+  const authorityInvite = await staff.invite(ownerId, shopId, {
+    email: 'other@example.com',
+    role: 'ADMIN',
+  });
+  for (const [model, id, denied, restored] of [
+    ['user', ownerId, { isActive: false }, { isActive: true }],
+    ['shop', shopId, { isActive: false }, { isActive: true }],
+    ['shopMember', ownerMembership.id, { role: 'ADMIN' }, { role: 'OWNER' }],
+  ]) {
+    await prisma[model].update({
+      where: { id },
+      data: denied,
+      select: { id: true },
+    });
+    for (const action of ['preview', 'accept'])
+      await assert.rejects(
+        staff[action](otherUser, shopId, authorityInvite.token),
+        {
+          status: 404,
+        },
+      );
+    assert.equal(
+      await prisma.shopMember.count({ where: { shopId, userId: otherUser } }),
+      0,
+    );
+    assert.equal(
+      (
+        await prisma.staffInvitation.findUniqueOrThrow({
+          where: { id: authorityInvite.invitation.id },
+        })
+      ).acceptedAt,
+      null,
+    );
+    await prisma[model].update({
+      where: { id },
+      data: restored,
+      select: { id: true },
+    });
+  }
+  await prisma.user.update({
+    where: { id: otherUser },
+    data: { isActive: false },
+  });
+  for (const action of ['preview', 'accept'])
+    await assert.rejects(
+      staff[action](otherUser, shopId, authorityInvite.token),
+      {
+        status: 403,
+      },
+    );
+  await prisma.user.update({
+    where: { id: otherUser },
+    data: { isActive: true },
+  });
+  await staff.accept(otherUser, shopId, authorityInvite.token);
   for (const name of ['staff_invitations', 'staff_audit_events']) {
     const result = await setup.query(
       `SELECT relrowsecurity AS rls,
@@ -626,7 +707,7 @@ try {
     });
   }
   console.log(
-    'Passed: migrations, invitations, tenant isolation, role permissions, membership disable/enable, account/session preservation, hidden suspended shops, owner protection, audit rollback and RLS.',
+    'Passed: migrations, invitations, tenant isolation, role permissions, membership disable/enable, account/session preservation, hidden suspended shops, suspended role edits, invitation authority/activity rechecks, owner protection, audit rollback and RLS.',
   );
 } finally {
   if (prisma) await prisma.$disconnect();

@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { AxiosError } from "axios";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import type { ShopRole, ShopStaffResponse } from "@paserve/contracts";
@@ -527,7 +528,9 @@ it.each(["Manager", "Cashier", "Kitchen"])(
           ? "Assign kitchen/barista role?"
           : "Remove admin role?",
     });
-    expect(dialog).toHaveTextContent(/Their shop membership stays active/);
+    expect(dialog).toHaveTextContent(
+      /Their membership keeps its current enabled or disabled status/,
+    );
     if (nextRole === "Manager")
       expect(dialog).toHaveTextContent(
         /Table management, staff management, settings, ownership, and billing are excluded/,
@@ -625,7 +628,9 @@ it.each(["Cashier", "Kitchen"])(
           ? "Assign kitchen/barista role?"
           : "Remove manager role?",
     });
-    expect(dialog).toHaveTextContent(/Their shop membership stays active/);
+    expect(dialog).toHaveTextContent(
+      /Their membership keeps its current enabled or disabled status/,
+    );
     expect(changeStaffRole).not.toHaveBeenCalled();
     await user.click(
       within(dialog).getByRole("button", {
@@ -784,4 +789,104 @@ it("shows real team counts and role guidance without granting access", async () 
     /Kitchen \/ Barista Kitchen and barista preparation: view the preparation queue and update preparation status/,
   );
   expect(inviteStaff).not.toHaveBeenCalled();
+});
+
+function apiFailure(status: number, code: string, message: string) {
+  const error = new AxiosError(message);
+  error.response = { status, data: { code, message } } as typeof error.response;
+  return error;
+}
+
+it.each(["MEMBER_UNAVAILABLE", "INVITATION_UNAVAILABLE"])(
+  "refreshes a stale %s target without locking out its owner",
+  async (code) => {
+    const invitation = code === "INVITATION_UNAVAILABLE";
+    const failure = apiFailure(
+      404,
+      code,
+      "The selected record is unavailable.",
+    );
+    if (invitation) vi.mocked(revokeInvitation).mockRejectedValue(failure);
+    else vi.mocked(removeStaff).mockRejectedValue(failure);
+    const user = setup();
+    await user.click(
+      await screen.findByRole("button", {
+        name: invitation ? "Revoke invitation" : "Remove",
+      }),
+    );
+    const dialog = screen.getByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: invitation ? "Revoke invitation" : "Remove access",
+      }),
+    );
+    expect(
+      await screen.findByText("The selected record is unavailable."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Staff & invitations" }),
+    ).toBeInTheDocument();
+    expect(listStaff).toHaveBeenCalledTimes(2);
+  },
+);
+
+it.each([
+  [401, "INVALID_SESSION"],
+  [403, "OWNER_REQUIRED"],
+  [404, "SHOP_NOT_ACCESSIBLE"],
+] as const)(
+  "still hides staff on real access loss (%s %s)",
+  async (status, code) => {
+    vi.mocked(removeStaff).mockRejectedValue(
+      apiFailure(status, code, "Access lost."),
+    );
+    const user = setup();
+    await user.click(await screen.findByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove access" }));
+    expect(
+      await screen.findByRole("heading", { name: "Owner access required" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Staff & invitations" }),
+    ).not.toBeInTheDocument();
+  },
+);
+
+it("does not promise to enable a suspended member when changing their role", async () => {
+  vi.mocked(listStaff).mockResolvedValue({
+    ...data,
+    members: data.members.map((member) =>
+      member.role === "OWNER" ? member : { ...member, isEnabled: false },
+    ),
+  });
+  const user = setup();
+  await user.click(
+    await screen.findByRole("combobox", { name: "Role for staff@example.com" }),
+  );
+  await user.click(screen.getByRole("option", { name: "Kitchen / Barista" }));
+  expect(screen.getByRole("dialog")).toHaveTextContent(
+    /keeps its current enabled or disabled status/,
+  );
+  expect(screen.getByText("Disabled", { exact: true })).toBeInTheDocument();
+  expect(setStaffAccess).not.toHaveBeenCalled();
+});
+
+it("hides staff when stale-target recovery discovers that the owner also lost access", async () => {
+  vi.mocked(removeStaff).mockRejectedValue(
+    apiFailure(404, "MEMBER_UNAVAILABLE", "Member removed."),
+  );
+  vi.mocked(listStaff)
+    .mockResolvedValueOnce(data)
+    .mockRejectedValueOnce(
+      apiFailure(404, "SHOP_NOT_ACCESSIBLE", "Shop unavailable."),
+    );
+  const user = setup();
+  await user.click(await screen.findByRole("button", { name: "Remove" }));
+  await user.click(screen.getByRole("button", { name: "Remove access" }));
+  expect(
+    await screen.findByRole("heading", { name: "Owner access required" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument();
+  expect(listStaff).toHaveBeenCalledTimes(2);
 });
