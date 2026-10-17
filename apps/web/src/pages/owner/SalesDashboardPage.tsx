@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -134,6 +134,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
     };
   }, []);
   const date = selectedDate ?? today;
+  const reportStartDate = custom ? (customRange?.start ?? "") : date;
+  const reportEndDate = custom ? (customRange?.end ?? "") : date;
   const allowed = hasShopPermission(role, "shop.reports.read");
   const validDraft = !!salesDailyRange(customDraft.start, customDraft.end);
   const valid = custom
@@ -381,8 +383,13 @@ function SalesWorkspace({ userId }: { userId: string }) {
         {custom && (
           <p id="custom-sales-help" className="sales-range-help">
             Both dates are included in Manila (UTC+8); maximum 366 days. Apply
-            the range to gross sales, orders, average order value, items sold,
-            payment breakdown and recent orders.
+            the range to every card, chart and history view.
+          </p>
+        )}
+        {!custom && (
+          <p className="sales-range-help">
+            One reporting date for every card, chart and history view. Times use
+            Manila (UTC+8).
           </p>
         )}
         {custom && !validDraft && (
@@ -421,12 +428,10 @@ function SalesWorkspace({ userId }: { userId: string }) {
           <FiActivity aria-hidden="true" />
           Operations
         </a>
-        {!custom && (
-          <a href="#sales-history-section" onClick={() => setHistoryOpen(true)}>
-            <FiBarChart2 aria-hidden="true" />
-            History
-          </a>
-        )}
+        <a href="#sales-history-section" onClick={() => setHistoryOpen(true)}>
+          <FiBarChart2 aria-hidden="true" />
+          History
+        </a>
       </nav>
       {!valid &&
         (custom ? (
@@ -522,8 +527,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
             <SalesTrends
               userId={userId}
               shopId={shopId}
-              startDate={custom ? customRange!.start : date}
-              endDate={custom ? customRange!.end : date}
+              startDate={reportStartDate}
+              endDate={reportEndDate}
             />
           </div>
           <div
@@ -836,8 +841,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
           <TopProducts
             userId={userId}
             shopId={shopId}
-            startDate={custom ? customRange!.start : date}
-            endDate={custom ? customRange!.end : date}
+            startDate={reportStartDate}
+            endDate={reportEndDate}
           />
         </div>
       )}
@@ -849,42 +854,47 @@ function SalesWorkspace({ userId }: { userId: string }) {
           <AveragePrepTime
             userId={userId}
             shopId={shopId}
-            startDate={custom ? customRange!.start : date}
-            endDate={custom ? customRange!.end : date}
+            startDate={reportStartDate}
+            endDate={reportEndDate}
           />
           <PeakHours
             userId={userId}
             shopId={shopId}
-            startDate={custom ? customRange!.start : date}
-            endDate={custom ? customRange!.end : date}
+            startDate={reportStartDate}
+            endDate={reportEndDate}
           />
         </div>
       )}
-      {!custom && (
-        <details
-          className="sales-history sales-section-anchor"
-          id="sales-history-section"
-          open={historyOpen}
-          onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
-        >
-          <summary>
-            <span className="sales-history-icon">
-              <FiBarChart2 aria-hidden="true" />
-            </span>
+      <details
+        className="sales-history sales-section-anchor"
+        id="sales-history-section"
+        open={historyOpen}
+        onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
+      >
+        <summary>
+          <span className="sales-history-icon">
+            <FiBarChart2 aria-hidden="true" />
+          </span>
+          <span>
+            <span className="sales-kicker">EXPLORE YOUR PERFORMANCE</span>
+            <strong>Daily, weekly & monthly history</strong>
             <span>
-              <span className="sales-kicker">EXPLORE YOUR PERFORMANCE</span>
-              <strong>Daily, weekly & monthly history</strong>
-              <span>
-                Choose a separate range to explore the bigger picture.
-              </span>
+              Explore the selected reporting period by day, week or month.
             </span>
-            <FiChevronDown aria-hidden="true" />
-          </summary>
-          {historyOpen && (
-            <DailyAnalytics userId={userId} shopId={shopId} today={today} />
-          )}
-        </details>
-      )}
+          </span>
+          <FiChevronDown aria-hidden="true" />
+        </summary>
+        {historyOpen && (
+          <DailyAnalytics
+            userId={userId}
+            shopId={shopId}
+            today={today}
+            startDate={reportStartDate}
+            endDate={reportEndDate}
+            enabled={!!report}
+          />
+        )}
+      </details>
       <footer className="sales-report-footer">
         <span>
           <FiClock aria-hidden="true" />{" "}

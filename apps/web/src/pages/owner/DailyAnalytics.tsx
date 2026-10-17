@@ -19,35 +19,21 @@ export function DailyAnalytics({
   userId,
   shopId,
   today,
+  startDate: start,
+  endDate: end,
+  enabled = true,
 }: {
   userId: string;
   shopId: string;
   today: string;
+  startDate: string;
+  endDate: string;
+  enabled?: boolean;
 }) {
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const weekly = period === "weekly";
   const monthly = period === "monthly";
   const title = monthly ? "Monthly" : weekly ? "Weekly" : "Daily";
-  const [selection, setSelection] = useState<{
-    start: string;
-    end: string;
-  } | null>(null);
-  const currentWeek = salesWeeklyRange(today, today)?.weeks[0];
-  const currentMonth = salesMonthlyRange(today, today)?.months[0];
-  const { start, end } = selection ?? {
-    start:
-      monthly && currentMonth
-        ? currentMonth.monthStart
-        : weekly && currentWeek
-          ? currentWeek.weekStart
-          : today,
-    end:
-      monthly && currentMonth
-        ? currentMonth.monthEnd
-        : weekly && currentWeek
-          ? currentWeek.weekEnd
-          : today,
-  };
   const valid = !!(monthly
     ? salesMonthlyRange(start, end)
     : weekly
@@ -61,7 +47,7 @@ export function DailyAnalytics({
         : weekly
           ? await getWeeklyAnalytics(shopId, start, end, signal)
           : await getDailyAnalytics(shopId, start, end, signal),
-    enabled: valid,
+    enabled: enabled && valid,
     retry: false,
     gcTime: 0,
     networkMode: "always",
@@ -69,7 +55,7 @@ export function DailyAnalytics({
     refetchOnWindowFocus: (q) => !accessUnavailable(q.state.error),
     refetchOnReconnect: (q) => !accessUnavailable(q.state.error),
   });
-  const report = valid && query.isSuccess ? query.data : null;
+  const report = enabled && valid && query.isSuccess ? query.data : null;
   const denied = accessUnavailable(query.error);
   const rows =
     report &&
@@ -111,7 +97,7 @@ export function DailyAnalytics({
         </div>
         <button
           className="secondary-button"
-          disabled={!valid || query.isFetching}
+          disabled={!enabled || !valid || query.isFetching}
           onClick={() => void query.refetch()}
         >
           Refresh {period} analytics
@@ -145,39 +131,25 @@ export function DailyAnalytics({
             Monthly
           </button>
         </div>
-        <label>
-          Start date
-          <input
-            type="date"
-            value={start}
-            aria-describedby="daily-range-help"
-            aria-invalid={!valid}
-            onChange={(e) => setSelection({ start: e.target.value, end })}
-          />
-        </label>
-        <label>
-          End date
-          <input
-            type="date"
-            value={end}
-            aria-describedby="daily-range-help"
-            aria-invalid={!valid}
-            onChange={(e) => setSelection({ start, end: e.target.value })}
-          />
-        </label>
-        <button className="secondary-button" onClick={() => setSelection(null)}>
-          {monthly ? "Use this month" : weekly ? "Use this week" : "Use today"}
-        </button>
       </div>
-      {!valid && (
+      <p className="sales-range-help">
+        {start && end ? `${start} – ${end}. ` : ""}Uses the reporting period
+        selected above. Grouping does not change the dates.
+      </p>
+      {!enabled && (
+        <InlineMessage tone="info">
+          History will update when the selected sales report is available.
+        </InlineMessage>
+      )}
+      {enabled && !valid && (
         <InlineMessage>
           Choose valid start and end dates in order, spanning at most 366 days.
         </InlineMessage>
       )}
-      {valid && query.isPending && (
+      {enabled && valid && query.isPending && (
         <InlineMessage tone="info">Loading {period} analytics…</InlineMessage>
       )}
-      {valid && query.isError && (
+      {enabled && valid && query.isError && (
         <InlineMessage>
           {denied
             ? `Your access to this shop’s analytics is unavailable. Automatic refresh is paused; use Refresh ${period} analytics to retry.`

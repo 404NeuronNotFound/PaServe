@@ -177,7 +177,7 @@ const customReport = (startDate = "2026-10-15", endDate = "2026-10-17") => ({
     }),
   ],
 });
-it("starts with the overview and loads independent history only when opened", async () => {
+it("starts with the overview and loads shared-period history only when opened", async () => {
   setup();
   await screen.findByText("₱0.30", { selector: ".sales-amount" });
   expect(DailyAnalytics).not.toHaveBeenCalled();
@@ -192,6 +192,51 @@ it("starts with the overview and loads independent history only when opened", as
     "open",
   );
   expect(DailyAnalytics).toHaveBeenCalled();
+  expect(vi.mocked(DailyAnalytics).mock.calls.at(-1)?.[0]).toMatchObject({
+    startDate: "2026-10-16",
+    endDate: "2026-10-16",
+    enabled: true,
+  });
+});
+it("uses the one central picker for history, single-day cards and applied custom dates", async () => {
+  vi.mocked(getCustomSales).mockResolvedValue(customReport());
+  setup();
+  await screen.findByText("₱0.30", { selector: ".sales-amount" });
+  fireEvent.click(screen.getByRole("link", { name: "History" }));
+  fireEvent.change(screen.getByLabelText("Business date"), {
+    target: { value: "2026-10-14" },
+  });
+  await waitFor(() =>
+    expect(vi.mocked(DailyAnalytics).mock.calls.at(-1)?.[0]).toMatchObject({
+      startDate: "2026-10-14",
+      endDate: "2026-10-14",
+      enabled: true,
+    }),
+  );
+  expect(vi.mocked(SalesTrends).mock.calls.at(-1)?.[0]).toMatchObject({
+    startDate: "2026-10-14",
+    endDate: "2026-10-14",
+  });
+  chooseCustom();
+  expect(vi.mocked(DailyAnalytics).mock.calls.at(-1)?.[0]).toMatchObject({
+    enabled: false,
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Apply date range" }));
+  await screen.findByText("₱12.35", { selector: ".sales-amount" });
+  expect(vi.mocked(DailyAnalytics).mock.calls.at(-1)?.[0]).toMatchObject({
+    startDate: "2026-10-15",
+    endDate: "2026-10-17",
+    enabled: true,
+  });
+  expect(screen.getByRole("link", { name: "History" })).toBeVisible();
+  fireEvent.change(screen.getByLabelText("Start date"), {
+    target: { value: "2026-10-13" },
+  });
+  expect(vi.mocked(DailyAnalytics).mock.calls.at(-1)?.[0]).toMatchObject({
+    startDate: "2026-10-15",
+    endDate: "2026-10-17",
+    enabled: true,
+  });
 });
 it.each(["daily", "weekly", "monthly"])(
   "Refresh sales updates active %s history without refreshing another shop",
