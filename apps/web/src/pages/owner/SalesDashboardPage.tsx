@@ -30,6 +30,7 @@ import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./sales-dashboard.css";
+import { DailyAnalytics } from "./DailyAnalytics";
 
 const paymentLabels = {
   CASH: "Cash",
@@ -184,6 +185,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
           Refresh sales
         </button>
       </header>
+      <DailyAnalytics userId={userId} shopId={shopId} today={today} />
       <div className="sales-toolbar">
         <div className="sales-period">
           <FiCalendar aria-hidden="true" />

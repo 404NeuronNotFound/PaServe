@@ -27,6 +27,8 @@ import { api } from "../../lib/api/client";
 vi.mock("../../features/orders/daily-sales", () => ({
   getDailySales: vi.fn(),
 }));
+// Daily analytics has its own range, request, and error-state tests.
+vi.mock("./DailyAnalytics", () => ({ DailyAnalytics: () => null }));
 
 const breakdown = (totalSales = "0.30", orders = 2) =>
   SALES_PAYMENT_METHODS.map((paymentMethod) => ({

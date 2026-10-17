@@ -12,6 +12,96 @@
   color: var(--color-text);
   container: sales / inline-size;
 }
+.daily-analytics {
+  margin-bottom: 28px;
+  padding: clamp(16px, 3vw, 26px);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+.daily-analytics-heading,
+.daily-analytics-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.daily-analytics-heading > div {
+  flex: 1 1 260px;
+}
+.daily-analytics h2 {
+  margin: 0;
+  font:
+    400 28px/1.2 Georgia,
+    serif;
+}
+.daily-analytics-heading p:last-child {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.daily-analytics-controls {
+  justify-content: flex-start;
+  margin-block: 16px;
+}
+.daily-analytics-controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  flex: 1 1 160px;
+}
+.daily-analytics-controls input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  font: inherit;
+}
+.daily-analytics-controls button {
+  align-self: end;
+}
+.daily-analytics-summary {
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.daily-analytics-table {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+.daily-analytics table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.daily-analytics caption {
+  text-align: left;
+  color: var(--color-muted);
+  padding-block: 10px;
+  font-size: 12px;
+}
+.daily-analytics th,
+.daily-analytics td {
+  padding: 14px 12px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-border);
+}
+.daily-analytics tr > :first-child {
+  text-align: left;
+}
+.daily-analytics tfoot {
+  font-weight: 650;
+}
+.daily-analytics :focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 3px;
+}
 .sales-dashboard * {
   box-sizing: border-box;
 }

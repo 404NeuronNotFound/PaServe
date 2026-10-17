@@ -8,6 +8,8 @@ import {
   SHOP_ROLES,
   hasShopPermission,
   salesBusinessDayBounds,
+  salesDailyRange,
+  type DailyAnalyticsResponse,
   SALES_TIMEZONE,
   SALES_PAYMENT_METHODS,
   type RecentSalesOrder,
@@ -25,6 +27,96 @@ export const COMPLETED_SALES_ROLES = SHOP_ROLES.filter((role) =>
 @Injectable()
 export class CompletedSalesService {
   constructor(private readonly prisma: PrismaService) {}
+  async dailyAnalytics(
+    actorId: string,
+    shopId: string,
+    startDate: unknown,
+    endDate: unknown,
+  ): Promise<DailyAnalyticsResponse> {
+    const range = salesDailyRange(startDate, endDate);
+    if (!range)
+      throw new BadRequestException({
+        code: 'INVALID_SALES_PERIOD',
+        message:
+          'Choose valid start/end business dates in order, spanning at most 366 days.',
+      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const access = await tx.shop.findFirst({
+          where: shopAccessWhere(actorId, shopId, COMPLETED_SALES_ROLES),
+          select: { id: true },
+        });
+        if (!access)
+          throw new NotFoundException({
+            code: 'SHOP_NOT_ACCESSIBLE',
+            message: 'This shop is unavailable or you do not have access.',
+          });
+        // Aggregate item quantities per order before grouping, so item lines cannot
+        // multiply order counts or money. All reads share the access-check snapshot.
+        const rows = await tx.$queryRaw<
+          Array<{
+            businessDate: string;
+            completedOrders: bigint;
+            totalSales: Prisma.Decimal;
+            itemsSold: Prisma.Decimal;
+          }>
+        >`
+        SELECT to_char(o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD') AS "businessDate",
+          count(*) AS "completedOrders", sum(o."totalPrice") AS "totalSales",
+          sum(coalesce(items.quantity, 0)) AS "itemsSold"
+        FROM orders o
+        LEFT JOIN LATERAL (
+          SELECT sum(i.quantity) AS quantity FROM order_items i
+          WHERE i."shopId" = ${shopId} AND i."orderId" = o.id
+        ) items ON true
+        WHERE o."shopId" = ${shopId} AND o.status = 'CONFIRMED'
+          AND o."paymentStatus" = 'PAID' AND o."preparationStatus" = 'COMPLETED'
+          AND o."completedBy" IS NOT NULL AND o.currency = 'PHP'
+          AND o."completedAt" >= ${new Date(range.from)}
+          AND o."completedAt" < ${new Date(range.to)}
+        GROUP BY 1 ORDER BY 1
+      `;
+        const safeCount = (value: bigint | Prisma.Decimal) => {
+          const count = Number(value);
+          if (!Number.isSafeInteger(count) || count < 0)
+            throw new InternalServerErrorException(
+              'Daily analytics could not be calculated.',
+            );
+          return count;
+        };
+        const byDate = new Map(rows.map((row) => [row.businessDate, row]));
+        const days = range.dates.map((businessDate) => {
+          const row = byDate.get(businessDate);
+          return {
+            businessDate,
+            completedOrders: row ? safeCount(row.completedOrders) : 0,
+            totalSales: row ? row.totalSales.toFixed(2) : '0.00',
+            itemsSold: row ? safeCount(row.itemsSold) : 0,
+          };
+        });
+        return {
+          shopId,
+          startDate: startDate as string,
+          endDate: endDate as string,
+          timezone: SALES_TIMEZONE,
+          currency: 'PHP',
+          from: range.from,
+          to: range.to,
+          completedOrders: safeCount(
+            days.reduce((n, day) => n + BigInt(day.completedOrders), 0n),
+          ),
+          itemsSold: safeCount(
+            days.reduce((n, day) => n + BigInt(day.itemsSold), 0n),
+          ),
+          totalSales: days
+            .reduce((n, day) => n.plus(day.totalSales), new Prisma.Decimal(0))
+            .toFixed(2),
+          days,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
   async daily(
     actorId: string,
     shopId: string,

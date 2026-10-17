@@ -1233,6 +1233,33 @@ export function salesBusinessDayBounds(date: unknown): { from: string; to: strin
 }
 
 export const SALES_PAYMENT_METHODS = ["CASH", "GCASH_MANUAL", "CARD_MANUAL", "OTHER"] as const;
+/** Inclusive business dates, bounded to keep interactive reports predictable. */
+export function salesDailyRange(startDate: unknown, endDate: unknown) {
+  const start = salesBusinessDayBounds(startDate);
+  const end = salesBusinessDayBounds(endDate);
+  if (!start || !end) return null;
+  const days = (Date.parse(end.to) - Date.parse(start.from)) / 86_400_000;
+  if (days < 1 || days > 366) return null;
+  return {
+    from: start.from, to: end.to,
+    dates: Array.from({ length: days }, (_, i) =>
+      salesBusinessDate(new Date(Date.parse(start.from) + i * 86_400_000))),
+  };
+}
+export interface DailyAnalyticsRow {
+  businessDate: string;
+  completedOrders: number;
+  totalSales: string;
+  itemsSold: number;
+}
+export interface DailyAnalyticsResponse extends CompletedSalesResponse {
+  shopId: string;
+  startDate: string;
+  endDate: string;
+  timezone: typeof SALES_TIMEZONE;
+  itemsSold: number;
+  days: DailyAnalyticsRow[];
+}
 export interface PaymentBreakdownEntry {
   paymentMethod: (typeof SALES_PAYMENT_METHODS)[number];
   orders: number;

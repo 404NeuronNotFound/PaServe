@@ -380,6 +380,44 @@ try {
     (await sales.daily(actor.id, foreign.id, '2026-10-16')).totalSales,
     '900.00',
   );
+  const analytics = await sales.dailyAnalytics(actor.id, shop.id, '2026-10-15', '2026-10-18');
+  assert.equal(analytics.days.length, 4);
+  let rangeCents = 0n, rangeOrders = 0, rangeItems = 0;
+  for (const day of analytics.days) {
+    // Reconcile each analytics row directly to persisted eligible orders,
+    // independently of both reporting services and their date-bound helpers.
+    const underlying = await client.query(
+      `SELECT o.id, o."totalPrice"::text AS total,
+        (SELECT coalesce(sum(i.quantity), 0)::text FROM "${schema}".order_items i
+         WHERE i."shopId"=o."shopId" AND i."orderId"=o.id) AS units
+       FROM "${schema}".orders o WHERE o."shopId"=$1
+         AND o.status='CONFIRMED' AND o."paymentStatus"='PAID'
+         AND o."preparationStatus"='COMPLETED' AND o."completedBy" IS NOT NULL
+         AND o.currency='PHP'
+         AND ((o."completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila')::date=$2::date`,
+      [shop.id, day.businessDate],
+    );
+    const cents = underlying.rows.reduce((sum, row) => sum + BigInt(row.total.replace('.', '')), 0n);
+    const units = underlying.rows.reduce((sum, row) => sum + Number(row.units), 0);
+    assert.equal(BigInt(day.totalSales.replace('.', '')), cents, `${day.businessDate}: exact sales reconcile`);
+    assert.equal(day.completedOrders, underlying.rows.length, `${day.businessDate}: order count reconciles`);
+    assert.equal(day.itemsSold, units, `${day.businessDate}: quantities reconcile`);
+    rangeCents += cents;
+    rangeOrders += underlying.rows.length;
+    rangeItems += units;
+    const single = await sales.daily(actor.id, shop.id, day.businessDate);
+    assert.equal(day.totalSales, single.totalSales, 'Range daily sales match Phase 20');
+    assert.equal(day.completedOrders, single.completedOrders);
+    assert.equal(day.itemsSold, single.itemsSold);
+  }
+  assert.equal(BigInt(analytics.totalSales.replace('.', '')), rangeCents);
+  assert.equal(analytics.completedOrders, rangeOrders);
+  assert.equal(analytics.itemsSold, rangeItems);
+  assert.equal(analytics.days[3].totalSales, '0.00');
+  assert.equal(analytics.days[3].completedOrders, 0);
+  const foreignAnalytics = await sales.dailyAnalytics(actor.id, foreign.id, '2026-10-16', '2026-10-16');
+  assert.equal(foreignAnalytics.completedOrders, 1);
+  assert.equal(foreignAnalytics.totalSales, '900.00');
   await prisma.shopMember.update({
     where: { id: membership.id },
     data: { role: 'CASHIER' },
@@ -388,9 +426,20 @@ try {
     sales.daily(actor.id, shop.id, '2026-10-16'),
     (error) => error.getStatus() === 404,
   );
+  await assert.rejects(sales.dailyAnalytics(actor.id, shop.id, '2026-10-16', '2026-10-16'), (error) => error.getStatus() === 404);
   console.log(
     JSON.stringify({
       passed: true,
+      dailyAnalytics: {
+        criterion: 'Daily totals reconcile with underlying eligible orders',
+        passed: true,
+        startDate: analytics.startDate,
+        endDate: analytics.endDate,
+        days: analytics.days,
+        totalSales: analytics.totalSales,
+        completedOrders: analytics.completedOrders,
+        itemsSold: analytics.itemsSold,
+      },
       criterion: 'Metric matches filtered underlying orders',
       businessDate: '2026-10-16',
       timezone: report.timezone,

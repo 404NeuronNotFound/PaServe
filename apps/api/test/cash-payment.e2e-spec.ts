@@ -1552,6 +1552,39 @@ describe('Cash collection', () => {
     expect(aggregateOrders).not.toHaveBeenCalled();
     expect(aggregateItems).not.toHaveBeenCalled();
   });
+  it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)('serves daily range analytics for %s', async (reportRole) => {
+    role = reportRole;
+    raw.mockResolvedValueOnce([]);
+    const result = await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/daily-analytics`)
+      .query({ startDate: '2026-10-15', endDate: '2026-10-16' }).set('Authorization', 'Bearer session').expect(200);
+    expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.body.days).toEqual([
+      { businessDate: '2026-10-15', totalSales: '0.00', completedOrders: 0, itemsSold: 0 },
+      { businessDate: '2026-10-16', totalSales: '0.00', completedOrders: 0, itemsSold: 0 },
+    ]);
+  });
+  it.each(['CASHIER', 'KITCHEN'] as const)('denies daily analytics for %s', async (reportRole) => {
+    role = reportRole;
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/daily-analytics`)
+      .query({ startDate: '2026-10-15', endDate: '2026-10-16' }).set('Authorization', 'Bearer session').expect(403);
+    expect(raw).not.toHaveBeenCalled();
+  });
+  it('rejects invalid daily analytics queries and anonymous access', async () => {
+    role = 'OWNER';
+    const route = `/api/v1/shops/${shopId}/reports/daily-analytics`;
+    for (const query of [{}, { startDate: ['2026-10-15', '2026-10-16'], endDate: '2026-10-16' }, { startDate: '2026-10-17', endDate: '2026-10-16' }]) {
+      await request(app.getHttpServer()).get(route).query(query).set('Authorization', 'Bearer session').expect(400);
+    }
+    await request(app.getHttpServer()).get(route).query({ startDate: '2026-10-16', endDate: '2026-10-16' }).expect(401);
+    expect(raw).not.toHaveBeenCalled();
+  });
+  it('rejects access lost between the daily analytics guard and transaction', async () => {
+    role = 'OWNER';
+    transaction.mockImplementationOnce(async (work) => { role = 'CASHIER'; return work(database); });
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/daily-analytics`)
+      .query({ startDate: '2026-10-16', endDate: '2026-10-16' }).set('Authorization', 'Bearer session').expect(404);
+    expect(raw).not.toHaveBeenCalled();
+  });
   it('denies anonymous collection', async () => {
     await collect({}, shopId, false).expect(401);
     expect(transaction).not.toHaveBeenCalled();
