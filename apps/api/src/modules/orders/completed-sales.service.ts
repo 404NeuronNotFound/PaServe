@@ -25,6 +25,8 @@ import {
   type TopProductMetric,
   type PeakHoursResponse,
   type AveragePrepTimeResponse,
+  salesTrendRanges,
+  type SalesTrendsResponse,
 } from '@paserve/contracts';
 import { isISO8601 } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -37,6 +39,92 @@ export const COMPLETED_SALES_ROLES = SHOP_ROLES.filter((role) =>
 @Injectable()
 export class CompletedSalesService {
   constructor(private readonly prisma: PrismaService) {}
+  async salesTrends(
+    actorId: string,
+    shopId: string,
+    startDate: unknown,
+    endDate: unknown,
+  ): Promise<SalesTrendsResponse> {
+    const ranges = salesTrendRanges(startDate, endDate);
+    if (!ranges)
+      throw new BadRequestException({
+        code: 'INVALID_SALES_PERIOD',
+        message:
+          'Choose ordered dates spanning at most 366 days with a representable preceding period.',
+      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const access = await tx.shop.findFirst({
+          where: shopAccessWhere(actorId, shopId, COMPLETED_SALES_ROLES),
+          select: { id: true },
+        });
+        if (!access)
+          throw new NotFoundException({
+            code: 'SHOP_NOT_ACCESSIBLE',
+            message: 'This shop is unavailable or you do not have access.',
+          });
+        // One bounded aggregate over adjacent periods: no warehouse or per-day queries.
+        const rows = await tx.$queryRaw<
+          Array<{
+            businessDate: string;
+            completedOrders: bigint;
+            totalSales: Prisma.Decimal;
+          }>
+        >`
+        SELECT to_char(o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD') AS "businessDate",
+          count(*) AS "completedOrders", sum(o."totalPrice") AS "totalSales"
+        FROM orders o WHERE o."shopId" = ${shopId} AND o.status = 'CONFIRMED'
+          AND o."paymentStatus" = 'PAID' AND o."preparationStatus" = 'COMPLETED'
+          AND o."completedBy" IS NOT NULL AND o.currency = 'PHP'
+          AND o."completedAt" >= ${new Date(ranges.previous.from)}
+          AND o."completedAt" < ${new Date(ranges.current.to)}
+        GROUP BY 1 ORDER BY 1
+      `;
+        const safe = (value: bigint) => {
+          const result = Number(value);
+          if (!Number.isSafeInteger(result) || result < 0)
+            throw new InternalServerErrorException(
+              'Sales trends could not be calculated.',
+            );
+          return result;
+        };
+        const byDate = new Map(rows.map((row) => [row.businessDate, row]));
+        const period = (range: typeof ranges.current) => {
+          const days = range.dates.map((businessDate) => {
+            const row = byDate.get(businessDate);
+            return {
+              businessDate,
+              completedOrders: row ? safe(row.completedOrders) : 0,
+              totalSales: row ? row.totalSales.toFixed(2) : '0.00',
+            };
+          });
+          return {
+            startDate: range.dates[0],
+            endDate: range.dates.at(-1)!,
+            from: range.from,
+            to: range.to,
+            currency: 'PHP' as const,
+            completedOrders: safe(
+              days.reduce((n, day) => n + BigInt(day.completedOrders), 0n),
+            ),
+            totalSales: days
+              .reduce((n, day) => n.plus(day.totalSales), new Prisma.Decimal(0))
+              .toFixed(2),
+            days,
+          };
+        };
+        return {
+          shopId,
+          timezone: SALES_TIMEZONE,
+          currency: 'PHP',
+          comparisonBasis: 'PREVIOUS_EQUAL_PERIOD',
+          current: period(ranges.current),
+          previous: period(ranges.previous),
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
   async averagePrepTime(
     actorId: string,
     shopId: string,

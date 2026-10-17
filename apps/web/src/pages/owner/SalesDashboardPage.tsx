@@ -39,6 +39,7 @@ import { DailyAnalytics } from "./DailyAnalytics";
 import { TopProducts } from "./TopProducts";
 import { PeakHours } from "./PeakHours";
 import { AveragePrepTime } from "./AveragePrepTime";
+import { SalesTrends } from "./SalesTrends";
 
 const paymentLabels = {
   CASH: "Cash",
@@ -218,6 +219,9 @@ function SalesWorkspace({ userId }: { userId: string }) {
     });
     void queryClient.invalidateQueries({
       queryKey: ["average-prep-time", userId, shopId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["sales-trends", userId, shopId],
     });
   };
 
@@ -771,6 +775,14 @@ function SalesWorkspace({ userId }: { userId: string }) {
             </section>
           </div>
         </>
+      )}
+      {report && (
+        <SalesTrends
+          userId={userId}
+          shopId={shopId}
+          startDate={custom ? customRange!.start : date}
+          endDate={custom ? customRange!.end : date}
+        />
       )}
       {report && (
         <AveragePrepTime

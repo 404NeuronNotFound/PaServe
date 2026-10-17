@@ -25,6 +25,7 @@ import { getCustomSales } from "../../features/orders/custom-sales";
 import { TopProducts } from "./TopProducts";
 import { PeakHours } from "./PeakHours";
 import { AveragePrepTime } from "./AveragePrepTime";
+import { SalesTrends } from "./SalesTrends";
 import { SalesDashboardPage } from "./SalesDashboardPage";
 import { api } from "../../lib/api/client";
 
@@ -39,6 +40,7 @@ vi.mock("./DailyAnalytics", () => ({ DailyAnalytics: () => null }));
 vi.mock("./TopProducts", () => ({ TopProducts: vi.fn(() => null) }));
 vi.mock("./PeakHours", () => ({ PeakHours: vi.fn(() => null) }));
 vi.mock("./AveragePrepTime", () => ({ AveragePrepTime: vi.fn(() => null) }));
+vi.mock("./SalesTrends", () => ({ SalesTrends: vi.fn(() => null) }));
 
 const breakdown = (totalSales = "0.30", orders = 2) =>
   SALES_PAYMENT_METHODS.map((paymentMethod) => ({
@@ -237,6 +239,12 @@ it("applies one custom range to cards, payments and recent orders only after App
     endDate: "2026-10-17",
   });
   expect(vi.mocked(AveragePrepTime).mock.calls.at(-1)?.[0]).toMatchObject({
+    userId: "user-a",
+    shopId: "a",
+    startDate: "2026-10-15",
+    endDate: "2026-10-17",
+  });
+  expect(vi.mocked(SalesTrends).mock.calls.at(-1)?.[0]).toMatchObject({
     userId: "user-a",
     shopId: "a",
     startDate: "2026-10-15",

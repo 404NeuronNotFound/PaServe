@@ -10,6 +10,22 @@ import {
 @Controller('shops/:shopId/reports')
 export class CompletedSalesController {
   constructor(private readonly sales: CompletedSalesService) {}
+  @Get('sales-trends')
+  @Roles(...COMPLETED_SALES_ROLES)
+  salesTrends(
+    @Query('startDate') startDate: unknown,
+    @Query('endDate') endDate: unknown,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.sales.salesTrends(
+      request.user.id,
+      request.shopMembership.shopId,
+      startDate,
+      endDate,
+    );
+  }
   @Get('average-prep-time')
   @Roles(...COMPLETED_SALES_ROLES)
   averagePrepTime(

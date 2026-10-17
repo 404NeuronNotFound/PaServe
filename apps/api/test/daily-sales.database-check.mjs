@@ -17,7 +17,12 @@ const client = new pg.Client({
 const pool = new pg.Pool({
   connectionString: 'postgres://unused:unused@127.0.0.1:1/unused',
 });
-pool.query = (query) => client.query(query);
+let captureTrendQuery = false;
+let capturedTrendQuery;
+pool.query = (query) => {
+  if (captureTrendQuery && query.text?.includes('GROUP BY 1 ORDER BY 1')) capturedTrendQuery = query;
+  return client.query(query);
+};
 pool.connect = async () => {
   throw new Error('Only the rollback fixture connection may be used');
 };
@@ -690,6 +695,95 @@ try {
   assert.equal(paymentMixChecks[1].orders, 8); assert.equal(paymentMixChecks[1].sales, '100.00');
   assert.equal(paymentMixChecks[2].orders, 1); assert.equal(paymentMixChecks[2].sales, '0.00');
   assert.equal(paymentMixChecks[3].orders, 0);
+  await completed('2033-05-12T16:00:00.000Z','0.10');
+  await completed('2033-05-14T15:59:59.999Z','0.20');
+  await completed('2033-05-14T16:00:00.000Z','10.00');
+  await completed('2033-05-16T15:59:59.999Z','20.00');
+  await completed('2033-05-12T15:59:59.999Z','999.00');
+  await completed('2033-05-16T16:00:00.000Z','999.00');
+  await completed('2033-05-15T01:00:00.000Z','500.00',{shopId:foreign.id});
+  const trendChecks = [];
+  for (const [startDate,endDate] of [['2033-05-15','2033-05-16'],['2026-10-16','2026-10-16'],['2028-03-01','2028-03-01'],['2027-01-01','2027-01-01'],['2033-05-20','2033-05-21']]) {
+    const trend = await sales.salesTrends(actor.id,shop.id,startDate,endDate);
+    for (const key of ['current','previous']) {
+      const period=trend[key];
+      const source = await client.query(`SELECT to_char(o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila','YYYY-MM-DD') AS day,
+        o."totalPrice"::text AS total FROM orders o WHERE o."shopId"=$1 AND o.status='CONFIRMED' AND o."paymentStatus"='PAID'
+        AND o."preparationStatus"='COMPLETED' AND o."completedBy" IS NOT NULL AND o.currency='PHP'
+        AND (o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila')::date BETWEEN $2::date AND $3::date`,[shop.id,period.startDate,period.endDate]);
+      assert.equal(period.completedOrders,source.rows.length);
+      assert.equal(BigInt(period.totalSales.replace('.','')),source.rows.reduce((n,row)=>n+BigInt(row.total.replace('.','')),0n));
+      for (const day of period.days) {
+        const rows=source.rows.filter(row=>row.day===day.businessDate);
+        assert.equal(day.completedOrders,rows.length);
+        assert.equal(BigInt(day.totalSales.replace('.','')),rows.reduce((n,row)=>n+BigInt(row.total.replace('.','')),0n));
+      }
+    }
+    assert.equal(trend.current.days.length,trend.previous.days.length); assert.equal(trend.previous.to,trend.current.from);
+    trendChecks.push({startDate,endDate,currentSales:trend.current.totalSales,previousSales:trend.previous.totalSales,currentOrders:trend.current.completedOrders,previousOrders:trend.previous.completedOrders});
+  }
+  assert.deepEqual(trendChecks[0],{startDate:'2033-05-15',endDate:'2033-05-16',currentSales:'30.00',previousSales:'0.30',currentOrders:2,previousOrders:2});
+  assert.equal(trendChecks[4].currentSales,'0.00'); assert.equal(trendChecks[4].previousSales,'0.00');
+  const foreignTrend = await sales.salesTrends(actor.id,foreign.id,'2033-05-15','2033-05-16');
+  assert.equal(foreignTrend.current.totalSales,'500.00'); assert.equal(foreignTrend.current.completedOrders,1);
+  // Bounded MVP smoke benchmark in production-shaped private tables/indexes.
+  // Seed before relaxing any copied lifecycle constraints.
+  await client.query("SET LOCAL statement_timeout = '30s'");
+  for (let offset=0; offset<100000; offset+=5000) await client.query(`INSERT INTO orders SELECT (jsonb_populate_record(NULL::orders,
+    to_jsonb(template) || jsonb_build_object(
+      'id', gen_random_uuid()::text, 'requestId', gen_random_uuid()::text,
+      'paymentRequestId', gen_random_uuid()::text, 'orderNumber', 'ORD-' || (1000000 + g),
+      'shopId', CASE WHEN g <= 50000 THEN $2::text ELSE $3::text END,
+      'completedAt', timestamp '2034-01-01 04:00:00' + ((g - 1) % 50000 % 1098) * interval '1 day',
+      'totalPrice', (((g - 1) % 50000 % 10000) + 1)::numeric / 100,
+      'amountReceived', (((g - 1) % 50000 % 10000) + 1)::numeric / 100, 'changeDue', 0
+    ))).* FROM orders template CROSS JOIN generate_series($4::integer,$5::integer) g WHERE template.id=$1`,
+    [expected[0].id,shop.id,foreign.id,offset+1,offset+5000]);
+  await client.query('ANALYZE orders');
+  const benchmarkDays = new Map();
+  for (let index=0; index<50000; index++) {
+    const date = new Date(Date.UTC(2034,0,1) + (index % 1098) * 86400000).toISOString().slice(0,10);
+    const entry = benchmarkDays.get(date) ?? {orders:0,cents:0n};
+    entry.orders++; entry.cents += BigInt(index % 10000 + 1); benchmarkDays.set(date,entry);
+  }
+  const trendPerformance = [];
+  const budgetMs = 2000; // Local MVP smoke budget per service call, below 15s polling.
+  for (const [startDate,endDate] of [['2036-06-01','2036-06-01'],['2036-06-01','2036-06-30'],['2036-01-01','2036-12-31']]) {
+    const verify = report => {
+      for (const key of ['current','previous']) {
+        const period = report[key]; let orders=0,total=0n;
+        for (const day of period.days) {
+          const expectedDay = benchmarkDays.get(day.businessDate) ?? {orders:0,cents:0n};
+          assert.equal(day.completedOrders,expectedDay.orders);
+          assert.equal(BigInt(day.totalSales.replace('.','')),expectedDay.cents);
+          orders += expectedDay.orders; total += expectedDay.cents;
+        }
+        assert.equal(period.completedOrders,orders); assert.equal(BigInt(period.totalSales.replace('.','')),total);
+      }
+    };
+    captureTrendQuery = true;
+    const firstStarted = performance.now();
+    const first = await sales.salesTrends(actor.id,shop.id,startDate,endDate);
+    const firstMs = performance.now() - firstStarted;
+    captureTrendQuery = false;
+    verify(first);
+    const samples = [];
+    for (let index=0; index<5; index++) {
+      const started = performance.now();
+      const report = await sales.salesTrends(actor.id,shop.id,startDate,endDate);
+      samples.push(performance.now()-started); verify(report);
+    }
+    assert.ok(capturedTrendQuery, 'Capture the actual service SQL for EXPLAIN');
+    const planResult = await client.query({text:`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${capturedTrendQuery.text}`,values:capturedTrendQuery.values});
+    const plan = planResult.rows[0]['QUERY PLAN'][0];
+    const indexes = [];
+    const visit = node => { if (node['Index Name']) indexes.push(node['Index Name']); for (const child of node.Plans ?? []) visit(child); };
+    visit(plan.Plan);
+    const sorted = [...samples].sort((a,b)=>a-b), maxMs = Math.max(firstMs,...samples);
+    assert.ok(maxMs <= budgetMs, `Sales trends exceeded the ${budgetMs}ms MVP smoke budget: ${Math.round(maxMs)}ms`);
+    trendPerformance.push({startDate,endDate,daysPerPeriod:first.current.days.length,currentOrders:first.current.completedOrders,previousOrders:first.previous.completedOrders,
+      firstMs:Math.round(firstMs),medianMs:Math.round(sorted[2]),maxMs:Math.round(maxMs),sqlExecutionMs:plan['Execution Time'],indexes,responseBytes:Buffer.byteLength(JSON.stringify(first))});
+  }
   // Relax only the rollback copy to exercise legacy/corrupt timestamp pairs.
   // Production constraints remain intact.
   await client.query(`ALTER TABLE "${schema}".orders
@@ -766,9 +860,12 @@ try {
   await assert.rejects(sales.topProducts(actor.id, shop.id, '2029-01-15', '2029-01-15', 'QUANTITY'), (error) => error.getStatus() === 404);
   await assert.rejects(sales.peakHours(actor.id, shop.id, '2030-03-10', '2030-03-10'), (error) => error.getStatus() === 404);
   await assert.rejects(sales.averagePrepTime(actor.id, shop.id, '2032-04-01', '2032-04-01'), (error) => error.getStatus() === 404);
+  await assert.rejects(sales.salesTrends(actor.id,shop.id,'2033-05-15','2033-05-16'),error=>error.getStatus()===404);
   console.log(
     JSON.stringify({
       passed: true,
+      salesTrends: {passed:true,criterion:'Adjacent equal-length periods and daily points reconcile with detailed eligible orders in one reporting snapshot',checks:trendChecks,
+        performance:{passed:true,fixtureOrders:100000,shopOrders:50000,foreignOrders:50000,budgetMs,samplesPerRange:5,checks:trendPerformance,scope:'Sequential production-service calls in private rollback tables with copied production indexes; includes membership and aggregate, excludes HTTP/auth/transaction roundtrips and concurrent load'}},
       averagePrepTime: { passed: true, criterion: 'Preparing-to-ready duration uses valid timestamp pairs once per eligible order, with explicit missing/invalid coverage', checks: prepChecks },
       paymentMethods: { passed: true, criterion: 'Selected-period payment method counts and saved sales reconcile with detailed eligible orders, including zero-value and empty periods', checks: paymentMixChecks },
       peakHours: { passed: true, criterion: 'Eligible orders group by Manila completion hour and reconcile with detailed orders and the selected-period summary', checks: peakChecks },

@@ -1758,6 +1758,26 @@ describe('Cash collection', () => {
     await request(app.getHttpServer()).get(route).query(period).set('Authorization', 'Bearer session').expect(404);
     expect(raw).not.toHaveBeenCalled();
   });
+  it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)('serves sales trend comparisons for %s', async reportRole => {
+    role = reportRole;
+    raw.mockResolvedValueOnce([{businessDate:'2026-10-15',completedOrders:2n,totalSales:new Prisma.Decimal('30.00')}]);
+    const result = await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/sales-trends`).query({startDate:'2026-10-15',endDate:'2026-10-16'}).set('Authorization','Bearer session').expect(200);
+    expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.body).toMatchObject({shopId,comparisonBasis:'PREVIOUS_EQUAL_PERIOD',current:{startDate:'2026-10-15',endDate:'2026-10-16',completedOrders:2,totalSales:'30.00'},previous:{startDate:'2026-10-13',endDate:'2026-10-14',completedOrders:0,totalSales:'0.00'}});
+    expect(result.body.current.days).toHaveLength(2); expect(result.body.previous.days).toHaveLength(2);
+  });
+  it.each(['CASHIER','KITCHEN'] as const)('denies sales trends for %s',async reportRole => {
+    role=reportRole;
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/sales-trends`).query({startDate:'2026-10-15',endDate:'2026-10-16'}).set('Authorization','Bearer session').expect(403); expect(raw).not.toHaveBeenCalled();
+  });
+  it('validates trend periods and rejects anonymous, foreign and revoked access',async () => {
+    role='OWNER'; const route=`/api/v1/shops/${shopId}/reports/sales-trends`, period={startDate:'2026-10-15',endDate:'2026-10-16'};
+    for (const query of [{}, {...period,startDate:['2026-10-14','2026-10-15']}, {startDate:'0001-01-01',endDate:'0001-01-01'}, {...period,startDate:'2026-10-17'}, {startDate:'2026-01-01',endDate:'2027-01-02'}]) await request(app.getHttpServer()).get(route).query(query).set('Authorization','Bearer session').expect(400);
+    await request(app.getHttpServer()).get(route).query(period).expect(401);
+    await request(app.getHttpServer()).get('/api/v1/shops/55b18d73-f2fb-4fe6-bb1c-30cf385c3b24/reports/sales-trends').query(period).set('Authorization','Bearer session').expect(404);
+    transaction.mockImplementationOnce(async work => {role='CASHIER';return work(database);});
+    await request(app.getHttpServer()).get(route).query(period).set('Authorization','Bearer session').expect(404); expect(raw).not.toHaveBeenCalled();
+  });
   it('denies anonymous collection', async () => {
     await collect({}, shopId, false).expect(401);
     expect(transaction).not.toHaveBeenCalled();

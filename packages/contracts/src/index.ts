@@ -1252,6 +1252,34 @@ export interface DailyAnalyticsRow {
   totalSales: string;
   itemsSold: number;
 }
+/** Adjacent equal-length Manila date ranges; each range is limited to 366 days. */
+export function salesTrendRanges(startDate: unknown, endDate: unknown) {
+  const current = salesDailyRange(startDate, endDate);
+  if (!current) return null;
+  const start = Date.parse(current.from);
+  const previousStart = salesBusinessDate(new Date(start - current.dates.length * 86_400_000));
+  const previousEnd = salesBusinessDate(new Date(start - 86_400_000));
+  const previous = salesDailyRange(previousStart, previousEnd);
+  return previous ? { current, previous } : null;
+}
+export interface SalesTrendDay {
+  businessDate: string;
+  completedOrders: number;
+  totalSales: string;
+}
+export interface SalesTrendPeriod extends CompletedSalesResponse {
+  startDate: string;
+  endDate: string;
+  days: SalesTrendDay[];
+}
+export interface SalesTrendsResponse {
+  shopId: string;
+  timezone: typeof SALES_TIMEZONE;
+  currency: "PHP";
+  comparisonBasis: "PREVIOUS_EQUAL_PERIOD";
+  current: SalesTrendPeriod;
+  previous: SalesTrendPeriod;
+}
 export interface DailyAnalyticsResponse extends CompletedSalesResponse {
   shopId: string;
   startDate: string;
