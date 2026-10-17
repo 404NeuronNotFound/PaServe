@@ -12,6 +12,7 @@ import {
   listStaff,
   removeStaff,
   revokeInvitation,
+  setStaffAccess,
 } from "../../features/shops/api/staff";
 
 vi.mock("../../features/shops/api/staff", async (original) => ({
@@ -21,6 +22,7 @@ vi.mock("../../features/shops/api/staff", async (original) => ({
   changeStaffRole: vi.fn(),
   removeStaff: vi.fn(),
   revokeInvitation: vi.fn(),
+  setStaffAccess: vi.fn(),
 }));
 const data: ShopStaffResponse = {
   shopId: "shop-a",
@@ -30,6 +32,7 @@ const data: ShopStaffResponse = {
       userId: "owner",
       email: "owner@example.com",
       role: "OWNER",
+      isEnabled: true,
       isActive: true,
     },
     {
@@ -37,6 +40,7 @@ const data: ShopStaffResponse = {
       userId: "staff",
       email: "staff@example.com",
       role: "CASHIER",
+      isEnabled: true,
       isActive: true,
     },
   ],
@@ -184,6 +188,95 @@ it("requires confirmation before removing staff and preserves the owner", async 
   ).not.toBeInTheDocument();
 });
 
+it("confirms suspension and keeps the member's account and role", async () => {
+  vi.mocked(setStaffAccess).mockImplementation(async () => {
+    vi.mocked(listStaff).mockResolvedValue({
+      ...data,
+      members: data.members.map((member) =>
+        member.id === "staff-member" ? { ...member, isEnabled: false } : member,
+      ),
+    });
+  });
+  const user = setup();
+  await user.click(await screen.findByRole("button", { name: "Disable" }));
+  const dialog = screen.getByRole("dialog", { name: "Disable shop access?" });
+  expect(dialog).toHaveTextContent(
+    /Their account, role, history, and other shop memberships are kept/,
+  );
+  expect(setStaffAccess).not.toHaveBeenCalled();
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(setStaffAccess).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Disable" }));
+  await user.click(screen.getByRole("button", { name: "Disable access" }));
+  expect(setStaffAccess).toHaveBeenCalledExactlyOnceWith(
+    "shop-a",
+    "staff-member",
+    { isEnabled: false },
+  );
+  expect(
+    await screen.findByText("Disabled", { exact: true }),
+  ).toBeInTheDocument();
+  const team = screen.getByRole("region", { name: "Shop members" });
+  expect(within(team).getByText("staff@example.com")).toBeInTheDocument();
+  expect(
+    within(team).getByText("cashier", { exact: true }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Enable" })).toBeInTheDocument();
+  expect(removeStaff).not.toHaveBeenCalled();
+  expect(changeStaffRole).not.toHaveBeenCalled();
+});
+
+it("enables suspended membership without treating account inactivity as shop suspension", async () => {
+  const disabledData = {
+    ...data,
+    members: data.members.map((member) =>
+      member.id === "staff-member"
+        ? { ...member, isEnabled: false, isActive: false }
+        : member,
+    ),
+  };
+  vi.mocked(listStaff).mockResolvedValue(disabledData);
+  vi.mocked(setStaffAccess).mockImplementation(async () => {
+    vi.mocked(listStaff).mockResolvedValue({
+      ...disabledData,
+      members: disabledData.members.map((member) => ({
+        ...member,
+        isEnabled: true,
+      })),
+    });
+  });
+  const user = setup();
+  await user.click(await screen.findByRole("button", { name: "Enable" }));
+  const dialog = screen.getByRole("dialog", { name: "Enable shop access?" });
+  expect(dialog).toHaveTextContent(/Their account must also be active/);
+  await user.click(
+    within(dialog).getByRole("button", { name: "Enable access" }),
+  );
+  expect(setStaffAccess).toHaveBeenCalledWith("shop-a", "staff-member", {
+    isEnabled: true,
+  });
+  expect(
+    await screen.findByRole("button", { name: "Disable" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/account inactive/)).toBeInTheDocument();
+});
+
+it("shows a suspension failure in the dialog and leaves current access displayed", async () => {
+  vi.mocked(setStaffAccess).mockRejectedValue(new Error("offline"));
+  const user = setup();
+  await user.click(await screen.findByRole("button", { name: "Disable" }));
+  await user.click(screen.getByRole("button", { name: "Disable access" }));
+  expect(
+    await screen.findByText(/Unable to complete this action/),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("dialog", { name: "Disable shop access?" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText("Disabled", { exact: true }),
+  ).not.toBeInTheDocument();
+});
+
 it("displays and protects the sole owner without removal or role controls", async () => {
   vi.mocked(listStaff).mockResolvedValue({
     ...data,
@@ -195,6 +288,12 @@ it("displays and protects the sole owner without removal or role controls", asyn
   const badge = within(team).getByText("Owner", { exact: true });
   expect(badge).toHaveAccessibleDescription(/Owner memberships are protected/);
   expect(within(team).queryByRole("combobox")).not.toBeInTheDocument();
+  expect(
+    within(team).queryByRole("button", { name: "Disable" }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(team).queryByRole("button", { name: "Enable" }),
+  ).not.toBeInTheDocument();
   expect(
     within(team).queryByRole("button", { name: "Remove" }),
   ).not.toBeInTheDocument();

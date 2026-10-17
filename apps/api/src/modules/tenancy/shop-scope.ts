@@ -26,6 +26,7 @@ export function shopAccessWhere(
     members: {
       some: {
         userId,
+        disabledAt: null,
         ...(roles
           ? { role: roles.length === 1 ? roles[0] : { in: [...roles] } }
           : {}),

@@ -196,10 +196,12 @@ model OrderItem {
 }
 
 model ShopMember {
+  // Preserve the SQL owner-enabled CHECK in future migrations.
   id        String   @id @default(uuid())
   userId    String
   shopId    String
   role      ShopRole
+  disabledAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

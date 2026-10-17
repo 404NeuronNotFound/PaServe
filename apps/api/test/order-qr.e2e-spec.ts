@@ -221,6 +221,7 @@ describe('Cashier order QR verification', () => {
       isActive: true,
       members: {
         some: {
+          disabledAt: null,
           userId,
           role: { in: ['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] },
           user: { isActive: true },
@@ -325,7 +326,13 @@ describe('Cashier order QR verification', () => {
     await verify(token).expect(403);
   });
   it('returns saved public shop details without copying unrelated snapshot fields', async () => {
-    const details = { name: 'Original Cafe', address: '12 Old Street', phone: '09171234567', contactEmail: null, website: null };
+    const details = {
+      name: 'Original Cafe',
+      address: '12 Old Street',
+      phone: '09171234567',
+      contactEmail: null,
+      website: null,
+    };
     persisted.shopDetailsSnapshot = { ...details, internalField: 'private' };
     const result = await verify().expect(200);
     expect(result.body.order.shopDetails).toEqual(details);
@@ -333,7 +340,10 @@ describe('Cashier order QR verification', () => {
   });
   it('returns a controlled receipt error instead of 500 for malformed saved shop details', async () => {
     persisted.shopDetailsSnapshot = { name: 42 };
-    for (const result of [await verify().expect(400), await scan().expect(400)]) {
+    for (const result of [
+      await verify().expect(400),
+      await scan().expect(400),
+    ]) {
       expect(result.body.code).toBe('RECEIPT_SHOP_DETAILS_UNAVAILABLE');
     }
     expect(updateOrder).not.toHaveBeenCalled();
@@ -362,6 +372,7 @@ describe('Cashier order QR verification', () => {
             shop: expect.objectContaining({
               members: {
                 some: {
+                  disabledAt: null,
                   userId,
                   role: { in: ['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] },
                   user: { isActive: true },
@@ -494,6 +505,7 @@ describe('Cashier order QR verification', () => {
               isActive: true,
               members: {
                 some: {
+                  disabledAt: null,
                   userId,
                   role: { in: ['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] },
                   user: { isActive: true },

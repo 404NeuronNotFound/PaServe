@@ -16,7 +16,11 @@ import {
 import { Prisma, type StaffInvitation } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
-import type { InviteStaffDto, StaffRoleDto } from './staff.dto.js';
+import type {
+  InviteStaffDto,
+  StaffRoleDto,
+  StaffAccessDto,
+} from './staff.dto.js';
 
 const hash = (token: string) =>
   createHash('sha256').update(token).digest('hex');
@@ -140,6 +144,7 @@ export class StaffService {
           id: true,
           userId: true,
           role: true,
+          disabledAt: true,
           user: { select: { email: true, isActive: true } },
         },
         orderBy: { createdAt: 'asc' },
@@ -151,7 +156,11 @@ export class StaffService {
       });
       return {
         shopId,
-        members: members.map(({ user, ...member }) => ({ ...member, ...user })),
+        members: members.map(({ user, disabledAt, ...member }) => ({
+          ...member,
+          ...user,
+          isEnabled: disabledAt == null,
+        })),
         invitations: invitations.map(invitationResponse),
       };
     });
@@ -290,6 +299,60 @@ export class StaffService {
           targetUserId: member.userId,
           previousRole: member.role,
           role: dto.role,
+        },
+      });
+    });
+  }
+
+  async setAccess(
+    actorId: string,
+    shopId: string,
+    memberId: string,
+    dto: StaffAccessDto,
+  ) {
+    this.id(memberId);
+    if (typeof dto.isEnabled !== 'boolean')
+      throw new BadRequestException({
+        code: 'INVALID_STAFF_ACCESS',
+        message: 'Choose whether shop access is enabled.',
+      });
+    return this.transaction(async (tx) => {
+      await this.owner(tx, actorId, shopId);
+      const member = await tx.shopMember.findFirst({
+        where: { id: memberId, shopId },
+        include: { user: { select: { email: true } } },
+      });
+      if (!member)
+        throw new NotFoundException({
+          code: 'MEMBER_UNAVAILABLE',
+          message: 'This staff member is unavailable.',
+        });
+      if (member.role === 'OWNER' || member.userId === actorId)
+        throw new ForbiddenException({
+          code: 'OWNER_PROTECTED',
+          message:
+            'Owner membership cannot be suspended through staff management.',
+        });
+      if ((member.disabledAt == null) === dto.isEnabled) return;
+      const result = await tx.shopMember.updateMany({
+        where: {
+          id: memberId,
+          shopId,
+          role: member.role,
+          disabledAt: member.disabledAt ?? null,
+          shop: shopAccessWhere(actorId, shopId, ['OWNER']),
+        },
+        data: { disabledAt: dto.isEnabled ? null : new Date() },
+      });
+      if (result.count !== 1) throw changed();
+      await tx.staffAuditEvent.create({
+        data: {
+          shopId,
+          actorId,
+          action: dto.isEnabled ? 'ENABLED' : 'DISABLED',
+          targetEmail: member.user.email,
+          targetUserId: member.userId,
+          role: member.role,
         },
       });
     });

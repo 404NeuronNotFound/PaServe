@@ -1,10 +1,21 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsIn, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 import { STAFF_ROLES, type StaffRole } from '@paserve/contracts';
 
 export class StaffRoleDto {
   @IsIn(STAFF_ROLES)
   role!: StaffRole;
+}
+export class StaffAccessDto {
+  @IsBoolean()
+  isEnabled!: boolean;
 }
 export class InviteStaffDto extends StaffRoleDto {
   @Transform(({ value }: { value: unknown }) =>

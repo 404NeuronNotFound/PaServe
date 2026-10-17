@@ -99,7 +99,12 @@ describe('shop banner upload', () => {
           isActive: true,
           bannerUrl: shop.bannerUrl,
           members: {
-            some: { userId, role: 'OWNER', user: { isActive: true } },
+            some: {
+              disabledAt: null,
+              userId,
+              role: 'OWNER',
+              user: { isActive: true },
+            },
           },
         },
         data: { bannerUrl: uploaded.bannerUrl },

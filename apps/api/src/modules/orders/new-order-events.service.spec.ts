@@ -2,7 +2,8 @@ import { EventEmitter } from 'node:events';
 import type { Response } from 'express';
 import type { ConfigService } from '@nestjs/config';
 import type { AuthService } from '../auth/auth.service.js';
-import type { ShopMembersService } from '../shop-members/shop-members.service.js';
+import { ShopMembersService } from '../shop-members/shop-members.service.js';
+import type { ShopMembersRepository } from '../shop-members/shop-members.repository.js';
 import { NewOrderEventsService } from './new-order-events.service.js';
 
 const fake = vi.hoisted(() => ({ create: vi.fn() }));
@@ -166,6 +167,50 @@ describe('New order staff subscriptions', () => {
     expect(stream.end).toHaveBeenCalledOnce();
     expect(client.removeChannel).toHaveBeenCalledWith(channel);
   });
+
+  it.each(['event', 'heartbeat'])(
+    'closes a suspended membership stream on the next %s using live membership checks',
+    async (trigger) => {
+      const shopId = '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e';
+      const record = {
+        id: 'm',
+        shopId,
+        role: 'KITCHEN',
+        disabledAt: null as Date | null,
+        user: { isActive: true },
+        shop: { id: shopId, name: 'Cafe', slug: 'cafe', isActive: true },
+      };
+      const repository = { findMembership: vi.fn(async () => record) };
+      const liveMembers = new ShopMembersService(
+        repository as unknown as ShopMembersRepository,
+      );
+      const stream = new Stream();
+      await service.relay(
+        `staff:preparation:${shopId}`,
+        'order_ready',
+        { shopId },
+        () =>
+          liveMembers.requirePermission(
+            'actor-a',
+            shopId,
+            'shop.preparation.queue.read',
+          ),
+        stream as unknown as Response,
+      );
+      await flush();
+      stream.write.mockClear();
+      record.disabledAt = new Date();
+      if (trigger === 'event') {
+        broadcast({
+          event: 'order_ready',
+          payload: { shopId, orderId: 'order-a' },
+        });
+        await flush();
+      } else await vi.advanceTimersByTimeAsync(15_000);
+      expect(stream.write).not.toHaveBeenCalled();
+      expect(stream.end).toHaveBeenCalledOnce();
+    },
+  );
   it.each(['order_ready', 'order_completed'])(
     'relays %s only for the correct scope and rechecks access before delivery',
     async (event) => {

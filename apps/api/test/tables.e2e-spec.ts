@@ -86,6 +86,7 @@ describe('tenant-scoped table creation', () => {
             isActive: true,
             members: {
               some: {
+                disabledAt: null,
                 userId,
                 role: { in: ['OWNER', 'ADMIN'] },
                 user: { isActive: true },
@@ -147,24 +148,29 @@ describe('tenant-scoped table creation', () => {
     expect(response.body.code).toBe('VALIDATION_ERROR');
     expect(update).not.toHaveBeenCalled();
   });
-  it.each(['12', 'A3', 'Patio 4', '012', '露台 4', 'x'.repeat(40), '🍽'.repeat(40)])(
-    'stores and returns the human-facing label %s',
-    async (number) => {
-      update.mockImplementation(async ({ data }) => ({
-        tables: [{ ...table, ...data.tables.create }],
-      }));
-      const response = await post({ number }).expect(201);
-      expect(response.body.table.number).toBe(number);
-      const saved = update.mock.calls[0][0].data.tables.create;
-      expect(saved.number).toBe(number);
-      expect(saved.code).toMatch(TABLE_CODE_PATTERN);
-      expect(saved.code).not.toBe(`T${number}`);
-      expect(saved.code).not.toBe(response.body.table.id);
-      expect(publicTablePath('cafe', saved.code)).toBe(
-        `/cafe/table/${saved.code}`,
-      );
-    },
-  );
+  it.each([
+    '12',
+    'A3',
+    'Patio 4',
+    '012',
+    '露台 4',
+    'x'.repeat(40),
+    '🍽'.repeat(40),
+  ])('stores and returns the human-facing label %s', async (number) => {
+    update.mockImplementation(async ({ data }) => ({
+      tables: [{ ...table, ...data.tables.create }],
+    }));
+    const response = await post({ number }).expect(201);
+    expect(response.body.table.number).toBe(number);
+    const saved = update.mock.calls[0][0].data.tables.create;
+    expect(saved.number).toBe(number);
+    expect(saved.code).toMatch(TABLE_CODE_PATTERN);
+    expect(saved.code).not.toBe(`T${number}`);
+    expect(saved.code).not.toBe(response.body.table.id);
+    expect(publicTablePath('cafe', saved.code)).toBe(
+      `/cafe/table/${saved.code}`,
+    );
+  });
   it('normalizes spaces while preserving the displayed label', async () => {
     update.mockImplementation(async ({ data }) => ({
       tables: [{ ...table, ...data.tables.create }],

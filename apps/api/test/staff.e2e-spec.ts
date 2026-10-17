@@ -136,6 +136,7 @@ describe('Owner staff invitations through HTTP', () => {
     ['post', '/invitations'],
     ['delete', `/invitations/${resourceId}`],
     ['patch', `/members/${resourceId}`],
+    ['patch', `/members/${resourceId}/access`],
     ['delete', `/members/${resourceId}`],
   ] as const;
   it.each(['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'] as const)(
@@ -635,6 +636,153 @@ describe('Owner staff invitations through HTTP', () => {
     expect(tx.staffInvitation.updateMany).toHaveBeenCalledWith({
       where: { id: resourceId, shopId, acceptedAt: null, revokedAt: null },
       data: { revokedAt: expect.any(Date) },
+    });
+  });
+
+  it.each([false, true])(
+    'sets shop membership access to %s and audits it without deleting membership',
+    async (isEnabled) => {
+      const disabledAt = isEnabled ? new Date('2026-10-10') : null;
+      tx.shopMember.findFirst.mockResolvedValue({
+        userId,
+        role: 'CASHIER',
+        disabledAt,
+        user: { email: invite.email },
+      });
+      await owner()
+        .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}/access`)
+        .set('Authorization', 'Bearer owner')
+        .send({ isEnabled })
+        .expect(204);
+      expect(tx.shopMember.updateMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          id: resourceId,
+          shopId,
+          role: 'CASHIER',
+          disabledAt,
+        }),
+        data: { disabledAt: isEnabled ? null : expect.any(Date) },
+      });
+      expect(tx.staffAuditEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          shopId,
+          actorId: ownerId,
+          targetUserId: userId,
+          role: 'CASHIER',
+          action: isEnabled ? 'ENABLED' : 'DISABLED',
+        }),
+      });
+      expect(tx.shopMember.deleteMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([false, true])(
+    'protects OWNER membership from an access change (%s)',
+    async (isEnabled) => {
+      tx.shopMember.findFirst.mockResolvedValue({
+        userId: ownerId,
+        role: 'OWNER',
+        disabledAt: null,
+        user: { email: 'owner@example.com' },
+      });
+      const response = await owner()
+        .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}/access`)
+        .set('Authorization', 'Bearer owner')
+        .send({ isEnabled })
+        .expect(403);
+      expect(response.body.code).toBe('OWNER_PROTECTED');
+      expect(tx.shopMember.updateMany).not.toHaveBeenCalled();
+      expect(tx.staffAuditEvent.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { isEnabled: 'false' },
+    { isEnabled: 0 },
+    {},
+    { isEnabled: false, isActive: false },
+  ])('rejects invalid access payload %j', async (body) => {
+    await owner()
+      .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}/access`)
+      .set('Authorization', 'Bearer owner')
+      .send(body)
+      .expect(400);
+    expect(tx.shopMember.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('does not audit a repeated access setting', async () => {
+    tx.shopMember.findFirst.mockResolvedValue({
+      userId,
+      role: 'CASHIER',
+      disabledAt: null,
+      user: { email: invite.email },
+    });
+    await owner()
+      .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}/access`)
+      .set('Authorization', 'Bearer owner')
+      .send({ isEnabled: true })
+      .expect(204);
+    expect(tx.shopMember.updateMany).not.toHaveBeenCalled();
+    expect(tx.staffAuditEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('denies membership access changes if the owner lost live access after the guard', async () => {
+    tx.shop.findFirst.mockResolvedValue(null);
+    await owner()
+      .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}/access`)
+      .set('Authorization', 'Bearer owner')
+      .send({ isEnabled: false })
+      .expect(403);
+    expect(tx.shopMember.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('does not audit a conflicting access change', async () => {
+    tx.shopMember.findFirst.mockResolvedValue({
+      userId,
+      role: 'CASHIER',
+      disabledAt: null,
+      user: { email: invite.email },
+    });
+    tx.shopMember.updateMany.mockResolvedValue({ count: 0 });
+    await owner()
+      .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}/access`)
+      .set('Authorization', 'Bearer owner')
+      .send({ isEnabled: false })
+      .expect(409);
+    expect(tx.staffAuditEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects access changes targeting another shop membership', async () => {
+    tx.shopMember.findFirst.mockResolvedValue(null);
+    await owner()
+      .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}/access`)
+      .set('Authorization', 'Bearer owner')
+      .send({ isEnabled: false })
+      .expect(404);
+    expect(tx.shopMember.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: resourceId, shopId } }),
+    );
+    expect(tx.shopMember.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes account activity from membership access in the staff list', async () => {
+    tx.shopMember.findMany.mockResolvedValue([
+      {
+        id: resourceId,
+        userId,
+        role: 'CASHIER',
+        disabledAt: new Date(),
+        user: { email: invite.email, isActive: true },
+      },
+    ]);
+    const response = await owner()
+      .get(`/api/v1/shops/${shopId}/staff`)
+      .set('Authorization', 'Bearer owner')
+      .expect(200);
+    expect(response.body.members[0]).toMatchObject({
+      isEnabled: false,
+      isActive: true,
+      role: 'CASHIER',
     });
   });
 

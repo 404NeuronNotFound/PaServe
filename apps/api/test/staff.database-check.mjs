@@ -9,6 +9,7 @@ import { StaffService } from '../dist/modules/staff/staff.service.js';
 import { TenantResourcesRepository } from '../dist/modules/tenancy/tenant-resources.repository.js';
 import { ShopMembersRepository } from '../dist/modules/shop-members/shop-members.repository.js';
 import { ShopMembersService } from '../dist/modules/shop-members/shop-members.service.js';
+import { AuthRepository } from '../dist/modules/auth/auth.repository.js';
 import {
   SHOP_OPERATIONAL_PERMISSIONS,
   SHOP_CASHIER_PERMISSIONS,
@@ -38,6 +39,10 @@ try {
   await setup.query(`CREATE TABLE ${q('shops')} (
     "id" TEXT PRIMARY KEY, "name" TEXT NOT NULL, "slug" TEXT UNIQUE NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true, "logoUrl" TEXT)`);
+  await setup.query(`CREATE TABLE ${q('auth_sessions')} (
+    "id" TEXT PRIMARY KEY, "userId" TEXT NOT NULL REFERENCES ${q('users')}(id),
+    "refreshTokenHash" TEXT NOT NULL, "expiresAt" TIMESTAMP(3) NOT NULL,
+    "revokedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
   await setup.query(`CREATE TABLE ${q('shop_members')} (
     "id" TEXT PRIMARY KEY, "userId" TEXT NOT NULL REFERENCES ${q('users')}(id),
     "shopId" TEXT NOT NULL REFERENCES ${q('shops')}(id), "role" ${q('ShopRole')} NOT NULL,
@@ -57,6 +62,20 @@ try {
       .replace(
         /"(shops|staff_invitations|staff_audit_events|ShopRole)"/g,
         (_match, name) => q(name),
+      ),
+  );
+  const suspensionSql = await readFile(
+    new URL(
+      '../prisma/migrations/20261017170000_shop_member_suspension/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await setup.query(
+    suspensionSql
+      .replace(/^\s*(BEGIN|COMMIT);\s*$/gm, '')
+      .replace(/"(shop_members|staff_audit_events)"/g, (_match, name) =>
+        q(name),
       ),
   );
   const ownerId = randomUUID();
@@ -382,6 +401,136 @@ try {
       ['CASHIER', 'KITCHEN'],
     ],
   );
+  const accounts = new AuthRepository(prisma);
+  const sessionId = randomUUID();
+  await accounts.createSession(
+    sessionId,
+    userId,
+    'unchanged-session',
+    new Date(Date.now() + 60_000),
+  );
+  const originalUser = await prisma.user.findUnique({ where: { id: userId } });
+  const originalMember = await prisma.shopMember.findUnique({
+    where: { id: member.id },
+  });
+  await staff.setAccess(ownerId, shopId, member.id, { isEnabled: false });
+  const suspendedMember = await prisma.shopMember.findUnique({
+    where: { id: member.id },
+  });
+  assert.ok(suspendedMember.disabledAt instanceof Date);
+  assert.equal(suspendedMember.role, originalMember.role);
+  assert.equal(suspendedMember.id, originalMember.id);
+  assert.deepEqual(
+    await prisma.user.findUnique({ where: { id: userId } }),
+    originalUser,
+  );
+  const currentSession = await accounts.findSession(sessionId, userId);
+  assert.ok(currentSession);
+  assert.deepEqual(
+    currentSession.user.memberships.map(({ shopId: id }) => id),
+    [otherShop],
+  );
+  await assert.rejects(access.requireMembership(userId, shopId), {
+    status: 404,
+  });
+  for (const permission of [
+    ...SHOP_CASHIER_PERMISSIONS,
+    ...SHOP_KITCHEN_PERMISSIONS,
+    ...SHOP_OPERATIONAL_PERMISSIONS,
+  ])
+    await assert.rejects(access.requirePermission(userId, shopId, permission), {
+      status: 404,
+    });
+  await access.requirePermission(userId, otherShop, 'shop.payments.record');
+  assert.equal(
+    (await staff.list(ownerId, shopId)).members.find(
+      ({ id }) => id === member.id,
+    ).isEnabled,
+    false,
+  );
+  await assert.rejects(
+    staff.invite(ownerId, shopId, {
+      email: originalUser.email,
+      role: 'CASHIER',
+    }),
+    { status: 409 },
+  );
+  await assert.rejects(staff.accept(userId, shopId, invitation.token), {
+    status: 404,
+  });
+  const suspensionAuditCount = await prisma.staffAuditEvent.count({
+    where: { shopId, action: 'DISABLED' },
+  });
+  await staff.setAccess(ownerId, shopId, member.id, { isEnabled: false });
+  assert.equal(
+    await prisma.staffAuditEvent.count({
+      where: { shopId, action: 'DISABLED' },
+    }),
+    suspensionAuditCount,
+  );
+  await assert.rejects(
+    staff.setAccess(ownerId, shopId, ownerMembership.id, { isEnabled: false }),
+    { status: 403 },
+  );
+  await assert.rejects(
+    prisma.shopMember.update({
+      where: { id: ownerMembership.id },
+      data: { disabledAt: new Date() },
+    }),
+  );
+  await setup.query(
+    `ALTER TABLE ${q('staff_audit_events')} ADD CONSTRAINT test_enable_audit_failure CHECK (action <> 'ENABLED') NOT VALID`,
+  );
+  await assert.rejects(
+    staff.setAccess(ownerId, shopId, member.id, { isEnabled: true }),
+  );
+  assert.ok(
+    (await prisma.shopMember.findUnique({ where: { id: member.id } }))
+      .disabledAt,
+  );
+  await setup.query(
+    `ALTER TABLE ${q('staff_audit_events')} DROP CONSTRAINT test_enable_audit_failure`,
+  );
+  await staff.setAccess(ownerId, shopId, member.id, { isEnabled: true });
+  assert.equal(
+    (
+      await access.requirePermission(
+        userId,
+        shopId,
+        'shop.preparation.queue.read',
+      )
+    ).id,
+    member.id,
+  );
+  assert.equal(
+    (await prisma.shopMember.findUnique({ where: { id: otherMembership.id } }))
+      .role,
+    'CASHIER',
+  );
+  assert.deepEqual(
+    await prisma.user.findUnique({ where: { id: userId } }),
+    originalUser,
+  );
+  assert.equal(
+    (await accounts.findSession(sessionId, userId)).user.memberships.length,
+    2,
+  );
+  const accessAudits = await prisma.staffAuditEvent.findMany({
+    where: { shopId, action: { in: ['DISABLED', 'ENABLED'] } },
+    orderBy: { createdAt: 'asc' },
+  });
+  assert.deepEqual(
+    accessAudits.map(({ action, actorId, targetUserId, role }) => [
+      action,
+      actorId,
+      targetUserId,
+      role,
+    ]),
+    [
+      ['DISABLED', ownerId, userId, 'KITCHEN'],
+      ['ENABLED', ownerId, userId, 'KITCHEN'],
+    ],
+  );
   await assert.rejects(staff.list(userId, shopId), { status: 403 });
   const resources = new TenantResourcesRepository(prisma);
   assert.equal(
@@ -477,7 +626,7 @@ try {
     });
   }
   console.log(
-    'Passed: migration, invitations, tenant isolation, concurrent acceptance, owner protection, all staff-role assignments, kitchen/barista and counter separation, live permission removal, audit rollback and RLS.',
+    'Passed: migrations, invitations, tenant isolation, role permissions, membership disable/enable, account/session preservation, hidden suspended shops, owner protection, audit rollback and RLS.',
   );
 } finally {
   if (prisma) await prisma.$disconnect();

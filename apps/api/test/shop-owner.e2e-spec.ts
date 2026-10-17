@@ -138,6 +138,7 @@ describe('Owner-only shop updates', () => {
             id: shopA,
             members: {
               some: {
+                disabledAt: null,
                 userId,
                 role: 'OWNER',
                 user: { isActive: true },
@@ -324,7 +325,12 @@ describe('Owner-only shop updates', () => {
           id: shopA,
           isActive: true,
           members: {
-            some: { userId, role: 'OWNER', user: { isActive: true } },
+            some: {
+              disabledAt: null,
+              userId,
+              role: 'OWNER',
+              user: { isActive: true },
+            },
           },
         },
         data: { name: 'New Cafe', description: 'Fresh coffee' },
@@ -350,7 +356,12 @@ describe('Owner-only shop updates', () => {
           id: shopA,
           isActive: true,
           members: {
-            some: { userId, role: 'OWNER', user: { isActive: true } },
+            some: {
+              disabledAt: null,
+              userId,
+              role: 'OWNER',
+              user: { isActive: true },
+            },
           },
         },
       }),

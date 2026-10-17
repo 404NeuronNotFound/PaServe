@@ -111,6 +111,7 @@ describe('category editing and deletion', () => {
             isActive: true,
             members: {
               some: {
+                disabledAt: null,
                 userId,
                 role: { in: ['OWNER', 'ADMIN', 'MANAGER'] },
                 user: { isActive: true },
@@ -197,6 +198,7 @@ describe('category editing and deletion', () => {
             isActive: true,
             members: {
               some: {
+                disabledAt: null,
                 userId,
                 role: { in: ['OWNER', 'ADMIN', 'MANAGER'] },
                 user: { isActive: true },
@@ -272,6 +274,7 @@ describe('category editing and deletion', () => {
               id: shopId,
               members: {
                 some: {
+                  disabledAt: null,
                   userId,
                   role: { in: ['OWNER', 'ADMIN', 'MANAGER'] },
                   user: { isActive: true },

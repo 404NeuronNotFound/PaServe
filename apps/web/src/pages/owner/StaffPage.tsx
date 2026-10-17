@@ -30,6 +30,7 @@ import {
   removeStaff,
   revokeInvitation,
   staffInvitationLink,
+  setStaffAccess,
 } from "../../features/shops/api/staff";
 import { SelectField } from "../../components/forms/SelectField";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
@@ -51,7 +52,7 @@ function errorMessage(error: unknown) {
     : "Unable to complete this action. Check your connection and try again.";
 }
 type Decision = {
-  kind: "role" | "remove" | "revoke";
+  kind: "role" | "remove" | "revoke" | "enable" | "disable";
   id: string;
   email: string;
   role?: StaffRole;
@@ -294,6 +295,25 @@ function StaffWorkspace({ userId }: { userId: string }) {
     decision?.kind === "role"
       ? roleDecisionCopy(decision, membership.shop.name)
       : null;
+  const accessDecision =
+    decision?.kind === "enable" || decision?.kind === "disable"
+      ? {
+          title:
+            decision.kind === "enable"
+              ? "Enable shop access?"
+              : "Disable shop access?",
+          description:
+            decision.kind === "enable"
+              ? `${decision.email} will regain access to ${membership.shop.name} with their saved role. Their account must also be active.`
+              : `${decision.email} will lose access to ${membership.shop.name} until re-enabled. Their account, role, history, and other shop memberships are kept.`,
+          confirmLabel:
+            decision.kind === "enable" ? "Enable access" : "Disable access",
+          success:
+            decision.kind === "enable"
+              ? "Shop access enabled."
+              : "Shop access disabled.",
+        }
+      : null;
   return (
     <section className="shop-context-content staff-workspace">
       <header className="staff-heading">
@@ -328,8 +348,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
             </header>
             <p id="staff-owner-protection" className="staff-owner-protection">
               <FiLock aria-hidden="true" />
-              Owner memberships are protected. They cannot be removed or have
-              their role changed here, so the shop keeps its owner.
+              Owner memberships are protected. They cannot be disabled, removed,
+              or have their role changed here, so the shop keeps its owner.
             </p>
             <div className="staff-search">
               <FiSearch aria-hidden="true" />
@@ -374,6 +394,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                           : member.role.toLowerCase()}
                         {!member.isActive ? " · account inactive" : ""}
                       </span>
+                      <span>{member.isEnabled ? "Enabled" : "Disabled"}</span>
                     </div>
                   </div>
                   {member.role === "OWNER" ? (
@@ -385,6 +406,19 @@ function StaffWorkspace({ userId }: { userId: string }) {
                     </span>
                   ) : (
                     <div className="staff-actions">
+                      <button
+                        className="secondary-button"
+                        disabled={busy}
+                        onClick={() =>
+                          setDecision({
+                            kind: member.isEnabled ? "disable" : "enable",
+                            id: member.id,
+                            email: member.email,
+                          })
+                        }
+                      >
+                        {member.isEnabled ? "Disable" : "Enable"}
+                      </button>
                       <SelectField
                         id={`role-${member.id}`}
                         label={`Role for ${member.email}`}
@@ -602,39 +636,55 @@ function StaffWorkspace({ userId }: { userId: string }) {
       <DecisionDialog
         open={Boolean(decision)}
         title={
-          roleDecision
-            ? roleDecision.title
-            : decision?.kind === "remove"
-              ? "Remove staff access?"
-              : "Revoke invitation?"
+          accessDecision
+            ? accessDecision.title
+            : roleDecision
+              ? roleDecision.title
+              : decision?.kind === "remove"
+                ? "Remove staff access?"
+                : "Revoke invitation?"
         }
         description={
-          roleDecision
-            ? roleDecision.description
-            : decision?.kind === "remove"
-              ? `${decision.email} will lose access to this shop. Their account and other shop memberships remain available.`
-              : `The invitation for ${decision?.email} will stop working.`
+          accessDecision
+            ? accessDecision.description
+            : roleDecision
+              ? roleDecision.description
+              : decision?.kind === "remove"
+                ? `${decision.email} will lose access to this shop. Their account and other shop memberships remain available.`
+                : `The invitation for ${decision?.email} will stop working.`
         }
         confirmLabel={
-          roleDecision
-            ? roleDecision.confirmLabel
-            : decision?.kind === "remove"
-              ? "Remove access"
-              : "Revoke invitation"
+          accessDecision
+            ? accessDecision.confirmLabel
+            : roleDecision
+              ? roleDecision.confirmLabel
+              : decision?.kind === "remove"
+                ? "Remove access"
+                : "Revoke invitation"
         }
-        destructive={decision?.kind !== "role"}
+        destructive={
+          decision?.kind === "remove" ||
+          decision?.kind === "revoke" ||
+          decision?.kind === "disable"
+        }
         onClose={() => setDecision(null)}
         errorMessage={errorMessage}
         onConfirm={async () => {
           if (!decision) return;
           await run(
             () =>
-              decision.kind === "role"
-                ? changeStaffRole(shopId, decision.id, decision.role!)
-                : decision.kind === "remove"
-                  ? removeStaff(shopId, decision.id)
-                  : revokeInvitation(shopId, decision.id),
-            roleDecision?.success ?? "Staff access updated.",
+              decision.kind === "enable" || decision.kind === "disable"
+                ? setStaffAccess(shopId, decision.id, {
+                    isEnabled: decision.kind === "enable",
+                  })
+                : decision.kind === "role"
+                  ? changeStaffRole(shopId, decision.id, decision.role!)
+                  : decision.kind === "remove"
+                    ? removeStaff(shopId, decision.id)
+                    : revokeInvitation(shopId, decision.id),
+            accessDecision?.success ??
+              roleDecision?.success ??
+              "Staff access updated.",
           );
         }}
       />

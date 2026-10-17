@@ -24,6 +24,7 @@ import {
   InvitationTokenDto,
   InviteStaffDto,
   StaffRoleDto,
+  StaffAccessDto,
 } from './staff.dto.js';
 
 @Controller('shops/:shopId/staff')
@@ -70,6 +71,20 @@ export class StaffController {
     @Req() request: ShopMemberRequest,
   ) {
     return this.staff.changeRole(
+      request.user.id,
+      request.shopMembership.shopId,
+      id,
+      dto,
+    );
+  }
+  @Patch('members/:memberId/access')
+  @HttpCode(204)
+  setAccess(
+    @Param('memberId') id: string,
+    @Body() dto: StaffAccessDto,
+    @Req() request: ShopMemberRequest,
+  ) {
+    return this.staff.setAccess(
       request.user.id,
       request.shopMembership.shopId,
       id,

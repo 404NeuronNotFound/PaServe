@@ -87,6 +87,7 @@ describe('RolesGuard HTTP enforcement', () => {
   let present: boolean;
   let userActive: boolean;
   let shopActive: boolean;
+  let disabledAt: Date | null;
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       imports: [AppModule, AuthModule, ShopMembersModule],
@@ -110,6 +111,7 @@ describe('RolesGuard HTTP enforcement', () => {
     present = true;
     userActive = true;
     shopActive = true;
+    disabledAt = null;
     currentUser.mockImplementation(async (token: string) => {
       if (token === 'revoked') throw invalidSession();
       return { id: userId, memberships: [{ shopId, role: 'OWNER' }] };
@@ -125,6 +127,7 @@ describe('RolesGuard HTTP enforcement', () => {
           return null;
         return {
           id: 'live-member',
+          disabledAt,
           shopId,
           role,
           user: { isActive: userActive },
@@ -142,6 +145,22 @@ describe('RolesGuard HTTP enforcement', () => {
     request(app.getHttpServer())
       .get(`/api/v1/roles-test/${target}/${action}`)
       .set('Authorization', `Bearer ${token}`);
+
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'] as const)(
+    'denies suspended %s across business routes despite cached owner claims',
+    async (suspendedRole) => {
+      role = suspendedRole;
+      disabledAt = new Date();
+      for (const route of [
+        'administration',
+        'daily',
+        'counter',
+        'preparation',
+        'cashier-only',
+      ])
+        await get(route).expect(404);
+    },
+  );
 
   it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'] as const)(
     'enforces the route matrix for %s',

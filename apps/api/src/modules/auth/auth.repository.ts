@@ -61,6 +61,7 @@ export class AuthRepository {
             firstName: true,
             lastName: true,
             memberships: {
+              where: { disabledAt: null },
               orderBy: { id: 'asc' },
               select: {
                 id: true,

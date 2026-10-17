@@ -115,6 +115,7 @@ describe('Daily gross sales', () => {
           members: {
             some: {
               userId: actorId,
+              disabledAt: null,
               role: { in: ['OWNER', 'ADMIN', 'MANAGER'] },
               user: { isActive: true },
             },
@@ -217,6 +218,7 @@ describe('Daily gross sales', () => {
         members: {
           some: {
             userId: actorId,
+            disabledAt: null,
             role: { in: ['OWNER', 'ADMIN', 'MANAGER'] },
             user: { isActive: true },
           },

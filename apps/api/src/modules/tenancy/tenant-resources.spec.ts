@@ -131,7 +131,13 @@ describe('tenant resource isolation', () => {
                 shop: {
                   id: shopId,
                   isActive: true,
-                  members: { some: { userId, user: { isActive: true } } },
+                  members: {
+                    some: {
+                      userId,
+                      disabledAt: null,
+                      user: { isActive: true },
+                    },
+                  },
                 },
               },
         select: { id: true, shopId: true },

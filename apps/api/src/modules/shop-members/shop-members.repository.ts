@@ -12,6 +12,7 @@ export class ShopMembersRepository {
         id: true,
         shopId: true,
         role: true,
+        disabledAt: true,
         user: { select: { isActive: true } },
         shop: {
           select: {

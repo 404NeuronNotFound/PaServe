@@ -5,6 +5,7 @@ import type {
   ShopStaffResponse,
   StaffRole,
   StaffInvitationPreview,
+  UpdateStaffAccessRequest,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
@@ -42,6 +43,16 @@ export async function changeStaffRole(
 }
 export async function removeStaff(shopId: string, id: string) {
   await api.delete(`${base(shopId)}/members/${encodeURIComponent(id)}`);
+}
+export async function setStaffAccess(
+  shopId: string,
+  id: string,
+  input: UpdateStaffAccessRequest,
+) {
+  await api.patch(
+    `${base(shopId)}/members/${encodeURIComponent(id)}/access`,
+    input,
+  );
 }
 export async function acceptInvitation(shopId: string, token: string) {
   const { data } = await api.post<AcceptStaffInvitationResponse>(

@@ -405,6 +405,7 @@ describe('Cashier order decisions', () => {
         shop: expect.objectContaining({
           members: {
             some: {
+              disabledAt: null,
               userId,
               role: { in: ['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] },
               user: { isActive: true },

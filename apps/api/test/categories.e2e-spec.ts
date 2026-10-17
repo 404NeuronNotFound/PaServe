@@ -84,6 +84,7 @@ describe('tenant-scoped category creation', () => {
             isActive: true,
             members: {
               some: {
+                disabledAt: null,
                 userId,
                 role: { in: ['OWNER', 'ADMIN', 'MANAGER'] },
                 user: { isActive: true },

@@ -94,7 +94,12 @@ describe('shop logo upload', () => {
           isActive: true,
           logoUrl: shop.logoUrl,
           members: {
-            some: { userId, role: 'OWNER', user: { isActive: true } },
+            some: {
+              disabledAt: null,
+              userId,
+              role: 'OWNER',
+              user: { isActive: true },
+            },
           },
         },
         data: { logoUrl: uploaded.logoUrl },

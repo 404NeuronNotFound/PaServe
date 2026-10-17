@@ -74,7 +74,12 @@ export class ShopMembersService {
         message: 'Enter a valid shop identifier.',
       });
     const membership = await this.repository.findMembership(userId, shopId);
-    if (!membership || !membership.user.isActive || !membership.shop.isActive) {
+    if (
+      !membership ||
+      membership.disabledAt ||
+      !membership.user.isActive ||
+      !membership.shop.isActive
+    ) {
       // The same response prevents nonmembers from discovering other shops.
       throw new NotFoundException({
         code: 'SHOP_NOT_ACCESSIBLE',

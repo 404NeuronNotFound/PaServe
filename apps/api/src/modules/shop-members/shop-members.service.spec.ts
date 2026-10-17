@@ -81,6 +81,7 @@ describe('ShopMembersService', () => {
 
   it.each([
     null,
+    { ...record, disabledAt: new Date() },
     { ...record, shop: { ...record.shop, isActive: false } },
     { ...record, user: { ...record.user, isActive: false } },
   ])(
