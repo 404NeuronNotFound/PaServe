@@ -10,7 +10,8 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getDailyAnalytics } from "../../features/orders/daily-analytics";
 import { getWeeklyAnalytics } from "../../features/orders/weekly-analytics";
-import { salesWeeklyRange } from "@paserve/contracts";
+import { getMonthlyAnalytics } from "../../features/orders/monthly-analytics";
+import { salesWeeklyRange, salesMonthlyRange } from "@paserve/contracts";
 import { DailyAnalytics } from "./DailyAnalytics";
 
 vi.mock("../../features/orders/daily-analytics", () => ({
@@ -18,6 +19,9 @@ vi.mock("../../features/orders/daily-analytics", () => ({
 }));
 vi.mock("../../features/orders/weekly-analytics", () => ({
   getWeeklyAnalytics: vi.fn(),
+}));
+vi.mock("../../features/orders/monthly-analytics", () => ({
+  getMonthlyAnalytics: vi.fn(),
 }));
 afterEach(() => {
   cleanup();
@@ -121,6 +125,113 @@ it("shows zero days in an empty period", async () => {
   expect(screen.getByRole("table")).toHaveTextContent(
     "2026-10-16 (in progress)",
   );
+});
+const monthlyData = () => ({
+  ...data,
+  startDate: "2026-10-01",
+  endDate: "2026-10-31",
+  from: "2026-09-30T16:00:00.000Z",
+  to: "2026-10-31T16:00:00.000Z",
+  aggregation: "CALENDAR_MONTH" as const,
+  months: [
+    {
+      ...salesMonthlyRange("2026-10-01", "2026-10-31")!.months[0],
+      totalSales: "10.01",
+      completedOrders: 3,
+      itemsSold: 7,
+    },
+  ],
+});
+it("defaults Monthly to the calendar month and preserves selected dates when switching", async () => {
+  vi.mocked(getDailyAnalytics).mockResolvedValue(data);
+  vi.mocked(getMonthlyAnalytics).mockResolvedValue(monthlyData());
+  setup();
+  await screen.findByRole("table");
+  fireEvent.click(screen.getByRole("button", { name: "Monthly" }));
+  expect(
+    await screen.findByRole("region", { name: "Monthly performance table" }),
+  ).toHaveTextContent("2026-10 (2026-10-01 – 2026-10-31) (in progress)");
+  expect(screen.getByLabelText("Start date")).toHaveValue("2026-10-01");
+  expect(screen.getByLabelText("End date")).toHaveValue("2026-10-31");
+  expect(getMonthlyAnalytics).toHaveBeenLastCalledWith(
+    "shop",
+    "2026-10-01",
+    "2026-10-31",
+    expect.any(AbortSignal),
+  );
+  fireEvent.change(screen.getByLabelText("Start date"), {
+    target: { value: "2026-10-14" },
+  });
+  await waitFor(() =>
+    expect(getMonthlyAnalytics).toHaveBeenLastCalledWith(
+      "shop",
+      "2026-10-14",
+      "2026-10-31",
+      expect.any(AbortSignal),
+    ),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Daily" }));
+  expect(screen.getByLabelText("Start date")).toHaveValue("2026-10-14");
+  fireEvent.click(screen.getByRole("button", { name: "Monthly" }));
+  fireEvent.click(screen.getByRole("button", { name: "Use this month" }));
+  expect(screen.getByLabelText("Start date")).toHaveValue("2026-10-01");
+});
+it("shows a partial monthly summary and hides results on refresh failure", async () => {
+  vi.mocked(getDailyAnalytics).mockResolvedValue(data);
+  vi.mocked(getMonthlyAnalytics).mockResolvedValue({
+    ...monthlyData(),
+    startDate: "2026-10-16",
+    endDate: "2026-10-16",
+    months: [
+      {
+        ...monthlyData().months[0],
+        fromDate: "2026-10-16",
+        toDate: "2026-10-16",
+        partial: true,
+      },
+    ],
+  });
+  setup();
+  await screen.findByRole("table");
+  fireEvent.change(screen.getByLabelText("Start date"), {
+    target: { value: "2026-10-16" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Monthly" }));
+  expect(await screen.findByRole("table")).toHaveTextContent(
+    "partial: 2026-10-16 – 2026-10-16",
+  );
+  vi.mocked(getMonthlyAnalytics).mockRejectedValueOnce(new Error("Offline"));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Refresh monthly analytics" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "couldn’t refresh monthly analytics",
+  );
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+});
+it("advances default months on Manila date rollover but retains historical selections", async () => {
+  vi.mocked(getDailyAnalytics).mockResolvedValue(data);
+  vi.mocked(getMonthlyAnalytics).mockResolvedValue(monthlyData());
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const view = (today: string) => (
+    <QueryClientProvider client={client}>
+      <DailyAnalytics userId="user" shopId="shop" today={today} />
+    </QueryClientProvider>
+  );
+  const { rerender } = render(view("2026-10-31"));
+  fireEvent.click(screen.getByRole("button", { name: "Monthly" }));
+  await screen.findByRole("table");
+  rerender(view("2026-11-01"));
+  expect(screen.getByLabelText("Start date")).toHaveValue("2026-11-01");
+  expect(screen.getByLabelText("End date")).toHaveValue("2026-11-30");
+  fireEvent.change(screen.getByLabelText("Start date"), {
+    target: { value: "2026-10-15" },
+  });
+  rerender(view("2026-12-01"));
+  expect(screen.getByLabelText("Start date")).toHaveValue("2026-10-15");
+  expect(screen.getByLabelText("End date")).toHaveValue("2026-11-30");
 });
 const weeklyData = () => ({
   ...data,

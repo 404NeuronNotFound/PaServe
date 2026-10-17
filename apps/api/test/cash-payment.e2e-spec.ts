@@ -1616,6 +1616,37 @@ describe('Cash collection', () => {
     await request(app.getHttpServer()).get(route).query(period).set('Authorization', 'Bearer session').expect(404);
     expect(raw).not.toHaveBeenCalled();
   });
+  it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)('serves calendar-month analytics for %s', async (reportRole) => {
+    role = reportRole;
+    raw.mockResolvedValueOnce([]);
+    const result = await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/monthly-analytics`)
+      .query({ startDate: '2028-02-29', endDate: '2028-03-01' }).set('Authorization', 'Bearer session').expect(200);
+    expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.body.aggregation).toBe('CALENDAR_MONTH');
+    expect(result.body.months).toEqual([
+      { month: '2028-02', monthStart: '2028-02-01', monthEnd: '2028-02-29', fromDate: '2028-02-29', toDate: '2028-02-29', partial: true, totalSales: '0.00', completedOrders: 0, itemsSold: 0 },
+      { month: '2028-03', monthStart: '2028-03-01', monthEnd: '2028-03-31', fromDate: '2028-03-01', toDate: '2028-03-01', partial: true, totalSales: '0.00', completedOrders: 0, itemsSold: 0 },
+    ]);
+  });
+  it.each(['CASHIER', 'KITCHEN'] as const)('denies monthly analytics for %s', async (reportRole) => {
+    role = reportRole;
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/monthly-analytics`)
+      .query({ startDate: '2026-10-01', endDate: '2026-10-31' }).set('Authorization', 'Bearer session').expect(403);
+    expect(raw).not.toHaveBeenCalled();
+  });
+  it('rejects invalid monthly queries, anonymous, foreign-shop and revoked access', async () => {
+    role = 'OWNER';
+    const route = `/api/v1/shops/${shopId}/reports/monthly-analytics`;
+    const period = { startDate: '2026-10-01', endDate: '2026-10-31' };
+    for (const query of [{}, { startDate: ['2026-10-01', '2026-10-02'], endDate: '2026-10-31' }, { startDate: '2026-11-01', endDate: '2026-10-31' }, { startDate: '2026-01-01', endDate: '2027-01-02' }, { startDate: '2026-02-29', endDate: '2026-03-01' }]) {
+      await request(app.getHttpServer()).get(route).query(query).set('Authorization', 'Bearer session').expect(400);
+    }
+    await request(app.getHttpServer()).get(route).query(period).expect(401);
+    await request(app.getHttpServer()).get('/api/v1/shops/55b18d73-f2fb-4fe6-bb1c-30cf385c3b24/reports/monthly-analytics').query(period).set('Authorization', 'Bearer session').expect(404);
+    transaction.mockImplementationOnce(async (work) => { role = 'CASHIER'; return work(database); });
+    await request(app.getHttpServer()).get(route).query(period).set('Authorization', 'Bearer session').expect(404);
+    expect(raw).not.toHaveBeenCalled();
+  });
   it('denies anonymous collection', async () => {
     await collect({}, shopId, false).expect(401);
     expect(transaction).not.toHaveBeenCalled();

@@ -1,9 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { salesDailyRange, salesWeeklyRange } from "@paserve/contracts";
+import {
+  salesDailyRange,
+  salesWeeklyRange,
+  salesMonthlyRange,
+} from "@paserve/contracts";
 import { getDailyAnalytics } from "../../features/orders/daily-analytics";
 import { getWeeklyAnalytics } from "../../features/orders/weekly-analytics";
+import { getMonthlyAnalytics } from "../../features/orders/monthly-analytics";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 
@@ -19,27 +24,43 @@ export function DailyAnalytics({
   shopId: string;
   today: string;
 }) {
-  const [period, setPeriod] = useState<"daily" | "weekly">("daily");
+  const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const weekly = period === "weekly";
-  const title = weekly ? "Weekly" : "Daily";
+  const monthly = period === "monthly";
+  const title = monthly ? "Monthly" : weekly ? "Weekly" : "Daily";
   const [selection, setSelection] = useState<{
     start: string;
     end: string;
   } | null>(null);
   const currentWeek = salesWeeklyRange(today, today)?.weeks[0];
+  const currentMonth = salesMonthlyRange(today, today)?.months[0];
   const { start, end } = selection ?? {
-    start: weekly && currentWeek ? currentWeek.weekStart : today,
-    end: weekly && currentWeek ? currentWeek.weekEnd : today,
+    start:
+      monthly && currentMonth
+        ? currentMonth.monthStart
+        : weekly && currentWeek
+          ? currentWeek.weekStart
+          : today,
+    end:
+      monthly && currentMonth
+        ? currentMonth.monthEnd
+        : weekly && currentWeek
+          ? currentWeek.weekEnd
+          : today,
   };
-  const valid = !!(weekly
-    ? salesWeeklyRange(start, end)
-    : salesDailyRange(start, end));
+  const valid = !!(monthly
+    ? salesMonthlyRange(start, end)
+    : weekly
+      ? salesWeeklyRange(start, end)
+      : salesDailyRange(start, end));
   const query = useQuery({
     queryKey: [`${period}-analytics`, userId, shopId, start, end],
     queryFn: async ({ signal }) =>
-      weekly
-        ? await getWeeklyAnalytics(shopId, start, end, signal)
-        : await getDailyAnalytics(shopId, start, end, signal),
+      monthly
+        ? await getMonthlyAnalytics(shopId, start, end, signal)
+        : weekly
+          ? await getWeeklyAnalytics(shopId, start, end, signal)
+          : await getDailyAnalytics(shopId, start, end, signal),
     enabled: valid,
     retry: false,
     gcTime: 0,
@@ -52,17 +73,23 @@ export function DailyAnalytics({
   const denied = accessUnavailable(query.error);
   const rows =
     report &&
-    ("weeks" in report
-      ? report.weeks.map((week) => ({
-          ...week,
-          key: week.weekStart,
-          label: `${week.weekStart} – ${week.weekEnd}${week.partial ? ` (partial: ${week.fromDate} – ${week.toDate})` : ""}${week.fromDate <= today && week.toDate >= today ? " (in progress)" : ""}`,
+    ("months" in report
+      ? report.months.map((month) => ({
+          ...month,
+          key: month.month,
+          label: `${month.month} (${month.monthStart} – ${month.monthEnd})${month.partial ? ` (partial: ${month.fromDate} – ${month.toDate})` : ""}${month.fromDate <= today && month.toDate >= today ? " (in progress)" : ""}`,
         }))
-      : report.days.map((day) => ({
-          ...day,
-          key: day.businessDate,
-          label: `${day.businessDate}${day.businessDate === today ? " (in progress)" : ""}`,
-        })));
+      : "weeks" in report
+        ? report.weeks.map((week) => ({
+            ...week,
+            key: week.weekStart,
+            label: `${week.weekStart} – ${week.weekEnd}${week.partial ? ` (partial: ${week.fromDate} – ${week.toDate})` : ""}${week.fromDate <= today && week.toDate >= today ? " (in progress)" : ""}`,
+          }))
+        : report.days.map((day) => ({
+            ...day,
+            key: day.businessDate,
+            label: `${day.businessDate}${day.businessDate === today ? " (in progress)" : ""}`,
+          })));
   return (
     <section
       className="daily-analytics"
@@ -73,9 +100,11 @@ export function DailyAnalytics({
           <p className="sales-eyebrow">ANALYTICS / {title.toUpperCase()}</p>
           <h2 id="daily-analytics-title">{title} performance</h2>
           <p id="daily-range-help">
-            {weekly
-              ? "Monday–Sunday weeks in Manila (UTC+8). Partial weeks count only selected dates."
-              : "One row per business day in Manila (UTC+8)."}{" "}
+            {monthly
+              ? "Calendar months in Manila (UTC+8), from the first day through the last day. Partial months count only selected dates."
+              : weekly
+                ? "Monday–Sunday weeks in Manila (UTC+8). Partial weeks count only selected dates."
+                : "One row per business day in Manila (UTC+8)."}{" "}
             Both dates are included; maximum 366 days. Sales count confirmed,
             paid, completed orders by completion date.
           </p>
@@ -96,7 +125,7 @@ export function DailyAnalytics({
         >
           <button
             className="secondary-button"
-            aria-pressed={!weekly}
+            aria-pressed={period === "daily"}
             onClick={() => setPeriod("daily")}
           >
             Daily
@@ -107,6 +136,13 @@ export function DailyAnalytics({
             onClick={() => setPeriod("weekly")}
           >
             Weekly
+          </button>
+          <button
+            className="secondary-button"
+            aria-pressed={monthly}
+            onClick={() => setPeriod("monthly")}
+          >
+            Monthly
           </button>
         </div>
         <label>
@@ -130,7 +166,7 @@ export function DailyAnalytics({
           />
         </label>
         <button className="secondary-button" onClick={() => setSelection(null)}>
-          {weekly ? "Use this week" : "Use today"}
+          {monthly ? "Use this month" : weekly ? "Use this week" : "Use today"}
         </button>
       </div>
       {!valid && (
@@ -157,8 +193,8 @@ export function DailyAnalytics({
           </p>
           {report.completedOrders === 0 && (
             <InlineMessage tone="info">
-              No completed sales in this range. All {weekly ? "weeks" : "days"}{" "}
-              are shown below.
+              No completed sales in this range. All{" "}
+              {monthly ? "months" : weekly ? "weeks" : "days"} are shown below.
             </InlineMessage>
           )}
           <div
@@ -170,7 +206,11 @@ export function DailyAnalytics({
             <table>
               <caption>
                 {title} aggregation by completion date
-                {weekly ? "; weeks run Monday–Sunday" : ""}
+                {monthly
+                  ? "; calendar months"
+                  : weekly
+                    ? "; weeks run Monday–Sunday"
+                    : ""}
                 {end >= today
                   ? ". Today is in progress; future dates have no completed sales."
                   : "."}
@@ -178,7 +218,11 @@ export function DailyAnalytics({
               <thead>
                 <tr>
                   <th scope="col">
-                    {weekly ? "Business week (Mon–Sun)" : "Business date"}
+                    {monthly
+                      ? "Calendar month"
+                      : weekly
+                        ? "Business week (Mon–Sun)"
+                        : "Business date"}
                   </th>
                   <th scope="col">Gross sales</th>
                   <th scope="col">Orders</th>

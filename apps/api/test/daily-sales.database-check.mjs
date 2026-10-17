@@ -466,6 +466,60 @@ try {
   const foreignWeekly = await sales.weeklyAnalytics(actor.id, foreign.id, '2026-10-12', '2026-10-18');
   assert.equal(foreignWeekly.totalSales, '900.00');
   assert.equal(foreignWeekly.completedOrders, 1);
+  // Calendar-month boundaries, including February in leap/non-leap years.
+  await completed('2026-10-31T15:59:59.999Z', '1.11');
+  await completed('2026-10-31T16:00:00.000Z', '1.22');
+  await completed('2026-12-31T15:59:59.999Z', '3.11');
+  await completed('2027-02-28T15:59:59.999Z', '1.33');
+  await completed('2027-02-28T16:00:00.000Z', '1.44');
+  await completed('2028-02-29T15:59:59.999Z', '2.11');
+  await completed('2028-02-29T16:00:00.000Z', '2.22');
+  const monthlyChecks = [];
+  for (const [startDate, endDate] of [
+    ['2026-10-15', '2026-12-05'],
+    ['2026-12-01', '2027-03-31'],
+    ['2028-02-01', '2028-04-30'],
+  ]) {
+    const monthly = await sales.monthlyAnalytics(actor.id, shop.id, startDate, endDate);
+    const independent = await client.query(
+      `SELECT to_char(date_trunc('month', (o."completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila'), 'YYYY-MM') AS month,
+        count(*)::int AS orders, sum(o."totalPrice")::text AS total,
+        sum((SELECT coalesce(sum(i.quantity), 0) FROM "${schema}".order_items i WHERE i."shopId"=o."shopId" AND i."orderId"=o.id))::text AS units
+       FROM "${schema}".orders o WHERE o."shopId"=$1 AND o.status='CONFIRMED'
+         AND o."paymentStatus"='PAID' AND o."preparationStatus"='COMPLETED'
+         AND o."completedBy" IS NOT NULL AND o.currency='PHP'
+         AND ((o."completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila')::date BETWEEN $2::date AND $3::date
+       GROUP BY 1 ORDER BY 1`, [shop.id, startDate, endDate],
+    );
+    let cents = 0n, count = 0, units = 0;
+    for (const month of monthly.months) {
+      const expectedMonth = independent.rows.find((row) => row.month === month.month);
+      const expectedCents = BigInt((expectedMonth?.total ?? '0.00').replace('.', ''));
+      assert.equal(BigInt(month.totalSales.replace('.', '')), expectedCents);
+      assert.equal(month.completedOrders, expectedMonth?.orders ?? 0);
+      assert.equal(month.itemsSold, Number(expectedMonth?.units ?? 0));
+      assert.equal(month.monthStart, `${month.month}-01`);
+      cents += expectedCents; count += month.completedOrders; units += month.itemsSold;
+    }
+    assert.equal(monthly.months.filter((month) => month.completedOrders > 0).length, independent.rows.length);
+    assert.equal(BigInt(monthly.totalSales.replace('.', '')), cents);
+    assert.equal(monthly.completedOrders, count);
+    assert.equal(monthly.itemsSold, units);
+    const daily = await sales.dailyAnalytics(actor.id, shop.id, startDate, endDate);
+    assert.equal(monthly.totalSales, daily.totalSales);
+    assert.equal(monthly.completedOrders, daily.completedOrders);
+    assert.equal(monthly.itemsSold, daily.itemsSold);
+    monthlyChecks.push({ startDate, endDate, months: monthly.months });
+  }
+  const monthTransition = await sales.monthlyAnalytics(actor.id, shop.id, '2026-10-31', '2026-11-01');
+  assert.deepEqual(monthTransition.months.map((month) => month.totalSales), ['1.11', '1.22']);
+  const yearTransition = await sales.monthlyAnalytics(actor.id, shop.id, '2026-12-31', '2027-01-01');
+  assert.deepEqual(yearTransition.months.map((month) => month.totalSales), ['3.11', '0.33']);
+  const leapTransition = await sales.monthlyAnalytics(actor.id, shop.id, '2028-02-29', '2028-03-01');
+  assert.deepEqual(leapTransition.months.map((month) => month.totalSales), ['2.77', '2.22']);
+  const foreignMonthly = await sales.monthlyAnalytics(actor.id, foreign.id, '2026-10-01', '2026-10-31');
+  assert.equal(foreignMonthly.totalSales, '900.00');
+  assert.equal(foreignMonthly.completedOrders, 1);
   await prisma.shopMember.update({
     where: { id: membership.id },
     data: { role: 'CASHIER' },
@@ -476,9 +530,11 @@ try {
   );
   await assert.rejects(sales.dailyAnalytics(actor.id, shop.id, '2026-10-16', '2026-10-16'), (error) => error.getStatus() === 404);
   await assert.rejects(sales.weeklyAnalytics(actor.id, shop.id, '2026-10-12', '2026-10-18'), (error) => error.getStatus() === 404);
+  await assert.rejects(sales.monthlyAnalytics(actor.id, shop.id, '2026-10-01', '2026-10-31'), (error) => error.getStatus() === 404);
   console.log(
     JSON.stringify({
       passed: true,
+      monthlyAnalytics: { passed: true, criterion: 'Aggregate sales/orders by calendar month in Asia/Manila', checks: monthlyChecks },
       weeklyAnalytics: { passed: true, criterion: 'Aggregate by consistent Monday-Sunday week boundaries in Asia/Manila', checks: weeklyChecks },
       dailyAnalytics: {
         criterion: 'Daily totals reconcile with underlying eligible orders',

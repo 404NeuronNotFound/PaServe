@@ -10,6 +10,22 @@ import {
 @Controller('shops/:shopId/reports')
 export class CompletedSalesController {
   constructor(private readonly sales: CompletedSalesService) {}
+  @Get('monthly-analytics')
+  @Roles(...COMPLETED_SALES_ROLES)
+  monthlyAnalytics(
+    @Query('startDate') startDate: unknown,
+    @Query('endDate') endDate: unknown,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.sales.monthlyAnalytics(
+      request.user.id,
+      request.shopMembership.shopId,
+      startDate,
+      endDate,
+    );
+  }
   @Get('weekly-analytics')
   @Roles(...COMPLETED_SALES_ROLES)
   weeklyAnalytics(

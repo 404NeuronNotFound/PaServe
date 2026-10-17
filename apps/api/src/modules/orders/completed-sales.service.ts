@@ -10,6 +10,8 @@ import {
   salesBusinessDayBounds,
   salesDailyRange,
   salesWeeklyRange,
+  salesMonthlyRange,
+  type MonthlyAnalyticsResponse,
   type WeeklyAnalyticsResponse,
   type DailyAnalyticsResponse,
   SALES_TIMEZONE,
@@ -29,6 +31,44 @@ export const COMPLETED_SALES_ROLES = SHOP_ROLES.filter((role) =>
 @Injectable()
 export class CompletedSalesService {
   constructor(private readonly prisma: PrismaService) {}
+  async monthlyAnalytics(
+    actorId: string,
+    shopId: string,
+    startDate: unknown,
+    endDate: unknown,
+  ): Promise<MonthlyAnalyticsResponse> {
+    const range = salesMonthlyRange(startDate, endDate);
+    if (!range)
+      throw new BadRequestException({
+        code: 'INVALID_SALES_PERIOD',
+        message:
+          'Choose valid start/end business dates in order, spanning at most 366 days.',
+      });
+    // Use the same authorized reporting snapshot and eligibility as Daily.
+    const { days, ...summary } = await this.dailyAnalytics(
+      actorId,
+      shopId,
+      startDate,
+      endDate,
+    );
+    const months = range.months.map((period) => {
+      const included = days.filter(
+        (day) => day.businessDate.slice(0, 7) === period.month,
+      );
+      return {
+        ...period,
+        completedOrders: included.reduce(
+          (n, day) => n + day.completedOrders,
+          0,
+        ),
+        itemsSold: included.reduce((n, day) => n + day.itemsSold, 0),
+        totalSales: included
+          .reduce((n, day) => n.plus(day.totalSales), new Prisma.Decimal(0))
+          .toFixed(2),
+      };
+    });
+    return { ...summary, aggregation: 'CALENDAR_MONTH', months };
+  }
   async weeklyAnalytics(
     actorId: string,
     shopId: string,

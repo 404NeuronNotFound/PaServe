@@ -1295,6 +1295,39 @@ export interface WeeklyAnalyticsResponse extends Omit<DailyAnalyticsResponse, "d
   weekStartsOn: "MONDAY";
   weeks: WeeklyAnalyticsRow[];
 }
+export interface SalesMonthPeriod {
+  month: string;
+  monthStart: string;
+  monthEnd: string;
+  fromDate: string;
+  toDate: string;
+  partial: boolean;
+}
+/** Gregorian calendar months, clipped to the selected Manila business dates. */
+export function salesMonthlyRange(startDate: unknown, endDate: unknown) {
+  const range = salesDailyRange(startDate, endDate);
+  if (!range) return null;
+  const months: SalesMonthPeriod[] = Array.from(new Set(range.dates.map((date) => date.slice(0, 7)))).map((month) => {
+    const monthStart = `${month}-01`;
+    const lastDay = new Date(`${monthStart}T00:00:00.000Z`);
+    lastDay.setUTCMonth(lastDay.getUTCMonth() + 1, 0);
+    const monthEnd = lastDay.toISOString().slice(0, 10);
+    const fromDate = monthStart < range.dates[0] ? range.dates[0] : monthStart;
+    const last = range.dates[range.dates.length - 1];
+    const toDate = monthEnd > last ? last : monthEnd;
+    return { month, monthStart, monthEnd, fromDate, toDate, partial: fromDate !== monthStart || toDate !== monthEnd };
+  });
+  return { from: range.from, to: range.to, months };
+}
+export interface MonthlyAnalyticsRow extends SalesMonthPeriod {
+  completedOrders: number;
+  totalSales: string;
+  itemsSold: number;
+}
+export interface MonthlyAnalyticsResponse extends Omit<DailyAnalyticsResponse, "days"> {
+  aggregation: "CALENDAR_MONTH";
+  months: MonthlyAnalyticsRow[];
+}
 export interface PaymentBreakdownEntry {
   paymentMethod: (typeof SALES_PAYMENT_METHODS)[number];
   orders: number;
