@@ -608,6 +608,48 @@ try {
   const foreignRanked = await sales.topProducts(actor.id, foreign.id, '2029-01-15', '2029-01-15', 'QUANTITY');
   assert.equal(foreignRanked.totalQuantity, 99); assert.equal(foreignRanked.products[0].productName, 'Foreign name');
   assert.equal((await sales.topProducts(actor.id, shop.id, '2029-01-17', '2029-01-17', 'QUANTITY')).productCount, 0);
+  const hourStart = Date.parse('2030-03-09T16:00:00.000Z');
+  for (let hour = 0; hour < 24; hour++) await completed(new Date(hourStart + hour * 3_600_000).toISOString(), '1.00');
+  await completed('2030-03-09T16:59:59.999Z', '2.00'); // Last millisecond of local hour 00.
+  await completed('2030-03-10T15:59:59.999Z', '0.00'); // Last millisecond of local hour 23; zero-value order counts.
+  await completed('2030-03-10T16:00:00.000Z', '5.00'); // Next business date, local hour 00.
+  await completed('2030-03-09T15:59:59.999Z', '99.00'); // Before selected range.
+  await completed('2030-03-09T16:00:00.000Z', '99.00', { shopId: foreign.id });
+  const localHour = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Manila', hour: '2-digit', hourCycle: 'h23' });
+  const peakChecks = [];
+  for (const [startDate, endDate] of [['2030-03-10', '2030-03-10'], ['2030-03-10', '2030-03-11'], ['2030-03-12', '2030-03-12'], ['2026-10-16', '2026-10-16']]) {
+    const hourly = await sales.peakHours(actor.id, shop.id, startDate, endDate);
+    // Fetch individual UTC completion instants; group independently with Intl,
+    // rather than reusing EXTRACT/hour grouping or the shared report date helper.
+    const source = await client.query(
+      `SELECT o."totalPrice"::text AS total, to_char(o."completedAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS completed
+       FROM "${schema}".orders o WHERE o."shopId"=$1 AND o.status='CONFIRMED'
+         AND o."paymentStatus"='PAID' AND o."preparationStatus"='COMPLETED' AND o."completedBy" IS NOT NULL AND o.currency='PHP'
+         AND ((o."completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila')::date BETWEEN $2::date AND $3::date`, [shop.id, startDate, endDate],
+    );
+    const expectedHours = Array.from({ length: 24 }, (_, hour) => ({ hour, orders: 0, cents: 0n }));
+    for (const order of source.rows) {
+      const hour = Number(localHour.format(new Date(order.completed)));
+      expectedHours[hour].orders++; expectedHours[hour].cents += BigInt(order.total.replace('.', ''));
+    }
+    assert.equal(hourly.hours.length, 24);
+    for (const [index, bucket] of hourly.hours.entries()) {
+      assert.equal(bucket.hour, index); assert.equal(bucket.completedOrders, expectedHours[index].orders);
+      assert.equal(BigInt(bucket.totalSales.replace('.', '')), expectedHours[index].cents);
+    }
+    const maximum = Math.max(...expectedHours.map((hour) => hour.orders));
+    assert.deepEqual(hourly.peakHours, maximum === 0 ? [] : expectedHours.filter((hour) => hour.orders === maximum).map((hour) => hour.hour));
+    assert.equal(hourly.completedOrders, source.rows.length);
+    assert.equal(BigInt(hourly.totalSales.replace('.', '')), expectedHours.reduce((n, hour) => n + hour.cents, 0n));
+    const custom = await sales.custom(actor.id, shop.id, startDate, endDate);
+    assert.equal(hourly.completedOrders, custom.completedOrders); assert.equal(hourly.totalSales, custom.totalSales);
+    peakChecks.push({ startDate, endDate, completedOrders: hourly.completedOrders, totalSales: hourly.totalSales, peakHours: hourly.peakHours });
+  }
+  assert.deepEqual(peakChecks[0], { startDate: '2030-03-10', endDate: '2030-03-10', completedOrders: 26, totalSales: '26.00', peakHours: [0, 23] });
+  assert.deepEqual(peakChecks[1], { startDate: '2030-03-10', endDate: '2030-03-11', completedOrders: 27, totalSales: '31.00', peakHours: [0] });
+  assert.deepEqual(peakChecks[3].peakHours, [12]); // 04:00 UTC is noon Manila; item quantities do not multiply counts.
+  const foreignHours = await sales.peakHours(actor.id, foreign.id, '2030-03-10', '2030-03-10');
+  assert.equal(foreignHours.completedOrders, 1); assert.equal(foreignHours.totalSales, '99.00'); assert.deepEqual(foreignHours.peakHours, [0]);
   await prisma.shopMember.update({
     where: { id: membership.id },
     data: { role: 'CASHIER' },
@@ -621,9 +663,11 @@ try {
   await assert.rejects(sales.monthlyAnalytics(actor.id, shop.id, '2026-10-01', '2026-10-31'), (error) => error.getStatus() === 404);
   await assert.rejects(sales.custom(actor.id, shop.id, '2026-10-15', '2026-11-01'), (error) => error.getStatus() === 404);
   await assert.rejects(sales.topProducts(actor.id, shop.id, '2029-01-15', '2029-01-15', 'QUANTITY'), (error) => error.getStatus() === 404);
+  await assert.rejects(sales.peakHours(actor.id, shop.id, '2030-03-10', '2030-03-10'), (error) => error.getStatus() === 404);
   console.log(
     JSON.stringify({
       passed: true,
+      peakHours: { passed: true, criterion: 'Eligible orders group by Manila completion hour and reconcile with detailed orders and the selected-period summary', checks: peakChecks },
       topProducts: { passed: true, criterion: 'Snapshot identifiers, latest saved names, quantity/revenue rankings and remainder totals reconcile with eligible detailed items', checks: rankingChecks },
       customSales: { passed: true, criterion: 'One selected start/end period applies consistently to summary, item quantities, payments and recent orders', checks: customChecks },
       monthlyAnalytics: { passed: true, criterion: 'Aggregate sales/orders by calendar month in Asia/Manila', checks: monthlyChecks },

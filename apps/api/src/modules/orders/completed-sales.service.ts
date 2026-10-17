@@ -23,6 +23,7 @@ import {
   TOP_PRODUCT_METRICS,
   type TopProductsResponse,
   type TopProductMetric,
+  type PeakHoursResponse,
 } from '@paserve/contracts';
 import { isISO8601 } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -35,6 +36,90 @@ export const COMPLETED_SALES_ROLES = SHOP_ROLES.filter((role) =>
 @Injectable()
 export class CompletedSalesService {
   constructor(private readonly prisma: PrismaService) {}
+  async peakHours(
+    actorId: string,
+    shopId: string,
+    startDate: unknown,
+    endDate: unknown,
+  ): Promise<PeakHoursResponse> {
+    const range = salesDailyRange(startDate, endDate);
+    if (!range)
+      throw new BadRequestException({
+        code: 'INVALID_SALES_PERIOD',
+        message:
+          'Choose valid start/end dates in order, spanning at most 366 days.',
+      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const access = await tx.shop.findFirst({
+          where: shopAccessWhere(actorId, shopId, COMPLETED_SALES_ROLES),
+          select: { id: true },
+        });
+        if (!access)
+          throw new NotFoundException({
+            code: 'SHOP_NOT_ACCESSIBLE',
+            message: 'This shop is unavailable or you do not have access.',
+          });
+        // Group parent orders directly; item quantities cannot multiply counts or money.
+        const rows = await tx.$queryRaw<
+          Array<{
+            hour: number;
+            completedOrders: bigint;
+            totalSales: Prisma.Decimal;
+          }>
+        >`
+        SELECT extract(hour FROM (o."completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila')::int AS hour,
+          count(*) AS "completedOrders", sum(o."totalPrice") AS "totalSales"
+        FROM orders o WHERE o."shopId" = ${shopId} AND o.status = 'CONFIRMED'
+          AND o."paymentStatus" = 'PAID' AND o."preparationStatus" = 'COMPLETED'
+          AND o."completedBy" IS NOT NULL AND o.currency = 'PHP'
+          AND o."completedAt" >= ${new Date(range.from)} AND o."completedAt" < ${new Date(range.to)}
+        GROUP BY 1 ORDER BY 1
+      `;
+        const safe = (value: bigint) => {
+          const count = Number(value);
+          if (!Number.isSafeInteger(count) || count < 0)
+            throw new InternalServerErrorException(
+              'Hourly counts could not be calculated.',
+            );
+          return count;
+        };
+        const byHour = new Map(rows.map((row) => [row.hour, row]));
+        const hours = Array.from({ length: 24 }, (_, hour) => ({
+          hour,
+          completedOrders: byHour.has(hour)
+            ? safe(byHour.get(hour)!.completedOrders)
+            : 0,
+          totalSales: byHour.get(hour)?.totalSales.toFixed(2) ?? '0.00',
+        }));
+        const peak = Math.max(...hours.map((hour) => hour.completedOrders));
+        return {
+          shopId,
+          startDate: startDate as string,
+          endDate: endDate as string,
+          from: range.from,
+          to: range.to,
+          timezone: SALES_TIMEZONE,
+          timeBasis: 'COMPLETED_AT',
+          currency: 'PHP',
+          completedOrders: safe(
+            hours.reduce((n, hour) => n + BigInt(hour.completedOrders), 0n),
+          ),
+          totalSales: hours
+            .reduce((n, hour) => n.plus(hour.totalSales), new Prisma.Decimal(0))
+            .toFixed(2),
+          peakHours:
+            peak > 0
+              ? hours
+                  .filter((hour) => hour.completedOrders === peak)
+                  .map((hour) => hour.hour)
+              : [],
+          hours,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
   async topProducts(
     actorId: string,
     shopId: string,

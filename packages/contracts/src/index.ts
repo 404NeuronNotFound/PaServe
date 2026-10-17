@@ -1341,6 +1341,20 @@ export interface DailySalesResponse extends CompletedSalesResponse {
   businessDate: string;
   timezone: typeof SALES_TIMEZONE;
 }
+export interface PeakHourEntry {
+  hour: number;
+  completedOrders: number;
+  totalSales: string;
+}
+export interface PeakHoursResponse extends CompletedSalesResponse {
+  shopId: string;
+  startDate: string;
+  endDate: string;
+  timezone: typeof SALES_TIMEZONE;
+  timeBasis: "COMPLETED_AT";
+  peakHours: number[];
+  hours: PeakHourEntry[];
+}
 export const TOP_PRODUCT_METRICS = ["QUANTITY", "REVENUE"] as const;
 export type TopProductMetric = (typeof TOP_PRODUCT_METRICS)[number];
 export interface TopProductEntry {

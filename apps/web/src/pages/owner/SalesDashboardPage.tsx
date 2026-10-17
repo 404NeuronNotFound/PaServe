@@ -34,6 +34,7 @@ import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./sales-dashboard.css";
 import { DailyAnalytics } from "./DailyAnalytics";
 import { TopProducts } from "./TopProducts";
+import { PeakHours } from "./PeakHours";
 
 const paymentLabels = {
   CASH: "Cash",
@@ -189,6 +190,9 @@ function SalesWorkspace({ userId }: { userId: string }) {
     void query.refetch();
     void queryClient.invalidateQueries({
       queryKey: ["top-products", userId, shopId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["peak-hours", userId, shopId],
     });
   };
 
@@ -632,6 +636,14 @@ function SalesWorkspace({ userId }: { userId: string }) {
             </section>
           </div>
         </>
+      )}
+      {report && (
+        <PeakHours
+          userId={userId}
+          shopId={shopId}
+          startDate={custom ? customRange!.start : date}
+          endDate={custom ? customRange!.end : date}
+        />
       )}
       {report && (
         <TopProducts
