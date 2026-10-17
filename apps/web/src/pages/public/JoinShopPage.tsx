@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -34,12 +34,15 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
   const navigate = useNavigate();
   const [attempt, setAttempt] = useState(0);
   const [register, setRegister] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
   const mounted = useRef(false);
+  // Isolate credentials without putting the invitation token in query keys.
+  const invitationId = useId();
   const session = useQuery({
-    queryKey: ["invitation-session", attempt],
+    queryKey: ["invitation-session", invitationId, attempt],
     queryFn: getCurrentUser,
     enabled: valid,
     retry: false,
@@ -48,7 +51,13 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
     networkMode: "always",
   });
   const preview = useQuery({
-    queryKey: ["invitation-preview", session.data?.user.id, shopId, attempt],
+    queryKey: [
+      "invitation-preview",
+      invitationId,
+      session.data?.user.id,
+      shopId,
+      attempt,
+    ],
     queryFn: ({ signal }) => previewInvitation(shopId, token, signal),
     enabled: valid && session.isSuccess && !session.isFetching,
     retry: false,
@@ -197,10 +206,14 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
               ? "Create your account using the email address your owner invited."
               : "Sign in using the email address your owner invited."}
           </p>
+          <p className="account-note">
+            Use your own password. The shop owner never needs your password.
+          </p>
           {error && <InlineMessage tone="info">{error}</InlineMessage>}
           {register ? (
             <RegistrationForm
-              onSuccess={() => {
+              onSuccess={({ user }) => {
+                setRegisteredEmail(user.email);
                 setRegister(false);
                 setError(
                   "Your account is ready. Sign in below to accept the invitation.",
@@ -209,6 +222,7 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
             />
           ) : (
             <LoginForm
+              initialEmail={registeredEmail}
               onSuccess={() => {
                 client.clear();
                 setAttempt((value) => value + 1);

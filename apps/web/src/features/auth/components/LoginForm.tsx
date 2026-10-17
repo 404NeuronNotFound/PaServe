@@ -10,10 +10,12 @@ import { InlineMessage } from "../../../components/feedback/InlineMessage";
 
 export function LoginForm({
   onSuccess,
+  initialEmail = "",
 }: {
   onSuccess: (session: LoginResponse) => void;
+  initialEmail?: string;
 }) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(

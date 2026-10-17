@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { AxiosError, AxiosHeaders } from "axios";
 import { JoinShopPage } from "./JoinShopPage";
 import { getCurrentUser, logoutAccount } from "../../features/auth/api/session";
@@ -20,13 +20,27 @@ vi.mock("../../features/shops/api/staff", () => ({
   previewInvitation: vi.fn(),
 }));
 vi.mock("../../features/auth/components/LoginForm", () => ({
-  LoginForm: ({ onSuccess }: { onSuccess: () => void }) => (
-    <button onClick={onSuccess}>Sign in</button>
+  LoginForm: ({
+    onSuccess,
+    initialEmail,
+  }: {
+    onSuccess: () => void;
+    initialEmail?: string;
+  }) => (
+    <button onClick={onSuccess} data-email={initialEmail}>
+      Sign in
+    </button>
   ),
 }));
 vi.mock("../../features/auth/components/RegistrationForm", () => ({
-  RegistrationForm: ({ onSuccess }: { onSuccess: () => void }) => (
-    <button onClick={onSuccess}>Register account</button>
+  RegistrationForm: ({
+    onSuccess,
+  }: {
+    onSuccess: (result: { user: { email: string } }) => void;
+  }) => (
+    <button onClick={() => onSuccess({ user: { email: "staff@example.com" } })}>
+      Register account
+    </button>
   ),
 }));
 const shopId = "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e";
@@ -67,6 +81,9 @@ function setup(hash = `#token=${token}`) {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={[`/join/${shopId}${hash}`]}>
+        <Link to={`/join/${shopId}#token=${"b".repeat(64)}`}>
+          Open another invitation
+        </Link>
         <Routes>
           <Route path="/join/:shopId" element={<JoinShopPage />} />
           <Route
@@ -134,6 +151,10 @@ it("lets a new user register, sign in, and accept without shop creation", async 
     }),
   );
   await user.click(screen.getByRole("button", { name: "Register account" }));
+  expect(screen.getByRole("button", { name: "Sign in" })).toHaveAttribute(
+    "data-email",
+    "staff@example.com",
+  );
   await user.click(screen.getByRole("button", { name: "Sign in" }));
   await user.click(
     await screen.findByRole("button", { name: "Accept invitation" }),
@@ -185,4 +206,18 @@ it("permits switching accounts on the invitation page", async () => {
   expect(
     await screen.findByRole("button", { name: "Sign in" }),
   ).toBeInTheDocument();
+});
+
+it("does not reuse another link's preview while checking a new invitation", async () => {
+  const user = setup();
+  await screen.findByText("Cafe A");
+  vi.mocked(previewInvitation).mockImplementation(() => new Promise(() => {}));
+  await user.click(
+    screen.getByRole("link", { name: "Open another invitation" }),
+  );
+  expect(screen.queryByText("Cafe A")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Accept invitation" }),
+  ).toBeDisabled();
+  expect(acceptInvitation).not.toHaveBeenCalled();
 });

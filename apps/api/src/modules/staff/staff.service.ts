@@ -336,6 +336,8 @@ export class StaffService {
     if (
       !invite ||
       invite.revokedAt ||
+      invite.acceptedAt ||
+      invite.expiresAt <= new Date() ||
       !STAFF_ROLES.includes(invite.role as StaffRole)
     )
       throw invalidInvitation();
@@ -368,11 +370,7 @@ export class StaffService {
         shopId,
         token,
       );
-      if (invite.acceptedAt) {
-        if (invite.acceptedBy !== actorId || existing?.role !== invite.role)
-          throw invalidInvitation();
-      } else if (invite.expiresAt <= new Date() || existing)
-        throw invalidInvitation();
+      if (existing) throw invalidInvitation();
       const shop = await tx.shop.findFirst({
         where: shopAccessWhere(invite.invitedBy, shopId, ['OWNER']),
         select: { id: true, name: true },
@@ -396,14 +394,6 @@ export class StaffService {
         shopId,
         token,
       );
-      // Stable retry acknowledges this acceptance; never restores removed access
-      // or overwrites a role changed by the owner after acceptance.
-      if (invite.acceptedAt) {
-        if (invite.acceptedBy === actorId && existing?.role === invite.role)
-          return { shopId, role: invite.role as StaffRole };
-        throw invalidInvitation();
-      }
-      if (invite.expiresAt <= new Date()) throw invalidInvitation();
       if (
         !(await tx.shop.findFirst({
           where: shopAccessWhere(invite.invitedBy, shopId, ['OWNER']),

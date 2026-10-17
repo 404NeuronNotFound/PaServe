@@ -18,11 +18,11 @@ const session = {
   tokenType: "Bearer" as const,
   expiresIn: 900,
 };
-function setup() {
+function setup(initialEmail?: string) {
   const success = vi.fn();
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <LoginForm onSuccess={success} />
+      <LoginForm onSuccess={success} initialEmail={initialEmail} />
     </QueryClientProvider>,
   );
   return { user: userEvent.setup(), success };
@@ -33,6 +33,15 @@ async function fill(user: ReturnType<typeof userEvent.setup>) {
 }
 beforeEach(() => {
   vi.resetAllMocks();
+});
+
+it("carries a newly registered email into sign-in while keeping the password empty", () => {
+  setup("staff@example.com");
+  expect(screen.getByLabelText("Email address")).toHaveValue(
+    "staff@example.com",
+  );
+  expect(screen.getByLabelText("Password")).toHaveValue("");
+  expect(login).not.toHaveBeenCalled();
 });
 
 it("blocks invalid inputs and focuses the first error", async () => {

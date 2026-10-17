@@ -8,6 +8,7 @@ import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { Prisma } from '../src/generated/prisma/client.js';
+import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 
 describe('Owner staff invitations through HTTP', () => {
   const ownerId = '75992537-5d60-4d22-8e1e-60a114644681';
@@ -72,6 +73,7 @@ describe('Owner staff invitations through HTTP', () => {
   });
   beforeEach(() => {
     vi.resetAllMocks();
+    app.get<ThrottlerStorageService>(ThrottlerStorage).onApplicationShutdown();
     role = 'OWNER';
     invite = {
       id: resourceId,
@@ -342,14 +344,42 @@ describe('Owner staff invitations through HTTP', () => {
     ).expect(kind === 'email' ? 403 : kind === 'existing' ? 409 : 404);
     expect(tx.shopMember.create).not.toHaveBeenCalled();
   });
-  it('acknowledges acceptance retry without a second membership or audit', async () => {
-    invite.acceptedAt = new Date();
-    invite.acceptedBy = userId;
-    tx.shopMember.findFirst.mockResolvedValue({ role: 'CASHIER' });
+  it('rejects preview and acceptance after successful acceptance, including for the original recipient', async () => {
+    tx.staffInvitation.updateMany.mockImplementationOnce(async ({ data }) => {
+      invite.acceptedAt = data.acceptedAt;
+      invite.acceptedBy = data.acceptedBy;
+      return { count: 1 };
+    });
+    tx.shopMember.create.mockImplementationOnce(async () => {
+      tx.shopMember.findFirst.mockResolvedValue({ role: 'CASHIER' });
+    });
     await accept().expect(200);
-    expect(tx.shopMember.create).not.toHaveBeenCalled();
-    expect(tx.staffAuditEvent.create).not.toHaveBeenCalled();
+    for (const action of ['preview', 'accept']) {
+      const response = await owner()
+        .post(`/api/v1/staff-invitations/${shopId}/${action}`)
+        .set('Authorization', 'Bearer invitee')
+        .send({ token })
+        .expect(404);
+      expect(response.body.code).toBe('INVITATION_UNAVAILABLE');
+    }
+    expect(tx.staffInvitation.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.shopMember.create).toHaveBeenCalledTimes(1);
+    expect(tx.staffAuditEvent.create).toHaveBeenCalledTimes(1);
   });
+
+  it.each(['preview', 'accept'])(
+    'rejects an expired invitation during %s',
+    async (action) => {
+      invite.expiresAt = new Date(0);
+      await owner()
+        .post(`/api/v1/staff-invitations/${shopId}/${action}`)
+        .set('Authorization', 'Bearer invitee')
+        .send({ token })
+        .expect(404);
+      expect(tx.staffInvitation.updateMany).not.toHaveBeenCalled();
+      expect(tx.shopMember.create).not.toHaveBeenCalled();
+    },
+  );
   it.each([null, { role: 'KITCHEN' }])(
     'does not replay acceptance to restore removed or changed membership %j',
     async (existing) => {
@@ -444,5 +474,33 @@ describe('Owner staff invitations through HTTP', () => {
       where: { id: resourceId, shopId, acceptedAt: null, revokedAt: null },
       data: { revokedAt: expect.any(Date) },
     });
+  });
+
+  it.each(['preview', 'accept'])(
+    'rate limits repeated %s attempts before another transaction',
+    async (action) => {
+      const attempt = () =>
+        owner()
+          .post(`/api/v1/staff-invitations/${shopId}/${action}`)
+          .set('Authorization', 'Bearer invitee')
+          .send({ token: 'b'.repeat(64) });
+      for (let index = 0; index < 30; index++) await attempt().expect(404);
+      const calls = transaction.mock.calls.length;
+      const response = await attempt().expect(429);
+      expect(response.headers['retry-after']).toBeDefined();
+      expect(transaction).toHaveBeenCalledTimes(calls);
+      expect(tx.shopMember.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rate limits invitation creation without writing another invitation', async () => {
+    const attempt = () =>
+      owner()
+        .post(`/api/v1/shops/${shopId}/staff/invitations`)
+        .set('Authorization', 'Bearer owner')
+        .send({ email: 'cashier@example.com', role: 'CASHIER' });
+    for (let index = 0; index < 10; index++) await attempt().expect(201);
+    await attempt().expect(429);
+    expect(tx.staffInvitation.create).toHaveBeenCalledTimes(10);
   });
 });

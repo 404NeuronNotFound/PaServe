@@ -476,8 +476,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
             </form>
             <p className="staff-hint">
               <FiLock aria-hidden="true" />
-              They sign in with their own account. Share the link directly with
-              the person you invite.
+              They sign in or create their own account using the invited email.
+              Share the link directly; you never need their password.
             </p>
             <details className="staff-invite-guidance">
               <summary>How invitation links work</summary>

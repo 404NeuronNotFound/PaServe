@@ -108,13 +108,18 @@ try {
   await assert.rejects(staff.accept(userId, otherShop, invitation.token), {
     status: 404,
   });
-  // Two simultaneous accepts must leave one membership and one acceptance event.
+  // Exactly one concurrent acceptance succeeds; the consumed token is rejected.
   const outcomes = await Promise.allSettled([
     staff.accept(userId, shopId, invitation.token),
     staff.accept(userId, shopId, invitation.token),
   ]);
-  for (const outcome of outcomes)
-    assert.equal(outcome.status, 'fulfilled', outcome.reason?.message);
+  assert.equal(
+    outcomes.filter((outcome) => outcome.status === 'fulfilled').length,
+    1,
+  );
+  const rejected = outcomes.filter((outcome) => outcome.status === 'rejected');
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].reason.status, 404);
   assert.equal(await prisma.shopMember.count({ where: { shopId, userId } }), 1);
   assert.equal(
     await prisma.staffAuditEvent.count({
@@ -122,6 +127,12 @@ try {
     }),
     1,
   );
+  await assert.rejects(staff.preview(userId, shopId, invitation.token), {
+    status: 404,
+  });
+  await assert.rejects(staff.accept(userId, shopId, invitation.token), {
+    status: 404,
+  });
   const member = await prisma.shopMember.findUnique({
     where: { userId_shopId: { userId, shopId } },
   });
