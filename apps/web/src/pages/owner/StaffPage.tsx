@@ -55,7 +55,8 @@ type Decision = {
   previousRole?: StaffRole;
 };
 const roleDescriptions: Record<StaffRole, string> = {
-  CASHIER: "Order scanning and payment collection.",
+  CASHIER:
+    "Scan and read orders, confirm or reject orders, record payments, and update item availability. No menu or price editing, reports, kitchen preparation, staff management, settings, ownership, or billing access.",
   KITCHEN: "Kitchen preparation access.",
   MANAGER:
     "Daily operations, menu, orders, reports, cashier, and kitchen. Table management, staff management, settings, ownership, and billing are excluded.",
@@ -69,8 +70,13 @@ function roleDecisionCopy(decision: Decision, shopName: string) {
       ? "an admin"
       : decision.role === "MANAGER"
         ? "a manager"
-        : decision.role?.toLowerCase();
+        : decision.role === "CASHIER"
+          ? "a cashier"
+          : decision.role?.toLowerCase();
   const description = `${decision.email} will become ${assignedRole} in ${shopName}.`;
+  const permissionDescription = decision.role
+    ? roleDescriptions[decision.role]
+    : "";
   if (decision.role === "ADMIN")
     return {
       title: "Assign admin role?",
@@ -81,7 +87,7 @@ function roleDecisionCopy(decision: Decision, shopName: string) {
   if (decision.previousRole === "ADMIN")
     return {
       title: "Remove admin role?",
-      description: `${description} They will lose admin permissions. Their shop membership stays active with the selected role's permissions.${decision.role === "MANAGER" ? ` ${roleDescriptions.MANAGER}` : ""}`,
+      description: `${description} They will lose admin permissions. Their shop membership stays active with the selected role's permissions. ${permissionDescription}`,
       confirmLabel: "Remove admin role",
       success: "Admin role removed.",
     };
@@ -95,9 +101,23 @@ function roleDecisionCopy(decision: Decision, shopName: string) {
   if (decision.previousRole === "MANAGER")
     return {
       title: "Remove manager role?",
-      description: `${description} They will lose manager permissions. Their shop membership stays active with the selected role's permissions.`,
+      description: `${description} They will lose manager permissions. Their shop membership stays active with the selected role's permissions. ${permissionDescription}`,
       confirmLabel: "Remove manager role",
       success: "Manager role removed.",
+    };
+  if (decision.role === "CASHIER")
+    return {
+      title: "Assign cashier role?",
+      description: `${description} ${roleDescriptions.CASHIER}`,
+      confirmLabel: "Assign cashier",
+      success: "Cashier role assigned.",
+    };
+  if (decision.previousRole === "CASHIER")
+    return {
+      title: "Remove cashier role?",
+      description: `${description} They will lose counter permissions. Their shop membership stays active with the selected role's permissions. ${permissionDescription}`,
+      confirmLabel: "Remove cashier role",
+      success: "Cashier role removed.",
     };
   return {
     title: "Change staff role?",

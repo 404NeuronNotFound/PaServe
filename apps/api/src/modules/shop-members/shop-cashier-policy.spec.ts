@@ -1,6 +1,7 @@
 import {
   SHOP_CASHIER_PERMISSIONS,
   SHOP_OPERATIONAL_PERMISSIONS,
+  SHOP_KITCHEN_PERMISSIONS,
   hasShopPermission,
   type ShopPermission,
 } from '@paserve/contracts';
@@ -49,6 +50,7 @@ describe('shop CASHIER authorization', () => {
 
   it.each([
     ...SHOP_OPERATIONAL_PERMISSIONS,
+    ...SHOP_KITCHEN_PERMISSIONS,
     'shop.operations.manage',
     'shop.settings.manage',
     'shop.ownership.manage',

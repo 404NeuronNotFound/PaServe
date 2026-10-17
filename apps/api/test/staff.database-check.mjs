@@ -265,6 +265,59 @@ try {
       ['MANAGER', 'CASHIER'],
     ],
   );
+  for (const permission of SHOP_CASHIER_PERMISSIONS)
+    assert.equal(
+      (await access.requirePermission(userId, shopId, permission)).role,
+      'CASHIER',
+    );
+  for (const permission of [
+    ...SHOP_OPERATIONAL_PERMISSIONS,
+    ...SHOP_KITCHEN_PERMISSIONS,
+    'shop.operations.manage',
+    'shop.settings.manage',
+    'shop.ownership.manage',
+    'shop.billing.manage',
+  ])
+    await assert.rejects(access.requirePermission(userId, shopId, permission), {
+      status: 403,
+    });
+  await staff.changeRole(ownerId, otherShop, otherMembership.id, {
+    role: 'KITCHEN',
+  });
+  for (const permission of SHOP_CASHIER_PERMISSIONS)
+    await assert.rejects(
+      access.requirePermission(userId, otherShop, permission),
+      { status: 403 },
+    );
+  await assert.rejects(
+    staff.changeRole(userId, shopId, member.id, { role: 'MANAGER' }),
+    { status: 403 },
+  );
+  await staff.changeRole(ownerId, shopId, member.id, { role: 'KITCHEN' });
+  for (const permission of SHOP_CASHIER_PERMISSIONS)
+    await assert.rejects(access.requirePermission(userId, shopId, permission), {
+      status: 403,
+    });
+  await staff.changeRole(ownerId, shopId, member.id, { role: 'CASHIER' });
+  assert.equal((await access.requireMembership(userId, shopId)).id, member.id);
+  assert.equal(
+    (await prisma.shopMember.findUnique({ where: { id: otherMembership.id } }))
+      .role,
+    'KITCHEN',
+  );
+  const cashierTransitions = await prisma.staffAuditEvent.findMany({
+    where: { shopId, action: 'ROLE_CHANGED' },
+    orderBy: { createdAt: 'asc' },
+  });
+  assert.deepEqual(
+    cashierTransitions
+      .slice(-2)
+      .map(({ previousRole, role }) => [previousRole, role]),
+    [
+      ['CASHIER', 'KITCHEN'],
+      ['KITCHEN', 'CASHIER'],
+    ],
+  );
   await assert.rejects(
     staff.invite(ownerId, shopId, {
       email: 'cashier@example.com',
@@ -371,7 +424,7 @@ try {
     });
   }
   console.log(
-    'Passed: migration, invitations, tenant isolation, concurrent acceptance, owner protection, admin/manager assignment and downgrade, live permission removal, audit rollback and RLS.',
+    'Passed: migration, invitations, tenant isolation, concurrent acceptance, owner protection, admin/manager/cashier assignment and revocation, live permission removal, audit rollback and RLS.',
   );
 } finally {
   if (prisma) await prisma.$disconnect();

@@ -492,6 +492,8 @@ describe('Owner staff invitations through HTTP', () => {
     ['KITCHEN', 'MANAGER'],
     ['MANAGER', 'CASHIER'],
     ['MANAGER', 'KITCHEN'],
+    ['KITCHEN', 'CASHIER'],
+    ['CASHIER', 'KITCHEN'],
   ] as const)(
     'allows OWNER to change %s to %s and audits the role transition',
     async (previousRole, nextRole) => {
@@ -527,7 +529,7 @@ describe('Owner staff invitations through HTTP', () => {
     },
   );
 
-  it.each(['ADMIN', 'MANAGER'] as const)(
+  it.each(['ADMIN', 'MANAGER', 'CASHIER'] as const)(
     'allows inviting %s without granting membership before acceptance',
     async (role) => {
       const response = await owner()
@@ -540,7 +542,7 @@ describe('Owner staff invitations through HTTP', () => {
     },
   );
 
-  it.each(['ADMIN', 'MANAGER'] as const)(
+  it.each(['ADMIN', 'MANAGER', 'CASHIER'] as const)(
     'creates %s membership only when the invited account accepts',
     async (role) => {
       invite.role = role;

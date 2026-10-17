@@ -254,8 +254,11 @@ it("confirms a role change before saving", async () => {
     await screen.findByRole("combobox", { name: "Role for staff@example.com" }),
   );
   await user.click(screen.getByRole("option", { name: "Kitchen" }));
+  expect(
+    screen.getByRole("dialog", { name: "Remove cashier role?" }),
+  ).toHaveTextContent(/They will lose counter permissions/);
   expect(changeStaffRole).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "Change role" }));
+  await user.click(screen.getByRole("button", { name: "Remove cashier role" }));
   expect(changeStaffRole).toHaveBeenCalledWith(
     "shop-a",
     "staff-member",
@@ -325,6 +328,10 @@ it.each(["Manager", "Cashier", "Kitchen"])(
     if (nextRole === "Manager")
       expect(dialog).toHaveTextContent(
         /Table management, staff management, settings, ownership, and billing are excluded/,
+      );
+    if (nextRole === "Cashier")
+      expect(dialog).toHaveTextContent(
+        /Scan and read orders, confirm or reject orders, record payments/,
       );
     expect(changeStaffRole).not.toHaveBeenCalled();
     await user.click(
@@ -426,6 +433,84 @@ it("shows the manager invitation permissions before an invitation is created", a
   );
   expect(inviteStaff).not.toHaveBeenCalled();
 });
+
+it("explains counter permissions and confirms before assigning CASHIER", async () => {
+  const kitchenData: ShopStaffResponse = {
+    ...data,
+    members: data.members.map((member) =>
+      member.id === "staff-member" ? { ...member, role: "KITCHEN" } : member,
+    ),
+  };
+  vi.mocked(listStaff).mockResolvedValue(kitchenData);
+  vi.mocked(changeStaffRole).mockImplementation(async () => {
+    vi.mocked(listStaff).mockResolvedValue(data);
+  });
+  const user = setup();
+  const chooseCashier = async () => {
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "Role for staff@example.com",
+      }),
+    );
+    await user.click(screen.getByRole("option", { name: "Cashier" }));
+  };
+  await chooseCashier();
+  const dialog = screen.getByRole("dialog", { name: "Assign cashier role?" });
+  expect(dialog).toHaveAccessibleDescription(
+    /staff@example.com will become a cashier in Cafe A/,
+  );
+  expect(dialog).toHaveTextContent(
+    /Scan and read orders, confirm or reject orders, record payments, and update item availability/,
+  );
+  expect(dialog).toHaveTextContent(
+    /No menu or price editing, reports, kitchen preparation, staff management/,
+  );
+  expect(changeStaffRole).not.toHaveBeenCalled();
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(changeStaffRole).not.toHaveBeenCalled();
+  await chooseCashier();
+  await user.click(screen.getByRole("button", { name: "Assign cashier" }));
+  expect(changeStaffRole).toHaveBeenCalledExactlyOnceWith(
+    "shop-a",
+    "staff-member",
+    "CASHIER",
+  );
+  expect(
+    await within(
+      screen.getByRole("region", { name: "Shop members" }),
+    ).findByText("cashier", { exact: true }),
+  ).toBeInTheDocument();
+  expect(removeStaff).not.toHaveBeenCalled();
+});
+
+it("keeps failed cashier assignment in context without reporting saved access", async () => {
+  vi.mocked(listStaff).mockResolvedValue({
+    ...data,
+    members: data.members.map((member) =>
+      member.id === "staff-member" ? { ...member, role: "KITCHEN" } : member,
+    ),
+  });
+  vi.mocked(changeStaffRole).mockRejectedValue(new Error("offline"));
+  const user = setup();
+  await user.click(
+    await screen.findByRole("combobox", { name: "Role for staff@example.com" }),
+  );
+  await user.click(screen.getByRole("option", { name: "Cashier" }));
+  await user.click(screen.getByRole("button", { name: "Assign cashier" }));
+  expect(
+    await screen.findByText(/Unable to complete this action/),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("dialog", { name: "Assign cashier role?" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("kitchen", { exact: true })).toBeInTheDocument();
+  expect(
+    within(screen.getByRole("region", { name: "Shop members" })).queryByText(
+      "cashier",
+      { exact: true },
+    ),
+  ).not.toBeInTheDocument();
+});
 it("filters members by email or role and restores search focus on clear", async () => {
   const user = setup();
   const search = await screen.findByRole("textbox", {
@@ -465,7 +550,7 @@ it("shows real team counts and role guidance without granting access", async () 
   expect(
     screen.getByRole("combobox", { name: "Shop role" }),
   ).toHaveAccessibleDescription(
-    "Cashier Order scanning and payment collection.",
+    /Cashier Scan and read orders, confirm or reject orders, record payments, and update item availability/,
   );
   await user.click(screen.getByRole("combobox", { name: "Shop role" }));
   await user.click(screen.getByRole("option", { name: "Kitchen" }));
