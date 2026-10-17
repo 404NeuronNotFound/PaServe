@@ -244,6 +244,7 @@ describe('Owner staff invitations through HTTP', () => {
   });
   it.each([
     { email: 'bad', role: 'CASHIER' },
+    { email: 'barista@example.com', role: 'BARISTA' },
     { email: 'cashier@example.com', role: 'OWNER' },
     { email: 'cashier@example.com', role: 'CASHIER', shopId: foreignShop },
   ])(
@@ -529,7 +530,7 @@ describe('Owner staff invitations through HTTP', () => {
     },
   );
 
-  it.each(['ADMIN', 'MANAGER', 'CASHIER'] as const)(
+  it.each(['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'] as const)(
     'allows inviting %s without granting membership before acceptance',
     async (role) => {
       const response = await owner()
@@ -542,7 +543,7 @@ describe('Owner staff invitations through HTTP', () => {
     },
   );
 
-  it.each(['ADMIN', 'MANAGER', 'CASHIER'] as const)(
+  it.each(['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'] as const)(
     'creates %s membership only when the invited account accepts',
     async (role) => {
       invite.role = role;

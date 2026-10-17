@@ -329,6 +329,59 @@ try {
   await assert.rejects(staff.accept(userId, shopId, invitation.token), {
     status: 404,
   });
+  for (const permission of SHOP_KITCHEN_PERMISSIONS)
+    assert.equal(
+      (await access.requirePermission(userId, shopId, permission)).role,
+      'KITCHEN',
+    );
+  for (const permission of [
+    ...SHOP_CASHIER_PERMISSIONS,
+    ...SHOP_OPERATIONAL_PERMISSIONS,
+    'shop.operations.manage',
+    'shop.settings.manage',
+    'shop.ownership.manage',
+    'shop.billing.manage',
+  ])
+    await assert.rejects(access.requirePermission(userId, shopId, permission), {
+      status: 403,
+    });
+  await staff.changeRole(ownerId, otherShop, otherMembership.id, {
+    role: 'CASHIER',
+  });
+  for (const permission of SHOP_KITCHEN_PERMISSIONS)
+    await assert.rejects(
+      access.requirePermission(userId, otherShop, permission),
+      { status: 403 },
+    );
+  await assert.rejects(
+    staff.changeRole(userId, shopId, member.id, { role: 'ADMIN' }),
+    { status: 403 },
+  );
+  await staff.changeRole(ownerId, shopId, member.id, { role: 'CASHIER' });
+  for (const permission of SHOP_KITCHEN_PERMISSIONS)
+    await assert.rejects(access.requirePermission(userId, shopId, permission), {
+      status: 403,
+    });
+  assert.equal((await access.requireMembership(userId, shopId)).id, member.id);
+  assert.equal(
+    (await prisma.shopMember.findUnique({ where: { id: otherMembership.id } }))
+      .role,
+    'CASHIER',
+  );
+  await staff.changeRole(ownerId, shopId, member.id, { role: 'KITCHEN' });
+  const kitchenTransitions = await prisma.staffAuditEvent.findMany({
+    where: { shopId, action: 'ROLE_CHANGED' },
+    orderBy: { createdAt: 'asc' },
+  });
+  assert.deepEqual(
+    kitchenTransitions
+      .slice(-2)
+      .map(({ previousRole, role }) => [previousRole, role]),
+    [
+      ['KITCHEN', 'CASHIER'],
+      ['CASHIER', 'KITCHEN'],
+    ],
+  );
   await assert.rejects(staff.list(userId, shopId), { status: 403 });
   const resources = new TenantResourcesRepository(prisma);
   assert.equal(
@@ -424,7 +477,7 @@ try {
     });
   }
   console.log(
-    'Passed: migration, invitations, tenant isolation, concurrent acceptance, owner protection, admin/manager/cashier assignment and revocation, live permission removal, audit rollback and RLS.',
+    'Passed: migration, invitations, tenant isolation, concurrent acceptance, owner protection, all staff-role assignments, kitchen/barista and counter separation, live permission removal, audit rollback and RLS.',
   );
 } finally {
   if (prisma) await prisma.$disconnect();

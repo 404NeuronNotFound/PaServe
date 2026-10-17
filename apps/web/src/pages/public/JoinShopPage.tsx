@@ -168,7 +168,13 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
           ) : (
             <p>
               You are invited to join <strong>{preview.data.shopName}</strong>{" "}
-              as <strong>{preview.data.role.toLowerCase()}</strong>.
+              as{" "}
+              <strong>
+                {preview.data.role === "KITCHEN"
+                  ? "kitchen / barista"
+                  : preview.data.role.toLowerCase()}
+              </strong>
+              .
             </p>
           )}
           {error && <InlineMessage>{error}</InlineMessage>}

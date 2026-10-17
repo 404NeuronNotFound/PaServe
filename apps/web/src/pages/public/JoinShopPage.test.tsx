@@ -114,8 +114,17 @@ it("accepts explicitly and routes a cashier to the assigned shop", async () => {
   ).toBeInTheDocument();
 });
 it("routes kitchen staff to the shop workspace", async () => {
+  vi.mocked(previewInvitation).mockResolvedValue({
+    shopId,
+    shopName: "Cafe A",
+    email: "staff@example.com",
+    role: "KITCHEN",
+    expiresAt: "2026-10-20T00:00:00Z",
+  });
   vi.mocked(acceptInvitation).mockResolvedValue({ shopId, role: "KITCHEN" });
   const user = setup();
+  expect(await screen.findByText("kitchen / barista")).toBeInTheDocument();
+  expect(acceptInvitation).not.toHaveBeenCalled();
   await user.click(
     await screen.findByRole("button", { name: "Accept invitation" }),
   );

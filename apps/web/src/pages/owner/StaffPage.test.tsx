@@ -253,17 +253,112 @@ it("confirms a role change before saving", async () => {
   await user.click(
     await screen.findByRole("combobox", { name: "Role for staff@example.com" }),
   );
-  await user.click(screen.getByRole("option", { name: "Kitchen" }));
+  await user.click(screen.getByRole("option", { name: "Kitchen / Barista" }));
   expect(
-    screen.getByRole("dialog", { name: "Remove cashier role?" }),
+    screen.getByRole("dialog", { name: "Assign kitchen/barista role?" }),
   ).toHaveTextContent(/They will lose counter permissions/);
   expect(changeStaffRole).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "Remove cashier role" }));
+  await user.click(
+    screen.getByRole("button", { name: "Assign kitchen/barista" }),
+  );
   expect(changeStaffRole).toHaveBeenCalledWith(
     "shop-a",
     "staff-member",
     "KITCHEN",
   );
+});
+
+it("explains shared kitchen/barista permissions and confirms before assignment", async () => {
+  vi.mocked(changeStaffRole).mockImplementation(async () => {
+    vi.mocked(listStaff).mockResolvedValue({
+      ...data,
+      members: data.members.map((member) =>
+        member.id === "staff-member" ? { ...member, role: "KITCHEN" } : member,
+      ),
+    });
+  });
+  const user = setup();
+  const chooseKitchen = async () => {
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "Role for staff@example.com",
+      }),
+    );
+    await user.click(screen.getByRole("option", { name: "Kitchen / Barista" }));
+  };
+  await chooseKitchen();
+  const dialog = screen.getByRole("dialog", {
+    name: "Assign kitchen/barista role?",
+  });
+  expect(dialog).toHaveAccessibleDescription(
+    /staff@example.com will become kitchen\/barista staff in Cafe A/,
+  );
+  expect(dialog).toHaveTextContent(
+    /view the preparation queue and update preparation status/,
+  );
+  expect(dialog).toHaveTextContent(
+    /No order approval, payments, menu or price editing/,
+  );
+  expect(changeStaffRole).not.toHaveBeenCalled();
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(changeStaffRole).not.toHaveBeenCalled();
+  await chooseKitchen();
+  await user.click(
+    screen.getByRole("button", { name: "Assign kitchen/barista" }),
+  );
+  expect(changeStaffRole).toHaveBeenCalledExactlyOnceWith(
+    "shop-a",
+    "staff-member",
+    "KITCHEN",
+  );
+  expect(
+    await within(
+      screen.getByRole("region", { name: "Shop members" }),
+    ).findByText("kitchen / barista", { exact: true }),
+  ).toBeInTheDocument();
+  expect(removeStaff).not.toHaveBeenCalled();
+});
+
+it("invites a barista using the shared KITCHEN role", async () => {
+  vi.mocked(inviteStaff).mockResolvedValue({
+    shopId: "shop-a",
+    invitation: { ...data.invitations[0], role: "KITCHEN" },
+    token: "a".repeat(64),
+  });
+  const user = setup();
+  await user.click(await screen.findByRole("combobox", { name: "Shop role" }));
+  await user.click(screen.getByRole("option", { name: "Kitchen / Barista" }));
+  await user.type(
+    screen.getByLabelText("Staff email address"),
+    "barista@example.com",
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Create invitation link" }),
+  );
+  expect(inviteStaff).toHaveBeenCalledExactlyOnceWith("shop-a", {
+    email: "barista@example.com",
+    role: "KITCHEN",
+  });
+  expect(await screen.findByLabelText(/Invitation link/)).toBeInTheDocument();
+});
+
+it("finds shared KITCHEN memberships when searching for barista", async () => {
+  vi.mocked(listStaff).mockResolvedValue({
+    ...data,
+    members: data.members.map((member) =>
+      member.id === "staff-member" ? { ...member, role: "KITCHEN" } : member,
+    ),
+  });
+  const user = setup();
+  await user.type(
+    await screen.findByRole("textbox", { name: "Search shop members" }),
+    "barista",
+  );
+  const team = screen.getByRole("region", { name: "Shop members" });
+  expect(within(team).getByText("staff@example.com")).toBeInTheDocument();
+  expect(within(team).queryByText("owner@example.com")).not.toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("1 member found.");
+  expect(changeStaffRole).not.toHaveBeenCalled();
 });
 
 it("explains admin permissions and requires confirmation before assignment", async () => {
@@ -322,8 +417,17 @@ it.each(["Manager", "Cashier", "Kitchen"])(
         name: "Role for staff@example.com",
       }),
     );
-    await user.click(screen.getByRole("option", { name: nextRole }));
-    const dialog = screen.getByRole("dialog", { name: "Remove admin role?" });
+    await user.click(
+      screen.getByRole("option", {
+        name: nextRole === "Kitchen" ? "Kitchen / Barista" : nextRole,
+      }),
+    );
+    const dialog = screen.getByRole("dialog", {
+      name:
+        nextRole === "Kitchen"
+          ? "Assign kitchen/barista role?"
+          : "Remove admin role?",
+    });
     expect(dialog).toHaveTextContent(/Their shop membership stays active/);
     if (nextRole === "Manager")
       expect(dialog).toHaveTextContent(
@@ -335,7 +439,12 @@ it.each(["Manager", "Cashier", "Kitchen"])(
       );
     expect(changeStaffRole).not.toHaveBeenCalled();
     await user.click(
-      within(dialog).getByRole("button", { name: "Remove admin role" }),
+      within(dialog).getByRole("button", {
+        name:
+          nextRole === "Kitchen"
+            ? "Assign kitchen/barista"
+            : "Remove admin role",
+      }),
     );
     expect(changeStaffRole).toHaveBeenCalledWith(
       "shop-a",
@@ -406,12 +515,26 @@ it.each(["Cashier", "Kitchen"])(
         name: "Role for staff@example.com",
       }),
     );
-    await user.click(screen.getByRole("option", { name: nextRole }));
-    const dialog = screen.getByRole("dialog", { name: "Remove manager role?" });
+    await user.click(
+      screen.getByRole("option", {
+        name: nextRole === "Kitchen" ? "Kitchen / Barista" : nextRole,
+      }),
+    );
+    const dialog = screen.getByRole("dialog", {
+      name:
+        nextRole === "Kitchen"
+          ? "Assign kitchen/barista role?"
+          : "Remove manager role?",
+    });
     expect(dialog).toHaveTextContent(/Their shop membership stays active/);
     expect(changeStaffRole).not.toHaveBeenCalled();
     await user.click(
-      within(dialog).getByRole("button", { name: "Remove manager role" }),
+      within(dialog).getByRole("button", {
+        name:
+          nextRole === "Kitchen"
+            ? "Assign kitchen/barista"
+            : "Remove manager role",
+      }),
     );
     expect(changeStaffRole).toHaveBeenCalledWith(
       "shop-a",
@@ -503,7 +626,9 @@ it("keeps failed cashier assignment in context without reporting saved access", 
   expect(
     screen.getByRole("dialog", { name: "Assign cashier role?" }),
   ).toBeInTheDocument();
-  expect(screen.getByText("kitchen", { exact: true })).toBeInTheDocument();
+  expect(
+    screen.getByText("kitchen / barista", { exact: true }),
+  ).toBeInTheDocument();
   expect(
     within(screen.getByRole("region", { name: "Shop members" })).queryByText(
       "cashier",
@@ -553,9 +678,11 @@ it("shows real team counts and role guidance without granting access", async () 
     /Cashier Scan and read orders, confirm or reject orders, record payments, and update item availability/,
   );
   await user.click(screen.getByRole("combobox", { name: "Shop role" }));
-  await user.click(screen.getByRole("option", { name: "Kitchen" }));
+  await user.click(screen.getByRole("option", { name: "Kitchen / Barista" }));
   expect(
     screen.getByRole("combobox", { name: "Shop role" }),
-  ).toHaveAccessibleDescription("Kitchen Kitchen preparation access.");
+  ).toHaveAccessibleDescription(
+    /Kitchen \/ Barista Kitchen and barista preparation: view the preparation queue and update preparation status/,
+  );
   expect(inviteStaff).not.toHaveBeenCalled();
 });

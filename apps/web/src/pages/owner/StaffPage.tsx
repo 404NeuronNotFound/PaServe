@@ -39,7 +39,10 @@ import "./staff.css";
 
 const roles = STAFF_ROLES.map((value) => ({
   value,
-  label: value[0] + value.slice(1).toLowerCase(),
+  label:
+    value === "KITCHEN"
+      ? "Kitchen / Barista"
+      : value[0] + value.slice(1).toLowerCase(),
 }));
 function errorMessage(error: unknown) {
   return isAxiosError<ApiErrorResponse>(error)
@@ -57,7 +60,8 @@ type Decision = {
 const roleDescriptions: Record<StaffRole, string> = {
   CASHIER:
     "Scan and read orders, confirm or reject orders, record payments, and update item availability. No menu or price editing, reports, kitchen preparation, staff management, settings, ownership, or billing access.",
-  KITCHEN: "Kitchen preparation access.",
+  KITCHEN:
+    "Kitchen and barista preparation: view the preparation queue and update preparation status. No order approval, payments, menu or price editing, reports, staff management, settings, ownership, or billing access.",
   MANAGER:
     "Daily operations, menu, orders, reports, cashier, and kitchen. Table management, staff management, settings, ownership, and billing are excluded.",
   ADMIN:
@@ -72,11 +76,18 @@ function roleDecisionCopy(decision: Decision, shopName: string) {
         ? "a manager"
         : decision.role === "CASHIER"
           ? "a cashier"
-          : decision.role?.toLowerCase();
+          : "kitchen/barista staff";
   const description = `${decision.email} will become ${assignedRole} in ${shopName}.`;
   const permissionDescription = decision.role
     ? roleDescriptions[decision.role]
     : "";
+  if (decision.role === "KITCHEN")
+    return {
+      title: "Assign kitchen/barista role?",
+      description: `${description} ${roleDescriptions.KITCHEN} ${decision.previousRole === "CASHIER" ? "They will lose counter permissions." : decision.previousRole === "ADMIN" ? "They will lose admin permissions." : decision.previousRole === "MANAGER" ? "They will lose manager permissions." : ""} Their shop membership stays active with the selected role's permissions.`,
+      confirmLabel: "Assign kitchen/barista",
+      success: "Kitchen/barista role assigned.",
+    };
   if (decision.role === "ADMIN")
     return {
       title: "Assign admin role?",
@@ -108,16 +119,9 @@ function roleDecisionCopy(decision: Decision, shopName: string) {
   if (decision.role === "CASHIER")
     return {
       title: "Assign cashier role?",
-      description: `${description} ${roleDescriptions.CASHIER}`,
+      description: `${description} ${roleDescriptions.CASHIER}${decision.previousRole === "KITCHEN" ? " They will lose preparation permissions. Their shop membership stays active with the selected role's permissions." : ""}`,
       confirmLabel: "Assign cashier",
       success: "Cashier role assigned.",
-    };
-  if (decision.previousRole === "CASHIER")
-    return {
-      title: "Remove cashier role?",
-      description: `${description} They will lose counter permissions. Their shop membership stays active with the selected role's permissions. ${permissionDescription}`,
-      confirmLabel: "Remove cashier role",
-      success: "Cashier role removed.",
     };
   return {
     title: "Change staff role?",
@@ -279,7 +283,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
       </section>
     );
   const members = query.data.members.filter((member) =>
-    `${member.email} ${member.role}`
+    `${member.email} ${member.role} ${member.role === "KITCHEN" ? "barista" : ""}`
       .toLowerCase()
       .includes(search.trim().toLowerCase()),
   );
@@ -365,7 +369,9 @@ function StaffWorkspace({ userId }: { userId: string }) {
                     <div className="staff-person-details">
                       <strong>{member.email}</strong>
                       <span>
-                        {member.role.toLowerCase()}
+                        {member.role === "KITCHEN"
+                          ? "kitchen / barista"
+                          : member.role.toLowerCase()}
                         {!member.isActive ? " · account inactive" : ""}
                       </span>
                     </div>
@@ -466,7 +472,9 @@ function StaffWorkspace({ userId }: { userId: string }) {
                       <div className="staff-person-details">
                         <strong>{invitation.email}</strong>
                         <span>
-                          {invitation.role.toLowerCase()}{" "}
+                          {invitation.role === "KITCHEN"
+                            ? "kitchen / barista"
+                            : invitation.role.toLowerCase()}{" "}
                           <span
                             className={`staff-invitation-status is-${invitation.status.toLowerCase()}`}
                           >
