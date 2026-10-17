@@ -729,7 +729,10 @@ try {
   // Bounded MVP smoke benchmark in production-shaped private tables/indexes.
   // Seed before relaxing any copied lifecycle constraints.
   await client.query("SET LOCAL statement_timeout = '30s'");
-  for (let offset=0; offset<100000; offset+=5000) await client.query(`INSERT INTO orders SELECT (jsonb_populate_record(NULL::orders,
+  // LATERAL expands one populated row; (function()).* would repeat JSON work per column.
+  for (let offset=0; offset<100000; offset+=5000) await client.query(`INSERT INTO orders SELECT seeded.*
+    FROM orders template CROSS JOIN generate_series($4::integer,$5::integer) g
+    CROSS JOIN LATERAL jsonb_populate_record(NULL::orders,
     to_jsonb(template) || jsonb_build_object(
       'id', gen_random_uuid()::text, 'requestId', gen_random_uuid()::text,
       'paymentRequestId', gen_random_uuid()::text, 'orderNumber', 'ORD-' || (1000000 + g),
@@ -737,9 +740,19 @@ try {
       'completedAt', timestamp '2034-01-01 04:00:00' + ((g - 1) % 50000 % 1098) * interval '1 day',
       'totalPrice', (((g - 1) % 50000 % 10000) + 1)::numeric / 100,
       'amountReceived', (((g - 1) % 50000 % 10000) + 1)::numeric / 100, 'changeDue', 0
-    ))).* FROM orders template CROSS JOIN generate_series($4::integer,$5::integer) g WHERE template.id=$1`,
+    )) AS seeded WHERE template.id=$1`,
     [expected[0].id,shop.id,foreign.id,offset+1,offset+5000]);
+  const seededItems = await client.query(`INSERT INTO order_items
+    (id,"shopId","orderId","productId","lineNumber",quantity,snapshot,"productSnapshotId","productNameSnapshot",currency,
+      "basePriceSnapshot","unitPriceSnapshot","lineTotalSnapshot","variantsSnapshot","addOnsSnapshot")
+    SELECT gen_random_uuid()::text,o."shopId",o.id,NULL,1,1,
+      jsonb_build_object('productId','benchmark-product','productName','Benchmark product','currency','PHP','quantity',1,
+        'basePrice',o."totalPrice"::text,'unitPrice',o."totalPrice"::text,'totalPrice',o."totalPrice"::text,'variants','[]'::jsonb,'addOns','[]'::jsonb),
+      'benchmark-product','Benchmark product','PHP',o."totalPrice",o."totalPrice",o."totalPrice",'[]'::jsonb,'[]'::jsonb
+    FROM orders o WHERE o."orderNumber" LIKE 'ORD-1%' AND o."completedAt">=timestamp '2034-01-01'`);
+  assert.equal(seededItems.rowCount,100000);
   await client.query('ANALYZE orders');
+  await client.query('ANALYZE order_items');
   const benchmarkDays = new Map();
   for (let index=0; index<50000; index++) {
     const date = new Date(Date.UTC(2034,0,1) + (index % 1098) * 86400000).toISOString().slice(0,10);
@@ -783,6 +796,36 @@ try {
     assert.ok(maxMs <= budgetMs, `Sales trends exceeded the ${budgetMs}ms MVP smoke budget: ${Math.round(maxMs)}ms`);
     trendPerformance.push({startDate,endDate,daysPerPeriod:first.current.days.length,currentOrders:first.current.completedOrders,previousOrders:first.previous.completedOrders,
       firstMs:Math.round(firstMs),medianMs:Math.round(sorted[2]),maxMs:Math.round(maxMs),sqlExecutionMs:plan['Execution Time'],indexes,responseBytes:Buffer.byteLength(JSON.stringify(first))});
+  }
+  const phase21Performance=[];
+  const startDate='2036-01-01',endDate='2036-12-31';
+  const expectedFor=(start,end)=>{
+    let orders=0,cents=0n;
+    for(const [date,entry] of benchmarkDays) if(date>=start && date<=end) {orders+=entry.orders;cents+=entry.cents;}
+    return {orders,cents};
+  };
+  const periodExpected=expectedFor(startDate,endDate);
+  const verifyPeriod=(report,expected=periodExpected)=>{
+    assert.equal(report.completedOrders,expected.orders);
+    assert.equal(BigInt(report.totalSales.replace('.','')),expected.cents);
+    if ('itemsSold' in report) assert.equal(report.itemsSold,expected.orders);
+  };
+  const cases=[
+    ['Daily summary',()=>sales.daily(actor.id,shop.id,'2036-06-01'),report=>verifyPeriod(report,expectedFor('2036-06-01','2036-06-01'))],
+    ['Daily aggregation',()=>sales.dailyAnalytics(actor.id,shop.id,startDate,endDate),report=>{verifyPeriod(report);for(const day of report.days) verifyPeriod(day,expectedFor(day.businessDate,day.businessDate));}],
+    ['Weekly aggregation',()=>sales.weeklyAnalytics(actor.id,shop.id,startDate,endDate),report=>{verifyPeriod(report);for(const week of report.weeks) verifyPeriod(week,expectedFor(week.fromDate,week.toDate));}],
+    ['Monthly aggregation',()=>sales.monthlyAnalytics(actor.id,shop.id,startDate,endDate),report=>{verifyPeriod(report);for(const month of report.months) verifyPeriod(month,expectedFor(month.fromDate,month.toDate));}],
+    ['Custom Date / Payment Methods',()=>sales.custom(actor.id,shop.id,startDate,endDate),report=>{verifyPeriod(report);assert.equal(report.paymentBreakdown[0].orders,periodExpected.orders);assert.equal(report.paymentBreakdown[0].totalSales,report.totalSales);assert.equal(report.recentOrders.length,10);}],
+    ...['QUANTITY','REVENUE'].map(metric=>[`Top Products ${metric}`,()=>sales.topProducts(actor.id,shop.id,startDate,endDate,metric),report=>{assert.equal(report.productCount,1);assert.equal(report.totalQuantity,periodExpected.orders);assert.equal(BigInt(report.totalRevenue.replace('.','')),periodExpected.cents);assert.equal(report.products[0].quantity,periodExpected.orders);assert.equal(report.products[0].revenue,report.totalRevenue);}]),
+    ['Peak Hours',()=>sales.peakHours(actor.id,shop.id,startDate,endDate),report=>{verifyPeriod(report);assert.deepEqual(report.peakHours,[12]);assert.equal(report.hours[12].completedOrders,periodExpected.orders);}],
+    ['Average Prep Time',()=>sales.averagePrepTime(actor.id,shop.id,startDate,endDate),report=>{assert.equal(report.eligibleOrders,periodExpected.orders);assert.equal(report.measuredOrders,periodExpected.orders);assert.equal(report.excludedOrders,0);assert.equal(report.averageDurationMs,0);}],
+  ];
+  for(const [feature,read,verify] of cases) {
+    const samples=[];
+    for(let i=0;i<3;i++){const started=performance.now();const report=await read();samples.push(performance.now()-started);verify(report);}
+    const sorted=[...samples].sort((a,b)=>a-b),maximum=Math.max(...samples);
+    assert.ok(maximum<=budgetMs,`${feature} exceeded ${budgetMs}ms MVP smoke budget: ${Math.round(maximum)}ms`);
+    phase21Performance.push({feature,medianMs:Math.round(sorted[1]),maxMs:Math.round(maximum)});
   }
   // Relax only the rollback copy to exercise legacy/corrupt timestamp pairs.
   // Production constraints remain intact.
@@ -864,6 +907,7 @@ try {
   console.log(
     JSON.stringify({
       passed: true,
+      phase21Mvp:{passed:true,fixtureOrders:100000,fixtureItems:100000,daysPerPeriod:366,budgetMs,samplesPerFeature:3,checks:phase21Performance},
       salesTrends: {passed:true,criterion:'Adjacent equal-length periods and daily points reconcile with detailed eligible orders in one reporting snapshot',checks:trendChecks,
         performance:{passed:true,fixtureOrders:100000,shopOrders:50000,foreignOrders:50000,budgetMs,samplesPerRange:5,checks:trendPerformance,scope:'Sequential production-service calls in private rollback tables with copied production indexes; includes membership and aggregate, excludes HTTP/auth/transaction roundtrips and concurrent load'}},
       averagePrepTime: { passed: true, criterion: 'Preparing-to-ready duration uses valid timestamp pairs once per eligible order, with explicit missing/invalid coverage', checks: prepChecks },

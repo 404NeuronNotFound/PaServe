@@ -229,6 +229,11 @@ function SalesWorkspace({ userId }: { userId: string }) {
     void queryClient.invalidateQueries({
       queryKey: ["sales-trends", userId, shopId],
     });
+    for (const period of ["daily", "weekly", "monthly"]) {
+      void queryClient.invalidateQueries({
+        queryKey: [`${period}-analytics`, userId, shopId],
+      });
+    }
   };
 
   return (

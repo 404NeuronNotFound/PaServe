@@ -8,7 +8,11 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  QueryObserver,
+} from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { MemoryRouter } from "react-router-dom";
 import {
@@ -189,6 +193,53 @@ it("starts with the overview and loads independent history only when opened", as
   );
   expect(DailyAnalytics).toHaveBeenCalled();
 });
+it.each(["daily", "weekly", "monthly"])(
+  "Refresh sales updates active %s history without refreshing another shop",
+  async (period) => {
+    const view = setup();
+    await screen.findByText("₱0.30", { selector: ".sales-amount" });
+    const read = vi.fn().mockResolvedValue({ totalSales: "1.00" });
+    const foreignRead = vi.fn().mockResolvedValue({ totalSales: "2.00" });
+    const observer = new QueryObserver(view.client, {
+      queryKey: [
+        `${period}-analytics`,
+        "user-a",
+        "a",
+        "2026-10-16",
+        "2026-10-16",
+      ],
+      queryFn: read,
+      staleTime: Infinity,
+    });
+    const foreign = new QueryObserver(view.client, {
+      queryKey: [
+        `${period}-analytics`,
+        "user-a",
+        "b",
+        "2026-10-16",
+        "2026-10-16",
+      ],
+      queryFn: foreignRead,
+      staleTime: Infinity,
+    });
+    const unsubscribe = observer.subscribe(() => {}),
+      unsubscribeForeign = foreign.subscribe(() => {});
+    try {
+      await waitFor(() =>
+        expect(observer.getCurrentResult().isSuccess).toBe(true),
+      );
+      await waitFor(() =>
+        expect(foreign.getCurrentResult().isSuccess).toBe(true),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Refresh sales" }));
+      await waitFor(() => expect(read).toHaveBeenCalledTimes(2));
+      expect(foreignRead).toHaveBeenCalledTimes(1);
+    } finally {
+      unsubscribe();
+      unsubscribeForeign();
+    }
+  },
+);
 function chooseCustom(start = "2026-10-15", end = "2026-10-17") {
   fireEvent.click(screen.getByRole("button", { name: "Custom Date" }));
   fireEvent.change(screen.getByLabelText("Start date"), {

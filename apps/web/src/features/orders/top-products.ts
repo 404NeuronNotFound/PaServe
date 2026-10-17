@@ -11,6 +11,16 @@ import "../auth/api/session";
 const money = (value: unknown): value is string =>
   typeof value === "string" && /^(?:0|[1-9]\d*)\.\d{2}$(?![\s\S])/.test(value);
 const count = (value: number) => Number.isSafeInteger(value) && value >= 0;
+// PostgreSQL COLLATE "C" compares UTF-8 bytes, not locale/UTF-16 sort order.
+function compareSnapshotIds(first: string, second: string) {
+  const encoder = new TextEncoder(),
+    a = encoder.encode(first),
+    b = encoder.encode(second);
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if (a[i] !== b[i]) return a[i] - b[i];
+  }
+  return a.length - b.length;
+}
 export async function getTopProducts(
   shopId: string,
   startDate: string,
@@ -80,7 +90,13 @@ export async function getTopProducts(
       (rankValue(previous, metric) < rankValue(entry, metric) ||
         (rankValue(previous, metric) === rankValue(entry, metric) &&
           rankValue(previous, metric === "QUANTITY" ? "REVENUE" : "QUANTITY") <
-            rankValue(entry, metric === "QUANTITY" ? "REVENUE" : "QUANTITY")))
+            rankValue(entry, metric === "QUANTITY" ? "REVENUE" : "QUANTITY")) ||
+        (previous.quantity === entry.quantity &&
+          previous.revenue === entry.revenue &&
+          compareSnapshotIds(
+            previous.productSnapshotId,
+            entry.productSnapshotId,
+          ) > 0))
     )
       return invalid();
     ids.add(entry.productSnapshotId);
