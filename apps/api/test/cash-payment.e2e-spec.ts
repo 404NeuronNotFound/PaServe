@@ -1732,6 +1732,32 @@ describe('Cash collection', () => {
     await request(app.getHttpServer()).get(route).query(period).set('Authorization', 'Bearer session').expect(404);
     expect(raw).not.toHaveBeenCalled();
   });
+  it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)('serves preparation duration and sample coverage for %s', async (reportRole) => {
+    role = reportRole;
+    raw.mockResolvedValueOnce([{ eligibleOrders: 2n, measuredOrders: 1n, missingTimestamps: 1n, invalidTimestamps: 0n, totalDurationMs: '120000' }]);
+    const result = await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/average-prep-time`)
+      .query({ startDate: '2026-10-15', endDate: '2026-10-17' }).set('Authorization', 'Bearer session').expect(200);
+    expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.body).toMatchObject({ shopId, startDate: '2026-10-15', endDate: '2026-10-17', from: '2026-10-14T16:00:00.000Z', to: '2026-10-17T16:00:00.000Z', durationBasis: 'PREPARING_TO_READY', selectionBasis: 'COMPLETED_AT', eligibleOrders: 2, measuredOrders: 1, excludedOrders: 1, missingTimestamps: 1, invalidTimestamps: 0, totalDurationMs: '120000', averageDurationMs: 120000 });
+  });
+  it.each(['CASHIER', 'KITCHEN'] as const)('denies average preparation reporting for %s', async (reportRole) => {
+    role = reportRole;
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/average-prep-time`)
+      .query({ startDate: '2026-10-15', endDate: '2026-10-17' }).set('Authorization', 'Bearer session').expect(403);
+    expect(raw).not.toHaveBeenCalled();
+  });
+  it('rejects invalid prep-report dates, anonymous, foreign shop and revoked access', async () => {
+    role = 'OWNER'; const route = `/api/v1/shops/${shopId}/reports/average-prep-time`;
+    const period = { startDate: '2026-10-15', endDate: '2026-10-17' };
+    for (const query of [{}, { ...period, startDate: ['2026-10-15', '2026-10-16'] }, { ...period, startDate: '2026-10-18' }, { startDate: '2026-02-29', endDate: '2026-03-01' }, { startDate: '2026-01-01', endDate: '2027-01-02' }]) {
+      await request(app.getHttpServer()).get(route).query(query).set('Authorization', 'Bearer session').expect(400);
+    }
+    await request(app.getHttpServer()).get(route).query(period).expect(401);
+    await request(app.getHttpServer()).get('/api/v1/shops/55b18d73-f2fb-4fe6-bb1c-30cf385c3b24/reports/average-prep-time').query(period).set('Authorization', 'Bearer session').expect(404);
+    transaction.mockImplementationOnce(async (work) => { role = 'CASHIER'; return work(database); });
+    await request(app.getHttpServer()).get(route).query(period).set('Authorization', 'Bearer session').expect(404);
+    expect(raw).not.toHaveBeenCalled();
+  });
   it('denies anonymous collection', async () => {
     await collect({}, shopId, false).expect(401);
     expect(transaction).not.toHaveBeenCalled();

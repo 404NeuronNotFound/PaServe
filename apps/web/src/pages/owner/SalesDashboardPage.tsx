@@ -38,6 +38,7 @@ import "./sales-dashboard.css";
 import { DailyAnalytics } from "./DailyAnalytics";
 import { TopProducts } from "./TopProducts";
 import { PeakHours } from "./PeakHours";
+import { AveragePrepTime } from "./AveragePrepTime";
 
 const paymentLabels = {
   CASH: "Cash",
@@ -214,6 +215,9 @@ function SalesWorkspace({ userId }: { userId: string }) {
     });
     void queryClient.invalidateQueries({
       queryKey: ["peak-hours", userId, shopId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["average-prep-time", userId, shopId],
     });
   };
 
@@ -767,6 +771,14 @@ function SalesWorkspace({ userId }: { userId: string }) {
             </section>
           </div>
         </>
+      )}
+      {report && (
+        <AveragePrepTime
+          userId={userId}
+          shopId={shopId}
+          startDate={custom ? customRange!.start : date}
+          endDate={custom ? customRange!.end : date}
+        />
       )}
       {report && (
         <PeakHours

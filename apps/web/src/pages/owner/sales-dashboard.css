@@ -222,6 +222,48 @@
   outline: 2px solid var(--color-text);
   outline-offset: 3px;
 }
+.prep-time-average {
+  margin-block: 22px;
+  font:
+    400 clamp(30px, 4vw, 48px)/1.2 Georgia,
+    serif;
+  overflow-wrap: anywhere;
+}
+.prep-time-average > span {
+  display: block;
+  margin-top: 10px;
+  font-family: sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+.prep-time-coverage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 32px;
+}
+.prep-time-coverage div {
+  flex: 1 1 140px;
+}
+.prep-time-coverage dt {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.prep-time-coverage dd {
+  margin: 8px 0 0;
+  font-size: 22px;
+}
+.prep-time-definition summary {
+  min-height: 44px;
+  padding-block: 14px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.average-prep-time :focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 3px;
+}
 .sales-dashboard * {
   box-sizing: border-box;
 }

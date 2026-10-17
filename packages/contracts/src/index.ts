@@ -1341,6 +1341,23 @@ export interface DailySalesResponse extends CompletedSalesResponse {
   businessDate: string;
   timezone: typeof SALES_TIMEZONE;
 }
+export interface AveragePrepTimeResponse {
+  shopId: string;
+  startDate: string;
+  endDate: string;
+  from: string;
+  to: string;
+  timezone: typeof SALES_TIMEZONE;
+  durationBasis: "PREPARING_TO_READY";
+  selectionBasis: "COMPLETED_AT";
+  eligibleOrders: number;
+  measuredOrders: number;
+  excludedOrders: number;
+  missingTimestamps: number;
+  invalidTimestamps: number;
+  totalDurationMs: string;
+  averageDurationMs: number | null;
+}
 export interface PeakHourEntry {
   hour: number;
   completedOrders: number;

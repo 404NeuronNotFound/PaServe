@@ -24,6 +24,7 @@ import {
   type TopProductsResponse,
   type TopProductMetric,
   type PeakHoursResponse,
+  type AveragePrepTimeResponse,
 } from '@paserve/contracts';
 import { isISO8601 } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -36,6 +37,108 @@ export const COMPLETED_SALES_ROLES = SHOP_ROLES.filter((role) =>
 @Injectable()
 export class CompletedSalesService {
   constructor(private readonly prisma: PrismaService) {}
+  async averagePrepTime(
+    actorId: string,
+    shopId: string,
+    startDate: unknown,
+    endDate: unknown,
+  ): Promise<AveragePrepTimeResponse> {
+    const range = salesDailyRange(startDate, endDate);
+    if (!range)
+      throw new BadRequestException({
+        code: 'INVALID_SALES_PERIOD',
+        message:
+          'Choose valid start/end dates in order, spanning at most 366 days.',
+      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const access = await tx.shop.findFirst({
+          where: shopAccessWhere(actorId, shopId, COMPLETED_SALES_ROLES),
+          select: { id: true },
+        });
+        if (!access)
+          throw new NotFoundException({
+            code: 'SHOP_NOT_ACCESSIBLE',
+            message: 'This shop is unavailable or you do not have access.',
+          });
+        const rows = await tx.$queryRaw<
+          Array<{
+            eligibleOrders: bigint;
+            measuredOrders: bigint;
+            missingTimestamps: bigint;
+            invalidTimestamps: bigint;
+            totalDurationMs: string;
+          }>
+        >`
+        WITH eligible AS (
+          SELECT o."preparationReadyAt" - o."preparationStartedAt" AS duration,
+            CASE WHEN o."preparationStartedAt" IS NULL OR o."preparationReadyAt" IS NULL THEN 'MISSING'
+              WHEN o."preparationReadyAt" < o."preparationStartedAt" OR o."preparationReadyAt" > o."completedAt" THEN 'INVALID'
+              ELSE 'VALID' END AS validity
+          FROM orders o WHERE o."shopId" = ${shopId} AND o.status = 'CONFIRMED'
+            AND o."paymentStatus" = 'PAID' AND o."preparationStatus" = 'COMPLETED'
+            AND o."completedBy" IS NOT NULL AND o.currency = 'PHP'
+            AND o."completedAt" >= ${new Date(range.from)} AND o."completedAt" < ${new Date(range.to)}
+        )
+        SELECT count(*) AS "eligibleOrders", count(*) FILTER (WHERE validity = 'VALID') AS "measuredOrders",
+          count(*) FILTER (WHERE validity = 'MISSING') AS "missingTimestamps",
+          count(*) FILTER (WHERE validity = 'INVALID') AS "invalidTimestamps",
+          coalesce(sum((extract(epoch FROM duration) * 1000)::bigint) FILTER (WHERE validity = 'VALID'), 0)::text AS "totalDurationMs"
+        FROM eligible
+      `;
+        const row = rows[0];
+        if (!row)
+          throw new InternalServerErrorException(
+            'Preparation time could not be calculated.',
+          );
+        const safe = (value: bigint) => {
+          const count = Number(value);
+          if (!Number.isSafeInteger(count) || count < 0)
+            throw new InternalServerErrorException(
+              'Preparation time could not be calculated.',
+            );
+          return count;
+        };
+        const total = BigInt(row.totalDurationMs);
+        const average =
+          row.measuredOrders === 0n
+            ? null
+            : total / row.measuredOrders +
+              (2n * (total % row.measuredOrders) >= row.measuredOrders
+                ? 1n
+                : 0n);
+        if (
+          total < 0n ||
+          row.eligibleOrders !==
+            row.measuredOrders +
+              row.missingTimestamps +
+              row.invalidTimestamps ||
+          (row.measuredOrders === 0n && total !== 0n)
+        )
+          throw new InternalServerErrorException(
+            'Preparation time could not be reconciled.',
+          );
+        return {
+          shopId,
+          startDate: startDate as string,
+          endDate: endDate as string,
+          from: range.from,
+          to: range.to,
+          timezone: SALES_TIMEZONE,
+          durationBasis: 'PREPARING_TO_READY',
+          selectionBasis: 'COMPLETED_AT',
+          eligibleOrders: safe(row.eligibleOrders),
+          measuredOrders: safe(row.measuredOrders),
+          missingTimestamps: safe(row.missingTimestamps),
+          invalidTimestamps: safe(row.invalidTimestamps),
+          excludedOrders: safe(row.missingTimestamps + row.invalidTimestamps),
+          totalDurationMs: total.toString(),
+          averageDurationMs: average === null ? null : safe(average),
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
   async peakHours(
     actorId: string,
     shopId: string,

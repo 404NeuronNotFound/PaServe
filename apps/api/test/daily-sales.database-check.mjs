@@ -690,6 +690,67 @@ try {
   assert.equal(paymentMixChecks[1].orders, 8); assert.equal(paymentMixChecks[1].sales, '100.00');
   assert.equal(paymentMixChecks[2].orders, 1); assert.equal(paymentMixChecks[2].sales, '0.00');
   assert.equal(paymentMixChecks[3].orders, 0);
+  // Relax only the rollback copy to exercise legacy/corrupt timestamp pairs.
+  // Production constraints remain intact.
+  await client.query(`ALTER TABLE "${schema}".orders
+    DROP CONSTRAINT orders_preparation_start_check,
+    DROP CONSTRAINT orders_preparation_ready_check,
+    DROP CONSTRAINT orders_completion_check`);
+  const prepOrder = (finished, started, ready, overrides = {}) => completed(finished, '1.00', {
+    preparationStartedAt: started === null ? null : new Date(started),
+    preparationStartedBy: started === null ? null : actor.id,
+    preparationReadyAt: ready === null ? null : new Date(ready),
+    preparationReadyBy: ready === null ? null : actor.id,
+    ...overrides,
+  });
+  await prepOrder('2032-04-01T01:10:00Z', '2032-04-01T01:00:00Z', '2032-04-01T01:02:00Z');
+  await prepOrder('2032-03-31T16:05:00Z', '2032-03-31T15:58:00Z', '2032-03-31T16:02:00Z');
+  await prepOrder('2032-04-01T02:10:00Z', '2032-04-01T02:00:00Z', '2032-04-01T02:00:00Z');
+  await prepOrder('2032-04-01T03:00:00Z', null, null);
+  await prepOrder('2032-04-01T04:00:00Z', null, '2032-04-01T03:59:00Z');
+  await prepOrder('2032-04-01T05:00:00Z', '2032-04-01T04:50:00Z', null);
+  await prepOrder('2032-04-01T06:00:00Z', '2032-04-01T05:59:00Z', '2032-04-01T05:58:00Z');
+  await prepOrder('2032-04-01T07:00:00Z', '2032-04-01T06:59:00Z', '2032-04-01T07:01:00Z');
+  await prepOrder('2032-04-01T16:05:00Z', '2032-03-31T15:00:00Z', '2032-04-01T16:00:00Z');
+  await prepOrder('2032-04-04T01:00:00Z', null, null);
+  await prepOrder('2032-04-01T01:40:00Z', '2032-04-01T01:00:00Z', '2032-04-01T01:30:00Z', { shopId: foreign.id });
+  await completed('2032-03-31T15:59:59.999Z', '1.00');
+  const prepChecks = [];
+  for (const [startDate, endDate] of [
+    ['2032-04-01', '2032-04-01'], ['2032-04-01', '2032-04-02'],
+    ['2032-04-02', '2032-04-02'], ['2032-04-03', '2032-04-03'], ['2032-04-04', '2032-04-04'],
+  ]) {
+    const prep = await sales.averagePrepTime(actor.id, shop.id, startDate, endDate);
+    const source = await client.query(`SELECT
+      to_char(o."preparationStartedAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS started,
+      to_char(o."preparationReadyAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ready,
+      to_char(o."completedAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS completed
+      FROM orders o WHERE o."shopId"=$1 AND o.status='CONFIRMED' AND o."paymentStatus"='PAID'
+      AND o."preparationStatus"='COMPLETED' AND o."completedBy" IS NOT NULL AND o.currency='PHP'
+      AND (o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila')::date BETWEEN $2::date AND $3::date`,
+      [shop.id, startDate, endDate]);
+    let measured = 0, missing = 0, invalid = 0, total = 0n;
+    for (const order of source.rows) {
+      if (order.started === null || order.ready === null) { missing++; continue; }
+      const start = Date.parse(order.started), ready = Date.parse(order.ready), finish = Date.parse(order.completed);
+      if (ready < start || ready > finish) { invalid++; continue; }
+      measured++; total += BigInt(ready - start);
+    }
+    const count = BigInt(measured);
+    const average = measured === 0 ? null : Number(total / count + (total % count * 2n >= count ? 1n : 0n));
+    assert.equal(prep.eligibleOrders, source.rows.length);
+    assert.equal(prep.measuredOrders, measured); assert.equal(prep.missingTimestamps, missing);
+    assert.equal(prep.invalidTimestamps, invalid); assert.equal(prep.excludedOrders, missing + invalid);
+    assert.equal(prep.totalDurationMs, total.toString()); assert.equal(prep.averageDurationMs, average);
+    prepChecks.push({ startDate, endDate, eligible: prep.eligibleOrders, measured, missing, invalid, totalDurationMs: total.toString(), averageDurationMs: average });
+  }
+  assert.deepEqual(prepChecks[0], { startDate: '2032-04-01', endDate: '2032-04-01', eligible: 8, measured: 3, missing: 3, invalid: 2, totalDurationMs: '360000', averageDurationMs: 120000 });
+  assert.equal(prepChecks[1].averageDurationMs, 22590000);
+  assert.equal(prepChecks[2].averageDurationMs, 90000000);
+  assert.equal(prepChecks[3].averageDurationMs, null); assert.equal(prepChecks[3].eligible, 0);
+  assert.equal(prepChecks[4].averageDurationMs, null); assert.equal(prepChecks[4].eligible, 1);
+  const foreignPrep = await sales.averagePrepTime(actor.id, foreign.id, '2032-04-01', '2032-04-01');
+  assert.equal(foreignPrep.measuredOrders, 1); assert.equal(foreignPrep.averageDurationMs, 1800000);
   await prisma.shopMember.update({
     where: { id: membership.id },
     data: { role: 'CASHIER' },
@@ -704,9 +765,11 @@ try {
   await assert.rejects(sales.custom(actor.id, shop.id, '2026-10-15', '2026-11-01'), (error) => error.getStatus() === 404);
   await assert.rejects(sales.topProducts(actor.id, shop.id, '2029-01-15', '2029-01-15', 'QUANTITY'), (error) => error.getStatus() === 404);
   await assert.rejects(sales.peakHours(actor.id, shop.id, '2030-03-10', '2030-03-10'), (error) => error.getStatus() === 404);
+  await assert.rejects(sales.averagePrepTime(actor.id, shop.id, '2032-04-01', '2032-04-01'), (error) => error.getStatus() === 404);
   console.log(
     JSON.stringify({
       passed: true,
+      averagePrepTime: { passed: true, criterion: 'Preparing-to-ready duration uses valid timestamp pairs once per eligible order, with explicit missing/invalid coverage', checks: prepChecks },
       paymentMethods: { passed: true, criterion: 'Selected-period payment method counts and saved sales reconcile with detailed eligible orders, including zero-value and empty periods', checks: paymentMixChecks },
       peakHours: { passed: true, criterion: 'Eligible orders group by Manila completion hour and reconcile with detailed orders and the selected-period summary', checks: peakChecks },
       topProducts: { passed: true, criterion: 'Snapshot identifiers, latest saved names, quantity/revenue rankings and remainder totals reconcile with eligible detailed items', checks: rankingChecks },
