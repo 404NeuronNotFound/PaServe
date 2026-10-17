@@ -1678,6 +1678,34 @@ describe('Cash collection', () => {
     await request(app.getHttpServer()).get(route).query(period).set('Authorization', 'Bearer session').expect(404);
     expect(aggregateOrders).not.toHaveBeenCalled(); expect(aggregateItems).not.toHaveBeenCalled(); expect(groupPayments).not.toHaveBeenCalled();
   });
+  it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)('serves snapshot product ranking for %s', async (reportRole) => {
+    role = reportRole;
+    for (const metric of ['QUANTITY', 'REVENUE']) {
+      raw.mockResolvedValueOnce([]);
+      const result = await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/top-products`)
+        .query({ startDate: '2026-10-15', endDate: '2026-10-17', metric }).set('Authorization', 'Bearer session').expect(200);
+      expect(result.headers['cache-control']).toBe('no-store');
+      expect(result.body).toMatchObject({ shopId, startDate: '2026-10-15', endDate: '2026-10-17', metric, totalQuantity: 0, totalRevenue: '0.00', products: [], limit: 10 });
+    }
+  });
+  it.each(['CASHIER', 'KITCHEN'] as const)('denies product ranking for %s', async (reportRole) => {
+    role = reportRole;
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/top-products`)
+      .query({ startDate: '2026-10-15', endDate: '2026-10-17', metric: 'QUANTITY' }).set('Authorization', 'Bearer session').expect(403);
+    expect(raw).not.toHaveBeenCalled();
+  });
+  it('rejects invalid product queries, anonymous, foreign-shop and revoked access', async () => {
+    role = 'OWNER'; const route = `/api/v1/shops/${shopId}/reports/top-products`;
+    const period = { startDate: '2026-10-15', endDate: '2026-10-17', metric: 'QUANTITY' };
+    for (const query of [{}, { ...period, metric: 'PRICE' }, { ...period, metric: ['QUANTITY', 'REVENUE'] }, { ...period, startDate: ['2026-10-15', '2026-10-16'] }, { ...period, startDate: '2026-10-18' }]) {
+      await request(app.getHttpServer()).get(route).query(query).set('Authorization', 'Bearer session').expect(400);
+    }
+    await request(app.getHttpServer()).get(route).query(period).expect(401);
+    await request(app.getHttpServer()).get('/api/v1/shops/55b18d73-f2fb-4fe6-bb1c-30cf385c3b24/reports/top-products').query(period).set('Authorization', 'Bearer session').expect(404);
+    transaction.mockImplementationOnce(async (work) => { role = 'CASHIER'; return work(database); });
+    await request(app.getHttpServer()).get(route).query(period).set('Authorization', 'Bearer session').expect(404);
+    expect(raw).not.toHaveBeenCalled();
+  });
   it('denies anonymous collection', async () => {
     await collect({}, shopId, false).expect(401);
     expect(transaction).not.toHaveBeenCalled();

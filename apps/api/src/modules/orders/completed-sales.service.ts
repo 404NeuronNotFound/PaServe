@@ -20,6 +20,9 @@ import {
   type DailySalesResponse,
   type CustomSalesResponse,
   type CompletedSalesResponse,
+  TOP_PRODUCT_METRICS,
+  type TopProductsResponse,
+  type TopProductMetric,
 } from '@paserve/contracts';
 import { isISO8601 } from 'class-validator';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -32,6 +35,129 @@ export const COMPLETED_SALES_ROLES = SHOP_ROLES.filter((role) =>
 @Injectable()
 export class CompletedSalesService {
   constructor(private readonly prisma: PrismaService) {}
+  async topProducts(
+    actorId: string,
+    shopId: string,
+    startDate: unknown,
+    endDate: unknown,
+    metric: unknown,
+  ): Promise<TopProductsResponse> {
+    const range = salesDailyRange(startDate, endDate);
+    if (!range)
+      throw new BadRequestException({
+        code: 'INVALID_SALES_PERIOD',
+        message:
+          'Choose valid start/end dates in order, spanning at most 366 days.',
+      });
+    if (!TOP_PRODUCT_METRICS.includes(metric as TopProductMetric))
+      throw new BadRequestException({
+        code: 'INVALID_PRODUCT_METRIC',
+        message: 'Choose QUANTITY or REVENUE.',
+      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const access = await tx.shop.findFirst({
+          where: shopAccessWhere(actorId, shopId, COMPLETED_SALES_ROLES),
+          select: { id: true },
+        });
+        if (!access)
+          throw new NotFoundException({
+            code: 'SHOP_NOT_ACCESSIBLE',
+            message: 'This shop is unavailable or you do not have access.',
+          });
+        const sort =
+          metric === 'QUANTITY'
+            ? Prisma.sql`quantity DESC, revenue DESC`
+            : Prisma.sql`revenue DESC, quantity DESC`;
+        const rows = await tx.$queryRaw<
+          Array<{
+            productSnapshotId: string;
+            productName: string;
+            quantity: Prisma.Decimal;
+            revenue: Prisma.Decimal;
+            totalQuantity: Prisma.Decimal;
+            totalRevenue: Prisma.Decimal;
+            productCount: bigint;
+          }>
+        >`
+        WITH grouped AS (
+          SELECT i."productSnapshotId",
+            (array_agg(i."productNameSnapshot" ORDER BY o."completedAt" DESC, o.id DESC, i."lineNumber" DESC))[1] AS "productName",
+            sum(i.quantity) AS quantity, sum(i."lineTotalSnapshot") AS revenue
+          FROM order_items i JOIN orders o ON o.id = i."orderId" AND o."shopId" = i."shopId"
+          WHERE i."shopId" = ${shopId} AND o."shopId" = ${shopId}
+            AND o.status = 'CONFIRMED' AND o."paymentStatus" = 'PAID'
+            AND o."preparationStatus" = 'COMPLETED' AND o."completedBy" IS NOT NULL
+            AND o.currency = 'PHP' AND i.currency = 'PHP'
+            AND o."completedAt" >= ${new Date(range.from)} AND o."completedAt" < ${new Date(range.to)}
+          GROUP BY i."productSnapshotId"
+        )
+        SELECT *, sum(quantity) OVER () AS "totalQuantity", sum(revenue) OVER () AS "totalRevenue",
+          count(*) OVER () AS "productCount"
+        FROM grouped ORDER BY ${sort}, "productSnapshotId" COLLATE "C" ASC LIMIT 10
+      `;
+        const safe = (value: bigint | Prisma.Decimal) => {
+          const count = Number(value);
+          if (!Number.isSafeInteger(count) || count < 0)
+            throw new InternalServerErrorException(
+              'Product quantities could not be calculated.',
+            );
+          return count;
+        };
+        const products = rows.map((row) => {
+          if (
+            !row.productSnapshotId ||
+            !row.productName ||
+            row.productSnapshotId.length > 1000 ||
+            row.productName.length > 1000 ||
+            row.revenue.isNegative()
+          )
+            throw new InternalServerErrorException(
+              'Saved product data is unavailable.',
+            );
+          return {
+            productSnapshotId: row.productSnapshotId,
+            productName: row.productName,
+            quantity: safe(row.quantity),
+            revenue: row.revenue.toFixed(2),
+          };
+        });
+        const totalQuantity = rows[0] ? safe(rows[0].totalQuantity) : 0;
+        const totalRevenue = rows[0]?.totalRevenue ?? new Prisma.Decimal(0);
+        const otherQuantity =
+          totalQuantity -
+          products.reduce((n, product) => n + product.quantity, 0);
+        const otherRevenue = totalRevenue.minus(
+          products.reduce(
+            (n, product) => n.plus(product.revenue),
+            new Prisma.Decimal(0),
+          ),
+        );
+        if (otherQuantity < 0 || otherRevenue.isNegative())
+          throw new InternalServerErrorException(
+            'Product totals could not be reconciled.',
+          );
+        return {
+          shopId,
+          startDate: startDate as string,
+          endDate: endDate as string,
+          from: range.from,
+          to: range.to,
+          timezone: SALES_TIMEZONE,
+          currency: 'PHP',
+          metric: metric as TopProductMetric,
+          limit: 10,
+          productCount: rows[0] ? safe(rows[0].productCount) : 0,
+          totalQuantity,
+          totalRevenue: totalRevenue.toFixed(2),
+          otherQuantity,
+          otherRevenue: otherRevenue.toFixed(2),
+          products,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
   async monthlyAnalytics(
     actorId: string,
     shopId: string,

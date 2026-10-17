@@ -551,6 +551,63 @@ try {
   const foreignCustom = await sales.custom(actor.id, foreign.id, '2026-10-15', '2026-11-01');
   assert.equal(foreignCustom.totalSales, '900.00');
   assert.equal(foreignCustom.completedOrders, 1);
+  // Product ranking uses snapshots exclusively; no live products table exists
+  // in this private schema. productId=null represents deleted historical products.
+  const savedA = randomUUID(), savedB = randomUUID(), savedFree = randomUUID();
+  const addRankedItem = async (snapshotId, name, quantity, unit, time, overrides = {}) => {
+    const total = (BigInt(unit.replace('.', '')) * BigInt(quantity));
+    const amount = `${total / 100n}.${String(total % 100n).padStart(2, '0')}`;
+    const order = await completed(time, amount, overrides);
+    const snapshot = { productId: snapshotId, productName: name, currency: 'PHP', quantity, basePrice: unit, unitPrice: unit, totalPrice: amount, variants: [], addOns: [] };
+    await prisma.orderItem.create({ data: {
+      shopId: order.shopId, orderId: order.id, productId: null, lineNumber: 1, quantity, snapshot,
+      productSnapshotId: snapshotId, productNameSnapshot: name, currency: 'PHP', basePriceSnapshot: unit, unitPriceSnapshot: unit, lineTotalSnapshot: amount, variantsSnapshot: [], addOnsSnapshot: [],
+    } });
+  };
+  await addRankedItem(savedA, 'Old saved name', 3, '2.00', '2029-01-15T01:00:00.000Z');
+  await addRankedItem(savedA, 'Renamed coffee', 4, '2.00', '2029-01-15T02:00:00.000Z');
+  await addRankedItem(savedB, 'Renamed coffee', 1, '20.00', '2029-01-15T03:00:00.000Z');
+  await addRankedItem(savedFree, 'Free item', 9, '0.00', '2029-01-15T04:00:00.000Z');
+  for (let i = 0; i < 12; i++) await addRankedItem(randomUUID(), `Tie product ${i}`, 1, '1.00', '2029-01-15T05:00:00.000Z');
+  await addRankedItem(savedA, 'Foreign name', 99, '99.00', '2029-01-15T05:00:00.000Z', { shopId: foreign.id });
+  await addRankedItem(savedA, 'Outside period', 99, '99.00', '2029-01-14T15:59:59.999Z');
+  await addRankedItem(savedA, 'Next midnight', 99, '99.00', '2029-01-15T16:00:00.000Z');
+  const rankingSource = await client.query(
+    `SELECT i."productSnapshotId" AS id, i."productNameSnapshot" AS name, i.quantity, i."lineTotalSnapshot"::text AS revenue
+     FROM "${schema}".order_items i JOIN "${schema}".orders o ON o.id=i."orderId" AND o."shopId"=i."shopId"
+     WHERE i."shopId"=$1 AND o."shopId"=$1 AND o.status='CONFIRMED' AND o."paymentStatus"='PAID'
+       AND o."preparationStatus"='COMPLETED' AND o."completedBy" IS NOT NULL AND o.currency='PHP' AND i.currency='PHP'
+       AND ((o."completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila')::date=$2::date
+     ORDER BY o."completedAt" DESC, o.id DESC, i."lineNumber" DESC`, [shop.id, '2029-01-15'],
+  );
+  const groupedProducts = new Map();
+  for (const line of rankingSource.rows) {
+    const grouped = groupedProducts.get(line.id) ?? { id: line.id, name: line.name, quantity: 0, cents: 0n };
+    grouped.quantity += line.quantity; grouped.cents += BigInt(line.revenue.replace('.', '')); groupedProducts.set(line.id, grouped);
+  }
+  const rankingChecks = [];
+  const baselineRanking = await sales.topProducts(actor.id, shop.id, '2026-10-16', '2026-10-16', 'QUANTITY');
+  assert.equal(baselineRanking.totalQuantity, 41, 'Pending/unpaid/rejected/unfinished/foreign item quantities do not count');
+  assert.equal(baselineRanking.totalRevenue, '0.00', 'Revenue uses saved detailed line amounts, not parent order totals');
+  for (const metric of ['QUANTITY', 'REVENUE']) {
+    const ranked = await sales.topProducts(actor.id, shop.id, '2029-01-15', '2029-01-15', metric);
+    const expectedProducts = Array.from(groupedProducts.values()).sort((a, b) => {
+      const first = metric === 'QUANTITY' ? BigInt(b.quantity - a.quantity) : b.cents - a.cents;
+      const second = metric === 'QUANTITY' ? b.cents - a.cents : BigInt(b.quantity - a.quantity);
+      return first > 0n ? 1 : first < 0n ? -1 : second > 0n ? 1 : second < 0n ? -1 : a.id < b.id ? -1 : 1;
+    });
+    assert.equal(ranked.productCount, 15); assert.equal(ranked.totalQuantity, 29); assert.equal(ranked.totalRevenue, '46.00');
+    assert.deepEqual(ranked.products.map((p) => ({ id: p.productSnapshotId, name: p.productName, quantity: p.quantity, cents: BigInt(p.revenue.replace('.', '')) })), expectedProducts.slice(0, 10));
+    assert.equal(ranked.otherQuantity, expectedProducts.slice(10).reduce((n, p) => n + p.quantity, 0));
+    assert.equal(BigInt(ranked.otherRevenue.replace('.', '')), expectedProducts.slice(10).reduce((n, p) => n + p.cents, 0n));
+    assert.equal(ranked.products.find((p) => p.productSnapshotId === savedA).productName, 'Renamed coffee');
+    assert.equal(ranked.products[0].productSnapshotId, metric === 'QUANTITY' ? savedFree : savedB);
+    assert.deepEqual((await sales.topProducts(actor.id, shop.id, '2029-01-15', '2029-01-15', metric)).products, ranked.products);
+    rankingChecks.push({ metric, productCount: ranked.productCount, totalQuantity: ranked.totalQuantity, totalRevenue: ranked.totalRevenue, otherQuantity: ranked.otherQuantity, otherRevenue: ranked.otherRevenue });
+  }
+  const foreignRanked = await sales.topProducts(actor.id, foreign.id, '2029-01-15', '2029-01-15', 'QUANTITY');
+  assert.equal(foreignRanked.totalQuantity, 99); assert.equal(foreignRanked.products[0].productName, 'Foreign name');
+  assert.equal((await sales.topProducts(actor.id, shop.id, '2029-01-17', '2029-01-17', 'QUANTITY')).productCount, 0);
   await prisma.shopMember.update({
     where: { id: membership.id },
     data: { role: 'CASHIER' },
@@ -563,9 +620,11 @@ try {
   await assert.rejects(sales.weeklyAnalytics(actor.id, shop.id, '2026-10-12', '2026-10-18'), (error) => error.getStatus() === 404);
   await assert.rejects(sales.monthlyAnalytics(actor.id, shop.id, '2026-10-01', '2026-10-31'), (error) => error.getStatus() === 404);
   await assert.rejects(sales.custom(actor.id, shop.id, '2026-10-15', '2026-11-01'), (error) => error.getStatus() === 404);
+  await assert.rejects(sales.topProducts(actor.id, shop.id, '2029-01-15', '2029-01-15', 'QUANTITY'), (error) => error.getStatus() === 404);
   console.log(
     JSON.stringify({
       passed: true,
+      topProducts: { passed: true, criterion: 'Snapshot identifiers, latest saved names, quantity/revenue rankings and remainder totals reconcile with eligible detailed items', checks: rankingChecks },
       customSales: { passed: true, criterion: 'One selected start/end period applies consistently to summary, item quantities, payments and recent orders', checks: customChecks },
       monthlyAnalytics: { passed: true, criterion: 'Aggregate sales/orders by calendar month in Asia/Manila', checks: monthlyChecks },
       weeklyAnalytics: { passed: true, criterion: 'Aggregate by consistent Monday-Sunday week boundaries in Asia/Manila', checks: weeklyChecks },

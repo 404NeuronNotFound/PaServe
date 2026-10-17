@@ -33,6 +33,7 @@ import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./sales-dashboard.css";
 import { DailyAnalytics } from "./DailyAnalytics";
+import { TopProducts } from "./TopProducts";
 
 const paymentLabels = {
   CASH: "Cash",
@@ -117,6 +118,7 @@ export function SalesDashboardPage() {
 }
 
 function SalesWorkspace({ userId }: { userId: string }) {
+  const queryClient = useQueryClient();
   const { shopId, role, shop } = useActiveShop();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [custom, setCustom] = useState(false);
@@ -183,6 +185,12 @@ function SalesWorkspace({ userId }: { userId: string }) {
       ? `${formatDate(customRange!.start)} – ${formatDate(customRange!.end)}`
       : formatDate(date)
     : "Choose a date";
+  const refreshSales = () => {
+    void query.refetch();
+    void queryClient.invalidateQueries({
+      queryKey: ["top-products", userId, shopId],
+    });
+  };
 
   return (
     <section className="sales-dashboard" aria-labelledby="sales-title">
@@ -201,7 +209,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
         <button
           className="secondary-button sales-refresh"
           disabled={!valid || query.isFetching}
-          onClick={() => void query.refetch()}
+          onClick={refreshSales}
         >
           <FiRefreshCw
             aria-hidden="true"
@@ -365,7 +373,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
           <button
             className="secondary-button"
             disabled={query.isFetching}
-            onClick={() => void query.refetch()}
+            onClick={refreshSales}
           >
             Retry
           </button>
@@ -624,6 +632,14 @@ function SalesWorkspace({ userId }: { userId: string }) {
             </section>
           </div>
         </>
+      )}
+      {report && (
+        <TopProducts
+          userId={userId}
+          shopId={shopId}
+          startDate={custom ? customRange!.start : date}
+          endDate={custom ? customRange!.end : date}
+        />
       )}
       <footer className="sales-report-footer">
         <span>

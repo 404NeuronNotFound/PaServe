@@ -1341,6 +1341,31 @@ export interface DailySalesResponse extends CompletedSalesResponse {
   businessDate: string;
   timezone: typeof SALES_TIMEZONE;
 }
+export const TOP_PRODUCT_METRICS = ["QUANTITY", "REVENUE"] as const;
+export type TopProductMetric = (typeof TOP_PRODUCT_METRICS)[number];
+export interface TopProductEntry {
+  productSnapshotId: string;
+  productName: string;
+  quantity: number;
+  revenue: string;
+}
+export interface TopProductsResponse {
+  shopId: string;
+  startDate: string;
+  endDate: string;
+  from: string;
+  to: string;
+  timezone: typeof SALES_TIMEZONE;
+  currency: "PHP";
+  metric: TopProductMetric;
+  limit: 10;
+  productCount: number;
+  totalQuantity: number;
+  totalRevenue: string;
+  otherQuantity: number;
+  otherRevenue: string;
+  products: TopProductEntry[];
+}
 export interface CustomSalesResponse extends Omit<DailySalesResponse, "businessDate"> {
   startDate: string;
   endDate: string;
