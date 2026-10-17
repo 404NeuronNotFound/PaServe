@@ -26,6 +26,7 @@ import { TopProducts } from "./TopProducts";
 import { PeakHours } from "./PeakHours";
 import { AveragePrepTime } from "./AveragePrepTime";
 import { SalesTrends } from "./SalesTrends";
+import { DailyAnalytics } from "./DailyAnalytics";
 import { SalesDashboardPage } from "./SalesDashboardPage";
 import { api } from "../../lib/api/client";
 
@@ -36,7 +37,7 @@ vi.mock("../../features/orders/custom-sales", () => ({
   getCustomSales: vi.fn(),
 }));
 // Daily analytics has its own range, request, and error-state tests.
-vi.mock("./DailyAnalytics", () => ({ DailyAnalytics: () => null }));
+vi.mock("./DailyAnalytics", () => ({ DailyAnalytics: vi.fn(() => null) }));
 vi.mock("./TopProducts", () => ({ TopProducts: vi.fn(() => null) }));
 vi.mock("./PeakHours", () => ({ PeakHours: vi.fn(() => null) }));
 vi.mock("./AveragePrepTime", () => ({ AveragePrepTime: vi.fn(() => null) }));
@@ -171,6 +172,22 @@ const customReport = (startDate = "2026-10-15", endDate = "2026-10-17") => ({
       completedAt: `${startDate}T01:00:00.000Z`,
     }),
   ],
+});
+it("starts with the overview and loads independent history only when opened", async () => {
+  setup();
+  await screen.findByText("₱0.30", { selector: ".sales-amount" });
+  expect(DailyAnalytics).not.toHaveBeenCalled();
+  const navigation = screen.getByRole("navigation", {
+    name: "Sales dashboard sections",
+  });
+  expect(
+    within(navigation).getByRole("link", { name: "Trends" }),
+  ).toHaveAttribute("href", "#sales-trends-section");
+  fireEvent.click(within(navigation).getByRole("link", { name: "History" }));
+  expect(document.getElementById("sales-history-section")).toHaveAttribute(
+    "open",
+  );
+  expect(DailyAnalytics).toHaveBeenCalled();
 });
 function chooseCustom(start = "2026-10-15", end = "2026-10-17") {
   fireEvent.click(screen.getByRole("button", { name: "Custom Date" }));

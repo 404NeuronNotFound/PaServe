@@ -72,6 +72,7 @@ function setup(startDate = "2026-10-15", endDate = "2026-10-16") {
 it("shows exact sales/order comparisons, preceding dates, and zero-filled daily bars", async () => {
   vi.mocked(getSalesTrends).mockResolvedValue(fixture());
   setup();
+  fireEvent.click(await screen.findByText("View daily comparison data"));
   const table = await screen.findByRole("table");
   expect(within(table).getAllByRole("row")).toHaveLength(3);
   expect(screen.getByText(/Previous: 2026-10-13/)).toBeVisible();
@@ -110,14 +111,20 @@ it("hides stale data on refresh failure and supports retry", async () => {
     .mockRejectedValueOnce(new Error("offline"))
     .mockResolvedValueOnce(fixture());
   setup();
-  expect(await screen.findByRole("table")).toBeVisible();
+  expect(
+    await screen.findByRole("figure", { name: "Gross sales comparison chart" }),
+  ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Refresh sales trends" }));
   expect(
     await screen.findByText(/couldn’t refresh sales trends/),
   ).toBeVisible();
-  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("figure", { name: "Gross sales comparison chart" }),
+  ).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Refresh sales trends" }));
-  expect(await screen.findByRole("table")).toBeVisible();
+  expect(
+    await screen.findByRole("figure", { name: "Gross sales comparison chart" }),
+  ).toBeVisible();
 });
 it("does not request an unrepresentable preceding period", () => {
   setup("0001-01-01", "0001-01-01");

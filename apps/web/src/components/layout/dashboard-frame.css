@@ -1,0 +1,38 @@
+/* Only content and navigation scroll inside the viewport-sized screen frame. */
+@media screen {
+  html:has(.dashboard-shell),
+  body:has(.dashboard-shell) {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  #root:has(.dashboard-shell) {
+    height: 100dvh;
+    overflow: clip;
+  }
+  .dashboard-shell {
+    height: calc(100dvh - var(--feedback-banner-height, 0px));
+    min-height: 0;
+    overflow: clip;
+  }
+  .dashboard-body {
+    min-height: 0;
+    min-width: 0;
+    grid-template-rows: minmax(0, 1fr);
+    overflow: clip;
+  }
+  .dashboard-content,
+  .dashboard-sidebar {
+    min-height: 0;
+    overscroll-behavior-y: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+  .dashboard-content {
+    overflow: auto;
+    scrollbar-gutter: stable;
+    scroll-padding-block: 24px;
+  }
+  .dashboard-content:focus-visible {
+    outline-offset: -3px;
+  }
+}

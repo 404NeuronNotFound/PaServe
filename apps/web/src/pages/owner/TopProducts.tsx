@@ -67,13 +67,16 @@ export function TopProducts({
           </select>
         </label>
       </div>
-      <p className="sales-range-help">
-        Products are grouped by saved snapshot ID and labelled with their latest
-        saved name in this period. Revenue sums saved item line totals,
-        including variants and add-ons; current menu prices are not used. It may
-        differ from gross sales where historical orders lack matching item
-        snapshots.
-      </p>
+      <details className="sales-calculation-notes">
+        <summary>How products are ranked</summary>
+        <p className="sales-range-help">
+          Products are grouped by saved snapshot ID and labelled with their
+          latest saved name in this period. Revenue sums saved item line totals,
+          including variants and add-ons; current menu prices are not used. It
+          may differ from gross sales where historical orders lack matching item
+          snapshots.
+        </p>
+      </details>
       {query.isPending && (
         <InlineMessage tone="info">Loading top products…</InlineMessage>
       )}
@@ -123,7 +126,36 @@ export function TopProducts({
                   {report.products.map((product, i) => (
                     <tr key={product.productSnapshotId}>
                       <th scope="row">
-                        {product.productName}
+                        <span className="top-product-name">
+                          {product.productName}
+                        </span>
+                        <span
+                          className="top-product-progress"
+                          aria-hidden="true"
+                        >
+                          <span
+                            style={{
+                              width: (() => {
+                                const value =
+                                  metric === "QUANTITY"
+                                    ? BigInt(product.quantity)
+                                    : BigInt(product.revenue.replace(".", ""));
+                                const maximum =
+                                  metric === "QUANTITY"
+                                    ? BigInt(report.products[0].quantity)
+                                    : BigInt(
+                                        report.products[0].revenue.replace(
+                                          ".",
+                                          "",
+                                        ),
+                                      );
+                                return maximum === 0n
+                                  ? "0%"
+                                  : `${Number((value * 10000n) / maximum) / 100}%`;
+                              })(),
+                            }}
+                          />
+                        </span>
                         {report.products.filter(
                           (other) => other.productName === product.productName,
                         ).length > 1 && (
@@ -132,7 +164,13 @@ export function TopProducts({
                           </small>
                         )}
                       </th>
-                      <td>{i + 1}</td>
+                      <td>
+                        <span
+                          className={`top-product-rank${i === 0 ? " is-first" : ""}`}
+                        >
+                          {i + 1}
+                        </span>
+                      </td>
                       <td>{product.quantity.toLocaleString("en-PH")}</td>
                       <td>{formatCartPrice(product.revenue)}</td>
                     </tr>

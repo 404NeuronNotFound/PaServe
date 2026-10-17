@@ -7,6 +7,7 @@ import {
 } from "../../features/orders/sales-trends";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { formatCartPrice } from "../../lib/money";
+import { SalesTrendChart } from "./SalesTrendChart";
 
 const denied = (error: unknown) =>
   isAxiosError(error) && [401, 403, 404].includes(error.response?.status ?? 0);
@@ -76,11 +77,6 @@ export function SalesTrends({
           Refresh sales trends
         </button>
       </div>
-      <p className="sales-range-help">
-        Confirmed, paid, completed orders by completion date. Daily positions
-        are paired in order; weekdays may differ. Percent change uses the
-        previous period as its baseline.
-      </p>
       {!valid && (
         <InlineMessage>
           These dates have no supported preceding comparison period. Choose
@@ -99,7 +95,7 @@ export function SalesTrends({
       )}
       {current && previous && (
         <>
-          <p className="sales-range-help">
+          <p className="sales-range-help sales-comparison-periods">
             Selected: {current.startDate} – {current.endDate}. Previous:{" "}
             {previous.startDate} – {previous.endDate}. Both periods contain{" "}
             {current.days.length} day(s).
@@ -117,7 +113,11 @@ export function SalesTrends({
             </InlineMessage>
           )}
           <dl className="sales-trend-summary">
-            <div>
+            <div
+              data-direction={change(
+                cents(current.totalSales) - cents(previous.totalSales),
+              ).toLowerCase()}
+            >
               <dt>Gross sales</dt>
               <dd>
                 {formatCartPrice(current.totalSales)}
@@ -138,7 +138,12 @@ export function SalesTrends({
                 </p>
               </dd>
             </div>
-            <div>
+            <div
+              data-direction={change(
+                BigInt(current.completedOrders) -
+                  BigInt(previous.completedOrders),
+              ).toLowerCase()}
+            >
               <dt>Completed orders</dt>
               <dd>
                 {current.completedOrders.toLocaleString("en-PH")}
@@ -167,56 +172,72 @@ export function SalesTrends({
               </dd>
             </div>
           </dl>
-          <div
-            className="daily-analytics-table"
-            tabIndex={0}
-            role="region"
-            aria-label="Sales trends daily comparison"
-          >
-            <table>
-              <caption>
-                Daily gross sales on a shared scale. Solid bars: selected
-                period; outlined bars: previous period. Zero-sale days are
-                included.
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Selected date</th>
-                  <th scope="col">Sales / orders</th>
-                  <th scope="col">Previous date</th>
-                  <th scope="col">Sales / orders</th>
-                </tr>
-              </thead>
-              <tbody>
-                {current.days.map((day, i) => {
-                  const prior = previous.days[i];
-                  return (
-                    <tr key={day.businessDate}>
-                      <th scope="row">{day.businessDate}</th>
-                      <td>
-                        <span className="sales-trend-bar" aria-hidden="true">
-                          <span style={{ width: width(day.totalSales) }} />
-                        </span>
-                        {formatCartPrice(day.totalSales)} /{" "}
-                        {day.completedOrders.toLocaleString("en-PH")}
-                      </td>
-                      <td>{prior.businessDate}</td>
-                      <td>
-                        <span
-                          className="sales-trend-bar previous"
-                          aria-hidden="true"
-                        >
-                          <span style={{ width: width(prior.totalSales) }} />
-                        </span>
-                        {formatCartPrice(prior.totalSales)} /{" "}
-                        {prior.completedOrders.toLocaleString("en-PH")}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <SalesTrendChart
+            key={`${current.startDate}:${current.endDate}`}
+            current={current}
+            previous={previous}
+          />
+          <details className="sales-calculation-notes">
+            <summary>About this comparison</summary>
+            <p className="sales-range-help">
+              Confirmed, paid, completed orders by completion date. Daily
+              positions are paired in order; weekdays may differ. Percent change
+              uses the previous period as its baseline.
+            </p>
+          </details>
+          <details className="sales-comparison-details">
+            <summary>View daily comparison data</summary>
+            <div
+              className="daily-analytics-table"
+              tabIndex={0}
+              role="region"
+              aria-label="Sales trends daily comparison"
+            >
+              <table>
+                <caption>
+                  Daily gross sales on a shared scale. Solid bars: selected
+                  period; outlined bars: previous period. Zero-sale days are
+                  included.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Selected date</th>
+                    <th scope="col">Sales / orders</th>
+                    <th scope="col">Previous date</th>
+                    <th scope="col">Sales / orders</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {current.days.map((day, i) => {
+                    const prior = previous.days[i];
+                    return (
+                      <tr key={day.businessDate}>
+                        <th scope="row">{day.businessDate}</th>
+                        <td>
+                          <span className="sales-trend-bar" aria-hidden="true">
+                            <span style={{ width: width(day.totalSales) }} />
+                          </span>
+                          {formatCartPrice(day.totalSales)} /{" "}
+                          {day.completedOrders.toLocaleString("en-PH")}
+                        </td>
+                        <td>{prior.businessDate}</td>
+                        <td>
+                          <span
+                            className="sales-trend-bar previous"
+                            aria-hidden="true"
+                          >
+                            <span style={{ width: width(prior.totalSales) }} />
+                          </span>
+                          {formatCartPrice(prior.totalSales)} /{" "}
+                          {prior.completedOrders.toLocaleString("en-PH")}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </details>
         </>
       )}
     </section>

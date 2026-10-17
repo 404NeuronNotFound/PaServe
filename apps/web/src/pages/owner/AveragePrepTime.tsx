@@ -39,7 +39,7 @@ export function AveragePrepTime({
         <div>
           <p className="sales-eyebrow">ANALYTICS / PREPARATION</p>
           <h2 id="average-prep-time-title">Average Prep Time</h2>
-          <p>
+          <p className="sales-panel-period">
             {startDate} – {endDate} · Manila (UTC+8), both dates included.
             Confirmed, paid, completed orders only.
           </p>
@@ -52,10 +52,9 @@ export function AveragePrepTime({
           Refresh prep time
         </button>
       </div>
-      <p className="sales-range-help">
-        Preparing → Ready. Orders are selected by completion date; preparation
-        can start before the selected period. The full duration counts only when
-        both timestamps exist and are valid.
+      <p className="sales-range-help sales-prep-pair">
+        Preparing → Ready. Only complete, valid timestamp pairs contribute to
+        your average.
       </p>
       {query.isPending && (
         <InlineMessage tone="info">
@@ -115,7 +114,9 @@ export function AveragePrepTime({
               Preparing start and no later than completion. Missing or invalid
               pairs are excluded from the average. A valid zero-duration pair
               counts; an empty sample has no average. Queue wait and time from
-              Ready to completion are excluded.
+              Ready to completion are excluded. Orders are selected by
+              completion date; the full preparation duration counts even when it
+              starts before the selected period.
             </p>
           </details>
         </>

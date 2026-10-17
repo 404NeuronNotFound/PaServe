@@ -30,6 +30,7 @@ import { InlineMessage } from "../feedback/InlineMessage";
 import { feedback } from "../../app/stores/feedback";
 import "./dashboard-sidebar.css";
 import "./dashboard-header.css";
+import "./dashboard-frame.css";
 import { DashboardSidebarNavigation } from "./DashboardSidebarNavigation";
 
 export function OwnerDashboardLayout() {

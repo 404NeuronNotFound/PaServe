@@ -41,7 +41,7 @@ export function PeakHours({
         <div>
           <p className="sales-eyebrow">ANALYTICS / HOURS</p>
           <h2 id="peak-hours-title">Peak Hours</h2>
-          <p>
+          <p className="sales-panel-period">
             {startDate} – {endDate} · Manila (UTC+8), both dates included.
             Confirmed, paid, completed orders only.
           </p>
@@ -54,11 +54,14 @@ export function PeakHours({
           Refresh peak hours
         </button>
       </div>
-      <p className="sales-range-help">
-        Completion activity by local hour. Orders count when completed, rather
-        than when placed or paid. Counts are pooled across all selected dates;
-        24:00 is midnight at the end of the day.
-      </p>
+      <details className="sales-calculation-notes">
+        <summary>How hourly activity is counted</summary>
+        <p className="sales-range-help">
+          Completion activity by local hour. Orders count when completed, rather
+          than when placed or paid. Counts are pooled across all selected dates;
+          24:00 is midnight at the end of the day.
+        </p>
+      </details>
       {query.isPending && (
         <InlineMessage tone="info">Loading peak hours…</InlineMessage>
       )}
@@ -100,7 +103,13 @@ export function PeakHours({
                   className="peak-hour-column"
                   title={`${hourLabel(hour.hour)}: ${hour.completedOrders} orders`}
                 >
-                  <span>{hour.completedOrders.toLocaleString("en-PH")}</span>
+                  <span
+                    className={
+                      hour.completedOrders === 0 ? "is-zero" : undefined
+                    }
+                  >
+                    {hour.completedOrders.toLocaleString("en-PH")}
+                  </span>
                   <div className="peak-hour-track">
                     <span
                       className={

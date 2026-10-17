@@ -21,6 +21,10 @@ import {
   FiRefreshCw,
   FiShoppingBag,
   FiTrendingUp,
+  FiGrid,
+  FiPieChart,
+  FiLayers,
+  FiActivity,
 } from "react-icons/fi";
 import type { IconType } from "react-icons";
 import { shopPath, useActiveShop } from "../../features/shops/active-shop";
@@ -35,6 +39,7 @@ import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./sales-dashboard.css";
+import "./sales-workspace.css";
 import { DailyAnalytics } from "./DailyAnalytics";
 import { TopProducts } from "./TopProducts";
 import { PeakHours } from "./PeakHours";
@@ -109,6 +114,7 @@ export function SalesDashboardPage() {
 function SalesWorkspace({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
   const [paymentBasis, setPaymentBasis] = useState<PaymentMixBasis>("SALES");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const { shopId, role, shop } = useActiveShop();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [custom, setCustom] = useState(false);
@@ -230,13 +236,14 @@ function SalesWorkspace({ userId }: { userId: string }) {
       <header className="sales-header">
         <div>
           <p className="sales-eyebrow">
-            <span aria-hidden="true" /> THE BUSINESS OF A GOOD DAY
+            <span aria-hidden="true" /> YOUR BUSINESS, AT A GLANCE
           </p>
           <h1 id="sales-title">
             Sales dashboard<span aria-hidden="true">.</span>
           </h1>
           <p className="sales-intro">
-            A little clarity for your everyday. <strong>{shop.name}</strong>
+            Good decisions start with a clear picture.{" "}
+            <strong>{shop.name}</strong>
           </p>
         </div>
         <button
@@ -251,140 +258,171 @@ function SalesWorkspace({ userId }: { userId: string }) {
           Refresh sales
         </button>
       </header>
-      {!custom && (
-        <DailyAnalytics userId={userId} shopId={shopId} today={today} />
-      )}
-      <div
-        className="analytics-period-toggle sales-report-mode"
-        role="group"
-        aria-label="Sales report period"
-      >
-        <button
-          className="secondary-button"
-          aria-pressed={!custom}
-          onClick={() => setCustom(false)}
+      <div className="sales-period-panel" id="sales-overview">
+        <div className="sales-period-panel-heading">
+          <span className="sales-kicker">REPORTING PERIOD</span>
+          <span>Completed sales · PHP</span>
+        </div>
+        <div
+          className="analytics-period-toggle sales-report-mode"
+          role="group"
+          aria-label="Sales report period"
         >
-          Single day
-        </button>
-        <button
-          className="secondary-button"
-          aria-pressed={custom}
-          onClick={() => {
-            setCustomDraft(customRange ?? { start: date, end: date });
-            setCustom(true);
-          }}
-        >
-          Custom Date
-        </button>
-      </div>
-      <div className="sales-toolbar">
-        {custom ? (
-          <form
-            className="sales-custom-range"
-            aria-label="Custom sales dates"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (validDraft) setCustomRange({ ...customDraft });
+          <button
+            className="secondary-button"
+            aria-pressed={!custom}
+            onClick={() => setCustom(false)}
+          >
+            Single day
+          </button>
+          <button
+            className="secondary-button"
+            aria-pressed={custom}
+            onClick={() => {
+              setCustomDraft(customRange ?? { start: date, end: date });
+              setCustom(true);
             }}
           >
-            <label htmlFor="custom-sales-start">
-              Start date
-              <input
-                id="custom-sales-start"
-                type="date"
-                value={customDraft.start}
-                aria-describedby="custom-sales-help"
-                aria-invalid={!validDraft}
-                onChange={(e) =>
-                  setCustomDraft({ ...customDraft, start: e.target.value })
-                }
-              />
-            </label>
-            <label htmlFor="custom-sales-end">
-              End date
-              <input
-                id="custom-sales-end"
-                type="date"
-                value={customDraft.end}
-                aria-describedby="custom-sales-help"
-                aria-invalid={!validDraft}
-                onChange={(e) =>
-                  setCustomDraft({ ...customDraft, end: e.target.value })
-                }
-              />
-            </label>
-            <button
-              className="secondary-button"
-              type="submit"
-              disabled={!validDraft}
-            >
-              Apply date range
-            </button>
-          </form>
-        ) : (
-          <div className="sales-period">
-            <FiCalendar aria-hidden="true" />
-            <label htmlFor="sales-date">
-              Business date
-              <input
-                id="sales-date"
-                type="date"
-                value={date}
-                aria-describedby="sales-timezone"
-                onChange={(event) =>
-                  setSelectedDate(
-                    event.target.value === today ? null : event.target.value,
-                  )
-                }
-              />
-            </label>
-            <button
-              className="sales-today"
-              aria-pressed={date === today}
-              onClick={() => {
-                setToday(salesBusinessDate());
-                setSelectedDate(null);
+            Custom Date
+          </button>
+        </div>
+        <div className="sales-toolbar">
+          {custom ? (
+            <form
+              className="sales-custom-range"
+              aria-label="Custom sales dates"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (validDraft) setCustomRange({ ...customDraft });
               }}
             >
-              Today
-            </button>
-          </div>
-        )}
-        <span id="sales-timezone" className="sales-timezone">
-          Manila <span>UTC+8</span>
-        </span>
-        <p className="sales-sync">
-          <FiClock aria-hidden="true" />
-          {report ? (
-            <>Updated {updateFormat.format(query.dataUpdatedAt)}</>
-          ) : denied ? (
-            "Access unavailable"
+              <label htmlFor="custom-sales-start">
+                Start date
+                <input
+                  id="custom-sales-start"
+                  type="date"
+                  value={customDraft.start}
+                  aria-describedby="custom-sales-help"
+                  aria-invalid={!validDraft}
+                  onChange={(e) =>
+                    setCustomDraft({ ...customDraft, start: e.target.value })
+                  }
+                />
+              </label>
+              <label htmlFor="custom-sales-end">
+                End date
+                <input
+                  id="custom-sales-end"
+                  type="date"
+                  value={customDraft.end}
+                  aria-describedby="custom-sales-help"
+                  aria-invalid={!validDraft}
+                  onChange={(e) =>
+                    setCustomDraft({ ...customDraft, end: e.target.value })
+                  }
+                />
+              </label>
+              <button
+                className="secondary-button"
+                type="submit"
+                disabled={!validDraft}
+              >
+                Apply date range
+              </button>
+            </form>
           ) : (
-            "Updates every 15 seconds"
+            <div className="sales-period">
+              <FiCalendar aria-hidden="true" />
+              <label htmlFor="sales-date">
+                Business date
+                <input
+                  id="sales-date"
+                  type="date"
+                  value={date}
+                  aria-describedby="sales-timezone"
+                  onChange={(event) =>
+                    setSelectedDate(
+                      event.target.value === today ? null : event.target.value,
+                    )
+                  }
+                />
+              </label>
+              <button
+                className="sales-today"
+                aria-pressed={date === today}
+                onClick={() => {
+                  setToday(salesBusinessDate());
+                  setSelectedDate(null);
+                }}
+              >
+                Today
+              </button>
+            </div>
           )}
-        </p>
+          <span id="sales-timezone" className="sales-timezone">
+            Manila <span>UTC+8</span>
+          </span>
+          <p className="sales-sync">
+            <FiClock aria-hidden="true" />
+            {report ? (
+              <>Updated {updateFormat.format(query.dataUpdatedAt)}</>
+            ) : denied ? (
+              "Access unavailable"
+            ) : (
+              "Updates every 15 seconds"
+            )}
+          </p>
+        </div>
+        {custom && (
+          <p id="custom-sales-help" className="sales-range-help">
+            Both dates are included in Manila (UTC+8); maximum 366 days. Apply
+            the range to gross sales, orders, average order value, items sold,
+            payment breakdown and recent orders.
+          </p>
+        )}
+        {custom && !validDraft && (
+          <InlineMessage>
+            Choose valid start/end dates in order, spanning at most 366 days.
+          </InlineMessage>
+        )}
+        {custom && customRange && (
+          <p className="sales-range-help" role="status">
+            Applied to all metrics: {customRange.start} – {customRange.end}.
+            {customDraft.start !== customRange.start ||
+            customDraft.end !== customRange.end
+              ? " Date edits are not applied yet."
+              : ""}
+          </p>
+        )}
       </div>
-      {custom && (
-        <p id="custom-sales-help" className="sales-range-help">
-          Both dates are included in Manila (UTC+8); maximum 366 days. Apply the
-          range to gross sales, orders, average order value, items sold, payment
-          breakdown and recent orders.
-        </p>
-      )}
-      {custom && !validDraft && (
-        <InlineMessage>
-          Choose valid start/end dates in order, spanning at most 366 days.
-        </InlineMessage>
-      )}
-      {custom && customRange && (
-        <p className="sales-range-help" role="status">
-          Applied to all metrics: {customRange.start} – {customRange.end}.
-          {customDraft.start !== customRange.start ||
-          customDraft.end !== customRange.end
-            ? " Date edits are not applied yet."
-            : ""}
-        </p>
-      )}
+      <nav className="sales-section-nav" aria-label="Sales dashboard sections">
+        <a href="#sales-overview">
+          <FiGrid aria-hidden="true" />
+          Overview
+        </a>
+        <a href="#sales-trends-section">
+          <FiTrendingUp aria-hidden="true" />
+          Trends
+        </a>
+        <a href="#sales-payment-section">
+          <FiPieChart aria-hidden="true" />
+          Payments & orders
+        </a>
+        <a href="#sales-products-section">
+          <FiLayers aria-hidden="true" />
+          Products
+        </a>
+        <a href="#sales-operations-section">
+          <FiActivity aria-hidden="true" />
+          Operations
+        </a>
+        {!custom && (
+          <a href="#sales-history-section" onClick={() => setHistoryOpen(true)}>
+            <FiBarChart2 aria-hidden="true" />
+            History
+          </a>
+        )}
+      </nav>
       {!valid &&
         (custom ? (
           <InlineMessage tone="info">
@@ -475,7 +513,19 @@ function SalesWorkspace({ userId }: { userId: string }) {
               number="03"
             />
           </div>
-          <div className="sales-detail-grid" aria-busy={query.isFetching}>
+          <div id="sales-trends-section" className="sales-section-anchor">
+            <SalesTrends
+              userId={userId}
+              shopId={shopId}
+              startDate={custom ? customRange!.start : date}
+              endDate={custom ? customRange!.end : date}
+            />
+          </div>
+          <div
+            className="sales-detail-grid sales-section-anchor"
+            id="sales-payment-section"
+            aria-busy={query.isFetching}
+          >
             <section
               className="sales-payments"
               aria-labelledby="sales-payments-title"
@@ -777,36 +827,58 @@ function SalesWorkspace({ userId }: { userId: string }) {
         </>
       )}
       {report && (
-        <SalesTrends
-          userId={userId}
-          shopId={shopId}
-          startDate={custom ? customRange!.start : date}
-          endDate={custom ? customRange!.end : date}
-        />
+        <div className="sales-section-anchor" id="sales-products-section">
+          <TopProducts
+            userId={userId}
+            shopId={shopId}
+            startDate={custom ? customRange!.start : date}
+            endDate={custom ? customRange!.end : date}
+          />
+        </div>
       )}
       {report && (
-        <AveragePrepTime
-          userId={userId}
-          shopId={shopId}
-          startDate={custom ? customRange!.start : date}
-          endDate={custom ? customRange!.end : date}
-        />
+        <div
+          className="sales-operations-grid sales-section-anchor"
+          id="sales-operations-section"
+        >
+          <AveragePrepTime
+            userId={userId}
+            shopId={shopId}
+            startDate={custom ? customRange!.start : date}
+            endDate={custom ? customRange!.end : date}
+          />
+          <PeakHours
+            userId={userId}
+            shopId={shopId}
+            startDate={custom ? customRange!.start : date}
+            endDate={custom ? customRange!.end : date}
+          />
+        </div>
       )}
-      {report && (
-        <PeakHours
-          userId={userId}
-          shopId={shopId}
-          startDate={custom ? customRange!.start : date}
-          endDate={custom ? customRange!.end : date}
-        />
-      )}
-      {report && (
-        <TopProducts
-          userId={userId}
-          shopId={shopId}
-          startDate={custom ? customRange!.start : date}
-          endDate={custom ? customRange!.end : date}
-        />
+      {!custom && (
+        <details
+          className="sales-history sales-section-anchor"
+          id="sales-history-section"
+          open={historyOpen}
+          onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
+        >
+          <summary>
+            <span className="sales-history-icon">
+              <FiBarChart2 aria-hidden="true" />
+            </span>
+            <span>
+              <span className="sales-kicker">EXPLORE YOUR PERFORMANCE</span>
+              <strong>Daily, weekly & monthly history</strong>
+              <span>
+                Choose a separate range to explore the bigger picture.
+              </span>
+            </span>
+            <FiChevronDown aria-hidden="true" />
+          </summary>
+          {historyOpen && (
+            <DailyAnalytics userId={userId} shopId={shopId} today={today} />
+          )}
+        </details>
       )}
       <footer className="sales-report-footer">
         <span>
