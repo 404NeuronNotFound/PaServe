@@ -6,6 +6,7 @@ import {
   hasShopPermission,
   salesBusinessDate,
   salesBusinessDayBounds,
+  salesDailyRange,
   type CurrentUserResponse,
   type PaymentBreakdownEntry,
 } from "@paserve/contracts";
@@ -26,6 +27,7 @@ import type { IconType } from "react-icons";
 import { shopPath, useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getDailySales } from "../../features/orders/daily-sales";
+import { getCustomSales } from "../../features/orders/custom-sales";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
@@ -117,6 +119,12 @@ export function SalesDashboardPage() {
 function SalesWorkspace({ userId }: { userId: string }) {
   const { shopId, role, shop } = useActiveShop();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [custom, setCustom] = useState(false);
+  const [customDraft, setCustomDraft] = useState({ start: "", end: "" });
+  const [customRange, setCustomRange] = useState<{
+    start: string;
+    end: string;
+  } | null>(null);
   const [today, setToday] = useState(() => salesBusinessDate());
   useEffect(() => {
     const update = () => setToday(salesBusinessDate());
@@ -129,10 +137,23 @@ function SalesWorkspace({ userId }: { userId: string }) {
   }, []);
   const date = selectedDate ?? today;
   const allowed = hasShopPermission(role, "shop.reports.read");
-  const valid = !!salesBusinessDayBounds(date);
+  const validDraft = !!salesDailyRange(customDraft.start, customDraft.end);
+  const valid = custom
+    ? !!customRange && !!salesDailyRange(customRange.start, customRange.end)
+    : !!salesBusinessDayBounds(date);
   const query = useQuery({
-    queryKey: ["daily-sales", userId, shopId, date],
-    queryFn: ({ signal }) => getDailySales(shopId, date, signal),
+    queryKey: custom
+      ? ["custom-sales", userId, shopId, customRange?.start, customRange?.end]
+      : ["daily-sales", userId, shopId, date],
+    queryFn: async ({ signal }) =>
+      custom
+        ? await getCustomSales(
+            shopId,
+            customRange!.start,
+            customRange!.end,
+            signal,
+          )
+        : await getDailySales(shopId, date, signal),
     enabled: allowed && valid,
     retry: false,
     gcTime: 0,
@@ -155,8 +176,12 @@ function SalesWorkspace({ userId }: { userId: string }) {
   const segments = report
     ? paymentShares(report.paymentBreakdown, report.totalSales)
     : [];
+  const formatDate = (value: string) =>
+    dateFormat.format(new Date(`${value}T00:00:00+08:00`));
   const prettyDate = valid
-    ? dateFormat.format(new Date(`${date}T00:00:00+08:00`))
+    ? custom
+      ? `${formatDate(customRange!.start)} – ${formatDate(customRange!.end)}`
+      : formatDate(date)
     : "Choose a date";
 
   return (
@@ -185,35 +210,105 @@ function SalesWorkspace({ userId }: { userId: string }) {
           Refresh sales
         </button>
       </header>
-      <DailyAnalytics userId={userId} shopId={shopId} today={today} />
+      {!custom && (
+        <DailyAnalytics userId={userId} shopId={shopId} today={today} />
+      )}
+      <div
+        className="analytics-period-toggle sales-report-mode"
+        role="group"
+        aria-label="Sales report period"
+      >
+        <button
+          className="secondary-button"
+          aria-pressed={!custom}
+          onClick={() => setCustom(false)}
+        >
+          Single day
+        </button>
+        <button
+          className="secondary-button"
+          aria-pressed={custom}
+          onClick={() => {
+            setCustomDraft(customRange ?? { start: date, end: date });
+            setCustom(true);
+          }}
+        >
+          Custom Date
+        </button>
+      </div>
       <div className="sales-toolbar">
-        <div className="sales-period">
-          <FiCalendar aria-hidden="true" />
-          <label htmlFor="sales-date">
-            Business date
-            <input
-              id="sales-date"
-              type="date"
-              value={date}
-              aria-describedby="sales-timezone"
-              onChange={(event) =>
-                setSelectedDate(
-                  event.target.value === today ? null : event.target.value,
-                )
-              }
-            />
-          </label>
-          <button
-            className="sales-today"
-            aria-pressed={date === today}
-            onClick={() => {
-              setToday(salesBusinessDate());
-              setSelectedDate(null);
+        {custom ? (
+          <form
+            className="sales-custom-range"
+            aria-label="Custom sales dates"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (validDraft) setCustomRange({ ...customDraft });
             }}
           >
-            Today
-          </button>
-        </div>
+            <label htmlFor="custom-sales-start">
+              Start date
+              <input
+                id="custom-sales-start"
+                type="date"
+                value={customDraft.start}
+                aria-describedby="custom-sales-help"
+                aria-invalid={!validDraft}
+                onChange={(e) =>
+                  setCustomDraft({ ...customDraft, start: e.target.value })
+                }
+              />
+            </label>
+            <label htmlFor="custom-sales-end">
+              End date
+              <input
+                id="custom-sales-end"
+                type="date"
+                value={customDraft.end}
+                aria-describedby="custom-sales-help"
+                aria-invalid={!validDraft}
+                onChange={(e) =>
+                  setCustomDraft({ ...customDraft, end: e.target.value })
+                }
+              />
+            </label>
+            <button
+              className="secondary-button"
+              type="submit"
+              disabled={!validDraft}
+            >
+              Apply date range
+            </button>
+          </form>
+        ) : (
+          <div className="sales-period">
+            <FiCalendar aria-hidden="true" />
+            <label htmlFor="sales-date">
+              Business date
+              <input
+                id="sales-date"
+                type="date"
+                value={date}
+                aria-describedby="sales-timezone"
+                onChange={(event) =>
+                  setSelectedDate(
+                    event.target.value === today ? null : event.target.value,
+                  )
+                }
+              />
+            </label>
+            <button
+              className="sales-today"
+              aria-pressed={date === today}
+              onClick={() => {
+                setToday(salesBusinessDate());
+                setSelectedDate(null);
+              }}
+            >
+              Today
+            </button>
+          </div>
+        )}
         <span id="sales-timezone" className="sales-timezone">
           Manila <span>UTC+8</span>
         </span>
@@ -228,7 +323,35 @@ function SalesWorkspace({ userId }: { userId: string }) {
           )}
         </p>
       </div>
-      {!valid && <InlineMessage>Choose a valid business date.</InlineMessage>}
+      {custom && (
+        <p id="custom-sales-help" className="sales-range-help">
+          Both dates are included in Manila (UTC+8); maximum 366 days. Apply the
+          range to gross sales, orders, average order value, items sold, payment
+          breakdown and recent orders.
+        </p>
+      )}
+      {custom && !validDraft && (
+        <InlineMessage>
+          Choose valid start/end dates in order, spanning at most 366 days.
+        </InlineMessage>
+      )}
+      {custom && customRange && (
+        <p className="sales-range-help" role="status">
+          Applied to all metrics: {customRange.start} – {customRange.end}.
+          {customDraft.start !== customRange.start ||
+          customDraft.end !== customRange.end
+            ? " Date edits are not applied yet."
+            : ""}
+        </p>
+      )}
+      {!valid &&
+        (custom ? (
+          <InlineMessage tone="info">
+            Choose dates and select Apply date range to load all metrics.
+          </InlineMessage>
+        ) : (
+          <InlineMessage>Choose a valid business date.</InlineMessage>
+        ))}
       {valid && query.isPending && (
         <InlineMessage tone="info">Loading sales…</InlineMessage>
       )}
@@ -254,7 +377,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
             <article className="sales-hero" aria-labelledby="sales-total-label">
               <div className="sales-hero-top">
                 <h2 id="sales-total-label">
-                  {date === today ? "Today’s Sales" : "Gross Sales"}
+                  {!custom && date === today ? "Today’s Sales" : "Gross Sales"}
                 </h2>
                 <span className="sales-hero-icon">
                   <FiTrendingUp aria-hidden="true" />
@@ -272,7 +395,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
               </div>
               {report.completedOrders === 0 && (
                 <p className="sales-hero-empty">
-                  No eligible completed orders for this business day.
+                  No eligible completed orders for this{" "}
+                  {custom ? "date range" : "business day"}.
                 </p>
               )}
             </article>
@@ -370,7 +494,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
               </div>
               {report.completedOrders === 0 && (
                 <p className="sales-empty-note">
-                  No eligible payments for this business day.
+                  No eligible payments for this{" "}
+                  {custom ? "date range" : "business day"}.
                 </p>
               )}
               <table className="sales-payment-table">
@@ -437,7 +562,10 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 <div className="sales-feed-empty">
                   <FiClipboard aria-hidden="true" />
                   <h3>A quiet moment.</h3>
-                  <p>No completed orders for this business day.</p>
+                  <p>
+                    No completed orders for this{" "}
+                    {custom ? "date range" : "business day"}.
+                  </p>
                 </div>
               ) : (
                 <>
@@ -512,7 +640,10 @@ function SalesWorkspace({ userId }: { userId: string }) {
           </summary>
           <div>
             <p>
-              Asia/Manila (UTC+8) · Midnight inclusive to next midnight
+              Asia/Manila (UTC+8) ·{" "}
+              {custom
+                ? "Start date midnight inclusive to midnight after the end date"
+                : "Midnight inclusive to next midnight"}
               exclusive.
             </p>
             <p>

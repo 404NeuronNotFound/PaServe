@@ -21,11 +21,15 @@ import {
 import { ActiveShopContext } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getDailySales } from "../../features/orders/daily-sales";
+import { getCustomSales } from "../../features/orders/custom-sales";
 import { SalesDashboardPage } from "./SalesDashboardPage";
 import { api } from "../../lib/api/client";
 
 vi.mock("../../features/orders/daily-sales", () => ({
   getDailySales: vi.fn(),
+}));
+vi.mock("../../features/orders/custom-sales", () => ({
+  getCustomSales: vi.fn(),
 }));
 // Daily analytics has its own range, request, and error-state tests.
 vi.mock("./DailyAnalytics", () => ({ DailyAnalytics: () => null }));
@@ -135,6 +139,180 @@ it.each([
   },
 );
 
+const customReport = (startDate = "2026-10-15", endDate = "2026-10-17") => ({
+  shopId: "a",
+  startDate,
+  endDate,
+  from: salesBusinessDayBounds(startDate)!.from,
+  to: salesBusinessDayBounds(endDate)!.to,
+  timezone: "Asia/Manila" as const,
+  currency: "PHP" as const,
+  totalSales: "12.35",
+  completedOrders: 2,
+  itemsSold: 9,
+  paymentBreakdown: breakdown("12.35", 2),
+  recentOrders: [
+    recentOrder({
+      totalPrice: "12.25",
+      completedAt: `${endDate}T01:00:00.000Z`,
+    }),
+    recentOrder({
+      id: "b47f6994-a303-4a7b-87b0-2386d5198828",
+      orderNumber: "ORD-000041",
+      totalPrice: "0.10",
+      completedAt: `${startDate}T01:00:00.000Z`,
+    }),
+  ],
+});
+function chooseCustom(start = "2026-10-15", end = "2026-10-17") {
+  fireEvent.click(screen.getByRole("button", { name: "Custom Date" }));
+  fireEvent.change(screen.getByLabelText("Start date"), {
+    target: { value: start },
+  });
+  fireEvent.change(screen.getByLabelText("End date"), {
+    target: { value: end },
+  });
+}
+it("applies one custom range to cards, payments and recent orders only after Apply", async () => {
+  vi.mocked(getCustomSales).mockResolvedValue(customReport());
+  setup();
+  await screen.findByText("₱0.30", { selector: ".sales-amount" });
+  chooseCustom();
+  expect(getCustomSales).not.toHaveBeenCalled();
+  expect(
+    screen.queryByRole("article", { name: "Items Sold" }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Apply date range" }));
+  await screen.findByText("₱12.35", { selector: ".sales-amount" });
+  expect(
+    screen.getByText("Applied to all metrics: 2026-10-15 – 2026-10-17."),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole("article", { name: "Number of Orders" })).getByText(
+      "2",
+    ),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole("article", { name: "Items Sold" })).getByText("9"),
+  ).toBeVisible();
+  expect(
+    within(
+      screen.getByRole("article", { name: "Average Order Value" }),
+    ).getByText("₱6.18"),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole("region", { name: "Payment Breakdown" })).getByRole(
+      "row",
+      { name: "Cash 2 ₱12.35" },
+    ),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole("region", { name: "Recent Orders" })).getByRole(
+      "link",
+      { name: "ORD-000042" },
+    ),
+  ).toBeVisible();
+  expect(getCustomSales).toHaveBeenLastCalledWith(
+    "a",
+    "2026-10-15",
+    "2026-10-17",
+    expect.any(AbortSignal),
+  );
+  fireEvent.change(screen.getByLabelText("Start date"), {
+    target: { value: "2026-10-14" },
+  });
+  expect(screen.getByText(/Date edits are not applied yet/)).toBeVisible();
+  expect(getCustomSales).toHaveBeenCalledTimes(1);
+});
+it.each([
+  ["2026-10-18", "2026-10-17"],
+  ["2025-01-01", "2026-10-17"],
+  ["", "2026-10-17"],
+])(
+  "rejects invalid custom dates %s to %s without fetching",
+  async (start, end) => {
+    setup();
+    await screen.findByText("₱0.30", { selector: ".sales-amount" });
+    chooseCustom(start, end);
+    expect(
+      screen.getByRole("button", { name: "Apply date range" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "valid start/end dates",
+    );
+    expect(getCustomSales).not.toHaveBeenCalled();
+  },
+);
+it("hides all custom sections on refresh failure and retries the applied range", async () => {
+  vi.mocked(getCustomSales)
+    .mockResolvedValueOnce(customReport())
+    .mockRejectedValueOnce(new Error("offline"))
+    .mockResolvedValue(customReport());
+  setup();
+  chooseCustom();
+  fireEvent.click(screen.getByRole("button", { name: "Apply date range" }));
+  await screen.findByText("₱12.35", { selector: ".sales-amount" });
+  fireEvent.click(screen.getByRole("button", { name: "Refresh sales" }));
+  await screen.findByRole("alert");
+  expect(
+    screen.queryByRole("article", { name: "Items Sold" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("region", { name: "Payment Breakdown" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("region", { name: "Recent Orders" }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await screen.findByText("₱12.35", { selector: ".sales-amount" });
+  expect(getCustomSales).toHaveBeenLastCalledWith(
+    "a",
+    "2026-10-15",
+    "2026-10-17",
+    expect.any(AbortSignal),
+  );
+});
+it("cancels the old range and hides old metrics while another range loads", async () => {
+  let oldSignal: AbortSignal | undefined;
+  let resolve!: (value: ReturnType<typeof customReport>) => void;
+  vi.mocked(getCustomSales)
+    .mockImplementationOnce((_shop, _start, _end, signal) => {
+      oldSignal = signal;
+      return new Promise((r) => {
+        resolve = r;
+      });
+    })
+    .mockResolvedValue(customReport("2026-10-14", "2026-10-17"));
+  setup();
+  chooseCustom();
+  fireEvent.click(screen.getByRole("button", { name: "Apply date range" }));
+  await waitFor(() => expect(getCustomSales).toHaveBeenCalledTimes(1));
+  fireEvent.change(screen.getByLabelText("Start date"), {
+    target: { value: "2026-10-14" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Apply date range" }));
+  await screen.findByText("₱12.35", { selector: ".sales-amount" });
+  expect(oldSignal?.aborted).toBe(true);
+  await act(async () => resolve({ ...customReport(), totalSales: "999.00" }));
+  expect(screen.queryByText("₱999.00")).not.toBeInTheDocument();
+  expect(
+    screen.getByText("Applied to all metrics: 2026-10-14 – 2026-10-17."),
+  ).toBeVisible();
+});
+it("resets custom mode on a shop change", async () => {
+  vi.mocked(getCustomSales).mockResolvedValue(customReport());
+  const view = setup();
+  chooseCustom();
+  fireEvent.click(screen.getByRole("button", { name: "Apply date range" }));
+  await screen.findByText("₱12.35", { selector: ".sales-amount" });
+  view.rerender(view.page("b"));
+  expect(screen.getByRole("button", { name: "Single day" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(screen.queryByText(/Applied to all metrics/)).not.toBeInTheDocument();
+  expect(getCustomSales).toHaveBeenCalledTimes(1);
+});
 function setup(role: UserMembership["role"] = "OWNER") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },

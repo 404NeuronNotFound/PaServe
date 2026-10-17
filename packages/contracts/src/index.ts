@@ -1341,6 +1341,10 @@ export interface DailySalesResponse extends CompletedSalesResponse {
   businessDate: string;
   timezone: typeof SALES_TIMEZONE;
 }
+export interface CustomSalesResponse extends Omit<DailySalesResponse, "businessDate"> {
+  startDate: string;
+  endDate: string;
+}
 export interface RecentSalesOrder {
   id: string;
   shopId: string;

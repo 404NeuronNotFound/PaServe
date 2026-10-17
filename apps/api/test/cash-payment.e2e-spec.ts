@@ -1647,6 +1647,37 @@ describe('Cash collection', () => {
     await request(app.getHttpServer()).get(route).query(period).set('Authorization', 'Bearer session').expect(404);
     expect(raw).not.toHaveBeenCalled();
   });
+  it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)('serves one consistent custom period for %s', async (reportRole) => {
+    role = reportRole;
+    aggregateOrders.mockResolvedValueOnce({ _count: { _all: 2 }, _sum: { totalPrice: new Prisma.Decimal('0.30') } });
+    findQueue.mockResolvedValueOnce([]);
+    const result = await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/custom-sales`)
+      .query({ startDate: '2026-10-15', endDate: '2026-10-17' }).set('Authorization', 'Bearer session').expect(200);
+    expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.body).toMatchObject({ shopId, startDate: '2026-10-15', endDate: '2026-10-17', from: '2026-10-14T16:00:00.000Z', to: '2026-10-17T16:00:00.000Z', totalSales: '0.30', completedOrders: 2, itemsSold: 7, recentOrders: [] });
+    expect(result.body.paymentBreakdown[0]).toEqual({ paymentMethod: 'CASH', orders: 2, totalSales: '0.30' });
+    expect(groupPayments.mock.calls[0][0].where).toEqual(aggregateOrders.mock.calls[0][0].where);
+    expect(findQueue.mock.calls[0][0].where).toEqual(aggregateOrders.mock.calls[0][0].where);
+  });
+  it.each(['CASHIER', 'KITCHEN'] as const)('denies custom sales for %s', async (reportRole) => {
+    role = reportRole;
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/custom-sales`)
+      .query({ startDate: '2026-10-15', endDate: '2026-10-17' }).set('Authorization', 'Bearer session').expect(403);
+    expect(aggregateOrders).not.toHaveBeenCalled();
+  });
+  it('rejects invalid custom periods, anonymous, foreign shop and revoked access', async () => {
+    role = 'OWNER';
+    const route = `/api/v1/shops/${shopId}/reports/custom-sales`;
+    const period = { startDate: '2026-10-15', endDate: '2026-10-17' };
+    for (const query of [{}, { startDate: ['2026-10-15', '2026-10-16'], endDate: '2026-10-17' }, { startDate: '2026-10-18', endDate: '2026-10-17' }, { startDate: '2026-01-01', endDate: '2027-01-02' }, { startDate: '2026-02-29', endDate: '2026-03-01' }]) {
+      await request(app.getHttpServer()).get(route).query(query).set('Authorization', 'Bearer session').expect(400);
+    }
+    await request(app.getHttpServer()).get(route).query(period).expect(401);
+    await request(app.getHttpServer()).get('/api/v1/shops/55b18d73-f2fb-4fe6-bb1c-30cf385c3b24/reports/custom-sales').query(period).set('Authorization', 'Bearer session').expect(404);
+    transaction.mockImplementationOnce(async (work) => { role = 'CASHIER'; return work(database); });
+    await request(app.getHttpServer()).get(route).query(period).set('Authorization', 'Bearer session').expect(404);
+    expect(aggregateOrders).not.toHaveBeenCalled(); expect(aggregateItems).not.toHaveBeenCalled(); expect(groupPayments).not.toHaveBeenCalled();
+  });
   it('denies anonymous collection', async () => {
     await collect({}, shopId, false).expect(401);
     expect(transaction).not.toHaveBeenCalled();

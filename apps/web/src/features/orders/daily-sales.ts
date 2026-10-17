@@ -24,10 +24,18 @@ export async function getDailySales(
     `/shops/${encodeURIComponent(shopId)}/reports/daily-sales`,
     { params: { date }, signal, timeout: AUTH_REQUEST_TIMEOUT_MS },
   );
+  if (!data || data.businessDate !== date)
+    throw new Error("Sales could not be verified. Please refresh.");
+  return verifySalesReport(data, shopId, bounds);
+}
+
+/** Daily and custom reports share payment, recent-order, and summary integrity checks. */
+export function verifySalesReport<
+  T extends Omit<DailySalesResponse, "businessDate">,
+>(data: T, shopId: string, bounds: { from: string; to: string }): T {
   if (
     !data ||
     data.shopId !== shopId ||
-    data.businessDate !== date ||
     data.timezone !== SALES_TIMEZONE ||
     data.from !== bounds.from ||
     data.to !== bounds.to ||

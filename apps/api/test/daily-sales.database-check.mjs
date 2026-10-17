@@ -520,6 +520,37 @@ try {
   const foreignMonthly = await sales.monthlyAnalytics(actor.id, foreign.id, '2026-10-01', '2026-10-31');
   assert.equal(foreignMonthly.totalSales, '900.00');
   assert.equal(foreignMonthly.completedOrders, 1);
+  const customChecks = [];
+  for (const [startDate, endDate] of [['2026-10-15', '2026-11-01'], ['2026-10-16', '2026-10-16'], ['2026-12-31', '2027-01-01'], ['2028-02-29', '2028-03-01'], ['2028-04-01', '2028-04-30']]) {
+    const custom = await sales.custom(actor.id, shop.id, startDate, endDate);
+    const independent = await client.query(
+      `SELECT o.id, o."totalPrice"::text AS total, o."paymentMethod", o."completedAt",
+        (SELECT coalesce(sum(i.quantity),0)::text FROM "${schema}".order_items i WHERE i."shopId"=o."shopId" AND i."orderId"=o.id) AS units
+       FROM "${schema}".orders o WHERE o."shopId"=$1 AND o.status='CONFIRMED'
+        AND o."paymentStatus"='PAID' AND o."preparationStatus"='COMPLETED'
+        AND o."completedBy" IS NOT NULL AND o.currency='PHP'
+        AND ((o."completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila')::date BETWEEN $2::date AND $3::date
+       ORDER BY o."completedAt" DESC, o.id DESC`, [shop.id, startDate, endDate],
+    );
+    const cents = independent.rows.reduce((n, row) => n + BigInt(row.total.replace('.', '')), 0n);
+    assert.equal(BigInt(custom.totalSales.replace('.', '')), cents);
+    assert.equal(custom.completedOrders, independent.rows.length);
+    assert.equal(custom.itemsSold, independent.rows.reduce((n, row) => n + Number(row.units), 0));
+    for (const payment of custom.paymentBreakdown) {
+      const paid = independent.rows.filter((row) => row.paymentMethod === payment.paymentMethod);
+      assert.equal(payment.orders, paid.length);
+      assert.equal(BigInt(payment.totalSales.replace('.', '')), paid.reduce((n, row) => n + BigInt(row.total.replace('.', '')), 0n));
+    }
+    assert.deepEqual(custom.recentOrders.map((row) => row.id), independent.rows.slice(0, 10).map((row) => row.id));
+    const daily = await sales.dailyAnalytics(actor.id, shop.id, startDate, endDate);
+    assert.equal(custom.totalSales, daily.totalSales);
+    assert.equal(custom.completedOrders, daily.completedOrders);
+    assert.equal(custom.itemsSold, daily.itemsSold);
+    customChecks.push({ startDate, endDate, totalSales: custom.totalSales, completedOrders: custom.completedOrders, itemsSold: custom.itemsSold, recentOrders: custom.recentOrders.length });
+  }
+  const foreignCustom = await sales.custom(actor.id, foreign.id, '2026-10-15', '2026-11-01');
+  assert.equal(foreignCustom.totalSales, '900.00');
+  assert.equal(foreignCustom.completedOrders, 1);
   await prisma.shopMember.update({
     where: { id: membership.id },
     data: { role: 'CASHIER' },
@@ -531,9 +562,11 @@ try {
   await assert.rejects(sales.dailyAnalytics(actor.id, shop.id, '2026-10-16', '2026-10-16'), (error) => error.getStatus() === 404);
   await assert.rejects(sales.weeklyAnalytics(actor.id, shop.id, '2026-10-12', '2026-10-18'), (error) => error.getStatus() === 404);
   await assert.rejects(sales.monthlyAnalytics(actor.id, shop.id, '2026-10-01', '2026-10-31'), (error) => error.getStatus() === 404);
+  await assert.rejects(sales.custom(actor.id, shop.id, '2026-10-15', '2026-11-01'), (error) => error.getStatus() === 404);
   console.log(
     JSON.stringify({
       passed: true,
+      customSales: { passed: true, criterion: 'One selected start/end period applies consistently to summary, item quantities, payments and recent orders', checks: customChecks },
       monthlyAnalytics: { passed: true, criterion: 'Aggregate sales/orders by calendar month in Asia/Manila', checks: monthlyChecks },
       weeklyAnalytics: { passed: true, criterion: 'Aggregate by consistent Monday-Sunday week boundaries in Asia/Manila', checks: weeklyChecks },
       dailyAnalytics: {

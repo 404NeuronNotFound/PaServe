@@ -18,6 +18,7 @@ import {
   SALES_PAYMENT_METHODS,
   type RecentSalesOrder,
   type DailySalesResponse,
+  type CustomSalesResponse,
   type CompletedSalesResponse,
 } from '@paserve/contracts';
 import { isISO8601 } from 'class-validator';
@@ -211,6 +212,35 @@ export class CompletedSalesService {
         code: 'INVALID_SALES_DATE',
         message: 'Provide a valid business date as YYYY-MM-DD in Asia/Manila.',
       });
+    return {
+      ...(await this.reportForBounds(actorId, shopId, bounds)),
+      businessDate: date as string,
+    };
+  }
+  async custom(
+    actorId: string,
+    shopId: string,
+    startDate: unknown,
+    endDate: unknown,
+  ): Promise<CustomSalesResponse> {
+    const range = salesDailyRange(startDate, endDate);
+    if (!range)
+      throw new BadRequestException({
+        code: 'INVALID_SALES_PERIOD',
+        message:
+          'Choose valid start/end business dates in order, spanning at most 366 days.',
+      });
+    return {
+      ...(await this.reportForBounds(actorId, shopId, range)),
+      startDate: startDate as string,
+      endDate: endDate as string,
+    };
+  }
+  private async reportForBounds(
+    actorId: string,
+    shopId: string,
+    bounds: { from: string; to: string },
+  ): Promise<Omit<DailySalesResponse, 'businessDate'>> {
     const start = new Date(bounds.from),
       end = new Date(bounds.to);
     const { summary, itemsSold, paymentBreakdown, recentOrders } =
@@ -324,7 +354,6 @@ export class CompletedSalesService {
       paymentBreakdown,
       recentOrders,
       shopId,
-      businessDate: date as string,
       timezone: SALES_TIMEZONE,
     };
   }

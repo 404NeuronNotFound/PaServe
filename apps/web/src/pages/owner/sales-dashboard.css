@@ -117,6 +117,44 @@
   outline: 2px solid var(--color-text);
   outline-offset: 3px;
 }
+.sales-report-mode {
+  margin-bottom: 16px;
+}
+.sales-custom-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  flex: 1 1 360px;
+}
+.sales-custom-range label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 150px;
+  font-size: 12px;
+}
+.sales-custom-range input {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  font: inherit;
+}
+.sales-range-help {
+  font-size: 13px;
+  color: var(--color-muted);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.sales-custom-range :focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 3px;
+}
 .sales-dashboard * {
   box-sizing: border-box;
 }
