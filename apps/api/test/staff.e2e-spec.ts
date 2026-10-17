@@ -480,6 +480,115 @@ describe('Owner staff invitations through HTTP', () => {
       }),
     });
   });
+
+  it.each([
+    ['CASHIER', 'ADMIN'],
+    ['MANAGER', 'ADMIN'],
+    ['KITCHEN', 'ADMIN'],
+    ['ADMIN', 'MANAGER'],
+    ['ADMIN', 'CASHIER'],
+    ['ADMIN', 'KITCHEN'],
+  ] as const)(
+    'allows OWNER to change %s to %s and audits the role transition',
+    async (previousRole, nextRole) => {
+      tx.shopMember.findFirst.mockResolvedValue({
+        userId,
+        role: previousRole,
+        user: { email: invite.email },
+      });
+      await owner()
+        .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}`)
+        .set('Authorization', 'Bearer owner')
+        .send({ role: nextRole })
+        .expect(204);
+      expect(tx.shopMember.updateMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          id: resourceId,
+          shopId,
+          role: previousRole,
+        }),
+        data: { role: nextRole },
+      });
+      expect(tx.staffAuditEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          shopId,
+          actorId: ownerId,
+          targetUserId: userId,
+          action: 'ROLE_CHANGED',
+          previousRole,
+          role: nextRole,
+        }),
+      });
+      expect(tx.shopMember.deleteMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it('allows inviting ADMIN without granting membership before acceptance', async () => {
+    const response = await owner()
+      .post(`/api/v1/shops/${shopId}/staff/invitations`)
+      .set('Authorization', 'Bearer owner')
+      .send({ email: invite.email, role: 'ADMIN' })
+      .expect(201);
+    expect(response.body.invitation.role).toBe('ADMIN');
+    expect(tx.shopMember.create).not.toHaveBeenCalled();
+  });
+
+  it('creates ADMIN membership only when the invited account accepts', async () => {
+    invite.role = 'ADMIN';
+    const response = await accept().expect(200);
+    expect(response.body).toEqual({ shopId, role: 'ADMIN' });
+    expect(tx.shopMember.create).toHaveBeenCalledWith({
+      data: { shopId, userId, role: 'ADMIN' },
+    });
+  });
+
+  it.each(['OWNER', 'ADMIN'] as const)(
+    'rejects %s claims when live ownership is lost during admin assignment',
+    async (claimedRole) => {
+      role = claimedRole;
+      tx.shopMember.findFirst.mockResolvedValue({
+        userId,
+        role: 'CASHIER',
+        user: { email: invite.email },
+      });
+      tx.shop.findFirst.mockResolvedValue(null);
+      await owner()
+        .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}`)
+        .set('Authorization', 'Bearer owner')
+        .send({ role: 'ADMIN' })
+        .expect(403);
+      expect(tx.shopMember.updateMany).not.toHaveBeenCalled();
+      expect(tx.staffAuditEvent.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects an admin change targeting a member outside the selected shop', async () => {
+    tx.shopMember.findFirst.mockResolvedValue(null);
+    await owner()
+      .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}`)
+      .set('Authorization', 'Bearer owner')
+      .send({ role: 'ADMIN' })
+      .expect(404);
+    expect(tx.shopMember.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: resourceId, shopId } }),
+    );
+    expect(tx.shopMember.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('does not audit admin assignment if the conditional membership update fails', async () => {
+    tx.shopMember.findFirst.mockResolvedValue({
+      userId,
+      role: 'CASHIER',
+      user: { email: invite.email },
+    });
+    tx.shopMember.updateMany.mockResolvedValue({ count: 0 });
+    await owner()
+      .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}`)
+      .set('Authorization', 'Bearer owner')
+      .send({ role: 'ADMIN' })
+      .expect(409);
+    expect(tx.staffAuditEvent.create).not.toHaveBeenCalled();
+  });
   it('removes only the selected shop membership and audits the removal', async () => {
     tx.shopMember.findFirst.mockResolvedValue({
       userId,

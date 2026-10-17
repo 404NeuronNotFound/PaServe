@@ -52,12 +52,14 @@ type Decision = {
   id: string;
   email: string;
   role?: StaffRole;
+  previousRole?: StaffRole;
 };
 const roleDescriptions: Record<StaffRole, string> = {
   CASHIER: "Order scanning and payment collection.",
   KITCHEN: "Kitchen preparation access.",
   MANAGER: "Daily operations and order management.",
-  ADMIN: "Shop administration and management.",
+  ADMIN:
+    "Shop operations, menu, tables, reports, cashier, and kitchen. Staff management, settings, ownership, and billing remain owner-only.",
 };
 export function StaffPage() {
   const { shopId } = useActiveShop();
@@ -219,6 +221,9 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const pendingCount = query.data.invitations.filter(
     (invitation) => invitation.status === "PENDING",
   ).length;
+  const assigningAdmin = decision?.kind === "role" && decision.role === "ADMIN";
+  const removingAdmin =
+    decision?.kind === "role" && decision.previousRole === "ADMIN";
   return (
     <section className="shop-context-content staff-workspace">
       <header className="staff-heading">
@@ -320,6 +325,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                               id: member.id,
                               email: member.email,
                               role: value as StaffRole,
+                              previousRole: member.role as StaffRole,
                             });
                         }}
                         disabled={busy}
@@ -522,25 +528,37 @@ function StaffWorkspace({ userId }: { userId: string }) {
       <DecisionDialog
         open={Boolean(decision)}
         title={
-          decision?.kind === "role"
-            ? "Change staff role?"
-            : decision?.kind === "remove"
-              ? "Remove staff access?"
-              : "Revoke invitation?"
+          assigningAdmin
+            ? "Assign admin role?"
+            : removingAdmin
+              ? "Remove admin role?"
+              : decision?.kind === "role"
+                ? "Change staff role?"
+                : decision?.kind === "remove"
+                  ? "Remove staff access?"
+                  : "Revoke invitation?"
         }
         description={
-          decision?.kind === "role"
-            ? `${decision.email} will become ${decision.role?.toLowerCase()} in this shop.`
-            : decision?.kind === "remove"
-              ? `${decision.email} will lose access to this shop. Their account and other shop memberships remain available.`
-              : `The invitation for ${decision?.email} will stop working.`
+          assigningAdmin
+            ? `${decision?.email} will become an admin in ${membership.shop.name}. ${roleDescriptions.ADMIN}`
+            : removingAdmin
+              ? `${decision?.email} will become ${decision?.role?.toLowerCase()} in ${membership.shop.name} and lose admin permissions. Their shop membership stays active with the selected role's permissions.`
+              : decision?.kind === "role"
+                ? `${decision.email} will become ${decision.role?.toLowerCase()} in this shop.`
+                : decision?.kind === "remove"
+                  ? `${decision.email} will lose access to this shop. Their account and other shop memberships remain available.`
+                  : `The invitation for ${decision?.email} will stop working.`
         }
         confirmLabel={
-          decision?.kind === "role"
-            ? "Change role"
-            : decision?.kind === "remove"
-              ? "Remove access"
-              : "Revoke invitation"
+          assigningAdmin
+            ? "Assign admin"
+            : removingAdmin
+              ? "Remove admin role"
+              : decision?.kind === "role"
+                ? "Change role"
+                : decision?.kind === "remove"
+                  ? "Remove access"
+                  : "Revoke invitation"
         }
         destructive={decision?.kind !== "role"}
         onClose={() => setDecision(null)}
@@ -554,7 +572,11 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 : decision.kind === "remove"
                   ? removeStaff(shopId, decision.id)
                   : revokeInvitation(shopId, decision.id),
-            "Staff access updated.",
+            assigningAdmin
+              ? "Admin role assigned."
+              : removingAdmin
+                ? "Admin role removed."
+                : "Staff access updated.",
           );
         }}
       />

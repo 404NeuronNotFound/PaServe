@@ -7,6 +7,8 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../dist/generated/prisma/client.js';
 import { StaffService } from '../dist/modules/staff/staff.service.js';
 import { TenantResourcesRepository } from '../dist/modules/tenancy/tenant-resources.repository.js';
+import { ShopMembersRepository } from '../dist/modules/shop-members/shop-members.repository.js';
+import { ShopMembersService } from '../dist/modules/shop-members/shop-members.service.js';
 
 // Only disposable schema objects and fixtures are committed; public data and
 // migration history are untouched. Always settle sessions before cleanup.
@@ -30,7 +32,7 @@ try {
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
   await setup.query(`CREATE TABLE ${q('shops')} (
     "id" TEXT PRIMARY KEY, "name" TEXT NOT NULL, "slug" TEXT UNIQUE NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true)`);
+    "isActive" BOOLEAN NOT NULL DEFAULT true, "logoUrl" TEXT)`);
   await setup.query(`CREATE TABLE ${q('shop_members')} (
     "id" TEXT PRIMARY KEY, "userId" TEXT NOT NULL REFERENCES ${q('users')}(id),
     "shopId" TEXT NOT NULL REFERENCES ${q('shops')}(id), "role" ${q('ShopRole')} NOT NULL,
@@ -157,6 +159,67 @@ try {
   const member = await prisma.shopMember.findUnique({
     where: { userId_shopId: { userId, shopId } },
   });
+  const access = new ShopMembersService(new ShopMembersRepository(prisma));
+  const otherMembership = await prisma.shopMember.create({
+    data: { userId, shopId: otherShop, role: 'CASHIER' },
+  });
+  await staff.changeRole(ownerId, shopId, member.id, { role: 'ADMIN' });
+  assert.equal(
+    (await access.requirePermission(userId, shopId, 'shop.operations.manage'))
+      .role,
+    'ADMIN',
+  );
+  for (const permission of [
+    'shop.settings.manage',
+    'shop.ownership.manage',
+    'shop.billing.manage',
+  ])
+    await assert.rejects(access.requirePermission(userId, shopId, permission), {
+      status: 403,
+    });
+  await assert.rejects(
+    staff.changeRole(userId, shopId, ownerMembership.id, { role: 'CASHIER' }),
+    { status: 403 },
+  );
+  await assert.rejects(
+    staff.changeRole(ownerId, otherShop, member.id, { role: 'ADMIN' }),
+    { status: 404 },
+  );
+  await setup.query(
+    `ALTER TABLE ${q('staff_audit_events')} ADD CONSTRAINT test_role_audit_failure CHECK (action <> 'ROLE_CHANGED') NOT VALID`,
+  );
+  await assert.rejects(
+    staff.changeRole(ownerId, shopId, member.id, { role: 'CASHIER' }),
+  );
+  assert.equal(
+    (await prisma.shopMember.findUnique({ where: { id: member.id } })).role,
+    'ADMIN',
+  );
+  await setup.query(
+    `ALTER TABLE ${q('staff_audit_events')} DROP CONSTRAINT test_role_audit_failure`,
+  );
+  await staff.changeRole(ownerId, shopId, member.id, { role: 'CASHIER' });
+  await assert.rejects(
+    access.requirePermission(userId, shopId, 'shop.operations.manage'),
+    { status: 403 },
+  );
+  assert.equal((await access.requireMembership(userId, shopId)).id, member.id);
+  assert.equal(
+    (await prisma.shopMember.findUnique({ where: { id: otherMembership.id } }))
+      .role,
+    'CASHIER',
+  );
+  const roleEvents = await prisma.staffAuditEvent.findMany({
+    where: { shopId, action: 'ROLE_CHANGED' },
+    orderBy: { createdAt: 'asc' },
+  });
+  assert.deepEqual(
+    roleEvents.map(({ previousRole, role }) => [previousRole, role]),
+    [
+      ['CASHIER', 'ADMIN'],
+      ['ADMIN', 'CASHIER'],
+    ],
+  );
   await assert.rejects(
     staff.invite(ownerId, shopId, {
       email: 'cashier@example.com',
@@ -263,7 +326,7 @@ try {
     });
   }
   console.log(
-    'Passed: migration, invitations, tenant isolation, concurrent acceptance, role/removal protection, audit rollback and RLS.',
+    'Passed: migration, invitations, tenant isolation, concurrent acceptance, owner protection, admin assignment/downgrade, live permission removal, audit rollback and RLS.',
   );
 } finally {
   if (prisma) await prisma.$disconnect();

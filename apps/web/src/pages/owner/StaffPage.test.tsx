@@ -262,6 +262,78 @@ it("confirms a role change before saving", async () => {
     "KITCHEN",
   );
 });
+
+it("explains admin permissions and requires confirmation before assignment", async () => {
+  vi.mocked(changeStaffRole).mockImplementation(async () => {
+    vi.mocked(listStaff).mockResolvedValue({
+      ...data,
+      members: data.members.map((member) =>
+        member.id === "staff-member" ? { ...member, role: "ADMIN" } : member,
+      ),
+    });
+  });
+  const user = setup();
+  const chooseAdmin = async () => {
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "Role for staff@example.com",
+      }),
+    );
+    await user.click(screen.getByRole("option", { name: "Admin" }));
+  };
+  await chooseAdmin();
+  const dialog = screen.getByRole("dialog", { name: "Assign admin role?" });
+  expect(dialog).toHaveAccessibleDescription(
+    /staff@example.com will become an admin in Cafe A/,
+  );
+  expect(dialog).toHaveTextContent(
+    /Staff management, settings, ownership, and billing remain owner-only/,
+  );
+  expect(changeStaffRole).not.toHaveBeenCalled();
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(changeStaffRole).not.toHaveBeenCalled();
+  await chooseAdmin();
+  await user.click(screen.getByRole("button", { name: "Assign admin" }));
+  expect(changeStaffRole).toHaveBeenCalledExactlyOnceWith(
+    "shop-a",
+    "staff-member",
+    "ADMIN",
+  );
+  expect(await screen.findByText("admin", { exact: true })).toBeInTheDocument();
+  expect(removeStaff).not.toHaveBeenCalled();
+});
+
+it.each(["Manager", "Cashier", "Kitchen"])(
+  "removes admin authority by assigning %s while retaining membership",
+  async (nextRole) => {
+    const adminData: ShopStaffResponse = {
+      ...data,
+      members: data.members.map((member) =>
+        member.id === "staff-member" ? { ...member, role: "ADMIN" } : member,
+      ),
+    };
+    vi.mocked(listStaff).mockResolvedValue(adminData);
+    const user = setup();
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "Role for staff@example.com",
+      }),
+    );
+    await user.click(screen.getByRole("option", { name: nextRole }));
+    const dialog = screen.getByRole("dialog", { name: "Remove admin role?" });
+    expect(dialog).toHaveTextContent(/Their shop membership stays active/);
+    expect(changeStaffRole).not.toHaveBeenCalled();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Remove admin role" }),
+    );
+    expect(changeStaffRole).toHaveBeenCalledWith(
+      "shop-a",
+      "staff-member",
+      nextRole.toUpperCase(),
+    );
+    expect(removeStaff).not.toHaveBeenCalled();
+  },
+);
 it("filters members by email or role and restores search focus on clear", async () => {
   const user = setup();
   const search = await screen.findByRole("textbox", {
