@@ -28,10 +28,12 @@ describe('Cash collection', () => {
     aggregateOrders = vi.fn(),
     aggregateItems = vi.fn(),
     groupPayments = vi.fn(),
+    reportAccess = vi.fn(),
     updateOrder = vi.fn(),
     raw = vi.fn(),
     transaction = vi.fn();
   const database = {
+    shop: { findFirst: reportAccess },
     orderItem: { aggregate: aggregateItems },
     order: {
       findFirst: findOrder,
@@ -118,6 +120,7 @@ describe('Cash collection', () => {
     vi.resetAllMocks();
     role = 'CASHIER';
     active = true;
+    reportAccess.mockImplementation(async ({ where }) => active && where.id === shopId && where.members.some.role.in.includes(role) ? { id: shopId } : null);
     saved = fixture();
     auth.mockResolvedValue({
       id: userId,
@@ -1534,6 +1537,20 @@ describe('Cash collection', () => {
     active = false;
     await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/daily-sales`).query({ date: '2026-10-16' }).set('Authorization', 'Bearer session').expect(404);
     expect(aggregateOrders).not.toHaveBeenCalled();
+  });
+  it('rejects daily report access revoked after the guard, before reading metrics', async () => {
+    role = 'OWNER';
+    transaction.mockImplementationOnce(async (work) => { role = 'CASHIER'; return work(database); });
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/daily-sales`).query({ date: '2026-10-16' }).set('Authorization', 'Bearer session').expect(404);
+    expect(aggregateOrders).not.toHaveBeenCalled();
+    expect(aggregateItems).not.toHaveBeenCalled();
+    expect(groupPayments).not.toHaveBeenCalled();
+  });
+  it('rejects a daily report for another shop even when membership resolution is stale', async () => {
+    role = 'OWNER';
+    await request(app.getHttpServer()).get('/api/v1/shops/55b18d73-f2fb-4fe6-bb1c-30cf385c3b24/reports/daily-sales').query({ date: '2026-10-16' }).set('Authorization', 'Bearer session').expect(404);
+    expect(aggregateOrders).not.toHaveBeenCalled();
+    expect(aggregateItems).not.toHaveBeenCalled();
   });
   it('denies anonymous collection', async () => {
     await collect({}, shopId, false).expect(401);

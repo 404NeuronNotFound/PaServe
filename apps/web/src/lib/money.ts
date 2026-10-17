@@ -13,9 +13,10 @@ export function calculateAverageOrderValue(
   orders: number,
 ): string {
   if (
-    !/^(?:0|[1-9]\d*)\.\d{2}$/.test(totalSales) ||
+    !/^(?:0|[1-9]\d*)\.\d{2}$(?![\s\S])/.test(totalSales) ||
     !Number.isSafeInteger(orders) ||
-    orders < 0
+    orders < 0 ||
+    (orders === 0 && totalSales !== "0.00")
   ) {
     throw new Error(
       "Average order value requires valid sales and order count.",
@@ -36,7 +37,7 @@ export function formatProductPrice(value: string): string {
 
 /** Combined totals may exceed the storage limit for a single product price. */
 export function formatCartPrice(value: string): string {
-  if (!/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(value)) return "—";
+  if (!/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$(?![\s\S])/.test(value)) return "—";
   const [whole, fraction = ""] = value.split(".");
   return peso
     .formatToParts(BigInt(whole))

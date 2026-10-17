@@ -48,3 +48,13 @@ it.each([-1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
     expect(() => calculateAverageOrderValue("10.00", count)).toThrow();
   },
 );
+it.each(["0.30\n", "0.30\r", "0.30\r\n", " 0.30", "0.30 "])(
+  "rejects whitespace in exact currency input %j",
+  (amount) => {
+    expect(formatCartPrice(amount)).toBe("—");
+    expect(() => calculateAverageOrderValue(amount, 2)).toThrow();
+  },
+);
+it("does not silently average nonzero sales over zero orders", () => {
+  expect(() => calculateAverageOrderValue("10.00", 0)).toThrow();
+});

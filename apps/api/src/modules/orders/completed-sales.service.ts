@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   SHOP_ROLES,
@@ -40,6 +41,17 @@ export class CompletedSalesService {
     const { summary, itemsSold, paymentBreakdown, recentOrders } =
       await this.prisma.$transaction(
         async (tx) => {
+          // Distinguish an inaccessible shop from a legitimately empty period,
+          // including membership changes after the route guard resolved.
+          const access = await tx.shop.findFirst({
+            where: shopAccessWhere(actorId, shopId, COMPLETED_SALES_ROLES),
+            select: { id: true },
+          });
+          if (!access)
+            throw new NotFoundException({
+              code: 'SHOP_NOT_ACCESSIBLE',
+              message: 'This shop is unavailable or you do not have access.',
+            });
           const summary = await this.aggregate(actorId, shopId, start, end, tx);
           const items = await tx.orderItem.aggregate({
             where: {

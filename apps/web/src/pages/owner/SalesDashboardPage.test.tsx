@@ -22,6 +22,7 @@ import { ActiveShopContext } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getDailySales } from "../../features/orders/daily-sales";
 import { SalesDashboardPage } from "./SalesDashboardPage";
+import { api } from "../../lib/api/client";
 
 vi.mock("../../features/orders/daily-sales", () => ({
   getDailySales: vi.fn(),
@@ -344,6 +345,36 @@ it("hides totals when report access is revoked", async () => {
     screen.queryByRole("article", { name: "Number of Orders" }),
   ).not.toBeInTheDocument();
 });
+
+it("stops automatic polling after access denial and keeps manual retry available", async () => {
+  vi.useFakeTimers();
+  vi.mocked(getDailySales).mockRejectedValueOnce(
+    new AxiosError("denied", "ERR_BAD_REQUEST", undefined, undefined, {
+      status: 403,
+    } as never),
+  );
+  setup();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(25);
+  });
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "access to this shop’s sales reports is unavailable",
+  );
+  expect(screen.getByText("Automatic refresh paused")).toBeVisible();
+  const calls = vi.mocked(getDailySales).mock.calls.length;
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(45000);
+  });
+  expect(getDailySales).toHaveBeenCalledTimes(calls);
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(25);
+  });
+  expect(getDailySales).toHaveBeenCalledTimes(calls + 1);
+  expect(
+    screen.getByText("₱0.30", { selector: ".sales-amount" }),
+  ).toBeVisible();
+});
 it("does not retain another shop's total or date selection", async () => {
   const view = setup();
   await screen.findByText("₱0.30", { selector: ".sales-amount" });
@@ -379,6 +410,116 @@ it("advances the Today view across Manila midnight on focus", async () => {
       expect.any(AbortSignal),
     ),
   );
+});
+
+it("keeps an explicitly selected historical day when Today rolls over", async () => {
+  setup();
+  await screen.findByText("₱0.30", { selector: ".sales-amount" });
+  fireEvent.change(screen.getByLabelText("Business date"), {
+    target: { value: "2026-10-14" },
+  });
+  await waitFor(() =>
+    expect(getDailySales).toHaveBeenLastCalledWith(
+      "a",
+      "2026-10-14",
+      expect.any(AbortSignal),
+    ),
+  );
+  vi.setSystemTime(new Date("2026-10-16T16:00:00.000Z"));
+  fireEvent(window, new Event("focus"));
+  expect(screen.getByLabelText("Business date")).toHaveValue("2026-10-14");
+  expect(screen.getByRole("button", { name: "Today" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Today" }));
+  await waitFor(() =>
+    expect(getDailySales).toHaveBeenLastCalledWith(
+      "a",
+      "2026-10-17",
+      expect.any(AbortSignal),
+    ),
+  );
+});
+
+it("cancels a pending report when switching shops", async () => {
+  const signals: AbortSignal[] = [];
+  vi.mocked(getDailySales).mockImplementationOnce((_shopId, _date, signal) => {
+    signals.push(signal);
+    return new Promise(() => {});
+  });
+  const view = setup();
+  await waitFor(() => expect(signals).toHaveLength(1));
+  view.rerender(view.page("b"));
+  await waitFor(() => expect(signals[0].aborted).toBe(true));
+  await waitFor(() =>
+    expect(getDailySales).toHaveBeenLastCalledWith(
+      "b",
+      "2026-10-16",
+      expect.any(AbortSignal),
+    ),
+  );
+});
+
+it("clears report cards and the feed when the business date is cleared", async () => {
+  setup();
+  await screen.findByText("₱0.30", { selector: ".sales-amount" });
+  const calls = vi.mocked(getDailySales).mock.calls.length;
+  fireEvent.change(screen.getByLabelText("Business date"), {
+    target: { value: "" },
+  });
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Choose a valid business date",
+  );
+  expect(screen.getByRole("button", { name: "Refresh sales" })).toBeDisabled();
+  expect(
+    screen.queryByRole("region", { name: "Recent Orders" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("₱0.30", { selector: ".sales-amount" }),
+  ).not.toBeInTheDocument();
+  expect(getDailySales).toHaveBeenCalledTimes(calls);
+});
+
+it("validates real report responses and hides previous data if the refreshed feed is incomplete", async () => {
+  const actual = await vi.importActual<
+    typeof import("../../features/orders/daily-sales")
+  >("../../features/orders/daily-sales");
+  vi.mocked(getDailySales).mockImplementation(actual.getDailySales);
+  const data = {
+    shopId: "a",
+    businessDate: "2026-10-16",
+    ...salesBusinessDayBounds("2026-10-16")!,
+    timezone: "Asia/Manila",
+    currency: "PHP",
+    totalSales: "0.30",
+    completedOrders: 1,
+    itemsSold: 7,
+    paymentBreakdown: breakdown("0.30", 1),
+    recentOrders: [recentOrder({ totalPrice: "0.30" })],
+  };
+  const get = vi
+    .spyOn(api, "get")
+    .mockResolvedValueOnce({ data })
+    .mockResolvedValueOnce({ data: { ...data, recentOrders: [] } });
+  try {
+    setup();
+    expect(
+      await screen.findByRole("link", { name: "ORD-000042" }),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh sales" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "couldn’t refresh",
+    );
+    expect(
+      screen.queryByRole("region", { name: "Recent Orders" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("article", { name: "Average Order Value" }),
+    ).not.toBeInTheDocument();
+  } finally {
+    get.mockRestore();
+  }
 });
 
 it("shows totals and order counts for all four methods, including zero-value payments", async () => {

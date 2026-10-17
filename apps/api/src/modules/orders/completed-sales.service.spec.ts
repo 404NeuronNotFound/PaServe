@@ -15,7 +15,9 @@ describe('Daily gross sales', () => {
   const aggregateItems = vi.fn();
   const groupBy = vi.fn();
   const findMany = vi.fn();
+  const findShop = vi.fn();
   const database = {
+    shop: { findFirst: findShop },
     order: { aggregate, groupBy, findMany },
     orderItem: { aggregate: aggregateItems },
   };
@@ -28,6 +30,7 @@ describe('Daily gross sales', () => {
   } as unknown as PrismaService);
   beforeEach(() => {
     vi.resetAllMocks();
+    findShop.mockResolvedValue({ id: shopId });
     aggregate.mockResolvedValue({
       _count: { _all: 0 },
       _sum: { totalPrice: null },
@@ -193,6 +196,33 @@ describe('Daily gross sales', () => {
       totalSales: '0.00',
       completedOrders: 0,
       itemsSold: 0,
+    });
+  });
+  it('rejects access lost after the guard instead of displaying an empty report', async () => {
+    findShop.mockResolvedValue(null);
+    await expect(
+      service.daily(actorId, shopId, '2026-10-16'),
+    ).rejects.toMatchObject({
+      response: { code: 'SHOP_NOT_ACCESSIBLE' },
+      status: 404,
+    });
+    expect(aggregate).not.toHaveBeenCalled();
+    expect(aggregateItems).not.toHaveBeenCalled();
+    expect(groupBy).not.toHaveBeenCalled();
+    expect(findMany).not.toHaveBeenCalled();
+    expect(findShop).toHaveBeenCalledWith({
+      where: {
+        id: shopId,
+        isActive: true,
+        members: {
+          some: {
+            userId: actorId,
+            role: { in: ['OWNER', 'ADMIN', 'MANAGER'] },
+            user: { isActive: true },
+          },
+        },
+      },
+      select: { id: true },
     });
   });
 

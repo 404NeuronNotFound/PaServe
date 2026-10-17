@@ -25,7 +25,7 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(pool, { schema }) });
 let transaction = false;
 try {
   await client.connect();
-  await client.query('BEGIN');
+  await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');
   transaction = true;
   await client.query(`CREATE SCHEMA "${schema}"`);
   for (const name of ['MenuLayout', 'OrderMode', 'ShopRole']) {
@@ -384,13 +384,9 @@ try {
     where: { id: membership.id },
     data: { role: 'CASHIER' },
   });
-  assert.equal(
-    (await sales.daily(actor.id, shop.id, '2026-10-16')).itemsSold,
-    0,
-  );
-  assert.equal(
-    (await sales.daily(actor.id, shop.id, '2026-10-16')).totalSales,
-    '0.00',
+  await assert.rejects(
+    sales.daily(actor.id, shop.id, '2026-10-16'),
+    (error) => error.getStatus() === 404,
   );
   console.log(
     JSON.stringify({

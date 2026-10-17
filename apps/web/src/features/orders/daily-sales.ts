@@ -7,11 +7,11 @@ import {
 } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
 import "../auth/api/session";
-import {
-  isOrderNumber,
-  isOrderReceiptId,
-  isOrderTotal,
-} from "../cart/order-receipt-fields";
+import { isOrderNumber, isOrderTotal } from "../cart/order-receipt-fields";
+
+// Detail routes require UUIDs; safe legacy public receipt IDs are not enough.
+const orderIdPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$(?![\s\S])/i;
 
 export async function getDailySales(
   shopId: string,
@@ -33,7 +33,7 @@ export async function getDailySales(
     data.to !== bounds.to ||
     data.currency !== "PHP" ||
     typeof data.totalSales !== "string" ||
-    !/^(?:0|[1-9]\d*)\.\d{2}$/.test(data.totalSales) ||
+    !/^(?:0|[1-9]\d*)\.\d{2}$(?![\s\S])/.test(data.totalSales) ||
     !Number.isSafeInteger(data.completedOrders) ||
     data.completedOrders < 0 ||
     !Number.isSafeInteger(data.itemsSold) ||
@@ -58,7 +58,7 @@ export async function getDailySales(
       !Number.isSafeInteger(entry.orders) ||
       entry.orders < 0 ||
       typeof entry.totalSales !== "string" ||
-      !/^(?:0|[1-9]\d*)\.\d{2}$/.test(entry.totalSales) ||
+      !/^(?:0|[1-9]\d*)\.\d{2}$(?![\s\S])/.test(entry.totalSales) ||
       (entry.orders === 0 && entry.totalSales !== "0.00")
     ) {
       throw new Error(
@@ -78,19 +78,23 @@ export async function getDailySales(
   }
   if (
     !Array.isArray(data.recentOrders) ||
-    data.recentOrders.length > Math.min(10, data.completedOrders)
+    data.recentOrders.length !== Math.min(10, data.completedOrders)
   ) {
     throw new Error("Recent orders could not be verified. Please refresh.");
   }
   const ids = new Set<string>();
+  const numbers = new Set<string>();
+  let recentCents = 0n;
   for (const [index, order] of data.recentOrders.entries()) {
     const previous = data.recentOrders[index - 1];
     if (
       !order ||
-      !isOrderReceiptId(order.id) ||
-      ids.has(order.id) ||
+      typeof order.id !== "string" ||
+      !orderIdPattern.test(order.id) ||
+      ids.has(order.id.toLowerCase()) ||
       order.shopId !== shopId ||
       !isOrderNumber(order.orderNumber) ||
+      numbers.has(order.orderNumber) ||
       order.status !== "CONFIRMED" ||
       order.paymentStatus !== "PAID" ||
       order.preparationStatus !== "COMPLETED" ||
@@ -106,7 +110,17 @@ export async function getDailySales(
     ) {
       throw new Error("Recent orders could not be verified. Please refresh.");
     }
-    ids.add(order.id);
+    ids.add(order.id.toLowerCase());
+    numbers.add(order.orderNumber);
+    recentCents += BigInt(order.totalPrice.replace(".", ""));
+  }
+  if (
+    recentCents > cents ||
+    (data.recentOrders.length === data.completedOrders && recentCents !== cents)
+  ) {
+    throw new Error(
+      "Recent orders do not match the sales summary. Please refresh.",
+    );
   }
   return data;
 }

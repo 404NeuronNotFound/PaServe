@@ -51,6 +51,12 @@ const updateFormat = new Intl.DateTimeFormat("en-PH", {
   second: "2-digit",
 });
 
+function reportAccessUnavailable(error: unknown) {
+  return (
+    isAxiosError(error) && [401, 403, 404].includes(error.response?.status ?? 0)
+  );
+}
+
 /** Bounded ratio for drawing only; displayed monetary values remain exact strings. */
 function paymentShares(entries: PaymentBreakdownEntry[], total: string) {
   const cents = BigInt(total.replace(".", ""));
@@ -130,9 +136,12 @@ function SalesWorkspace({ userId }: { userId: string }) {
     retry: false,
     gcTime: 0,
     networkMode: "always",
-    refetchInterval: 15000,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    refetchInterval: (reportQuery) =>
+      reportAccessUnavailable(reportQuery.state.error) ? false : 15000,
+    refetchOnWindowFocus: (reportQuery) =>
+      !reportAccessUnavailable(reportQuery.state.error),
+    refetchOnReconnect: (reportQuery) =>
+      !reportAccessUnavailable(reportQuery.state.error),
   });
   if (!allowed)
     return (
@@ -140,9 +149,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
         Your role does not allow access to this shop’s sales reports.
       </InlineMessage>
     );
-  const denied =
-    isAxiosError(query.error) &&
-    [401, 403, 404].includes(query.error.response?.status ?? 0);
+  const denied = reportAccessUnavailable(query.error);
   const report = query.isSuccess && valid ? query.data : null;
   const segments = report
     ? paymentShares(report.paymentBreakdown, report.totalSales)
@@ -212,6 +219,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
           <FiClock aria-hidden="true" />
           {report ? (
             <>Updated {updateFormat.format(query.dataUpdatedAt)}</>
+          ) : denied ? (
+            "Access unavailable"
           ) : (
             "Updates every 15 seconds"
           )}
@@ -488,7 +497,12 @@ function SalesWorkspace({ userId }: { userId: string }) {
       )}
       <footer className="sales-report-footer">
         <span>
-          <FiClock aria-hidden="true" /> Refreshes every 15 seconds
+          <FiClock aria-hidden="true" />{" "}
+          {denied
+            ? "Automatic refresh paused"
+            : !valid
+              ? "Select a date to refresh"
+              : "Refreshes every 15 seconds"}
         </span>
         <details>
           <summary>
