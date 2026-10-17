@@ -418,6 +418,54 @@ try {
   const foreignAnalytics = await sales.dailyAnalytics(actor.id, foreign.id, '2026-10-16', '2026-10-16');
   assert.equal(foreignAnalytics.completedOrders, 1);
   assert.equal(foreignAnalytics.totalSales, '900.00');
+  // Weekly boundaries: last Sunday millisecond and exactly Monday midnight in Manila.
+  await completed('2026-10-18T15:59:59.999Z', '0.11');
+  await completed('2026-10-18T16:00:00.000Z', '0.22');
+  await completed('2026-12-31T16:00:00.000Z', '0.33');
+  await completed('2027-01-03T15:59:59.999Z', '0.44');
+  await completed('2027-01-03T16:00:00.000Z', '0.55');
+  await completed('2028-02-29T04:00:00.000Z', '0.66');
+  await completed('2028-03-05T16:00:00.000Z', '0.77');
+  const weeklyChecks = [];
+  for (const [startDate, endDate] of [
+    ['2026-10-15', '2026-10-26'],
+    ['2026-12-28', '2027-01-10'],
+    ['2028-02-28', '2028-03-12'],
+  ]) {
+    const weekly = await sales.weeklyAnalytics(actor.id, shop.id, startDate, endDate);
+    const independent = await client.query(
+      `SELECT to_char(date_trunc('week', (o."completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila'), 'YYYY-MM-DD') AS monday,
+        count(*)::int AS orders, sum(o."totalPrice")::text AS total,
+        sum((SELECT coalesce(sum(i.quantity), 0) FROM "${schema}".order_items i WHERE i."shopId"=o."shopId" AND i."orderId"=o.id))::text AS units
+       FROM "${schema}".orders o WHERE o."shopId"=$1 AND o.status='CONFIRMED'
+         AND o."paymentStatus"='PAID' AND o."preparationStatus"='COMPLETED'
+         AND o."completedBy" IS NOT NULL AND o.currency='PHP'
+         AND ((o."completedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Manila')::date BETWEEN $2::date AND $3::date
+       GROUP BY 1 ORDER BY 1`, [shop.id, startDate, endDate],
+    );
+    let cents = 0n, count = 0, units = 0;
+    for (const week of weekly.weeks) {
+      const expectedWeek = independent.rows.find((row) => row.monday === week.weekStart);
+      const expectedCents = BigInt((expectedWeek?.total ?? '0.00').replace('.', ''));
+      assert.equal(BigInt(week.totalSales.replace('.', '')), expectedCents);
+      assert.equal(week.completedOrders, expectedWeek?.orders ?? 0);
+      assert.equal(week.itemsSold, Number(expectedWeek?.units ?? 0));
+      assert.equal(new Date(`${week.weekStart}T12:00:00Z`).getUTCDay(), 1);
+      assert.equal(new Date(`${week.weekEnd}T12:00:00Z`).getUTCDay(), 0);
+      cents += expectedCents; count += week.completedOrders; units += week.itemsSold;
+    }
+    assert.equal(weekly.weeks.filter((week) => week.completedOrders > 0).length, independent.rows.length);
+    assert.equal(BigInt(weekly.totalSales.replace('.', '')), cents);
+    assert.equal(weekly.completedOrders, count);
+    assert.equal(weekly.itemsSold, units);
+    weeklyChecks.push({ startDate, endDate, weeks: weekly.weeks });
+  }
+  // Sunday and Monday fall in different canonical weeks.
+  const transition = await sales.weeklyAnalytics(actor.id, shop.id, '2026-10-18', '2026-10-19');
+  assert.deepEqual(transition.weeks.map((week) => week.totalSales), ['0.11', '0.22']);
+  const foreignWeekly = await sales.weeklyAnalytics(actor.id, foreign.id, '2026-10-12', '2026-10-18');
+  assert.equal(foreignWeekly.totalSales, '900.00');
+  assert.equal(foreignWeekly.completedOrders, 1);
   await prisma.shopMember.update({
     where: { id: membership.id },
     data: { role: 'CASHIER' },
@@ -427,9 +475,11 @@ try {
     (error) => error.getStatus() === 404,
   );
   await assert.rejects(sales.dailyAnalytics(actor.id, shop.id, '2026-10-16', '2026-10-16'), (error) => error.getStatus() === 404);
+  await assert.rejects(sales.weeklyAnalytics(actor.id, shop.id, '2026-10-12', '2026-10-18'), (error) => error.getStatus() === 404);
   console.log(
     JSON.stringify({
       passed: true,
+      weeklyAnalytics: { passed: true, criterion: 'Aggregate by consistent Monday-Sunday week boundaries in Asia/Manila', checks: weeklyChecks },
       dailyAnalytics: {
         criterion: 'Daily totals reconcile with underlying eligible orders',
         passed: true,

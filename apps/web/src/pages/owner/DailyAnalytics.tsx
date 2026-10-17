@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { salesDailyRange } from "@paserve/contracts";
+import { salesDailyRange, salesWeeklyRange } from "@paserve/contracts";
 import { getDailyAnalytics } from "../../features/orders/daily-analytics";
+import { getWeeklyAnalytics } from "../../features/orders/weekly-analytics";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 
@@ -18,15 +19,27 @@ export function DailyAnalytics({
   shopId: string;
   today: string;
 }) {
+  const [period, setPeriod] = useState<"daily" | "weekly">("daily");
+  const weekly = period === "weekly";
+  const title = weekly ? "Weekly" : "Daily";
   const [selection, setSelection] = useState<{
     start: string;
     end: string;
   } | null>(null);
-  const { start, end } = selection ?? { start: today, end: today };
-  const valid = !!salesDailyRange(start, end);
+  const currentWeek = salesWeeklyRange(today, today)?.weeks[0];
+  const { start, end } = selection ?? {
+    start: weekly && currentWeek ? currentWeek.weekStart : today,
+    end: weekly && currentWeek ? currentWeek.weekEnd : today,
+  };
+  const valid = !!(weekly
+    ? salesWeeklyRange(start, end)
+    : salesDailyRange(start, end));
   const query = useQuery({
-    queryKey: ["daily-analytics", userId, shopId, start, end],
-    queryFn: ({ signal }) => getDailyAnalytics(shopId, start, end, signal),
+    queryKey: [`${period}-analytics`, userId, shopId, start, end],
+    queryFn: async ({ signal }) =>
+      weekly
+        ? await getWeeklyAnalytics(shopId, start, end, signal)
+        : await getDailyAnalytics(shopId, start, end, signal),
     enabled: valid,
     retry: false,
     gcTime: 0,
@@ -37,6 +50,19 @@ export function DailyAnalytics({
   });
   const report = valid && query.isSuccess ? query.data : null;
   const denied = accessUnavailable(query.error);
+  const rows =
+    report &&
+    ("weeks" in report
+      ? report.weeks.map((week) => ({
+          ...week,
+          key: week.weekStart,
+          label: `${week.weekStart} – ${week.weekEnd}${week.partial ? ` (partial: ${week.fromDate} – ${week.toDate})` : ""}${week.fromDate <= today && week.toDate >= today ? " (in progress)" : ""}`,
+        }))
+      : report.days.map((day) => ({
+          ...day,
+          key: day.businessDate,
+          label: `${day.businessDate}${day.businessDate === today ? " (in progress)" : ""}`,
+        })));
   return (
     <section
       className="daily-analytics"
@@ -44,12 +70,14 @@ export function DailyAnalytics({
     >
       <div className="daily-analytics-heading">
         <div>
-          <p className="sales-eyebrow">ANALYTICS / DAILY</p>
-          <h2 id="daily-analytics-title">Daily performance</h2>
+          <p className="sales-eyebrow">ANALYTICS / {title.toUpperCase()}</p>
+          <h2 id="daily-analytics-title">{title} performance</h2>
           <p id="daily-range-help">
-            One row per business day in Manila (UTC+8). Both dates are included;
-            maximum 366 days. Sales count confirmed, paid, completed orders by
-            completion date.
+            {weekly
+              ? "Monday–Sunday weeks in Manila (UTC+8). Partial weeks count only selected dates."
+              : "One row per business day in Manila (UTC+8)."}{" "}
+            Both dates are included; maximum 366 days. Sales count confirmed,
+            paid, completed orders by completion date.
           </p>
         </div>
         <button
@@ -57,10 +85,30 @@ export function DailyAnalytics({
           disabled={!valid || query.isFetching}
           onClick={() => void query.refetch()}
         >
-          Refresh daily analytics
+          Refresh {period} analytics
         </button>
       </div>
       <div className="daily-analytics-controls">
+        <div
+          className="analytics-period-toggle"
+          role="group"
+          aria-label="Analytics aggregation"
+        >
+          <button
+            className="secondary-button"
+            aria-pressed={!weekly}
+            onClick={() => setPeriod("daily")}
+          >
+            Daily
+          </button>
+          <button
+            className="secondary-button"
+            aria-pressed={weekly}
+            onClick={() => setPeriod("weekly")}
+          >
+            Weekly
+          </button>
+        </div>
         <label>
           Start date
           <input
@@ -82,7 +130,7 @@ export function DailyAnalytics({
           />
         </label>
         <button className="secondary-button" onClick={() => setSelection(null)}>
-          Use today
+          {weekly ? "Use this week" : "Use today"}
         </button>
       </div>
       {!valid && (
@@ -91,13 +139,13 @@ export function DailyAnalytics({
         </InlineMessage>
       )}
       {valid && query.isPending && (
-        <InlineMessage tone="info">Loading daily analytics…</InlineMessage>
+        <InlineMessage tone="info">Loading {period} analytics…</InlineMessage>
       )}
       {valid && query.isError && (
         <InlineMessage>
           {denied
-            ? "Your access to this shop’s analytics is unavailable. Automatic refresh is paused; use Refresh daily analytics to retry."
-            : "We couldn’t refresh daily analytics. Use Refresh daily analytics to retry."}
+            ? `Your access to this shop’s analytics is unavailable. Automatic refresh is paused; use Refresh ${period} analytics to retry.`
+            : `We couldn’t refresh ${period} analytics. Use Refresh ${period} analytics to retry.`}
         </InlineMessage>
       )}
       {report && (
@@ -109,25 +157,29 @@ export function DailyAnalytics({
           </p>
           {report.completedOrders === 0 && (
             <InlineMessage tone="info">
-              No completed sales in this range. All days are shown below.
+              No completed sales in this range. All {weekly ? "weeks" : "days"}{" "}
+              are shown below.
             </InlineMessage>
           )}
           <div
             className="daily-analytics-table"
             tabIndex={0}
             role="region"
-            aria-label="Daily performance table"
+            aria-label={`${title} performance table`}
           >
             <table>
               <caption>
-                Daily aggregation by completion date
+                {title} aggregation by completion date
+                {weekly ? "; weeks run Monday–Sunday" : ""}
                 {end >= today
                   ? ". Today is in progress; future dates have no completed sales."
                   : "."}
               </caption>
               <thead>
                 <tr>
-                  <th scope="col">Business date</th>
+                  <th scope="col">
+                    {weekly ? "Business week (Mon–Sun)" : "Business date"}
+                  </th>
                   <th scope="col">Gross sales</th>
                   <th scope="col">Orders</th>
                   <th scope="col">Items sold</th>
@@ -135,12 +187,9 @@ export function DailyAnalytics({
                 </tr>
               </thead>
               <tbody>
-                {report.days.map((day) => (
-                  <tr key={day.businessDate}>
-                    <th scope="row">
-                      {day.businessDate}
-                      {day.businessDate === today ? " (in progress)" : ""}
-                    </th>
+                {rows?.map((day) => (
+                  <tr key={day.key}>
+                    <th scope="row">{day.label}</th>
                     <td>{formatCartPrice(day.totalSales)}</td>
                     <td>{day.completedOrders.toLocaleString("en-PH")}</td>
                     <td>{day.itemsSold.toLocaleString("en-PH")}</td>

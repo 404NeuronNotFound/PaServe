@@ -9,10 +9,15 @@ import {
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getDailyAnalytics } from "../../features/orders/daily-analytics";
+import { getWeeklyAnalytics } from "../../features/orders/weekly-analytics";
+import { salesWeeklyRange } from "@paserve/contracts";
 import { DailyAnalytics } from "./DailyAnalytics";
 
 vi.mock("../../features/orders/daily-analytics", () => ({
   getDailyAnalytics: vi.fn(),
+}));
+vi.mock("../../features/orders/weekly-analytics", () => ({
+  getWeeklyAnalytics: vi.fn(),
 }));
 afterEach(() => {
   cleanup();
@@ -116,4 +121,85 @@ it("shows zero days in an empty period", async () => {
   expect(screen.getByRole("table")).toHaveTextContent(
     "2026-10-16 (in progress)",
   );
+});
+const weeklyData = () => ({
+  ...data,
+  startDate: "2026-10-12",
+  endDate: "2026-10-18",
+  from: "2026-10-11T16:00:00.000Z",
+  to: "2026-10-18T16:00:00.000Z",
+  weekStartsOn: "MONDAY" as const,
+  weeks: [
+    {
+      ...salesWeeklyRange("2026-10-12", "2026-10-18")!.weeks[0],
+      totalSales: "10.01",
+      completedOrders: 3,
+      itemsSold: 7,
+    },
+  ],
+});
+it("switches to Weekly, defaults to this Monday-Sunday, and preserves explicit dates", async () => {
+  vi.mocked(getDailyAnalytics).mockResolvedValue(data);
+  vi.mocked(getWeeklyAnalytics).mockResolvedValue(weeklyData());
+  setup();
+  await screen.findByRole("table");
+  fireEvent.click(screen.getByRole("button", { name: "Weekly" }));
+  expect(
+    await screen.findByRole("region", { name: "Weekly performance table" }),
+  ).toHaveTextContent("2026-10-12 – 2026-10-18 (in progress)");
+  expect(screen.getByLabelText("Start date")).toHaveValue("2026-10-12");
+  expect(screen.getByLabelText("End date")).toHaveValue("2026-10-18");
+  expect(getWeeklyAnalytics).toHaveBeenLastCalledWith(
+    "shop",
+    "2026-10-12",
+    "2026-10-18",
+    expect.any(AbortSignal),
+  );
+  fireEvent.change(screen.getByLabelText("Start date"), {
+    target: { value: "2026-10-14" },
+  });
+  await waitFor(() =>
+    expect(getWeeklyAnalytics).toHaveBeenLastCalledWith(
+      "shop",
+      "2026-10-14",
+      "2026-10-18",
+      expect.any(AbortSignal),
+    ),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Daily" }));
+  expect(screen.getByLabelText("Start date")).toHaveValue("2026-10-14");
+});
+it("labels clipped weeks and hides weekly totals on refresh failure", async () => {
+  vi.mocked(getDailyAnalytics).mockResolvedValue(data);
+  const partial = {
+    ...weeklyData(),
+    startDate: "2026-10-16",
+    endDate: "2026-10-16",
+    weeks: [
+      {
+        ...weeklyData().weeks[0],
+        fromDate: "2026-10-16",
+        toDate: "2026-10-16",
+        partial: true,
+      },
+    ],
+  };
+  vi.mocked(getWeeklyAnalytics).mockResolvedValue(partial);
+  setup();
+  await screen.findByRole("table");
+  fireEvent.change(screen.getByLabelText("Start date"), {
+    target: { value: "2026-10-16" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Weekly" }));
+  expect(await screen.findByRole("table")).toHaveTextContent(
+    "partial: 2026-10-16 – 2026-10-16",
+  );
+  vi.mocked(getWeeklyAnalytics).mockRejectedValueOnce(new Error("Offline"));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Refresh weekly analytics" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "couldn’t refresh weekly analytics",
+  );
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
 });

@@ -65,6 +65,19 @@
 .daily-analytics-controls button {
   align-self: end;
 }
+.analytics-period-toggle {
+  display: flex;
+  gap: 6px;
+  align-self: end;
+}
+.analytics-period-toggle button[aria-pressed="true"] {
+  background: var(--color-text);
+  color: var(--color-surface);
+}
+.daily-analytics tbody th {
+  white-space: normal;
+  min-width: 180px;
+}
 .daily-analytics-summary {
   font-size: 13px;
   line-height: 1.7;

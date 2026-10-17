@@ -1585,6 +1585,37 @@ describe('Cash collection', () => {
       .query({ startDate: '2026-10-16', endDate: '2026-10-16' }).set('Authorization', 'Bearer session').expect(404);
     expect(raw).not.toHaveBeenCalled();
   });
+  it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)('serves consistent weekly analytics for %s', async (reportRole) => {
+    role = reportRole;
+    raw.mockResolvedValueOnce([]);
+    const result = await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/weekly-analytics`)
+      .query({ startDate: '2026-10-18', endDate: '2026-10-19' }).set('Authorization', 'Bearer session').expect(200);
+    expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.body.weekStartsOn).toBe('MONDAY');
+    expect(result.body.weeks).toEqual([
+      { weekStart: '2026-10-12', weekEnd: '2026-10-18', fromDate: '2026-10-18', toDate: '2026-10-18', partial: true, totalSales: '0.00', completedOrders: 0, itemsSold: 0 },
+      { weekStart: '2026-10-19', weekEnd: '2026-10-25', fromDate: '2026-10-19', toDate: '2026-10-19', partial: true, totalSales: '0.00', completedOrders: 0, itemsSold: 0 },
+    ]);
+  });
+  it.each(['CASHIER', 'KITCHEN'] as const)('denies weekly analytics for %s', async (reportRole) => {
+    role = reportRole;
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/reports/weekly-analytics`)
+      .query({ startDate: '2026-10-18', endDate: '2026-10-19' }).set('Authorization', 'Bearer session').expect(403);
+    expect(raw).not.toHaveBeenCalled();
+  });
+  it('rejects invalid weekly queries, anonymous, foreign-shop and revoked access', async () => {
+    role = 'OWNER';
+    const route = `/api/v1/shops/${shopId}/reports/weekly-analytics`;
+    const period = { startDate: '2026-10-18', endDate: '2026-10-19' };
+    for (const query of [{}, { startDate: ['2026-10-18', '2026-10-19'], endDate: '2026-10-19' }, { startDate: '2026-10-20', endDate: '2026-10-19' }]) {
+      await request(app.getHttpServer()).get(route).query(query).set('Authorization', 'Bearer session').expect(400);
+    }
+    await request(app.getHttpServer()).get(route).query(period).expect(401);
+    await request(app.getHttpServer()).get('/api/v1/shops/55b18d73-f2fb-4fe6-bb1c-30cf385c3b24/reports/weekly-analytics').query(period).set('Authorization', 'Bearer session').expect(404);
+    transaction.mockImplementationOnce(async (work) => { role = 'CASHIER'; return work(database); });
+    await request(app.getHttpServer()).get(route).query(period).set('Authorization', 'Bearer session').expect(404);
+    expect(raw).not.toHaveBeenCalled();
+  });
   it('denies anonymous collection', async () => {
     await collect({}, shopId, false).expect(401);
     expect(transaction).not.toHaveBeenCalled();

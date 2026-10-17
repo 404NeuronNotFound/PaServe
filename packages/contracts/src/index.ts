@@ -1260,6 +1260,41 @@ export interface DailyAnalyticsResponse extends CompletedSalesResponse {
   itemsSold: number;
   days: DailyAnalyticsRow[];
 }
+export interface SalesWeekPeriod {
+  weekStart: string;
+  weekEnd: string;
+  fromDate: string;
+  toDate: string;
+  partial: boolean;
+}
+/** Monday-Sunday business weeks; only dates inside the requested range count. */
+export function salesWeeklyRange(startDate: unknown, endDate: unknown) {
+  const range = salesDailyRange(startDate, endDate);
+  if (!range) return null;
+  const day = 86_400_000;
+  const first = new Date(`${range.dates[0]}T00:00:00.000Z`);
+  const monday = first.getTime() - ((first.getUTCDay() + 6) % 7) * day;
+  const last = Date.parse(`${range.dates[range.dates.length - 1]}T00:00:00.000Z`);
+  const weeks: SalesWeekPeriod[] = [];
+  for (let time = monday; time <= last; time += 7 * day) {
+    const weekStart = new Date(time).toISOString().slice(0, 10);
+    const weekEnd = new Date(time + 6 * day).toISOString().slice(0, 10);
+    if (!salesBusinessDayBounds(weekStart) || !salesBusinessDayBounds(weekEnd)) return null;
+    const fromDate = weekStart < range.dates[0] ? range.dates[0] : weekStart;
+    const toDate = weekEnd > range.dates[range.dates.length - 1] ? range.dates[range.dates.length - 1] : weekEnd;
+    weeks.push({ weekStart, weekEnd, fromDate, toDate, partial: fromDate !== weekStart || toDate !== weekEnd });
+  }
+  return { from: range.from, to: range.to, weeks };
+}
+export interface WeeklyAnalyticsRow extends SalesWeekPeriod {
+  completedOrders: number;
+  totalSales: string;
+  itemsSold: number;
+}
+export interface WeeklyAnalyticsResponse extends Omit<DailyAnalyticsResponse, "days"> {
+  weekStartsOn: "MONDAY";
+  weeks: WeeklyAnalyticsRow[];
+}
 export interface PaymentBreakdownEntry {
   paymentMethod: (typeof SALES_PAYMENT_METHODS)[number];
   orders: number;
