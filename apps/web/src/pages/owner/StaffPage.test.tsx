@@ -183,6 +183,60 @@ it("requires confirmation before removing staff and preserves the owner", async 
     screen.queryByLabelText("Role for owner@example.com"),
   ).not.toBeInTheDocument();
 });
+
+it("displays and protects the sole owner without removal or role controls", async () => {
+  vi.mocked(listStaff).mockResolvedValue({
+    ...data,
+    members: [data.members[0]],
+  });
+  setup();
+  const team = await screen.findByRole("region", { name: "Shop members" });
+  expect(within(team).getByText("owner@example.com")).toBeInTheDocument();
+  const badge = within(team).getByText("Owner", { exact: true });
+  expect(badge).toHaveAccessibleDescription(/Owner memberships are protected/);
+  expect(within(team).queryByRole("combobox")).not.toBeInTheDocument();
+  expect(
+    within(team).queryByRole("button", { name: "Remove" }),
+  ).not.toBeInTheDocument();
+  expect(removeStaff).not.toHaveBeenCalled();
+  expect(changeStaffRole).not.toHaveBeenCalled();
+});
+
+it("protects another owner as well as the signed-in owner", async () => {
+  vi.mocked(listStaff).mockResolvedValue({
+    ...data,
+    members: [
+      ...data.members,
+      {
+        ...data.members[0],
+        id: "second-owner",
+        userId: "other",
+        email: "other-owner@example.com",
+      },
+    ],
+  });
+  setup();
+  const team = await screen.findByRole("region", { name: "Shop members" });
+  expect(within(team).getAllByText("Owner", { exact: true })).toHaveLength(2);
+  expect(
+    within(team).queryByLabelText("Role for other-owner@example.com"),
+  ).not.toBeInTheDocument();
+  expect(within(team).getAllByRole("button", { name: "Remove" })).toHaveLength(
+    1,
+  );
+});
+
+it("does not offer OWNER when inviting staff or changing staff roles", async () => {
+  const user = setup();
+  for (const name of ["Shop role", "Role for staff@example.com"]) {
+    const control = await screen.findByRole("combobox", { name });
+    await user.click(control);
+    expect(
+      screen.queryByRole("option", { name: "Owner" }),
+    ).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+  }
+});
 it("confirms and revokes only the selected invitation", async () => {
   const user = setup();
   await user.click(
@@ -246,7 +300,9 @@ it("shows real team counts and role guidance without granting access", async () 
   expect(overview).toHaveTextContent("1 pending invite");
   expect(
     screen.getByRole("combobox", { name: "Shop role" }),
-  ).toHaveAccessibleDescription("Cashier Order scanning and payment collection.");
+  ).toHaveAccessibleDescription(
+    "Cashier Order scanning and payment collection.",
+  );
   await user.click(screen.getByRole("combobox", { name: "Shop role" }));
   await user.click(screen.getByRole("option", { name: "Kitchen" }));
   expect(

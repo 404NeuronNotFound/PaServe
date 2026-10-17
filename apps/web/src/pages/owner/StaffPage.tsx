@@ -251,6 +251,11 @@ function StaffWorkspace({ userId }: { userId: string }) {
               </div>
               <span className="staff-count">{query.data.members.length}</span>
             </header>
+            <p id="staff-owner-protection" className="staff-owner-protection">
+              <FiLock aria-hidden="true" />
+              Owner memberships are protected. They cannot be removed or have
+              their role changed here, so the shop keeps its owner.
+            </p>
             <div className="staff-search">
               <FiSearch aria-hidden="true" />
               <input
@@ -295,7 +300,10 @@ function StaffWorkspace({ userId }: { userId: string }) {
                     </div>
                   </div>
                   {member.role === "OWNER" ? (
-                    <span className="staff-owner-badge">
+                    <span
+                      className="staff-owner-badge"
+                      aria-describedby="staff-owner-protection"
+                    >
                       <FiLock aria-hidden="true" /> Owner
                     </span>
                   ) : (

@@ -58,6 +58,15 @@ export class StaffService {
       });
   }
 
+  private staffRole(role: StaffRole) {
+    if (!STAFF_ROLES.includes(role))
+      throw new BadRequestException({
+        code: 'INVALID_STAFF_ROLE',
+        message:
+          'Choose an admin, manager, cashier, or kitchen role. Ownership cannot be assigned through staff management.',
+      });
+  }
+
   private async transaction<T>(
     work: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
@@ -149,6 +158,7 @@ export class StaffService {
   }
 
   async invite(actorId: string, shopId: string, dto: InviteStaffDto) {
+    this.staffRole(dto.role);
     const token = randomBytes(32).toString('hex');
     return this.transaction(async (tx) => {
       await this.owner(tx, actorId, shopId);
@@ -256,8 +266,10 @@ export class StaffService {
       if (member.role === 'OWNER' || member.userId === actorId)
         throw new ForbiddenException({
           code: 'OWNER_PROTECTED',
-          message: 'Owner membership cannot be changed here.',
+          message:
+            'Owner membership is protected and cannot be changed through staff management.',
         });
+      this.staffRole(dto.role);
       if (member.role === dto.role) return;
       const result = await tx.shopMember.updateMany({
         where: {
@@ -299,7 +311,8 @@ export class StaffService {
       if (member.role === 'OWNER' || member.userId === actorId)
         throw new ForbiddenException({
           code: 'OWNER_PROTECTED',
-          message: 'Owner membership cannot be removed here.',
+          message:
+            'Owner membership is protected and cannot be removed through staff management.',
         });
       const result = await tx.shopMember.deleteMany({
         where: {

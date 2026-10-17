@@ -80,6 +80,19 @@
   color: var(--color-muted);
   font-size: 10px;
 }
+.phase-two .staff-owner-protection {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0 0 20px;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.phase-two .staff-owner-protection > svg {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
 .phase-two .staff-count {
   display: grid;
   place-items: center;

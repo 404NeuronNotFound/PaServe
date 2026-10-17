@@ -89,6 +89,27 @@ try {
     ),
   });
   const staff = new StaffService(prisma);
+  const ownerMembership = await prisma.shopMember.findUnique({
+    where: { userId_shopId: { userId: ownerId, shopId } },
+  });
+  const protectedOutcomes = await Promise.allSettled([
+    staff.remove(ownerId, shopId, ownerMembership.id),
+    staff.changeRole(ownerId, shopId, ownerMembership.id, { role: 'ADMIN' }),
+  ]);
+  for (const outcome of protectedOutcomes) {
+    assert.equal(outcome.status, 'rejected');
+    assert.equal(outcome.reason.status, 403);
+    assert.equal(outcome.reason.response.code, 'OWNER_PROTECTED');
+  }
+  const protectedOwner = await prisma.shopMember.findUnique({
+    where: { id: ownerMembership.id },
+  });
+  assert.equal(protectedOwner.role, 'OWNER');
+  assert.equal(
+    await prisma.shopMember.count({ where: { shopId, role: 'OWNER' } }),
+    1,
+  );
+  assert.equal(await prisma.staffAuditEvent.count({ where: { shopId } }), 0);
   const invitation = await staff.invite(ownerId, shopId, {
     email: 'cashier@example.com',
     role: 'CASHIER',

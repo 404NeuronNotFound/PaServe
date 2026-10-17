@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import type { ShopRole } from '@paserve/contracts';
+import type { ShopRole, StaffRole } from '@paserve/contracts';
 import { createHash } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -8,6 +8,7 @@ import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { Prisma } from '../src/generated/prisma/client.js';
+import { StaffService } from '../src/modules/staff/staff.service.js';
 import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 
 describe('Owner staff invitations through HTTP', () => {
@@ -395,23 +396,62 @@ describe('Owner staff invitations through HTTP', () => {
     await accept().expect(404);
     expect(tx.shopMember.create).not.toHaveBeenCalled();
   });
-  it.each(['patch', 'delete'] as const)(
-    'protects owner membership from %s',
-    async (method) => {
-      tx.shopMember.findFirst.mockResolvedValue({
-        userId: ownerId,
-        role: 'OWNER',
-        user: { email: 'owner@example.com' },
-      });
-      await owner()
-        [method](`/api/v1/shops/${shopId}/staff/members/${resourceId}`)
-        .set('Authorization', 'Bearer owner')
-        .send({ role: 'CASHIER' })
-        .expect(403);
+  it.each([
+    ['patch', 'ADMIN'],
+    ['patch', 'MANAGER'],
+    ['patch', 'CASHIER'],
+    ['patch', 'KITCHEN'],
+    ['delete', 'CASHIER'],
+  ] as const)(
+    'protects both own and other owner membership from %s (%s)',
+    async (method, nextRole) => {
+      for (const targetUserId of [ownerId, userId]) {
+        tx.shopMember.findFirst.mockResolvedValue({
+          userId: targetUserId,
+          role: 'OWNER',
+          user: { email: 'owner@example.com' },
+        });
+        const response = await owner()
+          [method](`/api/v1/shops/${shopId}/staff/members/${resourceId}`)
+          .set('Authorization', 'Bearer owner')
+          .send({ role: nextRole })
+          .expect(403);
+        expect(response.body.code).toBe('OWNER_PROTECTED');
+      }
       expect(tx.shopMember.updateMany).not.toHaveBeenCalled();
       expect(tx.shopMember.deleteMany).not.toHaveBeenCalled();
+      expect(tx.staffAuditEvent.create).not.toHaveBeenCalled();
     },
   );
+
+  it('rejects attempts to assign OWNER through the role-change endpoint', async () => {
+    await owner()
+      .patch(`/api/v1/shops/${shopId}/staff/members/${resourceId}`)
+      .set('Authorization', 'Bearer owner')
+      .send({ role: 'OWNER' })
+      .expect(400);
+    expect(tx.shopMember.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects ownership assignment by direct staff-service callers', async () => {
+    const service = app.get(StaffService);
+    tx.shopMember.findFirst.mockResolvedValue({
+      userId,
+      role: 'CASHIER',
+      user: { email: invite.email },
+    });
+    for (const role of ['OWNER', 'SUPER_ADMIN'] as StaffRole[]) {
+      await expect(
+        service.invite(ownerId, shopId, { email: invite.email, role }),
+      ).rejects.toMatchObject({ response: { code: 'INVALID_STAFF_ROLE' } });
+      await expect(
+        service.changeRole(ownerId, shopId, resourceId, { role }),
+      ).rejects.toMatchObject({ response: { code: 'INVALID_STAFF_ROLE' } });
+    }
+    expect(tx.staffInvitation.create).not.toHaveBeenCalled();
+    expect(tx.shopMember.updateMany).not.toHaveBeenCalled();
+    expect(tx.staffAuditEvent.create).not.toHaveBeenCalled();
+  });
   it('changes a nonowner role with shop and old-role predicates and an audit', async () => {
     tx.shopMember.findFirst.mockResolvedValue({
       userId,
