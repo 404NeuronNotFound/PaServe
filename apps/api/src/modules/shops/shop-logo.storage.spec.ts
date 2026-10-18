@@ -100,3 +100,11 @@ it.each(['returned error', 'thrown error'])(
     }
   },
 );
+
+it('rejects literal placeholder shop IDs before contacting storage', async () => {
+  await expect(
+    storage.upload('{actualShopId}', Buffer.from('processed')),
+  ).rejects.toMatchObject({ response: { code: 'INVALID_MEDIA_PATH' } });
+  expect(mocks.from).not.toHaveBeenCalled();
+  expect(mocks.upload).not.toHaveBeenCalled();
+});

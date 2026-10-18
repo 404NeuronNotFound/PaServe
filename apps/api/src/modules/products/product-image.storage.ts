@@ -5,8 +5,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { randomUUID } from 'node:crypto';
-export const PRODUCT_IMAGE_BUCKET = 'paserve-assets';
+import {
+  ASSETS_BUCKET,
+  productImageFolder,
+  productImagePath,
+} from '../../common/storage/media-paths.js';
+export const PRODUCT_IMAGE_BUCKET = ASSETS_BUCKET;
 @Injectable()
 export class ProductImageStorage {
   private client?: SupabaseClient;
@@ -28,7 +32,7 @@ export class ProductImageStorage {
     return this.client;
   }
   async upload(shopId: string, productId: string, buffer: Buffer) {
-    const storagePath = `shops/${shopId}/products/${productId}/${randomUUID()}.webp`;
+    const storagePath = productImagePath(shopId, productId);
     const bucket = this.admin().storage.from(PRODUCT_IMAGE_BUCKET);
     try {
       const { error } = await bucket.upload(storagePath, buffer, {
@@ -51,7 +55,7 @@ export class ProductImageStorage {
   }
   ownedReference(shopId: string, productId: string, imageUrl: string) {
     for (const [bucketName, folder] of [
-      [PRODUCT_IMAGE_BUCKET, `shops/${shopId}/products/${productId}/`],
+      [PRODUCT_IMAGE_BUCKET, productImageFolder(shopId, productId)],
       ['product-media', `${shopId}/${productId}/`],
     ]) {
       const prefix = this.admin().storage.from(bucketName).getPublicUrl(folder)

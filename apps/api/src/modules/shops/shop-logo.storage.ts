@@ -5,8 +5,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { randomUUID } from 'node:crypto';
-export const SHOP_LOGO_BUCKET = 'paserve-assets';
+import {
+  ASSETS_BUCKET,
+  brandingFolder,
+  brandingImagePath,
+} from '../../common/storage/media-paths.js';
+export const SHOP_LOGO_BUCKET = ASSETS_BUCKET;
 @Injectable()
 export class ShopLogoStorage {
   private client?: SupabaseClient;
@@ -28,7 +32,7 @@ export class ShopLogoStorage {
     return this.client;
   }
   async upload(shopId: string, buffer: Buffer) {
-    const storagePath = `shops/${shopId}/branding/logo/${randomUUID()}.webp`;
+    const storagePath = brandingImagePath(shopId, 'logo');
     const bucket = this.admin().storage.from(SHOP_LOGO_BUCKET);
     try {
       const { error } = await bucket.upload(storagePath, buffer, {
@@ -53,7 +57,7 @@ export class ShopLogoStorage {
     if (!logoUrl) return;
     // Never delete external media or objects owned by a different shop.
     for (const [bucketName, folder] of [
-      [SHOP_LOGO_BUCKET, `shops/${shopId}/branding/logo/`],
+      [SHOP_LOGO_BUCKET, brandingFolder(shopId, 'logo')],
       ['shop-media', `${shopId}/logo/`],
     ]) {
       const prefix = this.admin().storage.from(bucketName).getPublicUrl(folder)

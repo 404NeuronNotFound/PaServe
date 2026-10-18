@@ -128,3 +128,17 @@ it.each([
 ])('rejects a foreign or noncanonical stored reference: %s', (url) => {
   expect(storage.ownedReference(shopId, productId, url)).toBeNull();
 });
+
+it.each([
+  ['{actualShopId}', productId],
+  [shopId, '{productId}'],
+])(
+  'rejects placeholder tenant/resource IDs before contacting storage',
+  async (shop, product) => {
+    await expect(
+      storage.upload(shop, product, Buffer.from('processed')),
+    ).rejects.toMatchObject({ response: { code: 'INVALID_MEDIA_PATH' } });
+    expect(mocks.from).not.toHaveBeenCalled();
+    expect(mocks.upload).not.toHaveBeenCalled();
+  },
+);
