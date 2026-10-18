@@ -167,7 +167,7 @@ export function ShopBannerUpload({
       error={error}
       pending={pending}
       progress={progress}
-      hint={`Crop to a wide, 3:1 frame. Your image saves separately from business details for ${name}.`}
+      hint={`JPEG, PNG or WebP, up to 5 MB and 16 megapixels. Crop to a wide, 3:1 frame; wide screens may crop the top and bottom. Your image saves separately from business details for ${name}.`}
       onCropping={(value) => {
         setCropping(value);
         onPending(value);

@@ -911,7 +911,8 @@
 .public-menu .menu-category-nav a { min-height: 44px; font-weight: 600; }
 .public-menu .menu-product-card { border-radius: 22px; box-shadow: 0 4px 16px rgb(20 35 24 / 3%); }
 .public-menu .customer-cart-button { min-height: 48px; border-radius: 14px; font-weight: 650; }
-@media (max-width: 640px) {
+/* Follow the menu width in both customer pages and device previews. */
+@container customer-menu (max-width: 640px) {
   .public-menu .menu-shop-hero .shop-banner { aspect-ratio: 3 / 1; }
 }
 .guest-active-orders { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); }

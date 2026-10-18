@@ -6,7 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'node:crypto';
-export const SHOP_BANNER_BUCKET = 'shop-media';
+export const SHOP_BANNER_BUCKET = 'paserve-assets';
 @Injectable()
 export class ShopBannerStorage {
   private client?: SupabaseClient;
@@ -28,7 +28,7 @@ export class ShopBannerStorage {
     return this.client;
   }
   async upload(shopId: string, buffer: Buffer) {
-    const storagePath = `${shopId}/banner/${randomUUID()}.webp`;
+    const storagePath = `shops/${shopId}/branding/banner/${randomUUID()}.webp`;
     const bucket = this.admin().storage.from(SHOP_BANNER_BUCKET);
     try {
       const { error } = await bucket.upload(storagePath, buffer, {
@@ -53,18 +53,24 @@ export class ShopBannerStorage {
   async removePrevious(shopId: string, bannerUrl: string | null) {
     if (!bannerUrl) return;
     // Never delete external media or objects owned by a different shop.
-    const prefix = this.admin()
-      .storage.from(SHOP_BANNER_BUCKET)
-      .getPublicUrl(`${shopId}/banner/`).data.publicUrl;
-    if (!bannerUrl.startsWith(prefix)) return;
-    const filename = bannerUrl.slice(prefix.length);
-    if (!/^[0-9a-f-]{36}\.webp$/.test(filename)) return;
-    await this.remove(`${shopId}/banner/${filename}`);
+    for (const [bucketName, folder] of [
+      [SHOP_BANNER_BUCKET, `shops/${shopId}/branding/banner/`],
+      ['shop-media', `${shopId}/banner/`],
+    ]) {
+      const prefix = this.admin().storage.from(bucketName).getPublicUrl(folder)
+        .data.publicUrl;
+      if (!bannerUrl.startsWith(prefix)) continue;
+      const filename = bannerUrl.slice(prefix.length);
+      if (!/^[0-9a-f-]{36}\.webp$/.test(filename)) return;
+      await this.remove(folder + filename, bucketName);
+      return;
+    }
   }
-  async remove(storagePath: string) {
+
+  async remove(storagePath: string, bucketName = SHOP_BANNER_BUCKET) {
     try {
       const { error } = await this.admin()
-        .storage.from(SHOP_BANNER_BUCKET)
+        .storage.from(bucketName)
         .remove([storagePath]);
       if (error) this.logger.warn('Shop banner cleanup needs retry.');
     } catch {

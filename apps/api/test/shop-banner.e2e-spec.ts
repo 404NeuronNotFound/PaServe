@@ -1,5 +1,8 @@
 import { Test } from '@nestjs/testing';
-import type { INestApplication } from '@nestjs/common';
+import {
+  ServiceUnavailableException,
+  type INestApplication,
+} from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import sharp from 'sharp';
@@ -22,8 +25,8 @@ describe('shop banner upload', () => {
   let role = 'OWNER';
   let image: Buffer;
   const uploaded = {
-    bannerUrl: `https://example.com/${shopId}/banner/new.webp`,
-    storagePath: `${shopId}/banner/new.webp`,
+    bannerUrl: `https://example.com/shops/${shopId}/branding/banner/new.webp`,
+    storagePath: `shops/${shopId}/branding/banner/new.webp`,
   };
   const shop = {
     id: shopId,
@@ -202,6 +205,19 @@ describe('shop banner upload', () => {
       .expect(503);
     expect(response.body.code).toBe('SHOP_BANNER_SAVE_UNCERTAIN');
     expect(storage.remove).not.toHaveBeenCalled();
+    expect(storage.removePrevious).not.toHaveBeenCalled();
+  });
+  it('never changes the database reference when storage upload fails', async () => {
+    storage.upload.mockRejectedValue(
+      new ServiceUnavailableException({
+        code: 'SHOP_BANNER_STORAGE_UNAVAILABLE',
+      }),
+    );
+    const response = await post()
+      .attach('file', image, 'banner.png')
+      .expect(503);
+    expect(response.body.code).toBe('SHOP_BANNER_STORAGE_UNAVAILABLE');
+    expect(update).not.toHaveBeenCalled();
     expect(storage.removePrevious).not.toHaveBeenCalled();
   });
 });

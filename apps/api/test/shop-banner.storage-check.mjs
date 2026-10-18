@@ -1,4 +1,4 @@
-// Run from apps/api after building (reuses the existing shop-media bucket).
+// Run from apps/api after building and applying the paserve-assets bucket migration.
 // Database fixtures roll back; only generated fixture objects are removed.
 import 'dotenv/config';
 import assert from 'node:assert/strict';
@@ -71,7 +71,15 @@ try {
         const file = { buffer, size: buffer.length, mimetype: 'image/png' };
         const first = await service.upload(user.id, shop.id, file);
         paths.push(first.storagePath);
-        assert.ok(first.storagePath.startsWith(`${shop.id}/banner/`));
+        assert.equal(
+          first.shop.bannerUrl,
+          admin.storage.from(SHOP_BANNER_BUCKET).getPublicUrl(first.storagePath)
+            .data.publicUrl,
+        );
+        assert.equal(await exists(first.storagePath), true);
+        assert.ok(
+          first.storagePath.startsWith(`shops/${shop.id}/branding/banner/`),
+        );
         const response = await fetch(first.shop.bannerUrl);
         assert.equal(response.status, 200);
         assert.match(response.headers.get('content-type'), /image\/webp/);
@@ -95,6 +103,17 @@ try {
         );
         const second = await service.upload(user.id, shop.id, file);
         paths.push(second.storagePath);
+        assert.equal(
+          second.shop.bannerUrl,
+          admin.storage
+            .from(SHOP_BANNER_BUCKET)
+            .getPublicUrl(second.storagePath).data.publicUrl,
+        );
+        assert.ok(
+          second.storagePath.startsWith(`shops/${shop.id}/branding/banner/`),
+        );
+        const replacementResponse = await fetch(second.shop.bannerUrl);
+        assert.equal(replacementResponse.status, 200);
         assert.notEqual(first.shop.bannerUrl, second.shop.bannerUrl);
         assert.equal(
           (await repository.findSettings(user.id, shop.id)).bannerUrl,
@@ -114,7 +133,7 @@ try {
         );
         assert.equal(await exists(second.storagePath), true);
         const [bucket] =
-          await tx.$queryRaw`SELECT public, file_size_limit, allowed_mime_types FROM storage.buckets WHERE id = 'shop-media'`;
+          await tx.$queryRaw`SELECT public, file_size_limit, allowed_mime_types FROM storage.buckets WHERE id = 'paserve-assets'`;
         assert.equal(bucket.public, true);
         assert.equal(Number(bucket.file_size_limit), 5242880);
         assert.deepEqual(bucket.allowed_mime_types, ['image/webp']);
@@ -122,7 +141,7 @@ try {
           await tx.$executeRawUnsafe('SAVEPOINT browser_write');
           await tx.$executeRawUnsafe(`SET LOCAL ROLE ${role}`);
           await assert.rejects(
-            tx.$executeRaw`INSERT INTO storage.objects (bucket_id, name) VALUES ('shop-media', 'browser-banner-fixture')`,
+            tx.$executeRaw`INSERT INTO storage.objects (bucket_id, name) VALUES ('paserve-assets', 'browser-banner-fixture')`,
             (error) =>
               (error.meta?.code ??
                 error.meta?.driverAdapterError?.cause?.originalCode) ===

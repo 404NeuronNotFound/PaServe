@@ -50,4 +50,33 @@ describe('shop banner processing', () => {
       }),
     ).rejects.toMatchObject({ status: 400 });
   });
+  it('rejects images exceeding the pixel budget even within dimension limits', async () => {
+    const buffer = await sharp({
+      create: { width: 4001, height: 4000, channels: 3, background: 'red' },
+    })
+      .png()
+      .toBuffer();
+    await expect(
+      processor.process({ buffer, size: buffer.length, mimetype: 'image/png' }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+  it('rejects animated WebP input', async () => {
+    const buffer = await sharp(
+      Buffer.concat([
+        Buffer.alloc(20 * 20 * 3, 0),
+        Buffer.alloc(20 * 20 * 3, 255),
+      ]),
+      { raw: { width: 20, height: 40, channels: 3, pageHeight: 20 } },
+    )
+      .webp({ loop: 0, delay: [100, 100] })
+      .toBuffer();
+    expect((await sharp(buffer, { animated: true }).metadata()).pages).toBe(2);
+    await expect(
+      processor.process({
+        buffer,
+        size: buffer.length,
+        mimetype: 'image/webp',
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
 });
