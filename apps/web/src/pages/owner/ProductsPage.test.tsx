@@ -844,7 +844,9 @@ it("uploads an image immediately while keeping other edits unsaved", async () =>
       expect.any(Function),
     ),
   );
-  expect(modal.getByLabelText(/Image URL/)).toHaveValue(imageProduct.imageUrl);
+  expect(modal.getByLabelText(/Saved photo/)).toHaveValue(
+    imageProduct.imageUrl,
+  );
   expect(modal.getByLabelText("Product name")).toHaveValue("Latte changed");
   expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
     products: [imageProduct],
@@ -903,7 +905,7 @@ it("keeps the previous image and selected file on upload failure", async () => {
   expect(
     await modal.findByText(/Your current image is kept/),
   ).toBeInTheDocument();
-  expect(modal.getByLabelText(/Image URL/)).toHaveValue(
+  expect(modal.getByLabelText(/Saved photo/)).toHaveValue(
     "https://example.com/old.webp",
   );
   expect(modal.getByRole("button", { name: "Upload image" })).toBeEnabled();
@@ -1283,10 +1285,7 @@ it("creates optional fields and warns when the selected category is hidden", asy
   await user.click(modal.getByRole("option", { name: "Sold out" }));
   await user.type(modal.getByLabelText(/Description/), "Milky");
   await user.click(modal.getByText("Image & display options"));
-  await user.type(
-    modal.getByLabelText(/Image URL/),
-    "https://example.com/a.jpg",
-  );
+  expect(modal.getByLabelText(/Saved photo/)).toHaveAttribute("readonly");
   await user.click(modal.getByRole("checkbox"));
   await user.clear(modal.getByLabelText("Display order"));
   await user.type(modal.getByLabelText("Display order"), "7");
@@ -1299,7 +1298,7 @@ it("creates optional fields and warns when the selected category is hidden", asy
       categoryId: "cat-a",
       description: "Milky",
       status: "SOLD_OUT",
-      imageUrl: "https://example.com/a.jpg",
+      imageUrl: "",
       isFeatured: true,
       sortOrder: 7,
     }),
@@ -1309,16 +1308,14 @@ it("reveals a collapsed advanced field when validation fails", async () => {
   setup();
   const { user, modal } = await basics();
   await user.click(modal.getByText("Image & display options"));
-  await user.type(
-    modal.getByLabelText(/Image URL/),
-    "http://example.com/a.jpg",
-  );
+  await user.clear(modal.getByLabelText("Display order"));
+  await user.type(modal.getByLabelText("Display order"), "invalid");
   await user.click(modal.getByText("Image & display options"));
   await user.click(modal.getByRole("button", { name: "Create product" }));
-  expect(modal.getByLabelText(/Image URL/)).toHaveFocus();
-  expect(modal.getByLabelText(/Image URL/).closest("details")).toHaveAttribute(
-    "open",
-  );
+  expect(modal.getByLabelText("Display order")).toHaveFocus();
+  expect(
+    modal.getByLabelText("Display order").closest("details"),
+  ).toHaveAttribute("open");
   expect(createProduct).not.toHaveBeenCalled();
 });
 it("keeps the draft and focuses duplicate-name feedback", async () => {
@@ -1685,4 +1682,22 @@ it("keeps numbered navigation valid as a large menu approaches its last page", a
     screen.getByRole("button", { name: "Previous product page" }),
   );
   expect(screen.getByRole("heading", { name: "Item 40" })).toBeInTheDocument();
+});
+
+it("clears a saved photo through Save changes without accepting a replacement URL", async () => {
+  vi.mocked(listProducts).mockResolvedValue({
+    products: [{ ...product, imageUrl: "https://example.com/saved.webp" }],
+  });
+  vi.mocked(updateProduct).mockResolvedValue({
+    product: { ...product, imageUrl: null },
+  });
+  setup();
+  const { user, modal } = await edit();
+  await user.click(modal.getByText("Image & display options"));
+  expect(modal.getByLabelText("Saved photo")).toHaveAttribute("readonly");
+  await user.click(modal.getByRole("button", { name: "Remove saved photo" }));
+  await user.click(modal.getByRole("button", { name: "Save changes" }));
+  await waitFor(() =>
+    expect(updateProduct).toHaveBeenCalledWith("a", "p", { imageUrl: "" }),
+  );
 });

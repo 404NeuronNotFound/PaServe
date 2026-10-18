@@ -89,7 +89,8 @@ export class ProductsService {
       if (isTransactionConflict(error))
         throw new ConflictException({
           code: 'PRODUCT_ORDER_CHANGED',
-          message: 'The menu changed while saving. Refresh before saving again.',
+          message:
+            'The menu changed while saving. Refresh before saving again.',
         });
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025')
@@ -296,6 +297,7 @@ export class ProductsService {
   ): Promise<CreateProductResponse> {
     await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
     await this.resources.requireResource(userId, shopId, 'product', productId);
+    this.requireManagedImage(dto.imageUrl);
     if (Object.values(dto).every((value) => value === undefined))
       throw new BadRequestException({
         code: 'VALIDATION_ERROR',
@@ -346,12 +348,25 @@ export class ProductsService {
       throw error;
     }
   }
+  private requireManagedImage(imageUrl: string | undefined) {
+    if (imageUrl !== undefined && imageUrl !== '')
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Upload a product photo instead of setting an image URL.',
+        fieldErrors: {
+          imageUrl: [
+            'Use the photo uploader. Only an empty string is accepted to clear a photo.',
+          ],
+        },
+      });
+  }
   async create(
     userId: string,
     shopId: string,
     dto: CreateProductDto,
   ): Promise<CreateProductResponse> {
     await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
+    this.requireManagedImage(dto.imageUrl);
     if (dto.categoryId)
       await this.resources.requireResource(
         userId,

@@ -707,6 +707,7 @@ export interface CreateProductRequest {
   categoryId?: string;
   description?: string;
   status?: ProductStatus;
+  /** Only an empty string is accepted to clear a photo. Set photos through the upload endpoint. */
   imageUrl?: string;
   isFeatured?: boolean;
   sortOrder?: number;

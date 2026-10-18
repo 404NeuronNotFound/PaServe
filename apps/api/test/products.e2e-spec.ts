@@ -104,9 +104,8 @@ describe('tenant-scoped product creation', () => {
       price: new Prisma.Decimal('15'),
     });
     uploadImage.mockResolvedValue({
-      storagePath: `${shopId}/${productId}/image.webp`,
-      imageUrl:
-        'https://example.supabase.co/storage/v1/object/public/product-media/image.webp',
+      storagePath: `shops/${shopId}/products/${productId}/image.webp`,
+      imageUrl: `https://example.supabase.co/storage/v1/object/public/paserve-assets/shops/${shopId}/products/${productId}/image.webp`,
     });
     removeImage.mockResolvedValue(undefined);
   });
@@ -517,8 +516,7 @@ describe('tenant-scoped product creation', () => {
         shop: { members: { some: { userId } } },
       });
       expect(query.data).toEqual({
-        imageUrl:
-          'https://example.supabase.co/storage/v1/object/public/product-media/image.webp',
+        imageUrl: `https://example.supabase.co/storage/v1/object/public/paserve-assets/shops/${shopId}/products/${productId}/image.webp`,
       });
       expect(removeImage).not.toHaveBeenCalled();
     },
@@ -587,7 +585,7 @@ describe('tenant-scoped product creation', () => {
     );
     await imageRequest().attach('file', png, 'a.png').expect(404);
     expect(removeImage).toHaveBeenCalledExactlyOnceWith(
-      `${shopId}/${productId}/image.webp`,
+      `shops/${shopId}/products/${productId}/image.webp`,
     );
   });
   it('keeps uploaded bytes on uncertain database failure instead of breaking a possibly saved URL', async () => {
@@ -895,7 +893,7 @@ describe('tenant-scoped product creation', () => {
       categoryId,
       description: ' Milky ',
       status: 'SOLD_OUT',
-      imageUrl: 'https://example.com/latte.jpg',
+      imageUrl: '',
       isFeatured: true,
       sortOrder: 7,
     }).expect(201);
@@ -911,7 +909,7 @@ describe('tenant-scoped product creation', () => {
       status: 'SOLD_OUT',
       isFeatured: true,
       sortOrder: 7,
-      imageUrl: 'https://example.com/latte.jpg',
+      imageUrl: null,
       shop: { connect: { id: shopId } },
     });
   });
@@ -1036,4 +1034,18 @@ describe('tenant-scoped product creation', () => {
     shopRead.mockResolvedValue(null);
     await get().expect(403);
   });
+  it.each([
+    'https://example.com/missing.webp',
+    `https://example.supabase.co/storage/v1/object/public/paserve-assets/shops/${other}/products/${productId}/image.webp`,
+    `https://example.supabase.co/storage/v1/object/public/paserve-assets/shops/${shopId}/products/${productId}/missing.webp`,
+  ])(
+    'rejects client-selected media references on create and update: %s',
+    async (imageUrl) => {
+      await post({ name: 'Latte', price: '12.50', imageUrl }).expect(400);
+      await patch({ imageUrl }).expect(400);
+      expect(shopWrite).not.toHaveBeenCalled();
+      expect(categoryWrite).not.toHaveBeenCalled();
+      expect(productWrite).not.toHaveBeenCalled();
+    },
+  );
 });

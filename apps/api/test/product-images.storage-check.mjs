@@ -1,3 +1,4 @@
+// Run from apps/api after building and applying the Phase 23 paserve-assets migration.
 import 'dotenv/config';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -43,6 +44,22 @@ try {
             price: '12.50',
           },
         });
+        // Membership in both shops never permits mixing a shop and another shop's product.
+        const otherShop = await tx.shop.create({
+          data: {
+            name: 'Other image fixture',
+            slug: `image-other-${randomUUID()}`,
+            members: { create: { userId: user.id, role: 'OWNER' } },
+          },
+        });
+        const otherProduct = await tx.product.create({
+          data: {
+            shopId: otherShop.id,
+            name: 'Other coffee',
+            slug: 'other-coffee',
+            price: '9.50',
+          },
+        });
         const members = new ShopMembersService(new ShopMembersRepository(tx));
         const service = new ProductImageService(
           new ProductsRepository(tx),
@@ -60,9 +77,39 @@ try {
           .png()
           .toBuffer();
         const file = { buffer, size: buffer.length, mimetype: 'image/png' };
+        await assert.rejects(
+          service.upload(user.id, shop.id, otherProduct.id, file),
+          (error) => error.getStatus?.() === 404,
+        );
+        await assert.rejects(
+          service.upload(user.id, otherShop.id, product.id, file),
+          (error) => error.getStatus?.() === 404,
+        );
+        assert.equal(
+          (
+            await tx.product.findUniqueOrThrow({
+              where: { id: otherProduct.id },
+            })
+          ).imageUrl,
+          null,
+        );
         const first = await service.upload(user.id, shop.id, product.id, file);
         paths.push(first.storagePath);
-        assert.ok(first.storagePath.startsWith(`${shop.id}/${product.id}/`));
+        const admin = createClient(
+          process.env.SUPABASE_URL,
+          process.env.SUPABASE_SERVICE_ROLE_KEY,
+        );
+        assert.equal(
+          first.product.imageUrl,
+          admin.storage
+            .from(PRODUCT_IMAGE_BUCKET)
+            .getPublicUrl(first.storagePath).data.publicUrl,
+        );
+        assert.ok(
+          first.storagePath.startsWith(
+            `shops/${shop.id}/products/${product.id}/`,
+          ),
+        );
         const saved = await tx.product.findFirstOrThrow({
           where: { id: product.id, shopId: shop.id },
         });
@@ -78,6 +125,18 @@ try {
         );
         const second = await service.upload(user.id, shop.id, product.id, file);
         paths.push(second.storagePath);
+        assert.ok(
+          second.storagePath.startsWith(
+            `shops/${shop.id}/products/${product.id}/`,
+          ),
+        );
+        assert.equal(
+          second.product.imageUrl,
+          admin.storage
+            .from(PRODUCT_IMAGE_BUCKET)
+            .getPublicUrl(second.storagePath).data.publicUrl,
+        );
+        assert.equal((await fetch(second.product.imageUrl)).status, 200);
         assert.notEqual(first.storagePath, second.storagePath);
         assert.equal(
           (
@@ -92,7 +151,7 @@ try {
           await tx.$executeRawUnsafe('SAVEPOINT browser_write');
           await tx.$executeRawUnsafe(`SET LOCAL ROLE ${role}`);
           await assert.rejects(
-            tx.$executeRaw`INSERT INTO storage.objects (bucket_id, name) VALUES ('product-media', 'browser-write-fixture')`,
+            tx.$executeRaw`INSERT INTO storage.objects (bucket_id, name) VALUES ('paserve-assets', 'browser-write-fixture')`,
             (error) =>
               (error.meta?.code ??
                 error.meta?.driverAdapterError?.cause?.originalCode) ===
@@ -108,7 +167,7 @@ try {
   );
   assert.equal(await prisma.user.count({ where: { email } }), 0);
   console.log(
-    'Live product image upload, URL persistence, public delivery, replacement retention and browser-write isolation passed.',
+    'Live product image upload, URL persistence, public delivery, cross-shop rejection, replacement retention and browser-write isolation passed.',
   );
 } finally {
   for (const path of paths) await storage.remove(path);

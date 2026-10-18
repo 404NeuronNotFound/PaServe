@@ -11,13 +11,11 @@ import {
   Min,
   Max,
   ValidateIf,
-  ValidateBy,
 } from 'class-validator';
 import {
   PRODUCT_LIMITS,
   PRODUCT_PRICE_PATTERN,
   PRODUCT_STATUSES,
-  isValidProductImageUrl,
   type CreateProductRequest,
   type ProductStatus,
 } from '@paserve/contracts';
@@ -56,14 +54,9 @@ export class CreateProductDto implements CreateProductRequest {
   @Transform(trim)
   @IsString()
   @MaxLength(PRODUCT_LIMITS.imageUrlMax)
-  @ValidateBy({
-    name: 'productImageUrl',
-    validator: {
-      validate: (value: unknown) =>
-        typeof value === 'string' &&
-        (value === '' || isValidProductImageUrl(value)),
-      defaultMessage: () => 'Use an HTTPS image URL without credentials.',
-    },
+  @IsIn([''], {
+    message:
+      'Upload a product photo instead of setting an image URL. Use an empty string to clear the photo.',
   })
   imageUrl?: string;
 

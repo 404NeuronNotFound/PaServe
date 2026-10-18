@@ -6,7 +6,6 @@ import { FiCoffee, FiX, FiPlus, FiLoader } from "react-icons/fi";
 import {
   PRODUCT_LIMITS,
   PRODUCT_PRICE_PATTERN,
-  isValidProductImageUrl,
   type ProductStatus,
   type CreateProductRequest,
   type ProductsResponse,
@@ -280,12 +279,6 @@ export function ProductEditor({
         "Use a price from 0 to 99999999.99 with up to two decimal places.";
     if (description.trim().length > PRODUCT_LIMITS.descriptionMax)
       invalid.description = "Use no more than 2000 characters.";
-    if (
-      imageUrl.trim() &&
-      (!isValidProductImageUrl(imageUrl.trim()) ||
-        imageUrl.trim().length > PRODUCT_LIMITS.imageUrlMax)
-    )
-      invalid.imageUrl = "Use an HTTPS image URL without credentials.";
     if (
       !/^\d+$/.test(sortOrder) ||
       Number(sortOrder) > PRODUCT_LIMITS.sortOrderMax
@@ -649,28 +642,36 @@ export function ProductEditor({
               <summary>Image & display options</summary>
               <div>
                 <div className="field">
-                  <label htmlFor="product-image">
-                    Image URL <span className="field-hint">(optional)</span>
-                  </label>
+                  <label htmlFor="product-image">Saved photo</label>
                   <input
                     id="product-image"
-                    name="imageUrl"
-                    type="url"
-                    maxLength={PRODUCT_LIMITS.imageUrlMax}
                     value={imageUrl}
-                    disabled={disabled || Boolean(photo) || Boolean(photoError)}
-                    aria-invalid={Boolean(errors.imageUrl)}
-                    aria-describedby={`product-image-hint${errors.imageUrl ? " product-imageUrl-error" : ""}`}
-                    onChange={(event) => {
-                      setImageUrl(event.target.value);
-                      clearField("imageUrl");
-                    }}
-                    placeholder="https://…"
+                    readOnly
+                    aria-describedby="product-image-hint"
+                    placeholder="No saved photo"
                   />
                   <p id="product-image-hint" className="field-hint">
-                    Use an existing HTTPS image address, or choose a photo
-                    above.
+                    Choose a photo above to upload. Photo links are managed
+                    automatically.
                   </p>
+                  {product && imageUrl && (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={disabled}
+                      onClick={() => {
+                        setImageUrl("");
+                        clearField("imageUrl");
+                      }}
+                    >
+                      Remove saved photo
+                    </button>
+                  )}
+                  {product && imageSaved && !imageUrl && (
+                    <p className="field-hint" role="status">
+                      Save changes to remove the photo.
+                    </p>
+                  )}
                   {fieldError("imageUrl")}
                 </div>
                 <label className="product-featured-field">

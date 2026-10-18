@@ -51,4 +51,64 @@ describe('product image decoding', () => {
       }),
     ).rejects.toMatchObject({ status: 400 });
   });
+  it('rejects animated WebP', async () => {
+    const buffer = await sharp(
+      Buffer.concat([
+        Buffer.alloc(20 * 20 * 3, 0),
+        Buffer.alloc(20 * 20 * 3, 255),
+      ]),
+      { raw: { width: 20, height: 40, channels: 3, pageHeight: 20 } },
+    )
+      .webp({ loop: 0, delay: [100, 100] })
+      .toBuffer();
+    expect((await sharp(buffer, { animated: true }).metadata()).pages).toBe(2);
+    await expect(
+      processor.process({
+        buffer,
+        size: buffer.length,
+        mimetype: 'image/webp',
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+  it.each([
+    'image/svg+xml',
+    'image/gif',
+    'application/octet-stream',
+    'image/jpeg',
+  ])('rejects unsupported or mismatched MIME type: %s', async (mimetype) => {
+    const buffer = await sharp({
+      create: { width: 2, height: 2, channels: 3, background: 'red' },
+    })
+      .png()
+      .toBuffer();
+    await expect(
+      processor.process({ buffer, size: buffer.length, mimetype }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+  it('rejects empty and missing files', async () => {
+    await expect(processor.process()).rejects.toMatchObject({ status: 400 });
+    await expect(
+      processor.process({
+        buffer: Buffer.alloc(0),
+        size: 0,
+        mimetype: 'image/png',
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+  it('enforces the byte limit from both the buffer and multipart size', async () => {
+    await expect(
+      processor.process({
+        buffer: Buffer.alloc(5 * 1024 * 1024 + 1),
+        size: 1,
+        mimetype: 'image/png',
+      }),
+    ).rejects.toMatchObject({ status: 413 });
+    await expect(
+      processor.process({
+        buffer: Buffer.from('x'),
+        size: 5 * 1024 * 1024 + 1,
+        mimetype: 'image/png',
+      }),
+    ).rejects.toMatchObject({ status: 413 });
+  });
 });

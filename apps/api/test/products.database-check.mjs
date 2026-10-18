@@ -47,7 +47,7 @@ try {
           categoryId: category.id,
           price: '12.5',
           description: ' Milky ',
-          imageUrl: 'https://example.com/latte.jpg',
+          imageUrl: '',
           status: 'SOLD_OUT',
           isFeatured: true,
           sortOrder: 7,
