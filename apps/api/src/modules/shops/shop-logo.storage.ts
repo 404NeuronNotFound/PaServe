@@ -6,7 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'node:crypto';
-export const SHOP_LOGO_BUCKET = 'shop-media';
+export const SHOP_LOGO_BUCKET = 'paserve-assets';
 @Injectable()
 export class ShopLogoStorage {
   private client?: SupabaseClient;
@@ -28,7 +28,7 @@ export class ShopLogoStorage {
     return this.client;
   }
   async upload(shopId: string, buffer: Buffer) {
-    const storagePath = `${shopId}/logo/${randomUUID()}.webp`;
+    const storagePath = `shops/${shopId}/branding/logo/${randomUUID()}.webp`;
     const bucket = this.admin().storage.from(SHOP_LOGO_BUCKET);
     try {
       const { error } = await bucket.upload(storagePath, buffer, {
@@ -52,18 +52,24 @@ export class ShopLogoStorage {
   async removePrevious(shopId: string, logoUrl: string | null) {
     if (!logoUrl) return;
     // Never delete external media or objects owned by a different shop.
-    const prefix = this.admin()
-      .storage.from(SHOP_LOGO_BUCKET)
-      .getPublicUrl(`${shopId}/logo/`).data.publicUrl;
-    if (!logoUrl.startsWith(prefix)) return;
-    const filename = logoUrl.slice(prefix.length);
-    if (!/^[0-9a-f-]{36}\.webp$/.test(filename)) return;
-    await this.remove(`${shopId}/logo/${filename}`);
+    for (const [bucketName, folder] of [
+      [SHOP_LOGO_BUCKET, `shops/${shopId}/branding/logo/`],
+      ['shop-media', `${shopId}/logo/`],
+    ]) {
+      const prefix = this.admin().storage.from(bucketName).getPublicUrl(folder)
+        .data.publicUrl;
+      if (!logoUrl.startsWith(prefix)) continue;
+      const filename = logoUrl.slice(prefix.length);
+      if (!/^[0-9a-f-]{36}\.webp$/.test(filename)) return;
+      await this.remove(folder + filename, bucketName);
+      return;
+    }
   }
-  async remove(storagePath: string) {
+
+  async remove(storagePath: string, bucketName = SHOP_LOGO_BUCKET) {
     try {
       const { error } = await this.admin()
-        .storage.from(SHOP_LOGO_BUCKET)
+        .storage.from(bucketName)
         .remove([storagePath]);
       if (error) this.logger.warn('Shop logo cleanup needs retry.');
     } catch {

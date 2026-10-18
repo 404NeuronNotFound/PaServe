@@ -195,4 +195,76 @@ describe('shop logo upload', () => {
     expect(storage.remove).not.toHaveBeenCalled();
     expect(storage.removePrevious).not.toHaveBeenCalled();
   });
+  const remove = (target = shopId, authenticated = true) => {
+    const req = request(app.getHttpServer()).delete(
+      `/api/v1/shops/${target}/logo`,
+    );
+    return authenticated ? req.set('Authorization', 'Bearer valid') : req;
+  };
+  it('clears the logo conditionally before deleting its owned storage object', async () => {
+    update.mockResolvedValue({ ...shop, logoUrl: null });
+    const response = await remove().expect(200);
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.body.shop.logoUrl).toBeNull();
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: shopId, logoUrl: shop.logoUrl }),
+        data: { logoUrl: null },
+      }),
+    );
+    expect(storage.removePrevious).toHaveBeenCalledWith(shopId, shop.logoUrl);
+    expect(storage.upload).not.toHaveBeenCalled();
+  });
+  it.each(['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN'])(
+    'denies %s logo removal',
+    async (value) => {
+      role = value;
+      await remove().expect(403);
+      expect(update).not.toHaveBeenCalled();
+      expect(storage.removePrevious).not.toHaveBeenCalled();
+    },
+  );
+  it('denies foreign-shop and unauthenticated logo removal', async () => {
+    await remove(otherShopId).expect(404);
+    await remove(shopId, false).expect(401);
+    expect(storage.removePrevious).not.toHaveBeenCalled();
+  });
+  it('does not delete storage when a competing logo write wins', async () => {
+    update.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('changed', {
+        code: 'P2025',
+        clientVersion: '7',
+      }),
+    );
+    await remove().expect(409);
+    expect(storage.removePrevious).not.toHaveBeenCalled();
+  });
+  it('preserves storage when logo removal has an uncertain outcome', async () => {
+    update.mockRejectedValue(new Error('Connection dropped'));
+    const response = await remove().expect(503);
+    expect(response.body.code).toBe('SHOP_LOGO_SAVE_UNCERTAIN');
+    expect(storage.removePrevious).not.toHaveBeenCalled();
+  });
+  it('handles removal when there is no logo', async () => {
+    findShop.mockResolvedValue({ ...shop, logoUrl: null });
+    update.mockResolvedValue({ ...shop, logoUrl: null });
+    await remove().expect(200);
+    expect(storage.removePrevious).toHaveBeenCalledWith(shopId, null);
+  });
+  it('rejects injected removal fields', async () => {
+    await remove().send({ shopId: otherShopId, logoUrl: null }).expect(400);
+    expect(update).not.toHaveBeenCalled();
+    expect(storage.removePrevious).not.toHaveBeenCalled();
+  });
+  it('rechecks owner access when logo removal loses authorization', async () => {
+    update.mockImplementation(async () => {
+      role = 'MANAGER';
+      throw new Prisma.PrismaClientKnownRequestError('changed', {
+        code: 'P2025',
+        clientVersion: '7',
+      });
+    });
+    await remove().expect(403);
+    expect(storage.removePrevious).not.toHaveBeenCalled();
+  });
 });

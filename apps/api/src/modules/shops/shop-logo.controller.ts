@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Post,
   Req,
   Res,
@@ -23,6 +24,16 @@ import type { ShopLogoFile } from './shop-logo.processor.js';
 @Permissions('shop.settings.manage')
 export class ShopLogoController {
   constructor(private readonly logos: ShopLogoService) {}
+
+  @Delete()
+  delete(
+    @Body() _dto: EmptyDto,
+    @Req() req: ShopMemberRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.logos.delete(req.user.id, req.shopMembership.shopId);
+  }
 
   @Post()
   @UseInterceptors(

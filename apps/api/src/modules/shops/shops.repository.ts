@@ -50,7 +50,7 @@ export class ShopsRepository {
     userId: string,
     shopId: string,
     expectedLogoUrl: string | null,
-    logoUrl: string,
+    logoUrl: string | null,
   ) {
     return this.prisma.shop.update({
       where: {

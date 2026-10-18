@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { FiUpload } from "react-icons/fi";
+import { FiUpload, FiTrash2 } from "react-icons/fi";
 import {
   type CurrentUserResponse,
   type ShopSettingsResponse,
   type UserMembership,
 } from "@paserve/contracts";
-import { uploadShopLogo } from "../../features/shops/api/logo";
+import { uploadShopLogo, deleteShopLogo } from "../../features/shops/api/logo";
 import { activeShopKey } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
+import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { BrandPhotoPicker } from "./BrandPhotoPicker";
 import { feedback } from "../../app/stores/feedback";
 
@@ -35,6 +36,7 @@ export function ShopLogoUpload({
   const client = useQueryClient();
   const userId =
     client.getQueryData<CurrentUserResponse>(currentUserKey)?.user.id;
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
   const [uploadedLogo, setUploadedLogo] = useState<{
@@ -87,9 +89,9 @@ export function ShopLogoUpload({
     setPreview("");
     setError("");
   }
-  async function upload() {
+  async function save(removing = false) {
     if (
-      !file ||
+      (!removing && !file) ||
       !userId ||
       disabled ||
       running.current ||
@@ -103,9 +105,11 @@ export function ShopLogoUpload({
     setError("");
     setProgress(0);
     try {
-      const result = await uploadShopLogo(shopId, file, (value) => {
-        if (stillHere()) setProgress(value);
-      });
+      const result = removing
+        ? await deleteShopLogo(shopId)
+        : await uploadShopLogo(shopId, file!, (value) => {
+            if (stillHere()) setProgress(value);
+          });
       if (!stillHere()) return;
       if (result.shop.id !== shopId || !result.shop.isActive)
         throw new Error("Invalid shop response");
@@ -152,11 +156,11 @@ export function ShopLogoUpload({
       });
       setUploadedLogo({ previous: logoUrl, url: result.shop.logoUrl });
       clear();
-      feedback.toast("Shop logo saved.");
+      feedback.toast(removing ? "Shop logo removed." : "Shop logo saved.");
     } catch (failure) {
       if (!stillHere()) return;
       let message =
-        "We could not confirm the logo save. Refresh shop settings before trying again.";
+        "We could not confirm the logo change. Refresh shop settings before trying again.";
       setRefreshRequired(true);
       if (isAxiosError(failure) && failure.response) {
         const status = failure.response.status;
@@ -177,9 +181,10 @@ export function ShopLogoUpload({
             "Your owner access changed. Return to your shop to check it again.";
         else if (status === 409)
           message =
-            "The logo changed during upload. Refresh shop settings before trying again.";
+            "The logo changed. Refresh shop settings before trying again.";
       }
       setError(message);
+      if (removing) throw new Error(message, { cause: failure });
     } finally {
       running.current = false;
       if (stillHere()) {
@@ -189,39 +194,77 @@ export function ShopLogoUpload({
     }
   }
   return (
-    <BrandPhotoPicker
-      kind="logo"
-      file={file}
-      selectedPreviewUrl={preview}
-      currentImageUrl={savedUrl || ""}
-      disabled={disabled || pending || refreshRequired}
-      error={error}
-      pending={pending}
-      progress={progress}
-      hint={`Crop to a square, 1:1 frame. Your image saves separately from business details for ${name}.`}
-      onCropping={(value) => {
-        setCropping(value);
-        onPending(value);
-      }}
-      onChange={(selected, message) => {
-        setFile(selected);
-        setError(message);
-        setPreview(
-          selected && URL.createObjectURL ? URL.createObjectURL(selected) : "",
-        );
-      }}
-    >
-      <div className="shop-context-actions">
-        <button
-          type="button"
-          className="primary-button"
-          disabled={!file || disabled || pending || refreshRequired}
-          onClick={() => void upload()}
-        >
-          <FiUpload aria-hidden="true" />
-          {pending ? "Saving logo..." : "Upload logo"}
-        </button>
-      </div>
-    </BrandPhotoPicker>
+    <>
+      <BrandPhotoPicker
+        kind="logo"
+        file={file}
+        selectedPreviewUrl={preview}
+        currentImageUrl={savedUrl || ""}
+        disabled={disabled || pending || refreshRequired}
+        error={error}
+        pending={pending}
+        progress={progress}
+        hint={`Crop to a square, 1:1 frame. Your image saves separately from business details for ${name}.`}
+        onCropping={(value) => {
+          setCropping(value);
+          onPending(value);
+        }}
+        onChange={(selected, message) => {
+          setFile(selected);
+          setError(message);
+          setPreview(
+            selected && URL.createObjectURL
+              ? URL.createObjectURL(selected)
+              : "",
+          );
+        }}
+      >
+        <div className="shop-context-actions">
+          <button
+            type="button"
+            className="primary-button"
+            disabled={!file || disabled || pending || refreshRequired}
+            onClick={() => void save()}
+          >
+            <FiUpload aria-hidden="true" />
+            {pending ? "Saving logo..." : "Upload logo"}
+          </button>
+          {savedUrl && (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={
+                disabled ||
+                pending ||
+                refreshRequired ||
+                Boolean(file) ||
+                cropping
+              }
+              onClick={() => setConfirmDelete(true)}
+            >
+              <FiTrash2 aria-hidden="true" /> Remove logo
+            </button>
+          )}
+        </div>
+      </BrandPhotoPicker>
+      <DecisionDialog
+        open={confirmDelete}
+        title="Remove shop logo?"
+        description="Your shop will use its default icon. You can upload another logo later."
+        confirmLabel="Remove logo"
+        cancelLabel="Keep logo"
+        destructive
+        onConfirm={() => {
+          if (refreshRequired) throw new Error(error);
+          return save(true);
+        }}
+        errorMessage={(failure) =>
+          failure instanceof Error
+            ? failure.message
+            : "The logo could not be removed."
+        }
+        onClose={() => setConfirmDelete(false)}
+      />
+    </>
   );
 }

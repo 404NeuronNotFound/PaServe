@@ -4,11 +4,14 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ShopLogoUpload } from "./ShopLogoUpload";
-import { uploadShopLogo } from "../../features/shops/api/logo";
+import { uploadShopLogo, deleteShopLogo } from "../../features/shops/api/logo";
 import { activeShopKey } from "../../features/shops/active-shop";
 import { useFeedbackStore } from "../../app/stores/feedback";
 
-vi.mock("../../features/shops/api/logo", () => ({ uploadShopLogo: vi.fn() }));
+vi.mock("../../features/shops/api/logo", () => ({
+  uploadShopLogo: vi.fn(),
+  deleteShopLogo: vi.fn(),
+}));
 const membership = {
   id: "member",
   shopId: "shop",
@@ -199,4 +202,50 @@ it("does not repopulate caches after an account change while uploading", async (
   expect(client.getQueryData(["auth", "me"])).toMatchObject({
     user: { id: "other-user", memberships: [] },
   });
+});
+
+it("confirms logo removal and clears saved identities without overwriting drafts", async () => {
+  vi.mocked(deleteShopLogo).mockResolvedValue({
+    shop: { ...result.shop, logoUrl: null },
+  });
+  const { client } = setup();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Remove logo" }));
+  expect(deleteShopLogo).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Keep logo" }));
+  expect(deleteShopLogo).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Remove logo" }));
+  const buttons = screen.getAllByRole("button", { name: "Remove logo" });
+  await user.click(buttons[buttons.length - 1]);
+  await vi.waitFor(() => expect(deleteShopLogo).toHaveBeenCalledWith("shop"));
+  await vi.waitFor(() =>
+    expect(
+      client.getQueryData(["shops", "member", "shop", "settings"]),
+    ).toMatchObject({
+      shop: { name: "Original details", logoUrl: null },
+    }),
+  );
+  expect(client.getQueryData(activeShopKey("user", "shop"))).toMatchObject({
+    shop: { logoUrl: null },
+  });
+  expect(client.getQueryData(["auth", "me"])).toMatchObject({
+    user: { memberships: [{ shop: { logoUrl: null } }] },
+  });
+  expect(
+    screen.queryByRole("img", { name: "Current logo photo" }),
+  ).not.toBeInTheDocument();
+});
+it("keeps the saved logo and locks retry after uncertain removal", async () => {
+  vi.mocked(deleteShopLogo).mockRejectedValue(new Error("Disconnected"));
+  const { client } = setup();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Remove logo" }));
+  const buttons = screen.getAllByRole("button", { name: "Remove logo" });
+  await user.click(buttons[buttons.length - 1]);
+  await screen.findAllByText(/We could not confirm/);
+  expect(client.getQueryData(activeShopKey("user", "shop"))).toMatchObject({
+    shop: { logoUrl: membership.shop.logoUrl },
+  });
+  await user.click(screen.getByRole("button", { name: "Keep logo" }));
+  expect(screen.getByRole("button", { name: "Remove logo" })).toBeDisabled();
 });

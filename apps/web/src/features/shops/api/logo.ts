@@ -1,4 +1,7 @@
-import type { ShopLogoResponse } from "@paserve/contracts";
+import type {
+  ShopLogoResponse,
+  ShopSettingsResponse,
+} from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
 import "../../auth/api/session";
 
@@ -19,6 +22,16 @@ export async function uploadShopLogo(
             onProgress?.(Math.round((event.loaded * 100) / event.total));
         },
       },
+    )
+  ).data;
+}
+
+export async function deleteShopLogo(
+  shopId: string,
+): Promise<ShopSettingsResponse> {
+  return (
+    await api.delete<ShopSettingsResponse>(
+      `/shops/${encodeURIComponent(shopId)}/logo`,
     )
   ).data;
 }

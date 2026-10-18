@@ -71,7 +71,9 @@ try {
         const file = { buffer, size: buffer.length, mimetype: 'image/png' };
         const first = await service.upload(user.id, shop.id, file);
         paths.push(first.storagePath);
-        assert.ok(first.storagePath.startsWith(`${shop.id}/logo/`));
+        assert.ok(
+          first.storagePath.startsWith(`shops/${shop.id}/branding/logo/`),
+        );
         const response = await fetch(first.shop.logoUrl);
         assert.equal(response.status, 200);
         assert.match(response.headers.get('content-type'), /image\/webp/);
@@ -117,8 +119,19 @@ try {
           'https://example.com/external-logo.webp',
         );
         assert.equal(await exists(second.storagePath), true);
+        const removed = await service.delete(user.id, shop.id);
+        assert.equal(removed.shop.logoUrl, null);
+        assert.equal(
+          (await repository.findSettings(user.id, shop.id)).logoUrl,
+          null,
+        );
+        assert.equal(
+          (await new PublicMenuRepository(tx).read(shop.slug)).logoUrl,
+          null,
+        );
+        assert.equal(await exists(second.storagePath), false);
         const [bucket] =
-          await tx.$queryRaw`SELECT public, file_size_limit, allowed_mime_types FROM storage.buckets WHERE id = 'shop-media'`;
+          await tx.$queryRaw`SELECT public, file_size_limit, allowed_mime_types FROM storage.buckets WHERE id = 'paserve-assets'`;
         assert.equal(bucket.public, true);
         assert.equal(Number(bucket.file_size_limit), 5242880);
         assert.deepEqual(bucket.allowed_mime_types, ['image/webp']);
@@ -126,7 +139,7 @@ try {
           await tx.$executeRawUnsafe('SAVEPOINT browser_write');
           await tx.$executeRawUnsafe(`SET LOCAL ROLE ${role}`);
           await assert.rejects(
-            tx.$executeRaw`INSERT INTO storage.objects (bucket_id, name) VALUES ('shop-media', 'browser-logo-fixture')`,
+            tx.$executeRaw`INSERT INTO storage.objects (bucket_id, name) VALUES ('paserve-assets', 'browser-logo-fixture')`,
             (error) =>
               (error.meta?.code ??
                 error.meta?.driverAdapterError?.cause?.originalCode) ===
@@ -142,7 +155,7 @@ try {
   );
   assert.equal(await prisma.user.count({ where: { email } }), 0);
   console.log(
-    'Live logo upload, public delivery, transparent resizing, persistence, replacement cleanup and storage isolation passed.',
+    'Live logo upload, public delivery, transparent resizing, persistence, replacement cleanup, logo removal and storage isolation passed.',
   );
 } finally {
   for (const path of paths) {

@@ -4,7 +4,10 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import type { ShopLogoResponse } from '@paserve/contracts';
+import type {
+  ShopLogoResponse,
+  ShopSettingsResponse,
+} from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import { ShopsRepository } from './shops.repository.js';
@@ -19,6 +22,44 @@ export class ShopLogoService {
     private readonly processor: ShopLogoProcessor,
     private readonly storage: ShopLogoStorage,
   ) {}
+
+  async delete(userId: string, shopId: string): Promise<ShopSettingsResponse> {
+    await this.members.requireOwner(userId, shopId);
+    const previous = await this.repository.findSettings(userId, shopId);
+    if (!previous)
+      throw new ForbiddenException({
+        code: 'OWNER_REQUIRED',
+        message: 'Your owner access changed. Refresh shop settings.',
+      });
+    let shop;
+    try {
+      shop = await this.repository.updateLogo(
+        userId,
+        shopId,
+        previous.logoUrl,
+        null,
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        await this.members.requireOwner(userId, shopId);
+        throw new ConflictException({
+          code: 'SHOP_LOGO_CHANGED',
+          message:
+            'The logo changed. Refresh shop settings before trying again.',
+        });
+      }
+      throw new ServiceUnavailableException({
+        code: 'SHOP_LOGO_SAVE_UNCERTAIN',
+        message:
+          'We could not confirm the logo removal. Refresh shop settings before trying again.',
+      });
+    }
+    await this.storage.removePrevious(shopId, previous.logoUrl);
+    return { shop: { ...shop, createdAt: shop.createdAt.toISOString() } };
+  }
 
   async upload(
     userId: string,
