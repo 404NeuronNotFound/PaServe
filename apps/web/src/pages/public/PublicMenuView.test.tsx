@@ -64,6 +64,22 @@ const menu: PublicMenuResponse = {
   featuredProducts: [coffee],
 };
 
+it("makes menu text and actions usable before secondary images load", () => {
+  const { container } = render(<PublicMenuView menu={{ ...menu, shop: { ...menu.shop, bannerUrl: "https://example.com/banner.webp" } }} />);
+  expect(screen.getByRole("heading", { name: "Cafe" })).toBeVisible();
+  expect(screen.getByRole("searchbox")).toBeEnabled();
+  for (const button of screen.getAllByRole("button", { name: "View details for Coffee" }))
+    expect(button).toBeEnabled();
+  for (const image of container.querySelectorAll(".shop-banner img, .menu-product-media img")) {
+    expect(image).toHaveAttribute("loading", "lazy");
+    expect(image).toHaveAttribute("decoding", "async");
+    expect(image).toHaveAttribute("fetchpriority", "low");
+  }
+  fireEvent.error(screen.getByRole("img", { name: "Cafe banner" }));
+  expect(screen.getByRole("searchbox")).toBeEnabled();
+  expect(screen.getByRole("heading", { name: "Cafe" })).toBeVisible();
+});
+
 it.each(["grid", "list", "compact"] as const)(
   "supports category destinations, searching and recovery in %s",
   async (menuLayout) => {

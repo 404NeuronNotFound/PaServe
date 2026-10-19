@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import {
@@ -60,6 +59,8 @@ export function GuestTrackingShare({
       const link = `${window.location.origin}${path}#tracking=${encodeURIComponent(data.trackingToken)}`;
       if (!active.current) return;
       if (qr) {
+        const { default: QRCode } = await import("qrcode");
+        if (!active.current) return;
         const svg = await QRCode.toString(link, {
           type: "svg",
           margin: 4,

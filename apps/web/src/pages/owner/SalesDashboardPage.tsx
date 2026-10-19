@@ -1,5 +1,10 @@
-import { MetricsSkeleton } from "../../components/feedback/LoadingSkeleton";
-import { useEffect, useState, type CSSProperties } from "react";
+import {
+  MetricsSkeleton,
+  ReportSkeleton,
+  PreparationMetricSkeleton,
+} from "../../components/feedback/LoadingSkeleton";
+import { DeferredSection } from "../../components/feedback/DeferredSection";
+import { lazy, useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -42,10 +47,20 @@ import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./sales-dashboard.css";
 import "./sales-workspace.css";
 import { DailyAnalytics } from "./DailyAnalytics";
-import { TopProducts } from "./TopProducts";
-import { PeakHours } from "./PeakHours";
-import { AveragePrepTime } from "./AveragePrepTime";
-import { SalesTrends } from "./SalesTrends";
+const TopProducts = lazy(() =>
+  import("./TopProducts").then((module) => ({ default: module.TopProducts })),
+);
+const PeakHours = lazy(() =>
+  import("./PeakHours").then((module) => ({ default: module.PeakHours })),
+);
+const AveragePrepTime = lazy(() =>
+  import("./AveragePrepTime").then((module) => ({
+    default: module.AveragePrepTime,
+  })),
+);
+const SalesTrends = lazy(() =>
+  import("./SalesTrends").then((module) => ({ default: module.SalesTrends })),
+);
 
 const paymentLabels = {
   CASH: "Cash",
@@ -442,9 +457,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
         ) : (
           <InlineMessage>Choose a valid business date.</InlineMessage>
         ))}
-      {valid && query.isPending && (
-        <MetricsSkeleton />
-      )}
+      {valid && query.isPending && <MetricsSkeleton />}
       {valid && query.isError && (
         <div className="sales-error">
           <InlineMessage>
@@ -462,76 +475,93 @@ function SalesWorkspace({ userId }: { userId: string }) {
         </div>
       )}
       {report && (
-        <>
-          <div className="sales-summary" aria-busy={query.isFetching}>
-            <article className="sales-hero" aria-labelledby="sales-total-label">
-              <div className="sales-hero-top">
-                <h2 id="sales-total-label">
-                  {!custom && date === today ? "Today’s Sales" : "Gross Sales"}
-                </h2>
-                <span className="sales-hero-icon">
-                  <FiTrendingUp aria-hidden="true" />
-                </span>
-              </div>
-              <p className="sales-hero-date">{prettyDate}</p>
-              <strong className="sales-amount">
-                {formatCartPrice(report.totalSales)}
-              </strong>
-              <div className="sales-hero-footer">
-                <span>
-                  <FiCheck aria-hidden="true" /> Completed & paid
-                </span>
-                <span>PHP</span>
-              </div>
-              {report.completedOrders === 0 && (
-                <p className="sales-hero-empty">
-                  No eligible completed orders for this{" "}
-                  {custom ? "date range" : "business day"}.
-                </p>
-              )}
-            </article>
-            <Metric
-              id="sales-orders-label"
-              title="Number of Orders"
-              value={countFormat.format(report.completedOrders)}
-              note="Paid & completed orders."
-              Icon={FiClipboard}
-              number="01"
-            />
-            <Metric
-              id="sales-average-label"
-              title="Average Order Value"
-              value={formatCartPrice(
-                calculateAverageOrderValue(
-                  report.totalSales,
-                  report.completedOrders,
-                ),
-              )}
-              note={
-                report.completedOrders === 0
-                  ? "No eligible orders; average is ₱0.00."
-                  : "Per completed order."
-              }
-              Icon={FiBarChart2}
-              number="02"
-            />
-            <Metric
-              id="sales-items-label"
-              title="Items Sold"
-              value={countFormat.format(report.itemsSold)}
-              note="Total units sold."
-              Icon={FiShoppingBag}
-              number="03"
-            />
-          </div>
-          <div id="sales-trends-section" className="sales-section-anchor">
+        <div className="sales-summary" aria-busy={query.isFetching}>
+          <article className="sales-hero" aria-labelledby="sales-total-label">
+            <div className="sales-hero-top">
+              <h2 id="sales-total-label">
+                {!custom && date === today ? "Today’s Sales" : "Gross Sales"}
+              </h2>
+              <span className="sales-hero-icon">
+                <FiTrendingUp aria-hidden="true" />
+              </span>
+            </div>
+            <p className="sales-hero-date">{prettyDate}</p>
+            <strong className="sales-amount">
+              {formatCartPrice(report.totalSales)}
+            </strong>
+            <div className="sales-hero-footer">
+              <span>
+                <FiCheck aria-hidden="true" /> Completed & paid
+              </span>
+              <span>PHP</span>
+            </div>
+            {report.completedOrders === 0 && (
+              <p className="sales-hero-empty">
+                No eligible completed orders for this{" "}
+                {custom ? "date range" : "business day"}.
+              </p>
+            )}
+          </article>
+          <Metric
+            id="sales-orders-label"
+            title="Number of Orders"
+            value={countFormat.format(report.completedOrders)}
+            note="Paid & completed orders."
+            Icon={FiClipboard}
+            number="01"
+          />
+          <Metric
+            id="sales-average-label"
+            title="Average Order Value"
+            value={formatCartPrice(
+              calculateAverageOrderValue(
+                report.totalSales,
+                report.completedOrders,
+              ),
+            )}
+            note={
+              report.completedOrders === 0
+                ? "No eligible orders; average is ₱0.00."
+                : "Per completed order."
+            }
+            Icon={FiBarChart2}
+            number="02"
+          />
+          <Metric
+            id="sales-items-label"
+            title="Items Sold"
+            value={countFormat.format(report.itemsSold)}
+            note="Total units sold."
+            Icon={FiShoppingBag}
+            number="03"
+          />
+        </div>
+      )}
+      {valid && !denied && (
+        <div id="sales-trends-section" className="sales-section-anchor">
+          <DeferredSection
+            label="sales trends"
+            placeholder={
+              <section className="daily-analytics">
+                <h2>Sales Trends</h2>
+                <ReportSkeleton
+                  label="Loading sales trends…"
+                  chart
+                />
+              </section>
+            }
+          >
             <SalesTrends
               userId={userId}
               shopId={shopId}
               startDate={reportStartDate}
               endDate={reportEndDate}
             />
-          </div>
+          </DeferredSection>
+        </div>
+      )}
+      {report && (
+        <>
           <div
             className="sales-detail-grid sales-section-anchor"
             id="sales-payment-section"
@@ -837,33 +867,66 @@ function SalesWorkspace({ userId }: { userId: string }) {
           </div>
         </>
       )}
-      {report && (
+      {valid && !denied && (
         <div className="sales-section-anchor" id="sales-products-section">
-          <TopProducts
-            userId={userId}
-            shopId={shopId}
-            startDate={reportStartDate}
-            endDate={reportEndDate}
-          />
+          <DeferredSection
+            label="top products"
+            placeholder={
+              <section className="daily-analytics">
+                <h2>Top Products</h2>
+                <ReportSkeleton label="Loading top products…" />
+              </section>
+            }
+          >
+            <TopProducts
+              userId={userId}
+              shopId={shopId}
+              startDate={reportStartDate}
+              endDate={reportEndDate}
+            />
+          </DeferredSection>
         </div>
       )}
-      {report && (
+      {valid && !denied && (
         <div
           className="sales-operations-grid sales-section-anchor"
           id="sales-operations-section"
         >
-          <AveragePrepTime
-            userId={userId}
-            shopId={shopId}
-            startDate={reportStartDate}
-            endDate={reportEndDate}
-          />
-          <PeakHours
-            userId={userId}
-            shopId={shopId}
-            startDate={reportStartDate}
-            endDate={reportEndDate}
-          />
+          <DeferredSection
+            label="average preparation time"
+            placeholder={
+              <section className="daily-analytics">
+                <h2>Average Prep Time</h2>
+                <PreparationMetricSkeleton />
+              </section>
+            }
+          >
+            <AveragePrepTime
+              userId={userId}
+              shopId={shopId}
+              startDate={reportStartDate}
+              endDate={reportEndDate}
+            />
+          </DeferredSection>
+          <DeferredSection
+            label="peak hours"
+            placeholder={
+              <section className="daily-analytics">
+                <h2>Peak Hours</h2>
+                <ReportSkeleton
+                  label="Loading peak hours…"
+                  chart
+                />
+              </section>
+            }
+          >
+            <PeakHours
+              userId={userId}
+              shopId={shopId}
+              startDate={reportStartDate}
+              endDate={reportEndDate}
+            />
+          </DeferredSection>
         </div>
       )}
       <details
@@ -892,7 +955,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
             today={today}
             startDate={reportStartDate}
             endDate={reportEndDate}
-            enabled={!!report}
+            enabled={valid && !denied}
           />
         )}
       </details>

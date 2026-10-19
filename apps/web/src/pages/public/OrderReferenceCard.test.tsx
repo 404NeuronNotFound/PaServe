@@ -52,6 +52,16 @@ it("starts on QR, flips by keyboard, preserves focus and hides inactive controls
     screen.getByRole("region", { name: "Your order QR", hidden: true }),
   ).toBeInTheDocument();
 });
+
+it("shows the saved order number and lets the customer use it before QR generation finishes", async () => {
+  vi.mocked(createCustomerQrImage).mockImplementationOnce(() => new Promise(() => {}));
+  render(<OrderReferenceCard credential={credential} orderNumber={credential.orderNumber} />);
+  expect(screen.getByText("Order number: ORD-000042")).toBeVisible();
+  expect(screen.getByText("Preparing your order QR…")).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Show order number" }));
+  expect(screen.getByRole("region", { name: "Order number" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "Copy order number" })).toBeEnabled();
+});
 it("returns to the same QR without regenerating it", async () => {
   const user = userEvent.setup();
   render(

@@ -279,6 +279,8 @@ function ProductDetailsForm({
               className="product-details-image"
               src={product.imageUrl}
               alt={product.name}
+              decoding="async"
+              fetchPriority="low"
               onError={() => setFailedImage(true)}
             />
           ) : (

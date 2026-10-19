@@ -23,6 +23,8 @@ export function ShopBanner({
         width={SHOP_BANNER_LIMITS.outputWidth}
         height={SHOP_BANNER_LIMITS.outputHeight}
         decoding="async"
+        loading="lazy"
+        fetchPriority="low"
         onError={() => setFailed(url)}
       />
     </div>

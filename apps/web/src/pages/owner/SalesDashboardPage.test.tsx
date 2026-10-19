@@ -388,7 +388,7 @@ it.each([
     expect(getCustomSales).not.toHaveBeenCalled();
   },
 );
-it("hides all custom sections on refresh failure and retries the applied range", async () => {
+it("hides failed summary values on refresh failure and retries the applied range", async () => {
   vi.mocked(getCustomSales)
     .mockResolvedValueOnce(customReport())
     .mockRejectedValueOnce(new Error("offline"))
@@ -416,6 +416,23 @@ it("hides all custom sections on refresh failure and retries the applied range",
     "2026-10-17",
     expect.any(AbortSignal),
   );
+});
+
+it("lets independent reports render while the primary summary is still pending", async () => {
+  vi.mocked(getDailySales).mockImplementationOnce(() => new Promise(() => {}));
+  vi.mocked(TopProducts).mockImplementation(() => <p>Independent top products</p>);
+  setup();
+  expect(screen.getByRole("heading", { name: "Sales dashboard" })).toBeVisible();
+  expect(await screen.findByText("Independent top products")).toBeVisible();
+  expect(screen.getByText("Loading sales…")).toBeInTheDocument();
+});
+
+it("keeps independent reports available when the summary has a network error", async () => {
+  vi.mocked(getDailySales).mockRejectedValueOnce(new Error("Summary unavailable"));
+  vi.mocked(TopProducts).mockImplementation(() => <p>Independent top products</p>);
+  setup();
+  expect(await screen.findByRole("alert")).toHaveTextContent("couldn’t refresh sales");
+  expect(await screen.findByText("Independent top products")).toBeVisible();
 });
 it("cancels the old range and hides old metrics while another range loads", async () => {
   let oldSignal: AbortSignal | undefined;

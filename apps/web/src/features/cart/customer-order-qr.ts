@@ -1,5 +1,4 @@
 import type { CustomerOrderResponse } from "@paserve/contracts";
-import QRCode from "qrcode";
 import { parseOrderQrToken } from "../orders/order-qr-reference";
 import { isOrderNumber } from "./order-receipt-fields";
 
@@ -118,6 +117,7 @@ export function clearCustomerOrderQrs() {
 /** Deterministic local rendering: token only, no order details or external URL. */
 export async function createCustomerQrImage(qrToken: string): Promise<string> {
   if (!parseOrderQrToken(qrToken)) throw new Error("Order QR unavailable.");
+  const { default: QRCode } = await import("qrcode");
   const svg = await QRCode.toString(qrToken, {
     type: "svg",
     errorCorrectionLevel: "M",

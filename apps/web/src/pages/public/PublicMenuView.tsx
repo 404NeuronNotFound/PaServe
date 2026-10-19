@@ -320,6 +320,8 @@ function ProductMedia({
           src={product.imageUrl}
           alt=""
           loading="lazy"
+          decoding="async"
+          fetchPriority="low"
           onError={() => setFailed(product.imageUrl)}
         />
       ) : (

@@ -818,6 +818,8 @@ function ProductWorkspace({ userId }: { userId: string }) {
                             src={product.imageUrl}
                             alt=""
                             loading="lazy"
+                            decoding="async"
+                            fetchPriority="low"
                             referrerPolicy="no-referrer"
                             onError={(event) => {
                               event.currentTarget.hidden = true;

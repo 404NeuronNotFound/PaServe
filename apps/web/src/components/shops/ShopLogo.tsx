@@ -15,7 +15,7 @@ export function ShopLogo({
   return (
     <span className={`shop-logo ${className}`}>
       {url && failed !== url ? (
-        <img src={url} alt={`${name} logo`} onError={() => setFailed(url)} />
+        <img src={url} alt={`${name} logo`} decoding="async" fetchPriority="low" onError={() => setFailed(url)} />
       ) : (
         <FiCoffee aria-hidden="true" />
       )}

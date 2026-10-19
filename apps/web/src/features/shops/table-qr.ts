@@ -1,4 +1,3 @@
-import QRCode from "qrcode";
 import { publicTablePath } from "@paserve/contracts";
 
 export interface TableQr {
@@ -35,6 +34,7 @@ export async function generateTableQr(
   origin: string,
 ): Promise<TableQr> {
   const url = tableCustomerUrl(shopSlug, code, origin);
+  const { default: QRCode } = await import("qrcode");
   const svg = await QRCode.toString(url, {
     type: "svg",
     errorCorrectionLevel: "M",
