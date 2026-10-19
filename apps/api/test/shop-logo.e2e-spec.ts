@@ -130,6 +130,28 @@ describe('shop logo upload', () => {
     await post(shopId, false).attach('file', image, 'logo.png').expect(401);
     expect(storage.upload).not.toHaveBeenCalled();
   });
+  it('accepts a valid image at the inclusive 5 MiB upload limit', async () => {
+    const buffer = Buffer.concat([
+      image,
+      Buffer.alloc(5 * 1024 * 1024 - image.length),
+    ]);
+    await post()
+      .attach('file', buffer, {
+        filename: 'boundary.png',
+        contentType: 'image/png',
+      })
+      .expect(201);
+  });
+  it.each(['photo.jpg', 'photo.svg', 'photo.png.exe', 'photo'])(
+    'rejects filename/format mismatch %s without storage or database writes',
+    async (filename) => {
+      await post()
+        .attach('file', image, { filename, contentType: 'image/png' })
+        .expect(400);
+      expect(storage.upload).not.toHaveBeenCalled();
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
   it('rejects missing, spoofed, unsupported and extra multipart input', async () => {
     await post().expect(400);
     await post()

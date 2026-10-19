@@ -4,12 +4,12 @@ import {
   PayloadTooLargeException,
 } from '@nestjs/common';
 import sharp from 'sharp';
+import {
+  validateImageUpload,
+  type ImageUploadFile,
+} from '../../common/storage/image-upload.js';
 import { SHOP_BANNER_LIMITS, SHOP_BANNER_TYPES } from '@paserve/contracts';
-export type ShopBannerFile = {
-  buffer: Buffer;
-  mimetype: string;
-  size: number;
-};
+export type ShopBannerFile = ImageUploadFile;
 @Injectable()
 export class ShopBannerProcessor {
   async process(file?: ShopBannerFile): Promise<Buffer> {
@@ -19,31 +19,17 @@ export class ShopBannerProcessor {
         message: 'Choose a valid JPEG, PNG or WebP image.',
         fieldErrors: { file: ['Choose a valid JPEG, PNG or WebP image.'] },
       });
-    if (!file || !Buffer.isBuffer(file.buffer) || file.buffer.length === 0)
-      throw invalid();
-    if (
-      file.buffer.length > SHOP_BANNER_LIMITS.maxBytes ||
-      file.size > SHOP_BANNER_LIMITS.maxBytes
-    )
-      throw new PayloadTooLargeException({
-        code: 'SHOP_BANNER_TOO_LARGE',
-        message: 'Choose an image no larger than 5 MB.',
-      });
-    if (!(SHOP_BANNER_TYPES as readonly string[]).includes(file.mimetype))
-      throw invalid();
-    // Reject unsupported formats before a decoder can handle SVG or other active content.
-    const buffer = file.buffer;
-    const format = buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))
-      ? 'jpeg'
-      : buffer
-            .subarray(0, 8)
-            .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
-        ? 'png'
-        : buffer.toString('ascii', 0, 4) === 'RIFF' &&
-            buffer.toString('ascii', 8, 12) === 'WEBP'
-          ? 'webp'
-          : null;
-    if (!format || file.mimetype !== `image/${format}`) throw invalid();
+    const { buffer, format } = validateImageUpload(
+      file,
+      SHOP_BANNER_LIMITS.maxBytes,
+      SHOP_BANNER_TYPES,
+      invalid,
+      () =>
+        new PayloadTooLargeException({
+          code: 'SHOP_BANNER_TOO_LARGE',
+          message: 'Choose an image no larger than 5 MB.',
+        }),
+    );
     try {
       const image = sharp(buffer, {
         limitInputPixels: SHOP_BANNER_LIMITS.maxPixels,

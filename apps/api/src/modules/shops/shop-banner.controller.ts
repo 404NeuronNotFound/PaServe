@@ -30,7 +30,8 @@ export class ShopBannerController {
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
-        fileSize: SHOP_BANNER_LIMITS.maxBytes,
+        // Busboy truncates at its limit; allow the inclusive maximum through to validation.
+        fileSize: SHOP_BANNER_LIMITS.maxBytes + 1,
         files: 1,
         fields: 0,
         parts: 2,

@@ -20,6 +20,7 @@ describe('shop banner processing', () => {
       const result = await processor.process({
         buffer,
         size: buffer.length,
+        originalname: `image.${format}`,
         mimetype: `image/${format}`,
       });
       const metadata = await sharp(result).metadata();
@@ -40,12 +41,18 @@ describe('shop banner processing', () => {
       .png()
       .toBuffer();
     await expect(
-      processor.process({ buffer, size: buffer.length, mimetype: 'image/png' }),
+      processor.process({
+        buffer,
+        size: buffer.length,
+        originalname: 'image.png',
+        mimetype: 'image/png',
+      }),
     ).rejects.toMatchObject({ status: 400 });
     await expect(
       processor.process({
         buffer: Buffer.from([255, 216, 255]),
         size: 3,
+        originalname: 'image.jpeg',
         mimetype: 'image/jpeg',
       }),
     ).rejects.toMatchObject({ status: 400 });
@@ -57,7 +64,12 @@ describe('shop banner processing', () => {
       .png()
       .toBuffer();
     await expect(
-      processor.process({ buffer, size: buffer.length, mimetype: 'image/png' }),
+      processor.process({
+        buffer,
+        size: buffer.length,
+        originalname: 'image.png',
+        mimetype: 'image/png',
+      }),
     ).rejects.toMatchObject({ status: 400 });
   });
   it('rejects animated WebP input', async () => {
@@ -75,6 +87,7 @@ describe('shop banner processing', () => {
       processor.process({
         buffer,
         size: buffer.length,
+        originalname: 'image.webp',
         mimetype: 'image/webp',
       }),
     ).rejects.toMatchObject({ status: 400 });

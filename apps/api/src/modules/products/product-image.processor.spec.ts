@@ -13,6 +13,7 @@ describe('product image decoding', () => {
         .toBuffer();
       const output = await processor.process({
         buffer,
+        originalname: `image.${format}`,
         mimetype: `image/${format}`,
         size: buffer.length,
       });
@@ -29,7 +30,12 @@ describe('product image decoding', () => {
       .png()
       .toBuffer();
     await expect(
-      processor.process({ buffer, size: buffer.length, mimetype: 'image/png' }),
+      processor.process({
+        buffer,
+        size: buffer.length,
+        originalname: 'image.png',
+        mimetype: 'image/png',
+      }),
     ).rejects.toMatchObject({ status: 400 });
   });
   it('rejects pixel counts above 16 megapixels', async () => {
@@ -39,13 +45,19 @@ describe('product image decoding', () => {
       .png()
       .toBuffer();
     await expect(
-      processor.process({ buffer, size: buffer.length, mimetype: 'image/png' }),
+      processor.process({
+        buffer,
+        size: buffer.length,
+        originalname: 'image.png',
+        mimetype: 'image/png',
+      }),
     ).rejects.toMatchObject({ status: 400 });
   });
   it('rejects truncated real-format data', async () => {
     await expect(
       processor.process({
         buffer: Buffer.from([0xff, 0xd8, 0xff, 0]),
+        originalname: 'image.jpeg',
         mimetype: 'image/jpeg',
         size: 4,
       }),
@@ -66,6 +78,7 @@ describe('product image decoding', () => {
       processor.process({
         buffer,
         size: buffer.length,
+        originalname: 'image.webp',
         mimetype: 'image/webp',
       }),
     ).rejects.toMatchObject({ status: 400 });
@@ -82,7 +95,12 @@ describe('product image decoding', () => {
       .png()
       .toBuffer();
     await expect(
-      processor.process({ buffer, size: buffer.length, mimetype }),
+      processor.process({
+        buffer,
+        size: buffer.length,
+        originalname: 'image.png',
+        mimetype,
+      }),
     ).rejects.toMatchObject({ status: 400 });
   });
   it('rejects empty and missing files', async () => {
@@ -91,6 +109,7 @@ describe('product image decoding', () => {
       processor.process({
         buffer: Buffer.alloc(0),
         size: 0,
+        originalname: 'image.png',
         mimetype: 'image/png',
       }),
     ).rejects.toMatchObject({ status: 400 });
@@ -100,6 +119,7 @@ describe('product image decoding', () => {
       processor.process({
         buffer: Buffer.alloc(5 * 1024 * 1024 + 1),
         size: 1,
+        originalname: 'image.png',
         mimetype: 'image/png',
       }),
     ).rejects.toMatchObject({ status: 413 });
@@ -107,6 +127,7 @@ describe('product image decoding', () => {
       processor.process({
         buffer: Buffer.from('x'),
         size: 5 * 1024 * 1024 + 1,
+        originalname: 'image.png',
         mimetype: 'image/png',
       }),
     ).rejects.toMatchObject({ status: 413 });

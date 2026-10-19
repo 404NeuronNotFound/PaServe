@@ -547,6 +547,28 @@ describe('tenant-scoped product creation', () => {
     await imageRequest().attach('file', png, 'a.png').expect(404);
     expect(uploadImage).not.toHaveBeenCalled();
   });
+  it('accepts a valid image at the inclusive 5 MiB upload limit', async () => {
+    const buffer = Buffer.concat([
+      png,
+      Buffer.alloc(5 * 1024 * 1024 - png.length),
+    ]);
+    await imageRequest()
+      .attach('file', buffer, {
+        filename: 'boundary.png',
+        contentType: 'image/png',
+      })
+      .expect(201);
+  });
+  it.each(['photo.jpg', 'photo.svg', 'photo.png.exe', 'photo'])(
+    'rejects filename/format mismatch %s without storage or database writes',
+    async (filename) => {
+      await imageRequest()
+        .attach('file', png, { filename, contentType: 'image/png' })
+        .expect(400);
+      expect(uploadImage).not.toHaveBeenCalled();
+      expect(productWrite).not.toHaveBeenCalled();
+    },
+  );
   it('rejects missing, forged, mismatched and oversized images without uploads', async () => {
     await imageRequest().send({}).expect(400);
     await imageRequest()

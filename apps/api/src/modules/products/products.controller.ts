@@ -129,7 +129,8 @@ export class ProductsController {
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
-        fileSize: PRODUCT_IMAGE_LIMITS.maxBytes,
+        // Busboy truncates at its limit; allow the inclusive maximum through to validation.
+        fileSize: PRODUCT_IMAGE_LIMITS.maxBytes + 1,
         files: 1,
         fields: 0,
         parts: 2,
