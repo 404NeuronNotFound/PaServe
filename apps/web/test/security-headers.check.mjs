@@ -33,7 +33,11 @@ assert.ok(deploymentPolicy.includes("frame-ancestors 'none'"));
 assert.ok(hostHeaders.includes("Strict-Transport-Security: max-age=31536000"));
 assert.ok(nginx.includes('add_header X-Frame-Options "DENY" always;'));
 if (process.argv.includes("--release")) {
-  assert.equal(reportOnly, false, "Release acceptance requires an enforced CSP");
+  assert.equal(
+    reportOnly,
+    false,
+    "Release acceptance requires an enforced CSP",
+  );
   for (const token of deploymentPolicy.split(/[;\s]+/u)) {
     if (!/^\w+:\/\//u.test(token)) continue;
     const url = new URL(token);
@@ -42,8 +46,12 @@ if (process.argv.includes("--release")) {
       "Release CSP must not contain insecure network origins",
     );
     assert.ok(
-      !["localhost", "[::1]"].includes(url.hostname) &&
-        !/^127\./u.test(url.hostname),
+      !["localhost", "[::1]", "[::]", "0.0.0.0"].includes(
+        url.hostname.replace(/\.$/u, ""),
+      ) &&
+        !url.hostname.replace(/\.$/u, "").endsWith(".localhost") &&
+        !/^127\./u.test(url.hostname) &&
+        !/^\[::ffff:(?:7f[0-9a-f]{2}:[0-9a-f]{1,4}|0:0)\]$/u.test(url.hostname),
       "Release CSP must not contain loopback endpoints",
     );
   }

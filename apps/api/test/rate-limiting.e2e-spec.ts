@@ -60,6 +60,21 @@ describe('rate limiting admission and recovery', () => {
   const post = (shop = 'cafe') =>
     request(app.getHttpServer()).post(`/api/v1/menu/${shop}/orders`);
 
+  it('does not mint a new shop budget by changing UUID letter case', async () => {
+    const shop = '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e';
+    for (let index = 0; index < 30; index++)
+      await request(app.getHttpServer())
+        .post(`/api/v1/staff-invitations/${shop}/preview`)
+        .set('Authorization', 'Bearer invalid')
+        .send({})
+        .expect(401);
+    await request(app.getHttpServer())
+      .post(`/api/v1/staff-invitations/${shop.toUpperCase()}/preview`)
+      .set('Authorization', 'Bearer invalid')
+      .send({})
+      .expect(429);
+  });
+
   it('keeps critical registered routes explicitly covered by the intended policy', () => {
     const routes = new Map<string, string | undefined>();
     const reflector = app.get(Reflector);

@@ -59,32 +59,46 @@ describe("frontend deployment security policy", () => {
     expect(prod["connect-src"]).not.toContain("ws://localhost:*");
     expect(JSON.stringify(prod)).not.toContain("unsafe-eval");
   });
-  it.each([
-    "",
-    "/api/v1",
-  ])("supports same-origin API configuration: %s", (VITE_API_URL) => {
-    expect(() => frontendSecurity({ VITE_API_URL })).not.toThrow();
-  });
+  it.each(["", "/api/v1"])(
+    "supports same-origin API configuration: %s",
+    (VITE_API_URL) => {
+      expect(() => frontendSecurity({ VITE_API_URL })).not.toThrow();
+    },
+  );
   it.each([
     "http://localhost:3000/api/v1",
     "http://127.0.0.1:3000/api/v1",
     "http://[::1]:3000/api/v1",
     "https://localhost/api/v1",
     "https://127.0.0.1/api/v1",
+    "https://localhost./api/v1",
+    "https://api.localhost/api/v1",
+    "https://[::ffff:127.0.0.1]/api/v1",
+    "https://[::ffff:7f00:1]/api/v1",
+    "https://0.0.0.0/api/v1",
+    "https://[::]/api/v1",
     "http://2130706433/api/v1",
-  ])("rejects loopback release endpoints but supports local builds: %s", (VITE_API_URL) => {
-    expect(() => frontendSecurity({ VITE_API_URL })).toThrow(/Loopback/);
-    expect(() => frontendSecurity({ VITE_API_URL }, false, false)).not.toThrow();
-    expect(() => frontendSecurity({ VITE_API_URL }, true)).not.toThrow();
-  });
+  ])(
+    "rejects loopback release endpoints but supports local builds: %s",
+    (VITE_API_URL) => {
+      expect(() => frontendSecurity({ VITE_API_URL })).toThrow(/Loopback/);
+      expect(() =>
+        frontendSecurity({ VITE_API_URL }, false, false),
+      ).not.toThrow();
+      expect(() => frontendSecurity({ VITE_API_URL }, true)).not.toThrow();
+    },
+  );
   it.each([
     { VITE_SUPABASE_URL: "http://localhost:54321" },
     { VITE_CSP_IMAGE_ORIGINS: "https://localhost" },
     { VITE_CSP_CONNECT_ORIGINS: "wss://127.0.0.1" },
-  ])("rejects loopback storage and extra origins in releases: %j", (configuration) => {
-    expect(() => frontendSecurity(configuration)).toThrow(/Loopback/);
-    expect(() => frontendSecurity(configuration, false, false)).not.toThrow();
-  });
+  ])(
+    "rejects loopback storage and extra origins in releases: %j",
+    (configuration) => {
+      expect(() => frontendSecurity(configuration)).toThrow(/Loopback/);
+      expect(() => frontendSecurity(configuration, false, false)).not.toThrow();
+    },
+  );
   it.each([
     "https://user:password@api.test",
     "//api.test",

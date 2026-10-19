@@ -33,7 +33,13 @@ export class ApiRateLimitGuard extends ThrottlerGuard {
     ];
     if (policy.shop) {
       const target = request.params.shopId ?? request.params.shopSlug;
-      const shop = typeof target === 'string' ? target : 'missing';
+      // PostgreSQL UUIDs are case-insensitive; casing must not create fresh budgets.
+      const shop =
+        typeof target === 'string'
+          ? request.params.shopId
+            ? target.toLowerCase()
+            : target
+          : 'missing';
       buckets.push({ scope: `shop:${shop}`, limit: policy.limit });
     }
     for (const bucket of buckets) {

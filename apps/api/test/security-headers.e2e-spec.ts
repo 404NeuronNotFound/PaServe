@@ -85,6 +85,15 @@ describe('API security headers', () => {
       .expect(413);
     check(response.headers);
   });
+  it('rejects malformed JSON without exposing its contents and retains security headers', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .set('Content-Type', 'application/json')
+      .send('{"privateInput":"do-not-expose",')
+      .expect(400);
+    expect(JSON.stringify(response.body)).not.toContain('do-not-expose');
+    check(response.headers);
+  });
   it('preserves CSP, security headers and Retry-After on rate-limit errors', async () => {
     for (let n = 0; n < 5; n++)
       await request(app.getHttpServer())
