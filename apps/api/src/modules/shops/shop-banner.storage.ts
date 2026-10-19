@@ -4,6 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { isStorageConflict } from '../../common/storage/upload-errors.js';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
   ASSETS_BUCKET,
@@ -41,8 +42,9 @@ export class ShopBannerStorage {
         cacheControl: '31536000',
       });
       if (error) throw error;
-    } catch {
-      await this.remove(storagePath);
+    } catch (error) {
+      // A conflict means this attempt never owned the existing object.
+      if (!isStorageConflict(error)) await this.remove(storagePath);
       throw new ServiceUnavailableException({
         code: 'SHOP_BANNER_STORAGE_UNAVAILABLE',
         message:

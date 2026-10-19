@@ -1,6 +1,7 @@
 // Run from apps/api after building and applying the paserve-assets bucket migration.
 // Database fixtures roll back; only generated fixture objects are removed.
 import 'dotenv/config';
+import { assertBrowserCannotChangeObject } from './storage-browser-check.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
@@ -137,6 +138,11 @@ try {
         assert.equal(bucket.public, true);
         assert.equal(Number(bucket.file_size_limit), 5242880);
         assert.deepEqual(bucket.allowed_mime_types, ['image/webp']);
+        await assertBrowserCannotChangeObject(
+          tx,
+          SHOP_BANNER_BUCKET,
+          second.storagePath,
+        );
         for (const role of ['anon', 'authenticated']) {
           await tx.$executeRawUnsafe('SAVEPOINT browser_write');
           await tx.$executeRawUnsafe(`SET LOCAL ROLE ${role}`);

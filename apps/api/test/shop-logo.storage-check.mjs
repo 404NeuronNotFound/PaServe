@@ -1,6 +1,7 @@
 // Run from apps/api after building and applying the logo bucket migration.
 // Database fixtures roll back; only generated fixture objects are removed.
 import 'dotenv/config';
+import { assertBrowserCannotChangeObject } from './storage-browser-check.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
@@ -119,6 +120,11 @@ try {
           'https://example.com/external-logo.webp',
         );
         assert.equal(await exists(second.storagePath), true);
+        await assertBrowserCannotChangeObject(
+          tx,
+          SHOP_LOGO_BUCKET,
+          second.storagePath,
+        );
         const removed = await service.delete(user.id, shop.id);
         assert.equal(removed.shop.logoUrl, null);
         assert.equal(

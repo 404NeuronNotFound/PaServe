@@ -108,3 +108,16 @@ it('rejects literal placeholder shop IDs before contacting storage', async () =>
   expect(mocks.from).not.toHaveBeenCalled();
   expect(mocks.upload).not.toHaveBeenCalled();
 });
+
+it.each([409, '409'])(
+  'never removes an existing object when an immutable upload reports a conflict: %s',
+  async (statusCode) => {
+    mocks.upload.mockResolvedValue({
+      error: { statusCode, message: 'Object already exists' },
+    });
+    await expect(
+      storage.upload(shopId, Buffer.from('processed')),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(mocks.remove).not.toHaveBeenCalled();
+  },
+);

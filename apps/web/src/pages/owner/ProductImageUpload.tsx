@@ -19,6 +19,7 @@ export function ProductImageUpload({
   userId,
   shopId,
   productId,
+  shopSlug,
   currentImageUrl,
   disabled,
   onUploaded,
@@ -27,6 +28,7 @@ export function ProductImageUpload({
   userId: string;
   shopId: string;
   productId: string;
+  shopSlug?: string;
   currentImageUrl: string;
   disabled: boolean;
   onUploaded: (product: MenuProduct) => void;
@@ -71,6 +73,12 @@ export function ProductImageUpload({
         },
       );
       if (!stillHere()) return;
+      if (
+        result.product.id !== productId ||
+        result.product.shopId !== shopId ||
+        result.product.isArchived
+      )
+        throw new Error("Invalid product response");
       const key = productsKey(userId, shopId);
       await client.cancelQueries({ queryKey: key });
       if (!stillHere()) return;
@@ -84,6 +92,12 @@ export function ProductImageUpload({
           : current,
       );
       void client.invalidateQueries({ queryKey: key });
+      if (shopSlug) {
+        void client.invalidateQueries({ queryKey: ["public-menu", shopSlug] });
+        void client.invalidateQueries({
+          queryKey: ["public-product", shopSlug, productId],
+        });
+      }
       onUploaded(result.product);
       setFile(null);
       feedback.toast("Product image uploaded.");

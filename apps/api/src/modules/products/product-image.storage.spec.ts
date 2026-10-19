@@ -142,3 +142,16 @@ it.each([
     expect(mocks.upload).not.toHaveBeenCalled();
   },
 );
+
+it.each([409, '409'])(
+  'never deletes the existing object on upload conflict: %s',
+  async (statusCode) => {
+    mocks.upload.mockResolvedValue({
+      error: { statusCode, message: 'Object already exists' },
+    });
+    await expect(
+      storage.upload(shopId, productId, Buffer.from('processed')),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(mocks.remove).not.toHaveBeenCalled();
+  },
+);

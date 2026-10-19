@@ -1,5 +1,6 @@
 // Run from apps/api after building and applying the Phase 23 paserve-assets migration.
 import 'dotenv/config';
+import { assertBrowserCannotChangeObject } from './storage-browser-check.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
@@ -147,6 +148,11 @@ try {
           second.product.imageUrl,
         );
         assert.equal((await fetch(first.product.imageUrl)).status, 200);
+        await assertBrowserCannotChangeObject(
+          tx,
+          PRODUCT_IMAGE_BUCKET,
+          second.storagePath,
+        );
         for (const role of ['anon', 'authenticated']) {
           await tx.$executeRawUnsafe('SAVEPOINT browser_write');
           await tx.$executeRawUnsafe(`SET LOCAL ROLE ${role}`);

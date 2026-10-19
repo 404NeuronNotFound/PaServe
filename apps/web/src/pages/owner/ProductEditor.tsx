@@ -204,8 +204,12 @@ export function ProductEditor({
       ),
     }));
     void client.invalidateQueries({ queryKey: key });
-    if (shopSlug)
+    if (shopSlug) {
       void client.invalidateQueries({ queryKey: ["public-menu", shopSlug] });
+      void client.invalidateQueries({
+        queryKey: ["public-product", shopSlug, saved.id],
+      });
+    }
   }
   async function savePhoto(saved: MenuProduct, file: File) {
     setUploading(true);
@@ -221,16 +225,32 @@ export function ProductEditor({
         },
       );
       if (!stillHere()) return;
+      if (
+        result.product.id !== saved.id ||
+        result.product.shopId !== shopId ||
+        result.product.isArchived
+      )
+        throw new Error("Invalid product response");
       await cacheProduct(result.product);
       if (!stillHere()) return;
       feedback.toast(`"${saved.name}" was created with a photo.`);
       close();
     } catch (failure) {
       if (!stillHere()) return;
+      setUnavailable(true);
       let message =
-        "Product created. We couldn't confirm the photo upload. Retry the upload or choose Done to add it later.";
+        "Product created. The photo save is uncertain. Choose Done and refresh products before uploading again.";
       if (isAxiosError<ApiErrorResponse>(failure)) {
         const code = failure.response?.status;
+        if (
+          code === 400 ||
+          code === 413 ||
+          failure.response?.data?.code === "PRODUCT_STORAGE_UNAVAILABLE"
+        )
+          setUnavailable(false);
+        if (failure.response?.data?.code === "PRODUCT_STORAGE_UNAVAILABLE")
+          message =
+            "Product created. Photo uploads are unavailable. Retry the upload or choose Done to add it later.";
         if (code === 400 || code === 413)
           message =
             "Product created. Choose a valid JPEG, PNG or WebP photo up to 5 MB and 16 megapixels.";
@@ -560,6 +580,7 @@ export function ProductEditor({
                 userId={userId}
                 shopId={shopId}
                 productId={product.id}
+                shopSlug={shopSlug}
                 currentImageUrl={imageSaved}
                 disabled={mutation.isPending || closing || unavailable}
                 onPending={setUploading}

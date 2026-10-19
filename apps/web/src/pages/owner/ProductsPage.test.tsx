@@ -1415,13 +1415,16 @@ it("creates once then uploads the selected photo to the saved product", async ()
   expect(createProduct).toHaveBeenCalledTimes(1);
 });
 it("keeps the saved product on photo failure and retries only its upload", async () => {
-  vi.mocked(uploadProductImage).mockRejectedValueOnce(new Error("offline"));
+  vi.mocked(uploadProductImage).mockRejectedValueOnce({
+    isAxiosError: true,
+    response: { status: 503, data: { code: "PRODUCT_STORAGE_UNAVAILABLE" } },
+  });
   setup();
   const { user, modal } = await basics();
   const file = new File(["photo"], "latte.png", { type: "image/png" });
   await user.upload(modal.getByLabelText(/Photo.*optional/), file);
   await user.click(modal.getByRole("button", { name: "Create product" }));
-  await modal.findByText(/Product created. We couldn't confirm/);
+  await modal.findByText(/Product created. Photo uploads are unavailable/);
   expect(modal.getByLabelText("Product name")).toBeDisabled();
   vi.mocked(uploadProductImage).mockResolvedValueOnce({
     product,
@@ -1701,3 +1704,70 @@ it("clears a saved photo through Save changes without accepting a replacement UR
     expect(updateProduct).toHaveBeenCalledWith("a", "p", { imageUrl: "" }),
   );
 });
+
+it("locks photo retries after an uncertain network outcome during creation", async () => {
+  vi.mocked(uploadProductImage).mockRejectedValue(
+    new Error("Disconnected after sending"),
+  );
+  setup();
+  const { user, modal } = await basics();
+  await user.upload(
+    modal.getByLabelText(/Photo.*optional/),
+    new File(["png"], "photo.png", { type: "image/png" }),
+  );
+  await user.click(modal.getByRole("button", { name: "Create product" }));
+  await modal.findByText(/Product created/);
+  expect(modal.getByRole("button", { name: "Retry upload" })).toBeDisabled();
+  expect(modal.getByRole("button", { name: "Done" })).toBeEnabled();
+  expect(createProduct).toHaveBeenCalledTimes(1);
+});
+it("refreshes the customer menu and details after uploading an edited product photo", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  vi.mocked(uploadProductImage).mockResolvedValue({
+    product: { ...product, imageUrl: "https://example.com/new.webp" },
+    storagePath: "a/p/new.webp",
+  });
+  const { client } = setup();
+  client.setQueryData(["public-menu", "cafe-a"], { marker: "menu" });
+  client.setQueryData(["public-product", "cafe-a", "p"], { marker: "details" });
+  const { user, modal } = await edit();
+  await user.upload(
+    modal.getByLabelText(/Photo.*optional/),
+    new File(["png"], "photo.png", { type: "image/png" }),
+  );
+  await user.click(modal.getByRole("button", { name: "Upload image" }));
+  await waitFor(() =>
+    expect(client.getQueryState(["public-menu", "cafe-a"])?.isInvalidated).toBe(
+      true,
+    ),
+  );
+  expect(
+    client.getQueryState(["public-product", "cafe-a", "p"])?.isInvalidated,
+  ).toBe(true);
+});
+
+it.each([
+  { ...product, id: "other-product" },
+  { ...product, shopId: "other-shop" },
+])(
+  "does not cache an upload response for the wrong resource: %o",
+  async (wrongProduct) => {
+    vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+    vi.mocked(uploadProductImage).mockResolvedValue({
+      product: wrongProduct,
+      storagePath: "foreign",
+    });
+    const { client } = setup();
+    const { user, modal } = await edit();
+    await user.upload(
+      modal.getByLabelText(/Photo.*optional/),
+      new File(["png"], "photo.png", { type: "image/png" }),
+    );
+    await user.click(modal.getByRole("button", { name: "Upload image" }));
+    await modal.findByText(/couldn't confirm the image save/);
+    expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
+      products: [product],
+    });
+    expect(modal.getByRole("button", { name: "Upload image" })).toBeDisabled();
+  },
+);
