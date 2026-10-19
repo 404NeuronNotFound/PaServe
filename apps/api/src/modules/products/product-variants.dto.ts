@@ -1,3 +1,4 @@
+import { CATALOG_NAME_PATTERN, normalizeCatalogName } from '@paserve/contracts';
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
@@ -23,7 +24,7 @@ import {
 } from '@paserve/contracts';
 
 const normalize = ({ value }: { value: unknown }) =>
-  typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value;
+  typeof value === 'string' ? normalizeCatalogName(value, true) : value;
 const optional = (_object: unknown, value: unknown) => value !== undefined;
 
 class ChoiceFieldsDto {
@@ -78,7 +79,7 @@ export class CreateProductOptionGroupDto
   @IsString()
   @MinLength(1)
   @MaxLength(PRODUCT_VARIANT_LIMITS.nameMax)
-  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
+  @Matches(CATALOG_NAME_PATTERN)
   name!: string;
 }
 export class UpdateProductOptionGroupDto
@@ -90,7 +91,7 @@ export class UpdateProductOptionGroupDto
   @IsString()
   @MinLength(1)
   @MaxLength(PRODUCT_VARIANT_LIMITS.nameMax)
-  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
+  @Matches(CATALOG_NAME_PATTERN)
   name?: string;
 }
 export class CreateProductVariantDto
@@ -101,7 +102,7 @@ export class CreateProductVariantDto
   @IsString()
   @MinLength(1)
   @MaxLength(PRODUCT_VARIANT_LIMITS.nameMax)
-  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
+  @Matches(CATALOG_NAME_PATTERN)
   name!: string;
 
   @IsString()
@@ -117,7 +118,7 @@ export class UpdateProductVariantDto
   @IsString()
   @MinLength(1)
   @MaxLength(PRODUCT_VARIANT_LIMITS.nameMax)
-  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
+  @Matches(CATALOG_NAME_PATTERN)
   name?: string;
 
   @ValidateIf(optional)

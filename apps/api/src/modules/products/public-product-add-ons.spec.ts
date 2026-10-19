@@ -9,7 +9,7 @@ describe('internal selection pricing add-on limit', () => {
       { length: ADD_ON_LIMITS.selectionMax + 1 },
       (_, index) => ({
         addOn: {
-          id: `addon-${index}`,
+          id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
           name: `Choice ${index}`,
           priceAdjustment: new Prisma.Decimal('1.00'),
         },

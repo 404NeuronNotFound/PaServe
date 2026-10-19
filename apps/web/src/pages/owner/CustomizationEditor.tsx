@@ -1,3 +1,8 @@
+import {
+  isValidCatalogName,
+  normalizeCatalogName,
+  PRODUCT_VARIANT_LIMITS,
+} from "@paserve/contracts";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { FiTrash2, FiX } from "react-icons/fi";
 import {
@@ -104,8 +109,8 @@ export function CustomizationEditor({
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (busy || blocked) return;
-    const name = values.name.trim().replace(/\s+/g, " ");
-    if (!name || [...name].length > 80 || /[\p{Cc}\p{Cs}]/u.test(name)) {
+    const name = normalizeCatalogName(values.name, true);
+    if (!isValidCatalogName(name, PRODUCT_VARIANT_LIMITS.nameMax, true)) {
       setValidation(
         "Enter a name up to 80 characters without control characters.",
       );
@@ -123,7 +128,7 @@ export function CustomizationEditor({
     }
     if (
       !/^\d{1,7}$/.test(values.sortOrder) ||
-      Number(values.sortOrder) > 1000000
+      Number(values.sortOrder) > PRODUCT_VARIANT_LIMITS.sortOrderMax
     ) {
       setValidation("List position must be a whole number from 0 to 1000000.");
       setMoreSettings(true);

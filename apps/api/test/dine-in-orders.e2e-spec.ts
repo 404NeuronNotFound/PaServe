@@ -129,6 +129,24 @@ describe('dine-in order submission', () => {
   });
   const post = (body: unknown = payload()) =>
     request(app.getHttpServer()).post('/api/v1/menu/cafe/orders').send(body);
+  it('returns nested field errors and blocks injected pricing before opening a transaction', async () => {
+    const body = payload();
+    const result = await post({ ...body, items: [{ ...body.items[0], quantity: '2', price: 'private-input' }] }).expect(400);
+    expect(result.body).toMatchObject({ code: 'VALIDATION_ERROR', fieldErrors: {
+      'items.0.quantity': expect.arrayContaining([expect.any(String)]),
+      'items.0.price': expect.arrayContaining([expect.any(String)]),
+    } });
+    expect(JSON.stringify(result.body)).not.toContain('private-input');
+    expect(transaction).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+  it('preserves 300 Unicode characters in notes through pricing and persisted snapshots', async () => {
+    const body = payload();
+    const notes = '\u{1f600}'.repeat(300);
+    const result = await post({ ...body, items: [{ ...body.items[0], notes }] }).expect(201);
+    expect(result.body.order.items[0].notes).toBe(notes);
+    expect(createItems.mock.calls[0][0].data[0].notes).toBe(notes);
+  });
   it.each(['DINE_IN', 'TAKEOUT'] as const)(
     'captures shop display details for %s and preserves them across settings edits and retries',
     async (mode) => {

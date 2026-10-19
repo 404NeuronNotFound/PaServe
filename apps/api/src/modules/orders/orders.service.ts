@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import {
   PRODUCT_CURRENCY,
+  ORDER_INPUT_LIMITS,
+  isValidProductSelection,
   type CustomerOrderResponse,
 } from '@paserve/contracts';
 import { Prisma, type Order } from '../../generated/prisma/client.js';
@@ -35,6 +37,20 @@ export class OrdersService {
   ) {}
 
   async create(slug: string, dto: CreateOrderDto): Promise<CreatedGuestOrder> {
+    if (
+      !dto ||
+      !Array.isArray(dto.items) ||
+      !dto.items.length ||
+      dto.items.length > ORDER_INPUT_LIMITS.linesMax ||
+      !Array.from(dto.items).every(isValidProductSelection) ||
+      (dto.mode !== undefined &&
+        dto.mode !== 'DINE_IN' &&
+        dto.mode !== 'TAKEOUT')
+    )
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Provide valid order items and order mode.',
+      });
     const mode = dto.mode ?? 'DINE_IN';
     const unavailable = () =>
       new NotFoundException({
@@ -157,9 +173,17 @@ export class OrdersService {
           // shared-lock upgrade deadlocks between concurrent submissions.
           // Shop/table state stays locked until commit.
           const shops = await tx.$queryRaw<
-            { id: string; isActive: boolean; acceptingOrders: boolean;
-              name: string; displayName: string | null; address: string | null;
-              phone: string | null; contactEmail: string | null; website: string | null }[]
+            {
+              id: string;
+              isActive: boolean;
+              acceptingOrders: boolean;
+              name: string;
+              displayName: string | null;
+              address: string | null;
+              phone: string | null;
+              contactEmail: string | null;
+              website: string | null;
+            }[]
           >`SELECT "id", "isActive", "acceptingOrders", "name", "displayName", "address", "phone", "contactEmail", "website" FROM "shops" WHERE "slug" = ${slug} FOR UPDATE`;
           const shop = shops[0];
           if (!shop) throw unavailable();

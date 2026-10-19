@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import {
   CUSTOMER_NOTE_MAX_LENGTH,
-  CUSTOMER_NOTE_PATTERN,
+  isValidCustomerNote,
   normalizeCustomerNote,
 } from "@paserve/contracts";
 import { FiEdit2 } from "react-icons/fi";
@@ -31,9 +31,7 @@ export function CartNotesEditor({
     onEditingChange?.(key, editing);
     return () => onEditingChange?.(key, false);
   }, [onEditingChange, item.lineId, editing]);
-  const valid =
-    draft.length <= CUSTOMER_NOTE_MAX_LENGTH &&
-    CUSTOMER_NOTE_PATTERN.test(draft);
+  const valid = isValidCustomerNote(draft);
   const changed =
     normalizeCustomerNote(draft) !==
     normalizeCustomerNote(expected.notes ?? "");
@@ -97,7 +95,7 @@ export function CartNotesEditor({
         ref={textarea}
         id={id}
         rows={3}
-        maxLength={CUSTOMER_NOTE_MAX_LENGTH}
+        maxLength={CUSTOMER_NOTE_MAX_LENGTH * 2}
         value={draft}
         aria-invalid={!valid}
         aria-describedby={`${id}-hint${!valid ? ` ${id}-invalid` : ""}${error ? ` ${id}-error` : ""}`}
@@ -107,7 +105,7 @@ export function CartNotesEditor({
         }}
       />
       <p id={`${id}-hint`} className="field-hint">
-        Preparation requests · {draft.length}/{CUSTOMER_NOTE_MAX_LENGTH}
+        Preparation requests · {[...draft].length}/{CUSTOMER_NOTE_MAX_LENGTH}
         {changed ? " · Unsaved notes" : ""}
       </p>
       {!valid && (

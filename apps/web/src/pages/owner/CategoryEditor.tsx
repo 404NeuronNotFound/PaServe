@@ -1,3 +1,4 @@
+import { isValidCatalogName, normalizeCatalogName } from "@paserve/contracts";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -101,13 +102,13 @@ export function CategoryEditor({
     if (running.current || unavailable || closing || !dirty) return;
     const invalidName = !name.trim()
       ? "Enter a category name."
-      : name.trim().length > CATEGORY_LIMITS.nameMax
+      : [...normalizeCatalogName(name, true)].length > CATEGORY_LIMITS.nameMax
         ? `Use no more than ${CATEGORY_LIMITS.nameMax} characters.`
-        : /\p{Cc}/u.test(name)
+        : !isValidCatalogName(name, CATEGORY_LIMITS.nameMax, true)
           ? "Use a category name without control characters."
           : "";
     const invalidDescription =
-      description.trim().length > CATEGORY_LIMITS.descriptionMax
+      [...description.trim()].length > CATEGORY_LIMITS.descriptionMax
         ? `Use no more than ${CATEGORY_LIMITS.descriptionMax} characters.`
         : "";
     setNameError(invalidName);
@@ -222,7 +223,7 @@ export function CategoryEditor({
                 ref={input}
                 id="edit-category-name"
                 required
-                maxLength={CATEGORY_LIMITS.nameMax}
+                maxLength={CATEGORY_LIMITS.nameMax * 2}
                 value={name}
                 autoComplete="off"
                 disabled={mutation.isPending || unavailable || closing}
@@ -254,7 +255,7 @@ export function CategoryEditor({
                 rows={4}
                 placeholder="What makes this part of your menu special?"
                 value={description}
-                maxLength={CATEGORY_LIMITS.descriptionMax}
+                maxLength={CATEGORY_LIMITS.descriptionMax * 2}
                 disabled={mutation.isPending || unavailable || closing}
                 aria-invalid={Boolean(descriptionError)}
                 aria-describedby={`category-description-hint${descriptionError ? " category-description-error" : ""}`}
@@ -268,7 +269,7 @@ export function CategoryEditor({
                 A short introduction, up to {CATEGORY_LIMITS.descriptionMax}{" "}
                 characters.
                 <span className="category-character-count">
-                  {description.length}/{CATEGORY_LIMITS.descriptionMax}
+                  {[...description].length}/{CATEGORY_LIMITS.descriptionMax}
                 </span>
               </p>
               {descriptionError && (

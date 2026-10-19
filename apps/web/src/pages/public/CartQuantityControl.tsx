@@ -1,3 +1,4 @@
+import { ORDER_INPUT_LIMITS, isValidOrderQuantity } from "@paserve/contracts";
 import { useEffect, useId, useRef, useState } from "react";
 import { FiMinus, FiPlus } from "react-icons/fi";
 import type { ProductSelectionQuoteResponse } from "@paserve/contracts";
@@ -40,21 +41,14 @@ export function CartQuantityControl({
     };
   }, []);
   const count = Number(draft);
-  const valid =
-    /^\d+$/.test(draft) && Number.isInteger(count) && count >= 1 && count <= 99;
+  const valid = /^\d+$/.test(draft) && isValidOrderQuantity(count);
   const draftPreview =
     valid && count !== item.quantity
       ? createCartPricePreview({ ...item, quantity: count })
       : undefined;
 
   async function update(quantity: number) {
-    if (
-      submitting.current ||
-      !Number.isInteger(quantity) ||
-      quantity < 1 ||
-      quantity > 99
-    )
-      return;
+    if (submitting.current || !isValidOrderQuantity(quantity)) return;
     if (quantity === item.quantity) {
       setDraft(String(quantity));
       setError("");
@@ -130,7 +124,7 @@ export function CartQuantityControl({
             type="number"
             inputMode="numeric"
             min="1"
-            max="99"
+            max={ORDER_INPUT_LIMITS.quantityMax}
             step="1"
             value={draft}
             aria-invalid={!valid}
@@ -144,7 +138,7 @@ export function CartQuantityControl({
             type="button"
             className="secondary-button"
             aria-label={`Increase quantity for ${item.productName}`}
-            disabled={!valid || count >= 99}
+            disabled={!valid || count >= ORDER_INPUT_LIMITS.quantityMax}
             onClick={() => void update(count + 1)}
           >
             <FiPlus aria-hidden="true" />

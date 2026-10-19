@@ -540,7 +540,7 @@ export interface ProductImageResponse extends CreateProductResponse {
   storagePath: string;
 }
 export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
-export const PRODUCT_PRICE_PATTERN = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
+export const PRODUCT_PRICE_PATTERN = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$(?![\s\S])/;
 /** Application currency; product prices are exact decimal strings in PHP. */
 export const PRODUCT_CURRENCY = "PHP" as const;
 export const PRODUCT_VARIANT_LIMITS = {
@@ -1480,4 +1480,37 @@ export interface CreateTableResponse {
 }
 export interface TablesResponse {
   tables: RestaurantTable[];
+}
+
+
+/** Shared syntax/size rules only. Live permissions, availability and pricing belong to the API. */
+export const ORDER_INPUT_LIMITS = { linesMax: 100, quantityMin: 1, quantityMax: 99, variantsMax: 50 } as const;
+export const CATALOG_NAME_PATTERN = /^[^\p{Cc}\p{Cs}]*$(?![\s\S])/u;
+export function normalizeCatalogName(value: string, collapseSpaces = false): string {
+  // Preserve forbidden input so normalization cannot silently make it valid.
+  if (!CATALOG_NAME_PATTERN.test(value)) return value;
+  return collapseSpaces ? value.trim().replace(/\s+/gu, " ") : value.trim();
+}
+export function isValidCatalogName(value: unknown, maxLength: number, collapseSpaces = false): value is string {
+  if (typeof value !== "string" || !CATALOG_NAME_PATTERN.test(value)) return false;
+  const length = [...normalizeCatalogName(value, collapseSpaces)].length;
+  return length >= 1 && length <= maxLength;
+}
+export function isValidOrderQuantity(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) &&
+    value >= ORDER_INPUT_LIMITS.quantityMin && value <= ORDER_INPUT_LIMITS.quantityMax;
+}
+export function isValidCustomerNote(value: unknown): value is string {
+  return typeof value === "string" && CUSTOMER_NOTE_PATTERN.test(value) &&
+    [...(normalizeCustomerNote(value) ?? "")].length <= CUSTOMER_NOTE_MAX_LENGTH;
+}
+/** Guards internal callers as well as HTTP DTOs; never establishes ownership or price. */
+export function isValidProductSelection(value: unknown): value is ProductSelectionRequest {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const input = value as Record<string, unknown>;
+  const ids = (raw: unknown, max: number): boolean => Array.isArray(raw) && raw.length <= max &&
+    Array.from(raw).every(id => typeof id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$(?![\s\S])/i.test(id)) &&
+    new Set(raw).size === raw.length;
+  return isValidOrderQuantity(input.quantity) && ids(input.variantIds, ORDER_INPUT_LIMITS.variantsMax) &&
+    ids(input.addOnIds, ADD_ON_LIMITS.selectionMax) && (input.notes === undefined || isValidCustomerNote(input.notes));
 }

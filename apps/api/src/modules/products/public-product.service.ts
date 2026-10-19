@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import {
   ADD_ON_LIMITS,
+  isValidProductSelection,
   PRODUCT_CURRENCY,
   normalizeCustomerNote,
   type PublicProductDetailsResponse,
@@ -84,6 +85,11 @@ export class PublicProductService {
     dto: ProductSelectionDto,
     db?: Prisma.TransactionClient,
   ): Promise<ProductSelectionQuoteResponse> {
+    if (!isValidProductSelection(dto))
+      throw new BadRequestException({
+        code: 'PRODUCT_SELECTION_INVALID',
+        message: 'Choose valid quantities, options and notes for this product.',
+      });
     const details = await this.details(slug, productId, db);
     if (!details.product.isOrderable) throw unavailable();
     const invalid = () =>

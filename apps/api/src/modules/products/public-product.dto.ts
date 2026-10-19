@@ -14,6 +14,7 @@ import {
 } from 'class-validator';
 import {
   ADD_ON_LIMITS,
+  ORDER_INPUT_LIMITS,
   CUSTOMER_NOTE_MAX_LENGTH,
   CUSTOMER_NOTE_PATTERN,
   normalizeCustomerNote,
@@ -22,7 +23,7 @@ import {
 
 export class ProductSelectionDto implements ProductSelectionRequest {
   @IsArray()
-  @ArrayMaxSize(50)
+  @ArrayMaxSize(ORDER_INPUT_LIMITS.variantsMax)
   @ArrayUnique()
   @IsUUID('4', { each: true })
   variantIds!: string[];
@@ -34,8 +35,8 @@ export class ProductSelectionDto implements ProductSelectionRequest {
   addOnIds!: string[];
 
   @IsInt()
-  @Min(1)
-  @Max(99)
+  @Min(ORDER_INPUT_LIMITS.quantityMin)
+  @Max(ORDER_INPUT_LIMITS.quantityMax)
   quantity!: number;
 
   @Transform(({ value }: { value: unknown }) =>

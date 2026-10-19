@@ -12,7 +12,10 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { PUBLIC_TABLE_CODE_PATTERN } from '@paserve/contracts';
+import {
+  ORDER_INPUT_LIMITS,
+  PUBLIC_TABLE_CODE_PATTERN,
+} from '@paserve/contracts';
 import { ProductSelectionDto } from '../products/public-product.dto.js';
 
 export class OrderLineDto extends ProductSelectionDto {
@@ -46,7 +49,7 @@ export class CreateOrderDto {
 
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(100)
+  @ArrayMaxSize(ORDER_INPUT_LIMITS.linesMax)
   @IsObject({ each: true })
   @ValidateNested({ each: true })
   @Type(() => OrderLineDto)

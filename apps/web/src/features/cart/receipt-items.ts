@@ -1,3 +1,4 @@
+import { ORDER_INPUT_LIMITS } from "@paserve/contracts";
 import type { ProductSelectionQuoteResponse } from "@paserve/contracts";
 import { parseCartLine } from "./cart-storage";
 import { isOrderTotal } from "./order-receipt-fields";
@@ -8,7 +9,12 @@ export function parseReceiptItems(
   value: unknown,
   total: string,
 ): ProductSelectionQuoteResponse[] | null {
-  if (!Array.isArray(value) || !value.length || value.length > 100) return null;
+  if (
+    !Array.isArray(value) ||
+    !value.length ||
+    value.length > ORDER_INPUT_LIMITS.linesMax
+  )
+    return null;
   const items: ProductSelectionQuoteResponse[] = [];
   for (let index = 0; index < value.length; index++) {
     const raw: unknown = value[index];

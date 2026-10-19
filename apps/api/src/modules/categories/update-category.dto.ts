@@ -1,3 +1,4 @@
+import { CATALOG_NAME_PATTERN, normalizeCatalogName } from '@paserve/contracts';
 import {
   CATEGORY_LIMITS,
   type UpdateCategoryRequest,
@@ -13,12 +14,12 @@ import {
 export class UpdateCategoryDto implements UpdateCategoryRequest {
   @ValidateIf((_object, value: unknown) => value !== undefined)
   @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value,
+    typeof value === 'string' ? normalizeCatalogName(value, true) : value,
   )
   @IsString({ message: 'Enter a category name.' })
   @MinLength(1, { message: 'Enter a category name.' })
   @MaxLength(CATEGORY_LIMITS.nameMax)
-  @Matches(/^\P{Cc}*$/u, {
+  @Matches(CATALOG_NAME_PATTERN, {
     message: 'Use a category name without control characters.',
   })
   name?: string;

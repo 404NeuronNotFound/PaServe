@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import {
-  CUSTOMER_NOTE_MAX_LENGTH,
-  CUSTOMER_NOTE_PATTERN,
+  isValidCustomerNote,
+  isValidOrderQuantity,
   normalizeCustomerNote,
 } from "@paserve/contracts";
 import type {
@@ -274,10 +274,7 @@ export function createCartStore(
         };
       }),
     updateNotes: (slug, expected, draft) => {
-      if (
-        draft.length > CUSTOMER_NOTE_MAX_LENGTH ||
-        !CUSTOMER_NOTE_PATTERN.test(draft)
-      ) {
+      if (!isValidCustomerNote(draft)) {
         return false;
       }
       const notes = normalizeCustomerNote(draft);
@@ -318,9 +315,7 @@ export function createCartStore(
           replacement.notes !== expected.notes ||
           JSON.stringify(replacement.addOns.map((addOn) => addOn.id).sort()) !==
             JSON.stringify(expected.addOns.map((addOn) => addOn.id).sort()) ||
-          !Number.isInteger(quote.quantity) ||
-          quote.quantity < 1 ||
-          quote.quantity > 99 ||
+          !isValidOrderQuantity(quote.quantity) ||
           quote.quantity !== pricePreview.quantity
         )
           return state;

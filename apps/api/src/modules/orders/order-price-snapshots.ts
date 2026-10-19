@@ -1,6 +1,8 @@
 import {
-  CUSTOMER_NOTE_MAX_LENGTH,
-  CUSTOMER_NOTE_PATTERN,
+  isValidCustomerNote,
+  isValidOrderQuantity,
+  ORDER_INPUT_LIMITS,
+  ADD_ON_LIMITS,
   PRODUCT_CURRENCY,
   type ProductSelectionQuoteResponse,
 } from '@paserve/contracts';
@@ -20,20 +22,15 @@ export function copyPriceSnapshot(
   if (
     !snapshotText(quote.productId) ||
     !snapshotText(quote.productName) ||
-    !Number.isInteger(quote.quantity) ||
-    quote.quantity < 1 ||
-    quote.quantity > 99 ||
+    !isValidOrderQuantity(quote.quantity) ||
     !snapshotMoney(quote.basePrice) ||
     !snapshotMoney(quote.unitPrice) ||
     !snapshotMoney(quote.totalPrice) ||
-    (quote.notes !== undefined &&
-      (typeof quote.notes !== 'string' ||
-        quote.notes.length > CUSTOMER_NOTE_MAX_LENGTH ||
-        !CUSTOMER_NOTE_PATTERN.test(quote.notes))) ||
+    (quote.notes !== undefined && !isValidCustomerNote(quote.notes)) ||
     !Array.isArray(quote.variants) ||
-    quote.variants.length > 50 ||
+    quote.variants.length > ORDER_INPUT_LIMITS.variantsMax ||
     !Array.isArray(quote.addOns) ||
-    quote.addOns.length > 50 ||
+    quote.addOns.length > ADD_ON_LIMITS.selectionMax ||
     quote.variants.some(
       (option) =>
         !option ||

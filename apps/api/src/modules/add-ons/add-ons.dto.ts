@@ -1,3 +1,4 @@
+import { CATALOG_NAME_PATTERN, normalizeCatalogName } from '@paserve/contracts';
 import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -29,7 +30,7 @@ import {
 } from '@paserve/contracts';
 
 const normalize = ({ value }: { value: unknown }) =>
-  typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value;
+  typeof value === 'string' ? normalizeCatalogName(value, true) : value;
 const optional = (_object: unknown, value: unknown) => value !== undefined;
 class AddOnFieldsDto {
   @ValidateIf(optional)
@@ -50,7 +51,7 @@ export class CreateAddOnDto
   @IsString()
   @MinLength(1)
   @MaxLength(ADD_ON_LIMITS.nameMax)
-  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
+  @Matches(CATALOG_NAME_PATTERN)
   name!: string;
 
   @IsString()
@@ -66,7 +67,7 @@ export class UpdateAddOnDto
   @IsString()
   @MinLength(1)
   @MaxLength(ADD_ON_LIMITS.nameMax)
-  @Matches(/^[^\p{Cc}\p{Cs}]*$/u)
+  @Matches(CATALOG_NAME_PATTERN)
   name?: string;
 
   @ValidateIf(optional)

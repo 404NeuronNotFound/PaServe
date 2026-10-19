@@ -1,3 +1,4 @@
+import { isValidCatalogName } from "@paserve/contracts";
 import { SelectField } from "../../components/forms/SelectField";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -287,17 +288,13 @@ export function ProductEditor({
       return;
     }
     const invalid: Record<string, string> = {};
-    if (
-      !name.trim() ||
-      name.trim().length > PRODUCT_LIMITS.nameMax ||
-      /\p{Cc}/u.test(name)
-    )
+    if (!isValidCatalogName(name, PRODUCT_LIMITS.nameMax))
       invalid.name =
         "Enter a product name, up to 120 characters, without control characters.";
     if (!PRODUCT_PRICE_PATTERN.test(price))
       invalid.price =
         "Use a price from 0 to 99999999.99 with up to two decimal places.";
-    if (description.trim().length > PRODUCT_LIMITS.descriptionMax)
+    if ([...description.trim()].length > PRODUCT_LIMITS.descriptionMax)
       invalid.description = "Use no more than 2000 characters.";
     if (
       !/^\d+$/.test(sortOrder) ||
@@ -472,7 +469,7 @@ export function ProductEditor({
                 name="name"
                 autoComplete="off"
                 required
-                maxLength={PRODUCT_LIMITS.nameMax}
+                maxLength={PRODUCT_LIMITS.nameMax * 2}
                 value={name}
                 disabled={disabled}
                 aria-invalid={Boolean(errors.name)}
@@ -616,7 +613,7 @@ export function ProductEditor({
                 id="product-description"
                 name="description"
                 rows={3}
-                maxLength={PRODUCT_LIMITS.descriptionMax}
+                maxLength={PRODUCT_LIMITS.descriptionMax * 2}
                 value={description}
                 disabled={disabled}
                 aria-invalid={Boolean(errors.description)}
@@ -631,7 +628,7 @@ export function ProductEditor({
                 id="product-description-hint"
                 className="field-hint category-character-count"
               >
-                {description.length}/{PRODUCT_LIMITS.descriptionMax}
+                {[...description].length}/{PRODUCT_LIMITS.descriptionMax}
               </p>
               {fieldError("description")}
             </div>

@@ -1,3 +1,4 @@
+import { CATALOG_NAME_PATTERN, normalizeCatalogName } from '@paserve/contracts';
 import { Transform } from 'class-transformer';
 import {
   IsString,
@@ -23,11 +24,13 @@ import {
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 export class CreateProductDto implements CreateProductRequest {
-  @Transform(trim)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? normalizeCatalogName(value) : value,
+  )
   @IsString()
   @MinLength(1)
   @MaxLength(PRODUCT_LIMITS.nameMax)
-  @Matches(/^\P{Cc}*$/u)
+  @Matches(CATALOG_NAME_PATTERN)
   name!: string;
 
   @IsString()

@@ -1,9 +1,13 @@
+import {
+  ORDER_INPUT_LIMITS,
+  isValidOrderQuantity,
+  isValidCustomerNote,
+} from "@paserve/contracts";
 import { useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ADD_ON_LIMITS,
   CUSTOMER_NOTE_MAX_LENGTH,
-  CUSTOMER_NOTE_PATTERN,
   normalizeCustomerNote,
   type PublicMenuResponse,
   type PublicTableContext,
@@ -171,14 +175,8 @@ function ProductDetailsForm({
     };
   }, []);
   const count = Number(quantity);
-  const validQuantity =
-    /^\d+$/.test(quantity) &&
-    Number.isInteger(count) &&
-    count >= 1 &&
-    count <= 99;
-  const validNotes =
-    notes.length <= CUSTOMER_NOTE_MAX_LENGTH &&
-    CUSTOMER_NOTE_PATTERN.test(notes);
+  const validQuantity = /^\d+$/.test(quantity) && isValidOrderQuantity(count);
+  const validNotes = isValidCustomerNote(notes);
   const selectedVariants = variants.filter((variant) =>
     Object.values(choices).includes(variant.id),
   );
@@ -440,7 +438,7 @@ function ProductDetailsForm({
                 type="number"
                 inputMode="numeric"
                 min="1"
-                max="99"
+                max={ORDER_INPUT_LIMITS.quantityMax}
                 step="1"
                 value={quantity}
                 onChange={(event) => setQuantity(event.target.value)}
@@ -452,7 +450,9 @@ function ProductDetailsForm({
               <button
                 type="button"
                 aria-label="Increase quantity"
-                disabled={!validQuantity || count >= 99}
+                disabled={
+                  !validQuantity || count >= ORDER_INPUT_LIMITS.quantityMax
+                }
                 onClick={() => setQuantity(String(count + 1))}
               >
                 <FiPlus aria-hidden="true" />
@@ -470,14 +470,15 @@ function ProductDetailsForm({
               id={`${prefix}-notes`}
               rows={2}
               placeholder="e.g. Less ice, no onions…"
-              maxLength={CUSTOMER_NOTE_MAX_LENGTH}
+              maxLength={CUSTOMER_NOTE_MAX_LENGTH * 2}
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               aria-invalid={!validNotes}
               aria-describedby={`${prefix}-notes-hint${!validNotes ? ` ${prefix}-notes-error` : ""}`}
             />
             <p id={`${prefix}-notes-hint`} className="field-hint">
-              Preparation requests · {notes.length}/{CUSTOMER_NOTE_MAX_LENGTH}
+              Preparation requests · {[...notes].length}/
+              {CUSTOMER_NOTE_MAX_LENGTH}
             </p>
             {!validNotes && (
               <p

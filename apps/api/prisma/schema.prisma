@@ -50,6 +50,7 @@ model AuthSession {
   @@map("auth_sessions")
 }
 
+// Preserve SQL name/description length CHECKs from validation_hardening.
 model Shop {
   id          String   @id @default(uuid())
   name        String
@@ -253,6 +254,7 @@ model StaffAuditEvent {
   @@map("staff_audit_events")
 }
 
+// Preserve SQL name/description length CHECKs from validation_hardening.
 model Category {
   id        String   @id @default(uuid())
   shopId    String
@@ -274,6 +276,7 @@ model Category {
   @@map("categories")
 }
 
+// Preserve SQL name/description length and sort-order CHECKs from validation_hardening.
 model Product {
   id          String        @id @default(uuid())
   shopId      String

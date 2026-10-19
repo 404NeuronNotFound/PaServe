@@ -1,6 +1,8 @@
 import {
-  CUSTOMER_NOTE_MAX_LENGTH,
-  CUSTOMER_NOTE_PATTERN,
+  isValidCustomerNote,
+  isValidOrderQuantity,
+  ORDER_INPUT_LIMITS,
+  ADD_ON_LIMITS,
   normalizeCustomerNote,
 } from "@paserve/contracts";
 import type { CartItem, CartPricePreview } from "./cart";
@@ -34,7 +36,7 @@ function cents(value: string): bigint {
   return BigInt(value.replace(".", ""));
 }
 function quantity(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 99;
+  return isValidOrderQuantity(value);
 }
 
 function preview(value: unknown, count: number): CartPricePreview | null {
@@ -54,11 +56,10 @@ export function parseCartLine(value: unknown): CartItem | null {
   if (!record(value) || !text(value.lineId) || !text(value.productId) || !text(value.productName) ||
     value.currency !== "PHP" || !quantity(value.quantity) ||
     !money(value.basePrice) || !money(value.unitPrice) || !money(value.totalPrice) ||
-    !Array.isArray(value.variants) || value.variants.length > 50 ||
-    !Array.isArray(value.addOns) || value.addOns.length > 50) return null;
+    !Array.isArray(value.variants) || value.variants.length > ORDER_INPUT_LIMITS.variantsMax ||
+    !Array.isArray(value.addOns) || value.addOns.length > ADD_ON_LIMITS.selectionMax) return null;
   if (cents(value.unitPrice) * BigInt(value.quantity) !== cents(value.totalPrice)) return null;
-  if (value.notes !== undefined && (typeof value.notes !== "string" ||
-    value.notes.length > CUSTOMER_NOTE_MAX_LENGTH || !CUSTOMER_NOTE_PATTERN.test(value.notes))) return null;
+  if (value.notes !== undefined && !isValidCustomerNote(value.notes)) return null;
   const variants: CartItem["variants"] = [];
   const addOns: CartItem["addOns"] = [];
   for (const variant of value.variants) {
