@@ -4,6 +4,7 @@ import { isAxiosError } from "axios";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { ApiErrorResponse } from "@paserve/contracts";
 import { AuthLayout } from "../../components/layout/AuthLayout";
+import { AccessSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { LoginForm } from "../../features/auth/components/LoginForm";
 import { RegistrationForm } from "../../features/auth/components/RegistrationForm";
 import { getCurrentUser, logoutAccount } from "../../features/auth/api/session";
@@ -141,14 +142,14 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
           <Link to="/login">Go to sign in</Link>
         </>
       ) : session.isPending || session.isFetching ? (
-        <p role="status">Checking your session…</p>
+        <AccessSkeleton label="Checking your session…" view="invitation" />
       ) : session.isSuccess ? (
         <>
           <p>
             Signed in as <strong>{session.data.user.email}</strong>.
           </p>
           {preview.isPending || preview.isFetching ? (
-            <p role="status">Checking your invitation…</p>
+            <AccessSkeleton label="Checking your invitation…" view="invitation" />
           ) : preview.isError ? (
             <>
               <InlineMessage>

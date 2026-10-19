@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -482,7 +483,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               }}
             />
           ) : query.isPending ? (
-            <InlineMessage tone="info">Loading categories…</InlineMessage>
+            <ListSkeleton label="Loading categories…" />
           ) : query.isError ? (
             <>
               <InlineMessage>

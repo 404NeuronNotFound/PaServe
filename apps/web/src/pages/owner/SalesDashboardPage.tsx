@@ -1,3 +1,4 @@
+import { MetricsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -442,7 +443,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
           <InlineMessage>Choose a valid business date.</InlineMessage>
         ))}
       {valid && query.isPending && (
-        <InlineMessage tone="info">Loading sales…</InlineMessage>
+        <MetricsSkeleton />
       )}
       {valid && query.isError && (
         <div className="sales-error">

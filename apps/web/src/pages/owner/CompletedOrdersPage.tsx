@@ -1,3 +1,4 @@
+import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import type {
@@ -111,7 +112,7 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
         <span>Updates every 15 seconds · Times in Manila</span>
       </div>
       {query.isPending && (
-        <InlineMessage tone="info">Loading completed orders…</InlineMessage>
+        <OrderListSkeleton label="Loading completed orders…" />
       )}
       {query.isError && (
         <div className="active-orders-message">

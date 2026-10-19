@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Navigate, useLocation } from "react-router-dom";
 import { isAxiosError } from "axios";
 import { currentUserKey, getCurrentUser } from "../api/session";
+import { AccessSkeleton } from "../../../components/feedback/LoadingSkeleton";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -20,8 +21,17 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   // their existing draft behavior during a background session check.
   if (session.isPending || (cashierRequest && session.isFetching))
     return (
-      <main className="connection-page" role="status">
-        Checking your session…
+      <main className="skeleton-session-page phase-two">
+        <AccessSkeleton
+          label="Checking your session…"
+          view={
+            cashierRequest
+              ? "cashier"
+              : /\/kitchen(?:\/|$)/.test(location.pathname)
+                ? "kitchen"
+                : "workspace"
+          }
+        />
       </main>
     );
   if (session.isError) {

@@ -1,3 +1,4 @@
+import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -78,7 +79,7 @@ export function TopProducts({
         </p>
       </details>
       {query.isPending && (
-        <InlineMessage tone="info">Loading top products…</InlineMessage>
+        <ReportSkeleton label="Loading top products…" />
       )}
       {query.isError && (
         <InlineMessage>

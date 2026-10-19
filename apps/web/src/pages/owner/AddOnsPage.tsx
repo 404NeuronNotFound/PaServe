@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -112,7 +113,7 @@ function AddOnLibrary() {
           current data.
         </InlineMessage>
       )}
-      {query.isPending && <p role="status">Loading add-ons...</p>}
+      {query.isPending && <ListSkeleton label="Loading add-ons..." />}
       {query.isSuccess && (
         <section
           className="customization-panel addon-library-panel"

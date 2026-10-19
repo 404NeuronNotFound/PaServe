@@ -1,16 +1,18 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { PublicMenuPage } from "./PublicMenuPage";
 import { subscribeOrderStream } from "../../features/orders/new-order-events";
 import { api } from "../../lib/api/client";
+import { rememberMenuLayoutHint } from "../../features/shops/menu-layout-hint";
 
 vi.mock("../../features/orders/new-order-events", () => ({subscribeOrderStream: vi.fn(() => vi.fn())}));
 vi.mock("../../lib/api/client", () => ({ api: { get: vi.fn() } }));
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  sessionStorage.removeItem("paserve.public-menu-layout.v1");
 });
 function setup() {
   const client = new QueryClient();
@@ -36,6 +38,54 @@ const menu = {
   products: [],
   featuredProducts: [],
 };
+
+it("replaces the initial skeleton with content and keeps content during background refresh", async () => {
+  let complete!: (response: { data: typeof menu }) => void;
+  vi.mocked(api.get).mockReturnValueOnce(new Promise((resolve) => { complete = resolve; }));
+  const client = setup();
+  expect(screen.getByRole("status")).toHaveTextContent("Loading menu");
+  expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  expect(screen.getByRole("main").querySelector('[aria-busy="true"]')).not.toBeNull();
+  expect(screen.getByRole("main")).toHaveAttribute("data-layout", "loading");
+  expect(document.querySelector(".menu-product-card")).toBeNull();
+
+  await act(async () => { complete({ data: menu }); });
+  await screen.findByRole("heading", { name: "Cafe" });
+  expect(screen.queryByText("Loading menu…")).not.toBeInTheDocument();
+
+  vi.mocked(api.get).mockReturnValueOnce(new Promise((resolve) => { complete = resolve; }));
+  act(() => { void client.invalidateQueries({ queryKey: ["public-menu", "cafe"] }); });
+  expect(screen.getByRole("heading", { name: "Cafe" })).toBeInTheDocument();
+  expect(screen.queryByText("Loading menu…")).not.toBeInTheDocument();
+  await act(async () => { complete({ data: menu }); });
+});
+
+it("replaces a failed initial skeleton with the existing retry action", async () => {
+  vi.mocked(api.get).mockRejectedValueOnce(new Error("Connection lost"));
+  setup();
+  expect(screen.getByRole("status")).toHaveTextContent("Loading menu");
+  await screen.findByRole("heading", { name: "Menu unavailable" });
+  expect(screen.queryByText("Loading menu…")).not.toBeInTheDocument();
+  vi.mocked(api.get).mockResolvedValueOnce({ data: menu });
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  await screen.findByRole("heading", { name: "Cafe" });
+});
+
+it.each(["grid", "list", "compact"] as const)("keeps the known %s geometry during a repeat visit", async (menuLayout) => {
+  const response = { ...menu, shop: { ...menu.shop, menuLayout, bannerUrl: "https://example.com/banner.webp" } };
+  rememberMenuLayoutHint(response);
+  let complete!: (result: { data: typeof response }) => void;
+  vi.mocked(api.get).mockReturnValueOnce(new Promise((resolve) => { complete = resolve; }));
+  setup();
+  expect(screen.getByRole("main")).toHaveAttribute("data-layout", menuLayout);
+  expect(document.querySelector(".menu-shop-hero .shop-banner")).not.toBeNull();
+  await act(async () => complete({ data: response }));
+  await screen.findByRole("heading", { name: "Cafe" });
+  expect(screen.getByRole("main")).toHaveAttribute("data-layout", menuLayout);
+  expect(document.querySelector(".menu-shop-hero .shop-banner")).not.toBeNull();
+  expect(document.querySelector(".loading-skeleton")).toBeNull();
+});
 
 it.each(["grid", "list", "compact"])(
   "renders category descriptions in configured order and reflects visibility/order refreshes in %s",
@@ -439,10 +489,13 @@ it("hides a broken banner while keeping the logo and menu available", async () =
     },
   });
   setup();
+  await screen.findByRole("img", { name: "Cafe banner" });
+  const frame = document.querySelector(".menu-shop-hero .shop-banner");
   fireEvent.error(await screen.findByRole("img", { name: "Cafe banner" }));
   expect(
     screen.queryByRole("img", { name: "Cafe banner" }),
   ).not.toBeInTheDocument();
+  expect(document.querySelector(".menu-shop-hero .shop-banner")).toBe(frame);
   expect(screen.getByRole("img", { name: "Cafe logo" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Cafe" })).toBeInTheDocument();
 });

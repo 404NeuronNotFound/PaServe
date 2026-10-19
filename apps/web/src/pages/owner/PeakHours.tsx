@@ -1,3 +1,4 @@
+import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { getPeakHours } from "../../features/orders/peak-hours";
@@ -63,7 +64,7 @@ export function PeakHours({
         </p>
       </details>
       {query.isPending && (
-        <InlineMessage tone="info">Loading peak hours…</InlineMessage>
+        <ReportSkeleton label="Loading peak hours…" chart />
       )}
       {query.isError && (
         <InlineMessage>

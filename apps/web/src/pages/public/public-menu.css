@@ -716,8 +716,14 @@
 }
 @media (max-width: 600px) {
   .public-menu {
+  min-height: 100svh;
     padding: 16px 16px 32px;
   }
+}
+/* Reserve the scrollbar before a long response arrives. Applies to full pages,
+   not the owner preview's document. */
+html:has(main.public-menu) {
+  scrollbar-gutter: stable;
 }
 @media (max-height: 600px) {
   .menu-browse-bar {

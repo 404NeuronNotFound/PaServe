@@ -12,6 +12,7 @@ import type { CurrentUserResponse } from "@paserve/contracts";
 import { currentUserKey } from "../auth/api/session";
 import { getShopMembership } from "./api/context";
 import { DashboardFrame } from "../../components/layout/OwnerDashboardLayout";
+import { AccessSkeleton } from "../../components/feedback/LoadingSkeleton";
 import {
   ActiveShopContext,
   activeShopKey,
@@ -59,9 +60,16 @@ export function ActiveShopRoute() {
   if (context.isPending || context.isFetching)
     return (
       <DashboardFrame membership={null}>
-        <section className="dashboard-status" role="status">
-          Checking shop access…
-        </section>
+        <AccessSkeleton
+          label="Checking shop access…"
+          view={
+            /\/cashier(?:\/|$)/.test(location.pathname)
+              ? "cashier"
+              : /\/kitchen(?:\/|$)/.test(location.pathname)
+                ? "kitchen"
+                : "workspace"
+          }
+        />
       </DashboardFrame>
     );
   if (status === 401)

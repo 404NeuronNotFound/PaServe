@@ -1,3 +1,4 @@
+import { MenuSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import "./public-menu.css";
 import { PublicMenuView } from "./PublicMenuView";
 import { useMenuAvailability } from "../../features/products/useMenuAvailability";
 import { saveOrderReceipt } from "../../features/cart/order-receipt";
+import { readMenuLayoutHint, rememberMenuLayoutHint } from "../../features/shops/menu-layout-hint";
 import {
   useCustomerTables,
   customerTableCode,
@@ -93,11 +95,12 @@ function PublicMenuSession({
       ? `${menu.data.shop.name} menu · PaServe`
       : "Menu · PaServe";
   }, [menu.data]);
+  useEffect(() => {
+    if (menu.isSuccess && contextMatches) rememberMenuLayoutHint(menu.data);
+  }, [menu.isSuccess, menu.data, contextMatches]);
   if (menu.isPending)
     return (
-      <main className="public-menu" role="status">
-        Loading menu…
-      </main>
+      <MenuSkeleton {...readMenuLayoutHint(shopSlug)} />
     );
   if (menu.isError || !contextMatches)
     return (

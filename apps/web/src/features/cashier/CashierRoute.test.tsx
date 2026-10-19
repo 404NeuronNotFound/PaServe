@@ -56,6 +56,8 @@ it.each(["CASHIER", "OWNER", "ADMIN", "MANAGER"] as const)(
   async (role) => {
     vi.mocked(getShopMembership).mockResolvedValue(member(role));
     setup();
+    expect(screen.getByRole("status")).toHaveTextContent("Checking cashier access");
+    expect(document.querySelector(".loading-skeleton .skeleton-access-camera")).not.toBeNull();
     expect(
       screen.queryByRole("heading", { name: "Cashier workspace" }),
     ).not.toBeInTheDocument();
@@ -66,6 +68,7 @@ it.each(["CASHIER", "OWNER", "ADMIN", "MANAGER"] as const)(
       "shop-a",
       expect.any(AbortSignal),
     );
+    expect(document.querySelector(".skeleton-access")).toBeNull();
     expect(
       screen.getByRole("group", {
         name: `Active shop: Cafe A. Role: ${role.toLowerCase()}.`,

@@ -1,3 +1,4 @@
+import { FormSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
@@ -152,8 +153,8 @@ export function ShopSettingsPage() {
     );
   if (settings.isPending)
     return (
-      <section className="dashboard-status" role="status">
-        Loading shop settings…
+      <section className="shop-context-content profile-card shop-create-card shop-settings-card">
+        <FormSkeleton label="Loading shop settings…" branding />
       </section>
     );
   if (settings.isError) {

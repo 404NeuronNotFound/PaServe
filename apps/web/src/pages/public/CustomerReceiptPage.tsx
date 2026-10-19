@@ -1,3 +1,4 @@
+import { ReceiptSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { FiCoffee } from "react-icons/fi";
@@ -37,6 +38,7 @@ function ReceiptRead({
     tracking.state === "denied" || tracking.state === "unavailable";
   const paid = tracking.order?.status === "CONFIRMED" && tracking.order.paymentStatus === "PAID";
   const receipt = !denied && paid ? tracking.receipt : null;
+  const loading = tracking.state === "loading";
   const heading = useRef<HTMLHeadingElement>(null);
   const title = receipt
     ? `Receipt ${receipt.orderNumber} · ${receipt.shopName}`
@@ -44,7 +46,7 @@ function ReceiptRead({
   useEffect(() => {
     document.title = `${title} · PaServe`;
     heading.current?.focus();
-  }, [title]);
+  }, [title, loading]);
   const menuUrl =
     receipt?.mode === "DINE_IN"
       ? `/${encodeURIComponent(shopSlug)}/table/${encodeURIComponent(receipt.table!.code)}`
@@ -114,33 +116,27 @@ function ReceiptRead({
             </div>
           </footer>
         </article>
+      ) : loading ? (
+        <ReceiptSkeleton />
       ) : (
         <section className="order-receipt-card order-receipt-unavailable">
           <h1 ref={heading} tabIndex={-1}>
-            {tracking.state === "loading"
-              ? "Loading receipt"
-              : "Receipt unavailable"}
+            Receipt unavailable
           </h1>
-          {tracking.state === "loading" ? (
-            <p role="status">Checking receipt access…</p>
-          ) : (
-            <>
-              <InlineMessage>
-                {denied
-                  ? "Receipt access is unavailable. Open your private tracking link in this browser, or ask the counter staff for help using your order number."
-                  : tracking.state === "current" && !paid
-                    ? "Your receipt will be available after the cashier confirms your order and payment. You can follow your order on the tracking page."
-                    : "We could not load this receipt. Try again when connected, or ask the counter staff for help."}
-              </InlineMessage>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={retry}
-              >
-                Try again
-              </button>
-            </>
-          )}
+          <InlineMessage>
+            {denied
+              ? "Receipt access is unavailable. Open your private tracking link in this browser, or ask the counter staff for help using your order number."
+              : tracking.state === "current" && !paid
+                ? "Your receipt will be available after the cashier confirms your order and payment. You can follow your order on the tracking page."
+                : "We could not load this receipt. Try again when connected, or ask the counter staff for help."}
+          </InlineMessage>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={retry}
+          >
+            Try again
+          </button>
           <Link
             className="secondary-button"
             to={trackingPath(shopSlug, orderId)}

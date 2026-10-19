@@ -1,3 +1,4 @@
+import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import type { CurrentUserResponse } from "@paserve/contracts";
@@ -100,9 +101,7 @@ function CancelledOrdersWorkspace({ userId }: { userId: string }) {
         <span>Updates every 15 seconds · Times in Manila</span>
       </div>
       {query.isPending && (
-        <InlineMessage tone="info">
-          Loading cancelled / rejected orders…
-        </InlineMessage>
+        <OrderListSkeleton label="Loading cancelled / rejected orders…" />
       )}
       {query.isError && (
         <div className="active-orders-message">

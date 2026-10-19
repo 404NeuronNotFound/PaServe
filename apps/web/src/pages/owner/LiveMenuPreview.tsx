@@ -4,6 +4,7 @@ import type { PublicMenuResponse } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { PublicMenuView } from "../public/PublicMenuView";
+import { MenuSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { IPhone17ProMax } from "../../components/preview/IPhone17ProMax";
 import { AppleProDisplayXDR } from "../../components/preview/AppleProDisplayXDR";
@@ -79,9 +80,7 @@ export function LiveMenuPreview({
           : "Showing the saved customer menu."}{" "}
         Menu items reflect saved changes.
       </p>
-      {menu.isPending ? (
-        <p role="status">Loading menu preview…</p>
-      ) : menu.isError ? (
+      {menu.isError ? (
         <InlineMessage>
           The menu preview is unavailable. Check your connection and shop
           access, then refresh the menu.
@@ -92,19 +91,14 @@ export function LiveMenuPreview({
             {width === "phone" ? (
               <IPhone17ProMax>
                 <div className="menu-preview-canvas" data-width="phone">
-                  <PublicMenuView
-                    preview
-                    menu={{
-                      ...menu.data,
-                      shop: { ...menu.data.shop, ...draft },
-                    }}
-                  />
-                </div>
-              </IPhone17ProMax>
-            ) : (
-              <AppleProDisplayXDR
-                screenContent={
-                  <div className="menu-preview-canvas" data-width="desktop">
+                  {menu.isPending ? (
+                    <MenuSkeleton
+                      preview
+                      label="Loading menu preview…"
+                      layout={draft?.menuLayout}
+                      banner={draft && "bannerUrl" in draft ? Boolean(draft.bannerUrl) : undefined}
+                    />
+                  ) : (
                     <PublicMenuView
                       preview
                       menu={{
@@ -112,6 +106,29 @@ export function LiveMenuPreview({
                         shop: { ...menu.data.shop, ...draft },
                       }}
                     />
+                  )}
+                </div>
+              </IPhone17ProMax>
+            ) : (
+              <AppleProDisplayXDR
+                screenContent={
+                  <div className="menu-preview-canvas" data-width="desktop">
+                    {menu.isPending ? (
+                      <MenuSkeleton
+                        preview
+                        label="Loading menu preview…"
+                        layout={draft?.menuLayout}
+                        banner={draft && "bannerUrl" in draft ? Boolean(draft.bannerUrl) : undefined}
+                      />
+                    ) : (
+                      <PublicMenuView
+                        preview
+                        menu={{
+                          ...menu.data,
+                          shop: { ...menu.data.shop, ...draft },
+                        }}
+                      />
+                    )}
                   </div>
                 }
               />

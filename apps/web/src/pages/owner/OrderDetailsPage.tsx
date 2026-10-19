@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { OrderDetailsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -163,7 +164,7 @@ function OrderDetailsWorkspace({
         </button>
       </header>
       <OrderViewsNavigation />
-      {query.isPending && <p role="status">Loading saved order details…</p>}
+      {query.isPending && <OrderDetailsSkeleton />}
       {query.isError && (
         <div className="active-orders-message">
           <InlineMessage>

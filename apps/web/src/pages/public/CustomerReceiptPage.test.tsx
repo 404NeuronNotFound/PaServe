@@ -151,10 +151,10 @@ it.each([401, 403, 404])(
     fetchReceipt.mockResolvedValue({ ok: false, status });
     setup();
     expect(
-      screen.getByRole("heading", { name: "Loading receipt" }),
-    ).toBeInTheDocument();
+      screen.getByRole("status"),
+    ).toHaveTextContent("Checking receipt access");
     expect(screen.queryByText("Receipt Cafe")).not.toBeInTheDocument();
-    await screen.findByRole("heading", { name: "Receipt unavailable" });
+    expect(await screen.findByRole("heading", { name: "Receipt unavailable" })).toHaveFocus();
     expect(
       screen.queryByRole("region", { name: "Order receipt" }),
     ).not.toBeInTheDocument();

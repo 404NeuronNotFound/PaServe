@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { PreparationMetricSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { isAxiosError } from "axios";
 import {
   getAveragePrepTime,
@@ -57,9 +58,7 @@ export function AveragePrepTime({
         your average.
       </p>
       {query.isPending && (
-        <InlineMessage tone="info">
-          Loading average preparation time…
-        </InlineMessage>
+        <PreparationMetricSkeleton />
       )}
       {query.isError && (
         <InlineMessage>

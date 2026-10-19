@@ -92,7 +92,7 @@ export function PublicMenuView({
       </div>
       {!preview && <YourActiveOrders key={shop.slug} shopSlug={shop.slug} />}
       <div className="menu-shop-hero">
-        <ShopBanner url={shop.bannerUrl} name={shop.name} />
+        <ShopBanner url={shop.bannerUrl} name={shop.name} preserveSpace />
         <header className="public-menu-header">
           <ShopLogo url={shop.logoUrl} name={shop.name} />
           <div className="menu-shop-copy">

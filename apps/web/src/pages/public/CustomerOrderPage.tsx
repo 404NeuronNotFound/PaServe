@@ -1,3 +1,4 @@
+import { ReceiptSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -328,9 +329,7 @@ export function CustomerOrderPage() {
           </footer>
         </article>
       ) : tracking.state === "loading" ? (
-        <section className="order-receipt-card order-receipt-unavailable" role="status">
-          Loading your order…
-        </section>
+        <ReceiptSkeleton tracking />
       ) : (
         <section className="order-receipt-card order-receipt-unavailable">
           <h1 ref={heading} tabIndex={-1}>

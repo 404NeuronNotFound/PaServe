@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -196,7 +197,7 @@ function ProductCustomization({ productId }: { productId: string }) {
         </button>
       </header>
       {(products.isPending || (product && data.isPending)) && (
-        <p role="status">Loading customization...</p>
+        <ListSkeleton label="Loading customization..." />
       )}
       {products.isSuccess && !product && (
         <InlineMessage>

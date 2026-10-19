@@ -1,3 +1,4 @@
+import { StaffSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -287,9 +288,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
     );
   if (query.isPending || query.isFetching)
     return (
-      <section className="dashboard-status" role="status">
-        Checking staff access…
-      </section>
+      <StaffSkeleton />
     );
   if (query.isError)
     return (

@@ -46,7 +46,10 @@ it("renders the protected page only after the server verifies the session", asyn
   });
   renderRoute();
   expect(screen.queryByText("Private account")).not.toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Checking your session");
+  expect(document.querySelector('.loading-skeleton [aria-busy="true"]')).not.toBeNull();
   expect(await screen.findByText("Private account")).toBeInTheDocument();
+  expect(document.querySelector(".loading-skeleton")).toBeNull();
 });
 
 it("redirects unauthenticated visitors to sign in", async () => {
@@ -83,6 +86,7 @@ it("does not expose a private page from a cached profile while rechecking a revo
   );
   renderRoute(client, "/app/shops/shop-a/cashier");
   expect(screen.queryByText("Private account")).not.toBeInTheDocument();
+  expect(document.querySelector(".loading-skeleton .skeleton-access-camera")).not.toBeNull();
   expect(
     await screen.findByRole("button", { name: "Try again" }),
   ).toBeInTheDocument();

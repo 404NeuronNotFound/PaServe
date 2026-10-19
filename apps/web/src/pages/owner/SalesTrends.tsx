@@ -1,3 +1,4 @@
+import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { salesBusinessDate, salesTrendRanges } from "@paserve/contracts";
@@ -84,7 +85,7 @@ export function SalesTrends({
         </InlineMessage>
       )}
       {valid && query.isPending && (
-        <InlineMessage tone="info">Loading sales trends…</InlineMessage>
+        <ReportSkeleton label="Loading sales trends…" chart />
       )}
       {valid && query.isError && (
         <InlineMessage>

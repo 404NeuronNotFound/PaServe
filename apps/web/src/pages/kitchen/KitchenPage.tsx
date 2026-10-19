@@ -1,3 +1,4 @@
+import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -308,11 +309,7 @@ function NewOrders() {
         </p>
       </div>
       {queue.isPending && (
-        <div className="kitchen-empty" role="status">
-          <FiCoffee aria-hidden="true" />
-          <h2>Gathering your tickets…</h2>
-          <p>Loading the saved preparation queue.</p>
-        </div>
+        <OrderListSkeleton label="Loading the saved preparation queue." kitchen history={state === "COMPLETED"} />
       )}
       {queue.isError && (
         <InlineMessage>

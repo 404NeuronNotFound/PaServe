@@ -1,3 +1,4 @@
+import { ProductsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { SelectField } from "../../components/forms/SelectField";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
@@ -740,7 +741,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
         )}
         {archiveError && <InlineMessage>{archiveError}</InlineMessage>}
         {query.isPending ? (
-          <InlineMessage tone="info">Loading products…</InlineMessage>
+          <ProductsSkeleton />
         ) : query.isError ? (
           <InlineMessage>
             {denied

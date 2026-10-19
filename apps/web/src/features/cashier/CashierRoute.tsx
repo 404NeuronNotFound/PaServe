@@ -6,6 +6,7 @@ import { currentUserKey } from "../auth/api/session";
 import { getShopMembership } from "../shops/api/context";
 import { ActiveShopContext, useActiveShop } from "../shops/active-shop";
 import { canUseCashier } from "./access";
+import { AccessSkeleton } from "../../components/feedback/LoadingSkeleton";
 
 // Every future scanner/payment child belongs beneath this boundary. The API
 // must also enforce the action permission and live shop access on each request.
@@ -29,11 +30,7 @@ export function CashierRoute() {
     ? access.error.response?.status
     : undefined;
   if (access.isPending || access.isFetching)
-    return (
-      <section className="dashboard-status" role="status">
-        Checking cashier access…
-      </section>
-    );
+    return <AccessSkeleton label="Checking cashier access…" view="cashier" />;
   if (status === 401)
     return (
       <Navigate to="/login" replace state={{ returnTo: location.pathname }} />

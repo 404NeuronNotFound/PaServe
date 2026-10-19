@@ -1,3 +1,4 @@
+import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -130,7 +131,7 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
         <span>Updates every 15 seconds · Times in Manila</span>
       </div>
       {query.isPending && (
-        <InlineMessage tone="info">Loading active orders…</InlineMessage>
+        <OrderListSkeleton label="Loading active orders…" />
       )}
       {query.isError && (
         <div className="active-orders-message">

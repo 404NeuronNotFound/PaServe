@@ -1,3 +1,4 @@
+import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -147,7 +148,7 @@ export function DailyAnalytics({
         </InlineMessage>
       )}
       {enabled && valid && query.isPending && (
-        <InlineMessage tone="info">Loading {period} analytics…</InlineMessage>
+        <ReportSkeleton label={`Loading ${period} analytics…`} />
       )}
       {enabled && valid && query.isError && (
         <InlineMessage>

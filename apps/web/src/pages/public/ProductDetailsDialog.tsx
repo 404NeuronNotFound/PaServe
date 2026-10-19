@@ -1,3 +1,4 @@
+import { ProductDetailsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import {
   ORDER_INPUT_LIMITS,
   isValidOrderQuantity,
@@ -97,7 +98,7 @@ export function ProductDetailsDialog({
     >
       {!preview && table && <CurrentTable table={table} shopName={shop.name} />}
       {details.isPending || details.isFetching ? (
-        <p role="status">Loading product details…</p>
+        <ProductDetailsSkeleton />
       ) : details.isError ? (
         <div className="customer-dialog-body">
           <p role="alert">
