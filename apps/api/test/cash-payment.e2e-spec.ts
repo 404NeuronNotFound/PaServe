@@ -252,6 +252,96 @@ describe('Cash collection', () => {
       ...body,
     });
   }
+  const paymentMethods = ['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'] as const;
+  function settlement(method: (typeof paymentMethods)[number], body: Record<string, unknown> = {}) {
+    if (method === 'CASH') return collect(body);
+    if (method === 'GCASH_MANUAL') return gcash(body);
+    if (method === 'CARD_MANUAL') return card(body);
+    return other(body);
+  }
+  const paymentStates = paymentMethods.flatMap((method) =>
+    ['PENDING_CONFIRMATION', 'CONFIRMED', 'REJECTED'].flatMap((status) =>
+      ['UNPAID', 'PAID'].map((paymentStatus) => ({ method, status, paymentStatus })),
+    ),
+  );
+  it.each(paymentStates)('legacy $method settlement from $status/$paymentStatus', async ({ method, status, paymentStatus }) => {
+    if (paymentStatus === 'PAID') await settlement(method).expect(200);
+    saved.status = status;
+    const before = JSON.stringify(saved);
+    updateOrder.mockClear();
+    const allowed = status === 'CONFIRMED';
+    const result = await settlement(method).expect(allowed ? 200 : 409);
+    if (!allowed || paymentStatus === 'PAID') {
+      expect(JSON.stringify(saved)).toBe(before);
+      expect(updateOrder).not.toHaveBeenCalled();
+    } else {
+      expect(saved).toMatchObject({ status: 'CONFIRMED', paymentStatus: 'PAID', preparationStatus: 'QUEUED' });
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+      expect((await settlement(method).expect(200)).body).toEqual(result.body);
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+    }
+  });
+  it.each(paymentStates)('combined $method payment from $status/$paymentStatus', async ({ method, status, paymentStatus }) => {
+    if (paymentStatus === 'PAID') {
+      await preparePending();
+      await atomic(method, {}, true).expect(200);
+    }
+    saved.status = status;
+    if (status === 'PENDING_CONFIRMATION' && paymentStatus === 'UNPAID') await preparePending();
+    const before = JSON.stringify(saved);
+    updateOrder.mockClear();
+    const fresh = status === 'PENDING_CONFIRMATION' && paymentStatus === 'UNPAID';
+    const replay = status === 'CONFIRMED' && paymentStatus === 'PAID';
+    const result = await atomic(method, {}, true).expect(fresh || replay ? 200 : 409);
+    if (fresh) {
+      expect(saved).toMatchObject({ status: 'CONFIRMED', paymentStatus: 'PAID', preparationStatus: 'QUEUED' });
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+      expect((await atomic(method, {}, true).expect(200)).body).toEqual(result.body);
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+    } else {
+      expect(JSON.stringify(saved)).toBe(before);
+      expect(updateOrder).not.toHaveBeenCalled();
+    }
+  });
+  it.each(paymentMethods.flatMap((first) => paymentMethods.map((retry) => ({ first, retry }))))(
+    'cannot replace $first with $retry using the same payment key', async ({ first, retry }) => {
+      await preparePending();
+      const receipt = await atomic(first, {}, true).expect(200);
+      const before = JSON.stringify(saved);
+      const replay = await atomic(retry, {}, true).expect(first === retry ? 200 : 409);
+      if (first === retry) expect(replay.body).toEqual(receipt.body);
+      expect(JSON.stringify(saved)).toBe(before);
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+    },
+  );
+  it.each(paymentMethods.flatMap((method) => ['PREPARING', 'READY', 'COMPLETED'].map((stage) => ({ method, stage }))))(
+    'replaying $method payment after $stage preserves receipt and fulfillment state', async ({ method, stage }) => {
+      await preparePending();
+      const receipt = await atomic(method, {}, true).expect(200);
+      role = 'KITCHEN';
+      await start().expect(200);
+      if (stage !== 'PREPARING') await ready().expect(200);
+      if (stage === 'COMPLETED') await complete().expect(200);
+      const before = JSON.stringify(saved);
+      const writes = updateOrder.mock.calls.length;
+      role = 'CASHIER';
+      const retry = await atomic(method, {}, true).expect(200);
+      expect(retry.body.payment).toEqual(receipt.body.payment);
+      expect(retry.body.queue.status).toBe(stage);
+      expect(JSON.stringify(saved)).toBe(before);
+      expect(updateOrder).toHaveBeenCalledTimes(writes);
+    },
+  );
+  it.each(paymentMethods)('rejects a changed request key or review version after $method settlement', async (method) => {
+    await preparePending();
+    await atomic(method, {}, true).expect(200);
+    const before = JSON.stringify(saved);
+    for (const change of [{ requestId: '68bb31e6-9c13-4c07-9e04-fbb29b0584ab' }, { reviewVersion: 'b'.repeat(64) }]) {
+      await atomic(method, change, true).expect(409);
+      expect(JSON.stringify(saved)).toBe(before);
+    }
+    expect(updateOrder).toHaveBeenCalledTimes(1);
+  });
   it.each(
     ['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'].flatMap((method) =>
       [false, true].map((byNumber) => ({ method, byNumber })),

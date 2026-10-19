@@ -167,6 +167,30 @@ describe('Cashier order decisions', () => {
       ...body,
     });
   }
+  it.each(
+    ['PENDING_CONFIRMATION', 'CONFIRMED', 'REJECTED'].flatMap((status) =>
+      ['UNPAID', 'PAID'].flatMap((paymentStatus) =>
+        ['confirm', 'reject'].flatMap((action) =>
+          [false, true].map((byNumber) => ({ status, paymentStatus, action, byNumber })),
+        ),
+      ),
+    ),
+  )('enforces decision $action from $status/$paymentStatus byNumber=$byNumber', async ({ status, paymentStatus, action, byNumber }) => {
+    saved.status = status;
+    saved.paymentStatus = paymentStatus;
+    const before = JSON.stringify(saved);
+    const allowed = status === 'PENDING_CONFIRMATION' && paymentStatus === 'UNPAID' && action === 'reject';
+    const response = await (byNumber ? numberRequest(`${action}-number`) : decide(action)).expect(allowed ? 200 : 409);
+    if (allowed) {
+      expect(saved.status).toBe('REJECTED');
+      expect(updateOrder).toHaveBeenCalledTimes(1);
+    } else {
+      expect(JSON.stringify(saved)).toBe(before);
+      expect(updateOrder).not.toHaveBeenCalled();
+      if (status === 'PENDING_CONFIRMATION' && paymentStatus === 'UNPAID')
+        expect(response.body.code).toBe('PAYMENT_REQUIRED');
+    }
+  });
   it.each(['OWNER', 'ADMIN', 'MANAGER', 'CASHIER'] as const)(
     'allows live %s to find a number and rejects using current saved details',
     async (currentRole) => {
