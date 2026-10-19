@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "pnpm --filter @paserve/contracts build && vite",
     "build": "pnpm --filter @paserve/contracts build && tsc -b && vite build",
+    "build:local": "pnpm --filter @paserve/contracts build && tsc -b && vite build --mode local-build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test:security-headers": "node test/security-headers.check.mjs",
+    "test:security-release": "node test/security-headers.check.mjs --release",
     "test": "pnpm --filter @paserve/contracts build && vitest run"
   },
   "dependencies": {

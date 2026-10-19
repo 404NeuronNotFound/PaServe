@@ -1,3 +1,4 @@
+import { configureSecurityHeaders } from './common/http/security-headers.js';
 import { configureTrustedProxy } from './common/http/trusted-proxy.js';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
@@ -6,6 +7,7 @@ import { configureRequestBody } from './common/http/request-body.js';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  configureSecurityHeaders(app);
   configureTrustedProxy(app);
   configureRequestBody(app);
 
