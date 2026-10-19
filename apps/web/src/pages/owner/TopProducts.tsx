@@ -1,5 +1,3 @@
-import { PendingButton } from "../../components/feedback/PendingButton";
-import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -43,20 +41,18 @@ export function TopProducts({
         <div>
           <p className="sales-eyebrow">ANALYTICS / PRODUCTS</p>
           <h2 id="top-products-title">Top Products</h2>
-          <p>
+          <p> 
             {startDate} – {endDate} · Manila (UTC+8), both dates included.
             Confirmed, paid, completed orders only.
           </p>
         </div>
-        <PendingButton
-          pending={query.isFetching}
-          pendingLabel="Refreshing top products..."
+        <button
           className="secondary-button"
           disabled={query.isFetching}
           onClick={() => void query.refetch()}
         >
           Refresh top products
-        </PendingButton>
+        </button>
       </div>
       <div className="daily-analytics-controls">
         <label htmlFor="top-products-metric">
@@ -82,7 +78,7 @@ export function TopProducts({
         </p>
       </details>
       {query.isPending && (
-        <ReportSkeleton label="Loading top products…" />
+        <InlineMessage tone="info">Loading top products…</InlineMessage>
       )}
       {query.isError && (
         <InlineMessage>
