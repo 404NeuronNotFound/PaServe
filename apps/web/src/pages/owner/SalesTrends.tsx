@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -70,13 +71,15 @@ export function SalesTrends({
             immediately preceding equal-length period.
           </p>
         </div>
-        <button
+        <PendingButton
+          pending={query.isFetching}
+          pendingLabel="Refreshing sales trends..."
           className="secondary-button"
           disabled={!valid || query.isFetching}
           onClick={() => void query.refetch()}
         >
           Refresh sales trends
-        </button>
+        </PendingButton>
       </div>
       {!valid && (
         <InlineMessage>

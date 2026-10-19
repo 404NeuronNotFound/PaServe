@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -96,13 +97,15 @@ export function DailyAnalytics({
             paid, completed orders by completion date.
           </p>
         </div>
-        <button
+        <PendingButton
+          pending={query.isFetching}
+          pendingLabel="Refreshing analytics..."
           className="secondary-button"
           disabled={!enabled || !valid || query.isFetching}
           onClick={() => void query.refetch()}
         >
           Refresh {period} analytics
-        </button>
+        </PendingButton>
       </div>
       <div className="daily-analytics-controls">
         <div

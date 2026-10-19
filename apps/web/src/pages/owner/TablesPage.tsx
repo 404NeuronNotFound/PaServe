@@ -281,6 +281,7 @@ function TableWorkspace({ userId }: { userId: string }) {
             </div>
             {error && <InlineMessage>{error}</InlineMessage>}
             <button
+              aria-busy={mutation.isPending}
               className="primary-button"
               disabled={disabled}
               type="submit"

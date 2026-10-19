@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { useEffect, useRef, useState } from "react";
 import { OrderDetailsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { Link, useParams } from "react-router-dom";
@@ -155,13 +156,15 @@ function OrderDetailsWorkspace({
             <p>The original order. Every detail, preserved.</p>
           </div>
         </div>
-        <button
+        <PendingButton
+          pending={query.isFetching}
+          pendingLabel="Refreshing order..."
           className="secondary-button"
           disabled={query.isFetching || mutation.isPending}
           onClick={() => void query.refetch()}
         >
           Refresh
-        </button>
+        </PendingButton>
       </header>
       <OrderViewsNavigation />
       {query.isPending && <OrderDetailsSkeleton />}
@@ -431,6 +434,7 @@ function OrderDetailsWorkspace({
             : "Confirm this order is ready for the next preparation stage."
         }
         confirmLabel={confirm ? actionLabels[confirm] : "Confirm"}
+        pendingLabel={confirm === "START_PREPARING" ? "Starting preparation…" : confirm === "MARK_READY" ? "Marking ready…" : "Completing order…"}
         onClose={() => setConfirm(null)}
         onConfirm={async () => {
           if (!confirm || !permitted(confirm)) throw new Error("Order changed");

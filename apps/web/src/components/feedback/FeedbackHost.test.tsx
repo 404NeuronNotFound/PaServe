@@ -134,10 +134,10 @@ it("prevents double actions and expiration while an asynchronous action is pendi
   render(<FeedbackHost />);
   act(() => feedback.snackbar("Changed.", { label: "Undo", onClick: action }));
   fireEvent.click(screen.getByRole("button", { name: "Undo" }));
-  expect(screen.getByRole("button", { name: "Working…" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Undoing…" })).toBeDisabled();
   advance(30000);
   expect(screen.getByText("Changed.")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Working…" }));
+  fireEvent.click(screen.getByRole("button", { name: "Undoing…" }));
   expect(action).toHaveBeenCalledTimes(1);
   await act(async () => resolve());
   expect(screen.queryByText("Changed.")).not.toBeInTheDocument();

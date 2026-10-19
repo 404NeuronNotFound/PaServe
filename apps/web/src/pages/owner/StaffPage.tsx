@@ -155,6 +155,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const [link, setLink] = useState("");
   const [busy, setBusy] = useState(false);
   const [copying, setCopying] = useState(false);
+  const copyingGuard = useRef(false);
   const [lostAccess, setLostAccess] = useState(false);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [search, setSearch] = useState("");
@@ -261,7 +262,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
     }
   }
   async function copy() {
-    if (copying) return;
+    if (copyingGuard.current || !link || busy) return;
+    copyingGuard.current = true;
     setCopying(true);
     setError("");
     try {
@@ -273,6 +275,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
           "Copy is unavailable. Select and copy the invitation link below.",
         );
     } finally {
+      copyingGuard.current = false;
       if (stillHere()) setCopying(false);
     }
   }
@@ -609,8 +612,9 @@ function StaffWorkspace({ userId }: { userId: string }) {
               <p id="staff-role-description" className="staff-role-description">
                 {roleDescriptions[role]}
               </p>
-              <button className="primary-button" disabled={busy}>
-                {busy ? "Saving…" : "Create invitation link"}
+              <button
+                aria-busy={busy} className="primary-button" disabled={busy}>
+                {busy ? "Creating invitation…" : "Create invitation link"}
                 <FiArrowUpRight aria-hidden="true" />
               </button>
             </form>

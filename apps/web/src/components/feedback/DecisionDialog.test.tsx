@@ -114,7 +114,7 @@ it("blocks repeat confirmation and dismissal while the action is pending", async
   await user.click(screen.getByRole("button", { name: "Delete record" }));
   await user.click(screen.getByRole("button", { name: "Delete" }));
   expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
-  expect(screen.getByRole("button", { name: "Working…" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Deleting…" })).toBeDisabled();
   fireEvent(
     screen.getByRole("dialog"),
     new Event("cancel", { cancelable: true }),

@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -47,13 +48,15 @@ export function TopProducts({
             Confirmed, paid, completed orders only.
           </p>
         </div>
-        <button
+        <PendingButton
+          pending={query.isFetching}
+          pendingLabel="Refreshing top products..."
           className="secondary-button"
           disabled={query.isFetching}
           onClick={() => void query.refetch()}
         >
           Refresh top products
-        </button>
+        </PendingButton>
       </div>
       <div className="daily-analytics-controls">
         <label htmlFor="top-products-metric">

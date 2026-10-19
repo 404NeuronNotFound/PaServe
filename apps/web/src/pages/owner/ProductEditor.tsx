@@ -762,6 +762,7 @@ export function ProductEditor({
                 </button>
                 {(!created || photo) && (
                   <button
+                    aria-busy={mutation.isPending || uploading}
                     className="primary-button"
                     type="submit"
                     disabled={

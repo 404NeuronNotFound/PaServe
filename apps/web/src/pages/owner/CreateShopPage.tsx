@@ -262,6 +262,7 @@ export function CreateShopPage() {
               {mutation.isPending ? "Creating your shop. Please wait." : ""}
             </p>
             <button
+              aria-busy={mutation.isPending}
               className="primary-button"
               disabled={mutation.isPending}
               type="submit"

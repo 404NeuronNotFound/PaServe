@@ -1,0 +1,37 @@
+.pending-button-content {
+  display: inline-grid;
+  min-width: 0;
+  max-width: 100%;
+}
+.pending-button-idle,
+.pending-button-progress {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pending-button-content [data-visible="false"] {
+  visibility: hidden;
+}
+.pending-button-progress > svg {
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+}
+.pending-button-progress[data-visible="true"] > svg {
+  animation: pending-button-spin 900ms linear infinite;
+}
+@keyframes pending-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pending-button-progress[data-visible="true"] > svg {
+    animation: none;
+  }
+}

@@ -6,6 +6,8 @@ import {
   type TransientNotice,
 } from "../../app/stores/feedback";
 import { InlineMessage } from "./InlineMessage";
+import { PendingButton } from "./PendingButton";
+import { pendingActionLabel } from "./pending-action-label";
 
 export function Banner({
   message,
@@ -127,16 +129,18 @@ function TransientMessage({
         <span>{notice.message}</span>
       </p>
       {notice.kind === "snackbar" && (
-        <button
+        <PendingButton
           className="feedback-action"
+          pending={pending}
+          pendingLabel={pendingActionLabel(notice.action.label)}
           type="button"
           disabled={pending}
           onClick={() => {
             void runAction();
           }}
         >
-          {pending ? "Working…" : notice.action.label}
-        </button>
+          {notice.action.label}
+        </PendingButton>
       )}
       <button
         className="feedback-dismiss"

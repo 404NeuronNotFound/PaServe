@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -47,13 +48,15 @@ export function PeakHours({
             Confirmed, paid, completed orders only.
           </p>
         </div>
-        <button
+        <PendingButton
+          pending={query.isFetching}
+          pendingLabel="Refreshing peak hours..."
           className="secondary-button"
           disabled={query.isFetching}
           onClick={() => void query.refetch()}
         >
           Refresh peak hours
-        </button>
+        </PendingButton>
       </div>
       <details className="sales-calculation-notes">
         <summary>How hourly activity is counted</summary>

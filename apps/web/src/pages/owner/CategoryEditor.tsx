@@ -300,6 +300,7 @@ export function CategoryEditor({
               </p>
               <div className="category-editor-actions">
                 <button
+                  aria-busy={mutation.isPending}
                   className="primary-button"
                   type="submit"
                   disabled={

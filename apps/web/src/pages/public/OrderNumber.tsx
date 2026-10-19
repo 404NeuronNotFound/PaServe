@@ -42,6 +42,7 @@ export function OrderNumber({
         <p className="order-receipt-number-value">{value ?? "Unavailable"}</p>
         {value && (
           <button
+            aria-busy={copying}
             className="secondary-button"
             type="button"
             disabled={copying}

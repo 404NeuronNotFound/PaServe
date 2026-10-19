@@ -150,6 +150,7 @@ export function ProductImageUpload({
     >
       {file && (
         <button
+          aria-busy={pending}
           type="button"
           className="secondary-button"
           disabled={pending || disabled || refreshRequired}

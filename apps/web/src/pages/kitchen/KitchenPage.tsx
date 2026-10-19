@@ -854,13 +854,14 @@ function Ticket({
           hasShopPermission(role, "shop.preparation.status.update") && (
             <div className="kitchen-ticket-action">
               <button
+                aria-busy={pending}
                 className="primary-button"
                 disabled={pending}
                 onClick={() => submit("QUEUED")}
                 aria-label={`Start preparing ${order.orderNumber}`}
               >
                 <FiPlay aria-hidden="true" />
-                {pending ? "Action pending…" : "Start preparing"}
+                {pending ? "Starting preparation…" : "Start preparing"}
               </button>
               {transition.isError &&
                 transition.variables.source === "QUEUED" && (
@@ -876,13 +877,14 @@ function Ticket({
           hasShopPermission(role, "shop.preparation.status.update") && (
             <div className="kitchen-ticket-action">
               <button
+                aria-busy={pending}
                 className="primary-button"
                 disabled={pending}
                 onClick={() => submit("PREPARING")}
                 aria-label={`Mark ready ${order.orderNumber}`}
               >
                 <FiCheck aria-hidden="true" />
-                {pending ? "Action pending…" : "Mark ready"}
+                {pending ? "Marking ready…" : "Mark ready"}
               </button>
               {transition.isError &&
                 transition.variables.source === "PREPARING" && (
@@ -900,6 +902,7 @@ function Ticket({
               Only complete after the customer has received this order.
             </p>
             <button
+              aria-busy={pending}
               className="primary-button"
               disabled={pending}
               onClick={() => submit("READY")}
@@ -907,7 +910,7 @@ function Ticket({
             >
               <FiCheck aria-hidden="true" />
               {pending
-                ? "Action pending…"
+                ? "Completing order…"
                 : order.mode === "TAKEOUT"
                   ? "Mark collected"
                   : "Mark served"}

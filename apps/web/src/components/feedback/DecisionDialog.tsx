@@ -1,12 +1,15 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { InlineMessage } from "./InlineMessage";
 import { FiTrash2 } from "react-icons/fi";
+import { PendingButton } from "./PendingButton";
+import { pendingActionLabel } from "./pending-action-label";
 
 type DecisionDialogProps = {
   open: boolean;
   title: string;
   description: string;
   confirmLabel: string;
+  pendingLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
   onConfirm: () => void | Promise<void>;
@@ -23,6 +26,7 @@ function OpenDecisionDialog({
   title,
   description,
   confirmLabel,
+  pendingLabel = pendingActionLabel(confirmLabel),
   cancelLabel = "Cancel",
   destructive = false,
   onConfirm,
@@ -119,16 +123,18 @@ function OpenDecisionDialog({
         >
           {cancelLabel}
         </button>
-        <button
+        <PendingButton
           className={`primary-button${destructive ? " feedback-destructive" : ""}`}
+          pending={pending}
+          pendingLabel={pendingLabel}
           type="button"
           disabled={pending || closing}
           onClick={() => {
             void confirm();
           }}
         >
-          {pending ? "Working…" : confirmLabel}
-        </button>
+          {confirmLabel}
+        </PendingButton>
       </div>
     </dialog>
   );

@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { useEffect, useRef, useState } from "react";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
@@ -17,6 +18,8 @@ export function GuestTrackingShare({
   orderNumber: string | null;
 }) {
   const [busy, setBusy] = useState(false);
+  const running = useRef(false);
+  const [pendingAction, setPendingAction] = useState<"copy" | "qr" | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [error, setError] = useState("");
   const active = useRef(true);
@@ -29,7 +32,9 @@ export function GuestTrackingShare({
     };
   }, []);
   async function share(qr: boolean) {
-    if (busy) return;
+    if (running.current) return;
+    running.current = true;
+    setPendingAction(qr ? "qr" : "copy");
     setBusy(true);
     setError("");
     controller.current = new AbortController();
@@ -80,6 +85,7 @@ export function GuestTrackingShare({
           "Unable to share tracking. Try again, or ask the counter staff for help using your order number.",
         );
     } finally {
+      running.current = false;
       clearTimeout(timeout);
       if (active.current) setBusy(false);
     }
@@ -98,22 +104,26 @@ export function GuestTrackingShare({
         order QR.
       </p>
       <div className="order-receipt-footer-actions">
-        <button
+        <PendingButton
+          pending={busy && pendingAction === "copy"}
+          pendingLabel="Copying tracking link..."
           type="button"
           className="secondary-button"
           disabled={busy}
           onClick={() => void share(false)}
         >
           Copy private tracking link
-        </button>
-        <button
+        </PendingButton>
+        <PendingButton
+          pending={busy && pendingAction === "qr"}
+          pendingLabel="Preparing tracking QR..."
           type="button"
           className="secondary-button"
           disabled={busy}
           onClick={() => void share(true)}
         >
           Show private tracking QR
-        </button>
+        </PendingButton>
       </div>
       {busy && <p role="status">Preparing private tracking access…</p>}
       {image && (

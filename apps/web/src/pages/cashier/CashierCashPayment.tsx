@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import {
@@ -78,6 +79,7 @@ export function CashierCashPayment({
   const [reference, setReference] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(true);
+  const [pendingAction, setPendingAction] = useState<"refresh" | "review" | "record">("refresh");
   const [blocked, setBlocked] = useState(true);
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
@@ -168,6 +170,7 @@ export function CashierCashPayment({
     if (running.current || busy) return;
     running.current = true;
     setBusy(true);
+    setPendingAction(open ? "review" : "refresh");
     setError("");
     const request = new AbortController();
     controller.current = request;
@@ -215,6 +218,7 @@ export function CashierCashPayment({
     if (running.current || blocked || !review || !eligible) return;
     running.current = true;
     setBusy(true);
+    setPendingAction("record");
     setError("");
     const request = new AbortController();
     controller.current = request;
@@ -418,14 +422,16 @@ export function CashierCashPayment({
           {error && <InlineMessage>{error}</InlineMessage>}
           <div className="cashier-paid-actions">
             {blocked && (
-              <button
+              <PendingButton
+                pending={busy && pendingAction === "refresh"}
+                pendingLabel="Refreshing payment..."
                 type="button"
                 className="secondary-button"
                 disabled={busy}
                 onClick={() => void refresh()}
               >
                 Refresh payment
-              </button>
+              </PendingButton>
             )}
             {!blocked &&
               review.order.status === "CONFIRMED" &&
@@ -617,22 +623,26 @@ export function CashierCashPayment({
               </div>
             </>
           )}
-          <button
+          <PendingButton
+            pending={busy && pendingAction === "review"}
+            pendingLabel="Checking payment..."
             className="primary-button"
             disabled={busy || blocked || confirm || !eligible}
             onClick={() => void refresh(true)}
           >
             {recordLabel}
-          </button>
+          </PendingButton>
         </>
       )}
-      <button
+      <PendingButton
+        pending={busy && pendingAction === "refresh"}
+        pendingLabel="Refreshing payment..."
         className="secondary-button"
         disabled={busy || confirm}
         onClick={() => void refresh()}
       >
         Refresh payment
-      </button>
+      </PendingButton>
       {busy && <p role="status">Checking or recording payment…</p>}
       {error && <InlineMessage>{error}</InlineMessage>}
       <DecisionDialog
@@ -663,6 +673,7 @@ export function CashierCashPayment({
                   : "Check the cash before recording payment.")
         }
         confirmLabel={recordLabel}
+        pendingLabel={pendingOrder ? "Confirming payment…" : "Recording payment…"}
         cancelLabel="Keep reviewing"
         onConfirm={collect}
         onClose={() => setConfirm(false)}

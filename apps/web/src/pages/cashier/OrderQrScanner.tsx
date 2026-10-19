@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { isAxiosError } from "axios";
@@ -316,7 +317,9 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
           </span>
         </div>
         <div className="scanner-controls">
-          <button
+          <PendingButton
+            pending={phase === "starting"}
+            pendingLabel="Starting camera..."
             className="primary-button"
             onClick={() => start()}
             disabled={
@@ -324,7 +327,7 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
             }
           >
             <FiCamera aria-hidden="true" /> Start camera
-          </button>
+          </PendingButton>
           <button
             className="secondary-button"
             onClick={stopCamera}
@@ -404,12 +407,14 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
               Use the number beneath the customer's QR.
             </p>
           </div>
-          <button
+          <PendingButton
+            pending={busy}
+            pendingLabel="Verifying order..."
             className="primary-button scanner-find"
             disabled={busy || lostAccess || !number.trim()}
           >
             Find order <FiArrowRight aria-hidden="true" />
-          </button>
+          </PendingButton>
         </form>
         <div className="scanner-shop-note">
           <FiShield aria-hidden="true" />
@@ -455,12 +460,14 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
                   order number, use Find by order number above.
                 </p>
               </div>
-              <button
+              <PendingButton
+            pending={busy}
+            pendingLabel="Verifying order..."
                 className="secondary-button"
                 disabled={busy || lostAccess || !pasted.trim()}
               >
                 Verify pasted QR
-              </button>
+              </PendingButton>
             </form>
           </div>
         </details>

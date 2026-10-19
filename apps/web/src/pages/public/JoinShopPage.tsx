@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { useEffect, useId, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -38,6 +39,7 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"accept" | "switch" | null>(null);
   const running = useRef(false);
   const mounted = useRef(false);
   // Isolate credentials without putting the invitation token in query keys.
@@ -86,6 +88,7 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
       return;
     running.current = true;
     setBusy(true);
+    setPendingAction("accept");
     setError("");
     try {
       const result = await acceptInvitation(shopId, token);
@@ -115,6 +118,7 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
     if (running.current) return;
     running.current = true;
     setBusy(true);
+    setPendingAction("switch");
     setError("");
     try {
       await logoutAccount();
@@ -179,20 +183,24 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
             </p>
           )}
           {error && <InlineMessage>{error}</InlineMessage>}
-          <button
+          <PendingButton
+            pending={busy && pendingAction === "accept"}
+            pendingLabel="Joining shop..."
             className="primary-button"
             onClick={() => void accept()}
             disabled={busy || !preview.isSuccess || preview.isFetching}
           >
-            {busy ? "Please wait…" : "Accept invitation"}
-          </button>
-          <button
+            Accept invitation
+          </PendingButton>
+          <PendingButton
+            pending={busy && pendingAction === "switch"}
+            pendingLabel="Signing out..."
             className="secondary-button"
             onClick={() => void switchAccount()}
             disabled={busy}
           >
             Use another account
-          </button>
+          </PendingButton>
         </>
       ) : !anonymous ? (
         <>

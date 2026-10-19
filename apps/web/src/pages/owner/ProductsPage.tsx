@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { ProductsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { SelectField } from "../../components/forms/SelectField";
 import { useNavigate } from "react-router-dom";
@@ -90,6 +91,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
   const [editing, setEditing] = useState<MenuProduct | null>(null);
   const [archiving, setArchiving] = useState<MenuProduct | null>(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [availableBusy, setAvailableBusy] = useState<string | null>(null);
@@ -340,6 +342,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
       throw new Error("Wait for the current product action to finish.");
     running.current = true;
     setArchiveBusy(true);
+    setArchiveTarget(product.id);
     setArchiveError("");
     const key = productsKey(userId, membership.shopId);
     try {
@@ -602,7 +605,10 @@ function ProductWorkspace({ userId }: { userId: string }) {
               </p>
             )}
           </div>
-          <button
+          <PendingButton
+            pending={query.isFetching}
+            pendingLabel="Refreshing products"
+            iconOnly
             className="secondary-button product-refresh-button"
             title="Refresh products"
             type="button"
@@ -622,7 +628,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
             <span className="sr-only">
               {query.isFetching ? "Refreshing products" : "Refresh products"}
             </span>
-          </button>
+          </PendingButton>
         </div>
         {query.isSuccess &&
           !denied &&
@@ -1135,7 +1141,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                               )
                             }
                           >
-                            <FiRotateCcw aria-hidden="true" /> Restore
+                            <FiRotateCcw aria-hidden="true" /> {archiveBusy && archiveTarget === product.id ? "Restoring…" : "Restore"}
                           </button>
                         )}
                       </div>

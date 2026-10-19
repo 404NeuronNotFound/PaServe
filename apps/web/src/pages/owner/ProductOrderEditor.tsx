@@ -168,6 +168,7 @@ export function ProductOrderEditor({
         {error && <InlineMessage>{error}</InlineMessage>}
         <div className="category-editor-actions">
           <button
+            aria-busy={pending}
             type="button"
             className="primary-button"
             disabled={pending || closing || !dirty}

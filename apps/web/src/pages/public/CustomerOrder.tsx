@@ -446,6 +446,7 @@ export function CustomerOrder({
           </button>
         )}
         <button
+          aria-busy={pending}
           key={
             attempt
               ? "retry-order"

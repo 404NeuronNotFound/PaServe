@@ -228,6 +228,7 @@ export function RegistrationForm({
         </div>
         {formError && <InlineMessage>{formError}</InlineMessage>}
         <button
+          aria-busy={mutation.isPending}
           className="primary-button"
           type="submit"
           disabled={mutation.isPending}

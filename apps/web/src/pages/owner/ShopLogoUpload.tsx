@@ -221,6 +221,7 @@ export function ShopLogoUpload({
       >
         <div className="shop-context-actions">
           <button
+            aria-busy={pending}
             type="button"
             className="primary-button"
             disabled={!file || disabled || pending || refreshRequired}

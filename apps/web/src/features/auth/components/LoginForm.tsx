@@ -224,6 +224,7 @@ export function LoginForm({
           </InlineMessage>
         )}
         <button
+          aria-busy={mutation.isPending}
           className="primary-button"
           type="submit"
           disabled={mutation.isPending}

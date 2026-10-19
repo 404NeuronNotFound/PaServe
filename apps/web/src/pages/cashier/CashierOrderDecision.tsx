@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import type {
@@ -39,6 +40,7 @@ export function CashierOrderDecision({
 }) {
   const [review, setReview] = useState(order);
   const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"refresh" | "confirm" | "reject" | null>(null);
   const [blocked, setBlocked] = useState(
     order.status !== "PENDING_CONFIRMATION" || order.paymentStatus !== "UNPAID",
   );
@@ -96,6 +98,7 @@ export function CashierOrderDecision({
     }
     running.current = true;
     setBusy(true);
+    setPendingAction(nextAction ?? "refresh");
     setMessage("");
     const controller = new AbortController();
     request.current = controller;
@@ -215,7 +218,9 @@ export function CashierOrderDecision({
     >
       <div className="cashier-decision-controls">
         <p>Confirmation and payment must succeed together.</p>
-        <button
+        <PendingButton
+          pending={busy && pendingAction === "refresh"}
+          pendingLabel="Refreshing order..."
           className="secondary-button"
           disabled={busy || Boolean(action)}
           onClick={() => {
@@ -223,7 +228,7 @@ export function CashierOrderDecision({
           }}
         >
           Refresh order
-        </button>
+        </PendingButton>
         <div className="field">
           <label htmlFor="cashier-rejection-reason">
             Rejection reason (optional)
@@ -241,7 +246,9 @@ export function CashierOrderDecision({
           </p>
         </div>
         <div className="scanner-controls">
-          <button
+          <PendingButton
+            pending={busy && pendingAction === "confirm"}
+            pendingLabel="Checking order..."
             className="primary-button"
             disabled={busy || blocked || Boolean(action)}
             onClick={() => {
@@ -249,8 +256,10 @@ export function CashierOrderDecision({
             }}
           >
             Confirm and pay
-          </button>
-          <button
+          </PendingButton>
+          <PendingButton
+            pending={busy && pendingAction === "reject"}
+            pendingLabel="Checking order..."
             className="secondary-button"
             disabled={busy || blocked || Boolean(action)}
             onClick={() => {
@@ -258,7 +267,7 @@ export function CashierOrderDecision({
             }}
           >
             Reject order
-          </button>
+          </PendingButton>
         </div>
         {busy && (
           <p role="status">Checking or saving the order. Please wait…</p>
@@ -274,6 +283,7 @@ export function CashierOrderDecision({
         title="Reject this order?"
         description={`Reject ${review.orderNumber}? This closes the pending order. No payment will be recorded.`}
         confirmLabel="Reject order"
+        pendingLabel="Rejecting order…"
         cancelLabel="Keep reviewing"
         destructive={action === "reject"}
         onConfirm={submit}

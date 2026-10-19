@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -81,7 +82,10 @@ function AddOnLibrary() {
           <p>Create once. Offer on any product.</p>
         </div>
         <div className="customization-actions">
-          <button
+          <PendingButton
+            pending={refreshing || query.isFetching}
+            pendingLabel="Refreshing add-ons..."
+            iconOnly
             className="secondary-button customization-refresh"
             aria-label="Refresh add-ons"
             title="Refresh add-ons"
@@ -89,7 +93,7 @@ function AddOnLibrary() {
             onClick={() => void refresh()}
           >
             <FiRefreshCw aria-hidden="true" />
-          </button>
+          </PendingButton>
           <button
             className="primary-button addon-create-fab"
             ref={createAddOn}

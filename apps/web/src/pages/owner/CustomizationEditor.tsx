@@ -361,10 +361,11 @@ export function CustomizationEditor({
               </button>
               <button
                 className="primary-button"
+                aria-busy={busy}
                 disabled={busy || blocked || Boolean(record && !dirty)}
               >
                 {busy
-                  ? "Saving..."
+                  ? record ? "Saving…" : `Creating ${label}…`
                   : record
                     ? "Save changes"
                     : `Create ${label}`}

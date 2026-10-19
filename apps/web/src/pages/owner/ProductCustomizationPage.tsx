@@ -1,3 +1,4 @@
+import { PendingButton } from "../../components/feedback/PendingButton";
 import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -180,7 +181,10 @@ function ProductCustomization({ productId }: { productId: string }) {
             </p>
           )}
         </div>
-        <button
+        <PendingButton
+            pending={refreshing || data.isFetching || products.isFetching}
+            pendingLabel="Refreshing customization..."
+            iconOnly
           className="secondary-button customization-refresh"
           aria-label="Refresh customization"
           title="Refresh customization"
@@ -194,7 +198,7 @@ function ProductCustomization({ productId }: { productId: string }) {
           onClick={() => void refresh()}
         >
           <FiRefreshCw aria-hidden="true" />
-        </button>
+        </PendingButton>
       </header>
       {(products.isPending || (product && data.isPending)) && (
         <ListSkeleton label="Loading customization..." />

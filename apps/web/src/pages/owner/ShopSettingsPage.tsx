@@ -599,6 +599,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
             {dirty ? "Unsaved changes" : "All changes saved"}
           </span>
           <button
+            aria-busy={mutation.isPending}
             type="submit"
             className="primary-button"
             disabled={busy || !dirty}

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GuestTrackingShare } from "./GuestTrackingShare";
 
@@ -17,6 +17,23 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+it("shows copy progress in place, blocks duplicate requests and unlocks after failure", async () => {
+  let fail!: (error: Error) => void;
+  fetchMock.mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject; }));
+  render(<GuestTrackingShare shopSlug="cafe" orderId={id} orderNumber="ORD-000042" />);
+  fireEvent.click(screen.getByText("Track on another device"));
+  fireEvent.click(screen.getByRole("button", { name: "Copy private tracking link" }));
+  const pending = screen.getByRole("button", { name: "Copying tracking link..." });
+  expect(pending).toBeDisabled();
+  expect(pending).toHaveAttribute("aria-busy", "true");
+  fireEvent.click(pending);
+  fireEvent.click(screen.getByRole("button", { name: "Show private tracking QR" }));
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  await act(async () => fail(new Error("offline")));
+  expect(screen.getByRole("button", { name: "Copy private tracking link" })).toBeEnabled();
+  expect(screen.getByRole("alert")).toHaveTextContent("Unable to share tracking");
 });
 
 it("copies the private fragment link and renders a distinct tracking QR only on request", async () => {
