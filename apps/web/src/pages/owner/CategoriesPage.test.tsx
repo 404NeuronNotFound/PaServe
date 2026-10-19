@@ -6,6 +6,7 @@ import {
   within,
   fireEvent,
   cleanup,
+  act,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -53,6 +54,103 @@ const meals = {
   isVisible: false,
   sortOrder: 7,
 };
+it("previews visibility immediately, rolls back rejection and reconciles a retry", async () => {
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  let reject!: (reason: unknown) => void;
+  vi.mocked(setCategoryVisibility).mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+  const { client } = setup();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Hide Coffee" }));
+  expect(screen.getByText("Hidden")).toBeInTheDocument();
+  expect(screen.getByText("Saving visibility…")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Show Coffee" })).toBeDisabled();
+  expect(client.getQueryData(categoriesKey("user-a", "a"))).toEqual({ categories: [category] });
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+  await act(async () => reject({ isAxiosError: true, response: { status: 409 } }));
+  expect(screen.getByText("Visible")).toBeInTheDocument();
+  expect(screen.getByRole("alert")).toHaveTextContent("preview was reverted");
+  expect(screen.getByRole("button", { name: "Hide Coffee" })).toBeEnabled();
+  // Server values, including changes unrelated to the toggle, win on success.
+  const saved = { ...category, isVisible: false, description: "Saved by server" };
+  vi.mocked(setCategoryVisibility).mockResolvedValueOnce({ category: saved });
+  vi.mocked(listCategories).mockResolvedValue({ categories: [saved] });
+  await user.click(screen.getByRole("button", { name: "Hide Coffee" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Show Coffee" })).toBeEnabled());
+  expect(screen.getByText("Saved by server")).toBeInTheDocument();
+});
+
+it("rollback keeps newer cached category data instead of restoring an old snapshot", async () => {
+  vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
+  let reject!: (reason: unknown) => void;
+  vi.mocked(setCategoryVisibility).mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+  const { client } = setup();
+  await userEvent.click(await screen.findByRole("button", { name: "Hide Coffee" }));
+  act(() => client.setQueryData(categoriesKey("user-a", "a"), {
+    categories: [{ ...category, name: "Updated coffee" }],
+  }));
+  vi.mocked(listCategories).mockResolvedValue({ categories: [{ ...category, name: "Updated coffee" }] });
+  await act(async () => reject(new Error("Rejected")));
+  expect(screen.getByText("Updated coffee")).toBeInTheDocument();
+  expect(screen.getByText("Visible")).toBeInTheDocument();
+});
+it.each([undefined, 409])("reconciles saved visibility after an uncertain or conflicted write (%s)", async (status) => {
+  const saved = { ...category, isVisible: false };
+  vi.mocked(listCategories).mockResolvedValueOnce({ categories: [category] });
+  let resolve!: (value: { categories: typeof category[] }) => void;
+  vi.mocked(listCategories).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  vi.mocked(setCategoryVisibility).mockRejectedValueOnce({
+    isAxiosError: true, ...(status ? { response: { status } } : {}),
+  });
+  const { client } = setup();
+  client.setQueryData(["public-menu", "cafe-a"], { categories: [category] });
+  await userEvent.click(await screen.findByRole("button", { name: "Hide Coffee" }));
+  await screen.findByText(/Checking saved categories/);
+  expect(screen.queryByText("Visible")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Create category" })).toBeDisabled();
+  await act(async () => resolve({ categories: [saved] }));
+  expect(await screen.findByRole("button", { name: "Show Coffee" })).toBeEnabled();
+  expect(screen.getByText("Hidden")).toBeInTheDocument();
+  expect(setCategoryVisibility).toHaveBeenCalledTimes(1);
+  expect(client.getQueryState(["public-menu", "cafe-a"])?.isInvalidated).toBe(true);
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+
+it("keeps category changes locked across failed verification and unlocks only after a successful refresh", async () => {
+  vi.mocked(listCategories).mockResolvedValueOnce({ categories: [category] }).mockRejectedValue(new Error("Offline"));
+  vi.mocked(setCategoryVisibility).mockRejectedValueOnce({ isAxiosError: true });
+  setup();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Hide Coffee" }));
+  await screen.findByText(/Saved category visibility is unverified/);
+  expect(screen.queryByText("Visible")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Create category" })).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "Refresh categories" }));
+  await screen.findByText(/Saved category visibility is unverified/);
+  expect(screen.getByRole("button", { name: "Create category" })).toBeDisabled();
+  vi.mocked(listCategories).mockResolvedValue({ categories: [{ ...category, isVisible: false }] });
+  await user.click(screen.getByRole("button", { name: "Refresh categories" }));
+  expect(await screen.findByRole("button", { name: "Show Coffee" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Create category" })).toBeEnabled();
+  expect(setCategoryVisibility).toHaveBeenCalledTimes(1);
+});
+
+it("does not unlock category changes after a cancelled verification read", async () => {
+  vi.mocked(listCategories).mockResolvedValueOnce({ categories: [category] });
+  let resolve!: (value: { categories: typeof category[] }) => void;
+  vi.mocked(listCategories).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  vi.mocked(setCategoryVisibility).mockRejectedValueOnce({ isAxiosError: true });
+  const { client } = setup();
+  await userEvent.click(await screen.findByRole("button", { name: "Hide Coffee" }));
+  await screen.findByText(/Checking saved categories/);
+  await act(async () => { await client.cancelQueries({ queryKey: categoriesKey("user-a", "a") }); });
+  await screen.findByText(/Saved category visibility is unverified/);
+  await act(async () => resolve({ categories: [category] }));
+  expect(screen.getByRole("button", { name: "Create category" })).toBeDisabled();
+  expect(screen.queryByText("Visible")).not.toBeInTheDocument();
+  vi.mocked(listCategories).mockResolvedValue({ categories: [{ ...category, isVisible: false }] });
+  await userEvent.click(screen.getByRole("button", { name: "Refresh categories" }));
+  expect(await screen.findByRole("button", { name: "Show Coffee" })).toBeEnabled();
+});
 it("keeps ordering focused and updates the public menu cache only on Save and Undo", async () => {
   const visibleMeals = { ...meals, isVisible: true };
   const hidden = {

@@ -87,7 +87,7 @@ it("previews a typed quantity locally without changing saved totals or submittin
   expect(useCart.getState()).toBe(before);
   expect(api.post).not.toHaveBeenCalled();
 });
-it("preserves the saved item and typed quantity after failure and allows retry", async () => {
+it("rolls back the displayed quantity after failure and allows retry", async () => {
   setup();
   const before = useCart.getState();
   const user = userEvent.setup();
@@ -96,25 +96,45 @@ it("preserves the saved item and typed quantity after failure and allows retry",
   await user.type(screen.getByRole("spinbutton"), "99");
   await user.click(screen.getByRole("button", { name: "Update quantity for Coffee" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("saved item is unchanged");
-  expect(screen.getByRole("spinbutton")).toHaveValue(99);
+  expect(screen.getByRole("spinbutton")).toHaveValue(2);
   expect(useCart.getState()).toBe(before);
   vi.mocked(api.post).mockResolvedValueOnce({ data: { ...quote, quantity: 99, totalPrice: "128.70" } });
+  await user.clear(screen.getByRole("spinbutton"));
+  await user.type(screen.getByRole("spinbutton"), "99");
   await user.click(screen.getByRole("button", { name: "Update quantity for Coffee" }));
   await waitFor(() => expect(useCart.getState().shops.cafe[0].quantity).toBe(99));
   expect(api.post).toHaveBeenCalledTimes(2);
 });
-it("lets the stepper return a failed draft to the saved quantity without requoting", async () => {
+it("restores a failed stepper change without leaving an unsaved draft", async () => {
   setup();
   const before = useCart.getState();
   vi.mocked(api.post).mockRejectedValueOnce(new Error("Unavailable"));
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "Increase quantity for Coffee" }));
   await screen.findByRole("alert");
-  await user.click(screen.getByRole("button", { name: "Decrease quantity for Coffee" }));
   expect(screen.getByRole("spinbutton")).toHaveValue(2);
-  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.getByRole("alert")).toHaveTextContent("saved item is unchanged");
+  expect(screen.queryByRole("button", { name: "Update quantity for Coffee" })).not.toBeInTheDocument();
   expect(useCart.getState()).toBe(before);
   expect(api.post).toHaveBeenCalledTimes(1);
+});
+
+it("shows quantity and estimated price immediately, then rolls back a rejected check", async () => {
+  setup();
+  const before = useCart.getState();
+  let reject!: (reason: unknown) => void;
+  vi.mocked(api.post).mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+  const button = screen.getByRole("button", { name: "Increase quantity for Coffee" });
+  await userEvent.dblClick(button);
+  expect(screen.getByRole("spinbutton")).toHaveValue(3);
+  expect(screen.getByText(/Estimated total for 3:/)).toHaveTextContent("₱3.90");
+  expect(api.post).toHaveBeenCalledTimes(1);
+  expect(useCart.getState()).toBe(before);
+  await act(async () => reject(new Error("Rejected")));
+  expect(screen.getByRole("spinbutton")).toHaveValue(2);
+  expect(screen.queryByText(/Estimated total for/)).not.toBeInTheDocument();
+  expect(button).toBeEnabled();
+  expect(useCart.getState()).toBe(before);
 });
 it.each(["remove", "close", "change"])("ignores a late response after %s", async (action) => {
   const view = setup();

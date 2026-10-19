@@ -95,6 +95,13 @@ function ProductWorkspace({ userId }: { userId: string }) {
   const [archiveError, setArchiveError] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [availableBusy, setAvailableBusy] = useState<string | null>(null);
+  const verificationRequired = useRef(false);
+  const [unverified, setUnverified] = useState(false);
+  const [productPreview, setProductPreview] = useState<{
+    id: string;
+    status?: MenuProduct["status"];
+    isFeatured?: boolean;
+  } | null>(null);
   const [availableError, setAvailableError] = useState<{
     id: string;
     message: string;
@@ -144,14 +151,56 @@ function ProductWorkspace({ userId }: { userId: string }) {
     }
     return "We couldn’t change the archive status. Please try again.";
   }
+  async function refreshProducts() {
+    const key = productsKey(userId, membership.shopId);
+    try {
+      await client.cancelQueries({ queryKey: key });
+      if (!stillHere()) return false;
+      let readFinished = false;
+      let readSignal: AbortSignal | undefined;
+      await client.fetchQuery({
+        queryKey: key,
+        queryFn: async ({ signal }) => {
+          readSignal = signal;
+          const saved = await listProducts(membership.shopId, signal);
+          readFinished = !signal.aborted;
+          return saved;
+        },
+        staleTime: 0,
+        retry: false,
+        networkMode: "always",
+      });
+      if (!stillHere() || !readFinished || readSignal?.aborted) return false;
+      verificationRequired.current = false;
+      setUnverified(false);
+      setAvailableError(null);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function reconcileProduct() {
+    verificationRequired.current = true;
+    setUnverified(true);
+    setProductPreview(null);
+    void client.invalidateQueries({
+      queryKey: ["public-menu", membership.shop.slug],
+    });
+    return refreshProducts();
+  }
   async function changeAvailability(
     product: MenuProduct,
     targetStatus: "AVAILABLE" | "SOLD_OUT" | "HIDDEN" = "AVAILABLE",
   ) {
-    if (!stillHere() || running.current || editorOpen.current) return;
+    if (
+      !stillHere() || running.current || editorOpen.current ||
+      verificationRequired.current
+    ) return;
     running.current = true;
     setAvailableBusy(product.id);
     setAvailableError(null);
+    returnFocus.current = `edit-product-${product.id}`;
+    setProductPreview({ id: product.id, status: targetStatus });
     try {
       const write =
         targetStatus === "HIDDEN"
@@ -194,26 +243,38 @@ function ProductWorkspace({ userId }: { userId: string }) {
       );
     } catch (error) {
       if (!stillHere()) return;
+      const refreshed = await reconcileProduct();
+      if (!stillHere()) return;
       const status = isAxiosError(error) ? error.response?.status : undefined;
       setAvailableError({
         id: product.id,
         message:
-          status === 409
-            ? "Product status changed elsewhere. Refresh products before trying again."
+          "The status preview was reverted. " +
+          (status === 409
+            ? "Product status changed elsewhere."
             : [401, 403, 404].includes(status ?? 0)
-              ? "The product or your access changed. Refresh products to continue."
-              : "We couldn’t confirm availability. Refresh products before trying again.",
+              ? "The product or your access changed."
+              : "We couldn’t confirm availability.") +
+          (refreshed ? " Latest saved products are now loaded." : " Saved status is unverified. Refresh products to unlock changes."),
       });
     } finally {
       running.current = false;
-      if (stillHere()) setAvailableBusy(null);
+      if (stillHere()) {
+        setProductPreview(null);
+        setAvailableBusy(null);
+      }
     }
   }
   async function changeFeatured(product: MenuProduct) {
-    if (!stillHere() || running.current || editorOpen.current) return;
+    if (
+      !stillHere() || running.current || editorOpen.current ||
+      verificationRequired.current
+    ) return;
     running.current = true;
     setAvailableBusy(product.id);
     setAvailableError(null);
+    returnFocus.current = `more-product-${product.id}`;
+    setProductPreview({ id: product.id, isFeatured: !product.isFeatured });
     try {
       const result = await setProductFeatured(membership.shopId, product.id, {
         isFeatured: !product.isFeatured,
@@ -249,23 +310,32 @@ function ProductWorkspace({ userId }: { userId: string }) {
       );
     } catch (error) {
       if (!stillHere()) return;
+      const refreshed = await reconcileProduct();
+      if (!stillHere()) return;
       const status = isAxiosError(error) ? error.response?.status : undefined;
       setAvailableError({
         id: product.id,
         message:
-          status === 409
-            ? "Featured selection changed elsewhere. Refresh products before trying again."
+          "The featured preview was reverted. " +
+          (status === 409
+            ? "Featured selection changed elsewhere."
             : [401, 403, 404].includes(status ?? 0)
-              ? "The product or your access changed. Refresh products to continue."
-              : "We couldn’t confirm the featured change. Refresh products before trying again.",
+              ? "The product or your access changed."
+              : "We couldn’t confirm the featured change.") +
+          (refreshed ? " Latest saved products are now loaded." : " Saved featured selection is unverified. Refresh products to unlock changes."),
       });
     } finally {
       running.current = false;
-      if (stillHere()) setAvailableBusy(null);
+      if (stillHere()) {
+        setProductPreview(null);
+        setAvailableBusy(null);
+      }
     }
   }
   async function saveOrder(productIds: string[], expectedOrder: string[]) {
     if (!stillHere()) return false;
+    if (verificationRequired.current)
+      throw new Error("Refresh products before changing their order.");
     if (running.current)
       throw new Error("Wait for the current action to finish.");
     running.current = true;
@@ -338,6 +408,8 @@ function ProductWorkspace({ userId }: { userId: string }) {
   ) {
     if (!stillHere())
       throw new Error("Return to this shop’s Products page before using Undo.");
+    if (verificationRequired.current)
+      throw new Error("Refresh products before changing archive status.");
     if (running.current || editorOpen.current)
       throw new Error("Wait for the current product action to finish.");
     running.current = true;
@@ -419,12 +491,19 @@ function ProductWorkspace({ userId }: { userId: string }) {
       </section>
     );
   const denied =
-    isAxiosError(query.error) &&
-    [401, 403, 404].includes(query.error.response?.status ?? 0);
+    unverified ||
+    (isAxiosError(query.error) &&
+      [401, 403, 404].includes(query.error.response?.status ?? 0));
+  // Keep previews local: rollback reveals the latest server cache, and an
+  // unfinished request cannot leak into another shop or a customer menu.
   const visibleProducts =
-    query.data?.products.filter(
-      (product) => product.isArchived === showArchived,
-    ) ?? [];
+    query.data?.products
+      .map((product) =>
+        product.id === productPreview?.id
+          ? { ...product, ...productPreview }
+          : product,
+      )
+      .filter((product) => product.isArchived === showArchived) ?? [];
   const knownCategories = categories.data?.categories ?? [];
   const groupDefinitions = [
     ...knownCategories.map((category) => ({
@@ -472,7 +551,12 @@ function ProductWorkspace({ userId }: { userId: string }) {
     group.products.filter(
       (product) =>
         (!categoryFilter || group.key === categoryFilter) &&
-        (!statusFilter || product.status === statusFilter) &&
+        (!statusFilter ||
+          product.status === statusFilter ||
+          // Keep the pending row in its current result scope until confirmed.
+          (product.id === productPreview?.id &&
+            query.data?.products.find((item) => item.id === product.id)?.status ===
+              statusFilter)) &&
         (!term ||
           [
             product.name,
@@ -510,6 +594,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
           (b.featuredSortOrder ?? b.sortOrder) || a.id.localeCompare(b.id),
     );
   const browsingLocked =
+    unverified ||
     creating ||
     Boolean(editing) ||
     ordering ||
@@ -614,7 +699,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
             type="button"
             disabled={
               query.isFetching ||
-              denied ||
+              (denied && !unverified) ||
               creating ||
               Boolean(editing) ||
               ordering ||
@@ -622,7 +707,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
               archiveBusy ||
               Boolean(availableBusy)
             }
-            onClick={() => void query.refetch()}
+            onClick={() => void refreshProducts()}
           >
             <FiRefreshCw aria-hidden="true" />
             <span className="sr-only">
@@ -666,7 +751,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
               </button>
             </div>
           )}
-        {query.isSuccess && query.data.products.length > 0 && (
+        {query.isSuccess && !unverified && query.data.products.length > 0 && (
           <div className="product-browse-controls">
             <div className="product-filter-fields">
               <div className="field product-search-field">
@@ -746,7 +831,16 @@ function ProductWorkspace({ userId }: { userId: string }) {
           </div>
         )}
         {archiveError && <InlineMessage>{archiveError}</InlineMessage>}
-        {query.isPending ? (
+        {availableError && (unverified || !pageProducts.some((product) => product.id === availableError.id)) && (
+          <InlineMessage>{availableError.message}</InlineMessage>
+        )}
+        {unverified ? (
+          <InlineMessage tone={query.isFetching ? "info" : "error"}>
+            {query.isFetching
+              ? "Checking saved products. Changes are locked until verification finishes."
+              : "Saved product status is unverified. Refresh products to unlock changes."}
+          </InlineMessage>
+        ) : query.isPending ? (
           <ProductsSkeleton />
         ) : query.isError ? (
           <InlineMessage>
@@ -885,7 +979,15 @@ function ProductWorkspace({ userId }: { userId: string }) {
                                   : "Menu visibility follows category visibility"}
                             </p>
                           )}
-                        <small>/{product.slug}</small>
+                        <small>
+                          {productPreview?.id === product.id ? (
+                            <span role="status">
+                              {productPreview.status
+                                ? "Saving product status…"
+                                : "Saving featured selection…"}
+                            </span>
+                          ) : `/${product.slug}`}
+                        </small>
                         {product.description && <p>{product.description}</p>}
                         <div className="product-card-meta">
                           <span className="category-visibility">
@@ -1208,7 +1310,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
           )}
         </footer>
       )}
-      {query.isSuccess && hasFilters && filteredProducts.length === 0 && (
+      {query.isSuccess && !unverified && hasFilters && filteredProducts.length === 0 && (
         <div className="categories-empty product-no-results">
           <FiSearch aria-hidden="true" />
           <h3>No products found.</h3>
@@ -1216,6 +1318,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
         </div>
       )}
       {query.isSuccess &&
+        !unverified &&
         !hasFilters &&
         visibleProducts.length === 0 &&
         query.data.products.length > 0 && (

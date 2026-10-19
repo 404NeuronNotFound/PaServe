@@ -47,6 +47,13 @@ export function CartQuantityControl({
       ? createCartPricePreview({ ...item, quantity: count })
       : undefined;
 
+  function restoreSavedQuantity() {
+    const saved = useCart.getState().shops[shopSlug]?.find(
+      (line) => line.lineId === item.lineId,
+    );
+    setDraft(String(saved?.quantity ?? item.quantity));
+  }
+
   async function update(quantity: number) {
     if (submitting.current || !isValidOrderQuantity(quantity)) return;
     if (quantity === item.quantity) {
@@ -71,6 +78,7 @@ export function CartQuantityControl({
           .getState()
           .updateQuantity(shopSlug, item, response.data, pricePreview)
       ) {
+        restoreSavedQuantity();
         setError(
           "This cart item changed. Close and reopen the cart before trying again.",
         );
@@ -79,6 +87,7 @@ export function CartQuantityControl({
       feedback.toast("Quantity updated.");
     } catch {
       if (mounted.current) {
+        restoreSavedQuantity();
         setError(
           "We could not update this quantity. Your saved item is unchanged. Try again, or remove and add the item again if its options or availability changed.",
         );

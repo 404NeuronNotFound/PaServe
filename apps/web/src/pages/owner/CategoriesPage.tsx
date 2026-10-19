@@ -61,12 +61,23 @@ function CategoryWorkspace({ userId }: { userId: string }) {
   const [editing, setEditing] = useState<MenuCategory | null>(null);
   const [deleting, setDeleting] = useState<MenuCategory | null>(null);
   const [reordering, setReordering] = useState(false);
+  const editorOpen = useRef(false);
+  useEffect(() => {
+    editorOpen.current = Boolean(editing || deleting || reordering);
+  }, [editing, deleting, reordering]);
   const orderBusy = useRef(false);
   const [visibilityError, setVisibilityError] = useState<{
     id: string;
     message: string;
   } | null>(null);
   const visibilityBusy = useRef(false);
+  const verificationRequired = useRef(false);
+  const [unverified, setUnverified] = useState(false);
+  // Local previews never publish unconfirmed changes into shared menu caches.
+  const [visibilityPreview, setVisibilityPreview] = useState<{
+    id: string;
+    isVisible: boolean;
+  } | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const mounted = useRef(false);
   const submitting = useRef(false);
@@ -80,6 +91,12 @@ function CategoryWorkspace({ userId }: { userId: string }) {
     networkMode: "always",
     refetchOnWindowFocus: false,
   });
+  const displayedCategories =
+    query.data?.categories.map((category) =>
+      category.id === visibilityPreview?.id
+        ? { ...category, isVisible: visibilityPreview.isVisible }
+        : category,
+    ) ?? [];
   const mutation = useMutation({
     mutationFn: (categoryName: string) =>
       createCategory(shopId, { name: categoryName }),
@@ -122,6 +139,8 @@ function CategoryWorkspace({ userId }: { userId: string }) {
       throw new Error(
         "Return to this shop’s Categories page before changing its order.",
       );
+    if (verificationRequired.current)
+      throw new Error("Refresh categories before changing their order.");
     if (orderBusy.current || visibilityBusy.current)
       throw new Error("Wait for the current menu update to finish.");
     orderBusy.current = true;
@@ -186,13 +205,13 @@ function CategoryWorkspace({ userId }: { userId: string }) {
   function visibilityMessage(failure: unknown) {
     if (isAxiosError(failure)) {
       if ([401, 403, 404].includes(failure.response?.status ?? 0))
-        return "This category is unavailable or your access changed. Refresh the categories to continue.";
+        return "This category is unavailable or your access changed.";
       if (failure.response?.status === 409)
-        return "Visibility changed elsewhere. Refresh the categories before trying again.";
+        return "Visibility changed elsewhere.";
       if (!failure.response)
-        return "We couldn’t confirm visibility. Refresh the categories before trying again.";
+        return "We couldn’t confirm visibility.";
     }
-    return "We couldn’t update visibility. Please try again.";
+    return "We couldn’t update visibility.";
   }
   function stillHere() {
     return (
@@ -200,6 +219,45 @@ function CategoryWorkspace({ userId }: { userId: string }) {
       client.getQueryData<CurrentUserResponse>(currentUserKey)?.user.id ===
         userId
     );
+  }
+  async function refreshCategories() {
+    try {
+      await client.cancelQueries({ queryKey: key });
+      if (!stillHere()) return false;
+      // The query library can resolve cancellation with cached data. Require
+      // this read itself to finish without aborting before clearing the lock.
+      let readFinished = false;
+      let readSignal: AbortSignal | undefined;
+      await client.fetchQuery({
+        queryKey: key,
+        queryFn: async ({ signal }) => {
+          readSignal = signal;
+          const saved = await listCategories(shopId, signal);
+          readFinished = !signal.aborted;
+          return saved;
+        },
+        staleTime: 0,
+        retry: false,
+        networkMode: "always",
+      });
+      if (!stillHere() || !readFinished || readSignal?.aborted) return false;
+      verificationRequired.current = false;
+      setUnverified(false);
+      setVisibilityError(null);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function reconcileVisibility() {
+    verificationRequired.current = true;
+    setUnverified(true);
+    setVisibilityPreview(null);
+    // A lost response can follow a committed write. Re-read; never replay it.
+    void client.invalidateQueries({
+      queryKey: ["public-menu", membership.shop.slug],
+    });
+    return refreshCategories();
   }
   async function changeVisibility(
     category: MenuCategory,
@@ -213,6 +271,14 @@ function CategoryWorkspace({ userId }: { userId: string }) {
         );
       return;
     }
+    if (verificationRequired.current) {
+      if (undo) throw new Error("Refresh categories before changing visibility.");
+      return;
+    }
+    if (editorOpen.current) {
+      if (undo) throw new Error("Finish the current category edit before using Undo.");
+      return;
+    }
     if (visibilityBusy.current || orderBusy.current) {
       if (undo)
         throw new Error("Wait for the current visibility update to finish.");
@@ -220,6 +286,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
     }
     visibilityBusy.current = true;
     setVisibilityError(null);
+    setVisibilityPreview({ id: category.id, isVisible });
     try {
       await client.cancelQueries({ queryKey: key });
       if (!stillHere()) return;
@@ -241,6 +308,9 @@ function CategoryWorkspace({ userId }: { userId: string }) {
           : current,
       );
       void client.invalidateQueries({ queryKey: key });
+      void client.invalidateQueries({
+        queryKey: ["public-menu", membership.shop.slug],
+      });
       if (!undo)
         feedback.snackbar(
           isVisible
@@ -259,11 +329,14 @@ function CategoryWorkspace({ userId }: { userId: string }) {
         );
     } catch (failure) {
       if (!stillHere()) return;
-      const message = visibilityMessage(failure);
+      const refreshed = await reconcileVisibility();
+      if (!stillHere()) return;
+      const message = `The visibility preview was reverted. ${visibilityMessage(failure)} ${refreshed ? "Latest saved categories are now loaded." : "Saved visibility is unverified. Refresh categories to unlock changes."}`;
       if (undo) throw new Error(message, { cause: failure });
       setVisibilityError({ id: category.id, message });
     } finally {
       visibilityBusy.current = false;
+      if (stillHere()) setVisibilityPreview(null);
     }
   }
   function deletionMessage(failure: unknown) {
@@ -296,6 +369,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
       submitting.current ||
       creationUncertain ||
       !authorized ||
+      verificationRequired.current ||
       lostAccess ||
       reordering ||
       orderBusy.current
@@ -394,7 +468,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             safely linked, ready to show again.
           </p>
         </div>
-        {query.isSuccess && !query.isError && (
+        {query.isSuccess && !query.isError && !unverified && (
           <div
             className="categories-menu-summary"
             aria-label="Menu visibility summary"
@@ -406,7 +480,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             <div>
               <strong>
                 {
-                  query.data.categories.filter((category) => category.isVisible)
+                  displayedCategories.filter((category) => category.isVisible)
                     .length
                 }
               </strong>
@@ -414,7 +488,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               <span className="categories-summary-divider" aria-hidden="true" />
               <strong>
                 {
-                  query.data.categories.filter(
+                  displayedCategories.filter(
                     (category) => !category.isVisible,
                   ).length
                 }
@@ -435,7 +509,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               <h2 id="category-list-title" tabIndex={-1}>
                 Your categories
               </h2>
-              {query.isSuccess && !query.isError && (
+              {query.isSuccess && !query.isError && !unverified && (
                 <span>{query.data.categories.length}</span>
               )}
             </div>
@@ -455,6 +529,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                     order.isPending ||
                     query.isFetching ||
                     lostAccess ||
+                    unverified ||
                     query.data.categories.length > CATEGORY_REORDER_MAX
                   }
                   onClick={() => setReordering(true)}
@@ -464,6 +539,9 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                 </button>
               )}
           </div>
+          {visibilityError && (unverified || !displayedCategories.some((category) => category.id === visibilityError.id)) && (
+            <InlineMessage>{visibilityError.message}</InlineMessage>
+          )}
           {query.data &&
             query.data.categories.length > CATEGORY_REORDER_MAX && (
               <InlineMessage tone="info">
@@ -471,7 +549,13 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                 once.
               </InlineMessage>
             )}
-          {reordering && query.data ? (
+          {unverified ? (
+            <InlineMessage tone={query.isFetching ? "info" : "error"}>
+              {query.isFetching
+                ? "Checking saved categories. Changes are locked until verification finishes."
+                : "Saved category visibility is unverified. Refresh categories to unlock changes."}
+            </InlineMessage>
+          ) : reordering && query.data ? (
             <CategoryOrderEditor
               categories={query.data.categories}
               onSave={saveOrder}
@@ -494,7 +578,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             </>
           ) : query.data.categories.length ? (
             <ul className="categories-list">
-              {query.data.categories.map((category, index) => (
+              {displayedCategories.map((category, index) => (
                 <li
                   key={category.id}
                   className={category.isVisible ? "" : "category-is-hidden"}
@@ -523,7 +607,11 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                         {category.isVisible ? "Visible" : "Hidden"}
                       </span>
                     </div>
-                    <small>/{category.slug}</small>
+                    <small>
+                      {visibilityPreview?.id === category.id ? (
+                        <span role="status">Saving visibility…</span>
+                      ) : `/${category.slug}`}
+                    </small>
                     {category.description && (
                       <p className="category-description">
                         {category.description}
@@ -615,7 +703,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               <p>Create your first category to start organizing your menu.</p>
             </div>
           )}
-          {!requestDenied && !query.isPending && (
+          {(!requestDenied || unverified) && !query.isPending && (
             <button
               type="button"
               className="secondary-button categories-refresh"
@@ -627,12 +715,12 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               }
               onClick={() => {
                 setVisibilityError(null);
-                void query.refetch().then((result) => {
+                void refreshCategories().then((success) => {
                   if (
                     mounted.current &&
                     client.getQueryData<CurrentUserResponse>(currentUserKey)
                       ?.user.id === userId &&
-                    result.isSuccess
+                    success
                   ) {
                     setCreationUncertain(false);
                     setError("");
@@ -693,6 +781,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                 disabled={
                   mutation.isPending ||
                   creationUncertain ||
+                  unverified ||
                   lostAccess ||
                   requestDenied
                 }
@@ -731,6 +820,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               disabled={
                 mutation.isPending ||
                 creationUncertain ||
+                unverified ||
                 lostAccess ||
                 requestDenied ||
                 reordering ||

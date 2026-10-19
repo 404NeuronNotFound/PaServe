@@ -6,6 +6,7 @@ import {
   within,
   fireEvent,
   cleanup,
+  act,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -136,6 +137,138 @@ async function findProductAction(name: string) {
     await userEvent.click(disclosure.querySelector("summary")!);
   return screen.findByRole("button", { name });
 }
+it.each([
+  ["Hide Latte", setProductHidden, "HIDDEN"],
+  ["Mark Latte sold out", setProductSoldOut, "SOLD_OUT"],
+  ["Make Latte available", setProductAvailable, "AVAILABLE"],
+] as const)("previews %s immediately and rolls back a rejected status", async (label, write, target) => {
+  const saved = { ...product, status: target === "AVAILABLE" ? "SOLD_OUT" as const : "AVAILABLE" as const };
+  vi.mocked(listProducts).mockResolvedValue({ products: [saved] });
+  let reject!: (reason: unknown) => void;
+  vi.mocked(write).mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+  const { client } = setup();
+  await userEvent.click(await findProductAction(label));
+  expect(screen.getByText("Saving product status…")).toBeInTheDocument();
+  if (target === "HIDDEN") expect(screen.getByText("Hidden from the customer menu · Details kept")).toBeInTheDocument();
+  if (target === "SOLD_OUT") expect(screen.getByText("Temporarily unavailable")).toBeInTheDocument();
+  if (target === "AVAILABLE") expect(screen.getByText("Shown on the menu · Available to order")).toBeInTheDocument();
+  expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({ products: [saved] });
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+  await act(async () => reject({ isAxiosError: true, response: { status: 409 } }));
+  expect(screen.getByRole("alert")).toHaveTextContent("preview was reverted");
+  expect(await findProductAction(label)).toBeEnabled();
+});
+
+it("previews featured state without publishing it and accepts the server response", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  let resolve!: (value: { product: MenuProduct }) => void;
+  vi.mocked(setProductFeatured).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  const { client } = setup();
+  const publicMenu = { products: [], featuredProducts: [] };
+  client.setQueryData(["public-menu", "cafe-a"], publicMenu);
+  await userEvent.click(await findProductAction("Feature Latte"));
+  expect(screen.getByText("Featured", { selector: ".product-featured-badge" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Unfeature Latte", hidden: true })).toHaveAttribute("aria-pressed", "true");
+  expect(client.getQueryData(["public-menu", "cafe-a"])).toEqual(publicMenu);
+  const saved = { ...product, isFeatured: true, name: "Server Latte" };
+  vi.mocked(listProducts).mockResolvedValue({ products: [saved] });
+  await act(async () => resolve({ product: saved }));
+  expect(await screen.findByRole("heading", { name: "Server Latte" })).toBeInTheDocument();
+  expect(screen.queryByText("Saving featured selection…")).not.toBeInTheDocument();
+});
+
+it("keeps a pending status row visible under its original status filter", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  let reject!: (reason: unknown) => void;
+  vi.mocked(setProductHidden).mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: "Latte" });
+  await user.click(screen.getByRole("combobox", { name: "Status" }));
+  await user.click(screen.getByRole("option", { name: "Available" }));
+  await user.click(await findProductAction("Hide Latte"));
+  expect(screen.getByRole("heading", { name: "Latte" })).toBeInTheDocument();
+  await act(async () => reject(new Error("Rejected")));
+  expect(screen.getByRole("heading", { name: "Latte" })).toBeInTheDocument();
+});
+
+it("rolls back a featured preview without losing newer product data", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  let reject!: (reason: unknown) => void;
+  vi.mocked(setProductFeatured).mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+  const { client } = setup();
+  await userEvent.click(await findProductAction("Feature Latte"));
+  expect(screen.getByText("Featured", { selector: ".product-featured-badge" })).toBeInTheDocument();
+  act(() => client.setQueryData(productsKey("user-a", "a"), {
+    products: [{ ...product, price: "20.00" }],
+  }));
+  vi.mocked(listProducts).mockResolvedValue({ products: [{ ...product, price: "20.00" }] });
+  await act(async () => reject({ isAxiosError: true }));
+  expect(screen.queryByText("Featured", { selector: ".product-featured-badge" })).not.toBeInTheDocument();
+  expect(screen.getByText("₱20.00")).toBeInTheDocument();
+  expect(screen.getByRole("alert")).toHaveTextContent("Latest saved products are now loaded");
+  expect(await findProductAction("Feature Latte")).toBeEnabled();
+});
+
+it.each(["status", "featured"] as const)("reconciles a committed %s change after a lost response without replaying it", async (kind) => {
+  const saved = { ...product, status: "SOLD_OUT" as const, isFeatured: true };
+  vi.mocked(listProducts).mockResolvedValueOnce({ products: [product] });
+  let resolve!: (value: { products: MenuProduct[] }) => void;
+  vi.mocked(listProducts).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  const write = kind === "status" ? setProductSoldOut : setProductFeatured;
+  vi.mocked(write).mockRejectedValueOnce({ isAxiosError: true });
+  const { client } = setup();
+  client.setQueryData(["public-menu", "cafe-a"], { products: [product] });
+  await userEvent.click(await findProductAction(kind === "status" ? "Mark Latte sold out" : "Feature Latte"));
+  await screen.findByText(/Checking saved products/);
+  expect(screen.queryByRole("heading", { name: "Latte" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Create product" })).toBeDisabled();
+  await act(async () => resolve({ products: [saved] }));
+  expect(await screen.findByRole("heading", { name: "Latte" })).toBeInTheDocument();
+  expect(screen.getByText("Sold out", { selector: ".category-visibility" })).toBeInTheDocument();
+  expect(screen.getByText("Featured", { selector: ".product-featured-badge" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Edit Latte" })).toBeEnabled();
+  expect(write).toHaveBeenCalledTimes(1);
+  expect(client.getQueryState(["public-menu", "cafe-a"])?.isInvalidated).toBe(true);
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+});
+
+it("keeps products locked after failed reconciliation until a manual read succeeds", async () => {
+  vi.mocked(listProducts).mockResolvedValueOnce({ products: [product] }).mockRejectedValue(new Error("Offline"));
+  vi.mocked(setProductFeatured).mockRejectedValueOnce({ isAxiosError: true, response: { status: 409 } });
+  setup();
+  const user = userEvent.setup();
+  await user.click(await findProductAction("Feature Latte"));
+  await screen.findByText(/Saved product status is unverified/);
+  expect(screen.queryByRole("heading", { name: "Latte" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Create product" })).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "Refresh products" }));
+  await screen.findByText(/Saved product status is unverified/);
+  expect(screen.getByRole("button", { name: "Create product" })).toBeDisabled();
+  vi.mocked(listProducts).mockResolvedValue({ products: [{ ...product, isFeatured: true }] });
+  await user.click(screen.getByRole("button", { name: "Refresh products" }));
+  expect(await screen.findByRole("button", { name: "Edit Latte" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Create product" })).toBeEnabled();
+  expect(setProductFeatured).toHaveBeenCalledTimes(1);
+});
+
+it("does not accept cached products as verification when the recovery read is cancelled", async () => {
+  vi.mocked(listProducts).mockResolvedValueOnce({ products: [product] });
+  let resolve!: (value: { products: MenuProduct[] }) => void;
+  vi.mocked(listProducts).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  vi.mocked(setProductFeatured).mockRejectedValueOnce({ isAxiosError: true });
+  const { client } = setup();
+  await userEvent.click(await findProductAction("Feature Latte"));
+  await screen.findByText(/Checking saved products/);
+  await act(async () => { await client.cancelQueries({ queryKey: productsKey("user-a", "a") }); });
+  await screen.findByText(/Saved product status is unverified/);
+  await act(async () => resolve({ products: [product] }));
+  expect(screen.getByRole("button", { name: "Create product" })).toBeDisabled();
+  expect(screen.queryByRole("heading", { name: "Latte" })).not.toBeInTheDocument();
+  vi.mocked(listProducts).mockResolvedValue({ products: [{ ...product, isFeatured: true }] });
+  await userEvent.click(screen.getByRole("button", { name: "Refresh products" }));
+  expect(await screen.findByRole("button", { name: "Edit Latte" })).toBeEnabled();
+});
 async function open() {
   const user = userEvent.setup();
   await user.click(
