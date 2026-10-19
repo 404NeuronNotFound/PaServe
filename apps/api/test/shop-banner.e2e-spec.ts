@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
 import {
   ServiceUnavailableException,
@@ -67,6 +68,7 @@ describe('shop banner upload', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     currentUser.mockResolvedValue({ id: userId });
     role = 'OWNER';

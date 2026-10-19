@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Body,
   Controller,
@@ -15,6 +16,7 @@ import { VerifyOrderQrDto } from './verify-order-qr.dto.js';
 import { LookupOrderNumberDto } from './order-number-lookup.dto.js';
 
 @Controller('shops/:shopId/orders')
+@RateLimit('staffVerification')
 export class OrderQrController {
   constructor(private readonly qr: OrderQrService) {}
   @Post('lookup-number')

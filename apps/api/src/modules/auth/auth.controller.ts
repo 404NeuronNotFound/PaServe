@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import type { Request, Response, CookieOptions } from 'express';
 import { AuthService } from './auth.service.js';
 import { RegisterDto } from './dto/register.dto.js';
@@ -43,16 +43,15 @@ export class AuthController {
   ) {}
 
   @Post('register')
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @RateLimit('register')
   register(@Body() dto: RegisterDto) {
     return this.auth.register(dto);
   }
 
   @Post('login')
   @HttpCode(200)
-  @UseGuards(AuthOriginGuard, ThrottlerGuard)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseGuards(AuthOriginGuard)
+  @RateLimit('login')
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) response: Response,
@@ -62,6 +61,7 @@ export class AuthController {
     return result.response;
   }
 
+  @RateLimit('refresh')
   @Post('refresh')
   @HttpCode(200)
   @UseGuards(AuthOriginGuard)
@@ -77,6 +77,7 @@ export class AuthController {
     return result.response;
   }
 
+  @RateLimit('logout')
   @Post('logout')
   @HttpCode(204)
   @UseGuards(AuthOriginGuard)
@@ -90,6 +91,7 @@ export class AuthController {
     response.setHeader('Cache-Control', 'no-store');
   }
 
+  @RateLimit('session')
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(

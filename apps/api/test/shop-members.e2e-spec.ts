@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import type { ShopRole } from '@paserve/contracts';
@@ -48,6 +49,7 @@ describe('ShopMember tenant access', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     memberships.clear();
     memberships.set(`${userA}:${shopA}`, record(userA, shopA, 'OWNER'));

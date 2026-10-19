@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import type { ShopRole } from '@paserve/contracts';
@@ -52,6 +53,7 @@ describe('New order stream HTTP authorization', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.clearAllMocks();
     role = 'OWNER';
     auth.mockResolvedValue({ id: userId });

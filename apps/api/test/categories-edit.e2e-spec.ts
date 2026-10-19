@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -47,6 +48,7 @@ describe('category editing and deletion', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     role = 'OWNER';
     currentUser.mockResolvedValue({ id: userId });

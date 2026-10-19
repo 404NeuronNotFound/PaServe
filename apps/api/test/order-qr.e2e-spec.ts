@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import type { INestApplication } from '@nestjs/common';
@@ -92,6 +93,7 @@ describe('Cashier order QR verification', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     role = 'CASHIER';
     activeUser = true;

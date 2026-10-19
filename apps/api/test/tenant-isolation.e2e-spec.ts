@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import {
   Controller,
   Get,
@@ -88,6 +89,7 @@ describe('shop/resource ID isolation through HTTP', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     memberA = true;
     memberB = true;

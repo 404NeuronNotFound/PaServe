@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import { Controller, Get, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
@@ -5,6 +6,7 @@ import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.g
 import { CompletedSalesService } from './completed-sales.service.js';
 
 @Controller('shops/:shopId/reports')
+@RateLimit('reports')
 export class CompletedSalesController {
   constructor(private readonly sales: CompletedSalesService) {}
   @Get('sales-trends')

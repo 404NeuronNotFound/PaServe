@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Body,
   Controller,
@@ -18,6 +19,7 @@ import {
 import { OrderDecisionService } from './order-decision.service.js';
 
 @Controller('shops/:shopId/orders')
+@RateLimit('orderAction')
 export class OrderDecisionController {
   constructor(private readonly decisions: OrderDecisionService) {}
   @Post(':orderId/confirm-number')
@@ -56,6 +58,7 @@ export class OrderDecisionController {
       dto,
     );
   }
+  @RateLimit('staffVerification')
   @Post(':orderId/confirm')
   @HttpCode(200)
   @Permissions('shop.orders.confirm', 'shop.orders.read')
@@ -74,6 +77,7 @@ export class OrderDecisionController {
       dto,
     );
   }
+  @RateLimit('staffVerification')
   @Post(':orderId/reject')
   @HttpCode(200)
   @Permissions('shop.orders.reject', 'shop.orders.read')

@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -28,6 +29,7 @@ describe('public table menus', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     findTable.mockImplementation(async ({ where }) =>
       where.shop.slug === 'cafe' && [code, 'T12'].includes(where.code)

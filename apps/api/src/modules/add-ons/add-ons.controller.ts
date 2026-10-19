@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Body,
   Controller,
@@ -152,6 +153,7 @@ export class ProductAddOnsController {
   }
 }
 @Controller('menu/:shopSlug/products/:productId/add-ons')
+@RateLimit('publicRead')
 export class PublicAddOnsController {
   constructor(private readonly addOns: AddOnsService) {}
   @Get()
@@ -163,6 +165,7 @@ export class PublicAddOnsController {
     res.setHeader('Cache-Control', 'no-store');
     return this.addOns.publicList(slug, productId);
   }
+  @RateLimit('quote')
   @Post('quote')
   quote(
     @Param('shopSlug') slug: string,

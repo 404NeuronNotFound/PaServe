@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import { Module } from '@nestjs/common';
 import { Body, Controller, Param, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
@@ -42,6 +43,7 @@ import {
 } from './confirmed-order-events.controller.js';
 
 @Controller('menu/:shopSlug/orders')
+@RateLimit('orderCreate')
 export class OrdersController {
   constructor(private readonly orders: OrdersService) {}
   @Post()

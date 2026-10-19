@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
 import { ADD_ON_LIMITS } from '@paserve/contracts';
 import type { INestApplication } from '@nestjs/common';
@@ -67,6 +68,7 @@ describe('dine-in order submission', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.clearAllMocks();
     raw
       .mockReset()

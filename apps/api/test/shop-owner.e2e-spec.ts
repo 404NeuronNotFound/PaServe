@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import type { ShopRole } from '@paserve/contracts';
@@ -48,6 +49,7 @@ describe('Owner-only shop updates', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     members.clear();
     members.set(shopA, membership(shopA, 'OWNER'));

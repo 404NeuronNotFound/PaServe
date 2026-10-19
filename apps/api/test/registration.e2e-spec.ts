@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -5,7 +6,7 @@ import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
 import { AuthRepository } from '../src/modules/auth/auth.repository.js';
 import { PrismaService } from '../src/database/prisma.service.js';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { ApiRateLimitGuard } from '../src/common/rate-limiting/api-rate-limit.guard.js';
 
 describe('POST /api/v1/auth/register', () => {
   let app: INestApplication<App>;
@@ -21,7 +22,7 @@ describe('POST /api/v1/auth/register', () => {
       .useValue(repository)
       .overrideProvider(PrismaService)
       .useValue({})
-      .overrideGuard(ThrottlerGuard)
+      .overrideProvider(ApiRateLimitGuard)
       .useValue({ canActivate: () => true })
       .compile();
     app = module.createNestApplication();
@@ -30,6 +31,7 @@ describe('POST /api/v1/auth/register', () => {
   });
 
   beforeEach(() => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     repository.findAccountByEmail.mockResolvedValue(null);
     repository.createAccount.mockResolvedValue({

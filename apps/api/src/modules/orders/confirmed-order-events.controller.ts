@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Controller,
   Get,
@@ -30,6 +31,7 @@ function bearer(request: Request) {
 }
 
 @Controller('menu/:shopSlug/orders/:orderId')
+@RateLimit('receiptRead')
 export class CustomerOrderStatusController {
   constructor(
     private readonly status: CustomerOrderStatusService,
@@ -49,6 +51,7 @@ export class CustomerOrderStatusController {
     return this.status.read(slug, orderId, trackingCredential(request));
   }
 
+  @RateLimit('receiptProof')
   @Post('tracking-session')
   async establish(
     @Param('shopSlug') slug: string,
@@ -67,6 +70,7 @@ export class CustomerOrderStatusController {
     return saved;
   }
 
+  @RateLimit('receiptProof')
   @Get('tracking-link')
   async share(
     @Param('shopSlug') slug: string,
@@ -81,6 +85,7 @@ export class CustomerOrderStatusController {
     return { trackingToken: token };
   }
 
+  @RateLimit('stream')
   @Get('events')
   async stream(
     @Param('shopSlug') slug: string,
@@ -103,6 +108,7 @@ export class CustomerOrderStatusController {
 }
 
 @Controller('shops/:shopId/orders')
+@RateLimit('stream')
 export class ConfirmedOrderEventsController {
   constructor(
     private readonly events: NewOrderEventsService,

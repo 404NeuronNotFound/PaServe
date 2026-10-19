@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Body,
   Controller,
@@ -20,6 +21,7 @@ import { CreatePaymentDto } from './create-payment.dto.js';
 import { LookupOrderNumberDto } from './order-number-lookup.dto.js';
 
 @Controller('shops/:shopId/orders')
+@RateLimit('orderAction')
 export class CashPaymentController {
   constructor(private readonly cash: CashPaymentService) {}
   @Post(':orderId/create-payment')
@@ -94,6 +96,7 @@ export class CashPaymentController {
       dto,
     );
   }
+  @RateLimit('staffVerification')
   @Post('cash-payment/lookup-number')
   @HttpCode(200)
   @Permissions('shop.payments.record', 'shop.orders.read')

@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Controller, Post, Req, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { ShopRole } from '@paserve/contracts';
@@ -50,6 +51,7 @@ describe('Membership Guard before business logic', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     role = 'CASHIER';
     member = true;

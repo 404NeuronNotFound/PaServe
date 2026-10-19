@@ -1,3 +1,4 @@
+import { RateLimitingModule } from './common/rate-limiting/rate-limiting.module.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller.js';
@@ -21,6 +22,7 @@ import { StaffModule } from './modules/staff/staff.module.js';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    RateLimitingModule,
     DatabaseModule,
     AuthModule,
     ShopsModule,

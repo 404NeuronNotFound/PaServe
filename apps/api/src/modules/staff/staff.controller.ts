@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import {
@@ -40,8 +40,7 @@ export class StaffController {
     return this.staff.list(request.user.id, request.shopMembership.shopId);
   }
   @Post('invitations')
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @RateLimit('invitationCreate')
   invite(
     @Body() dto: InviteStaffDto,
     @Req() request: ShopMemberRequest,
@@ -105,8 +104,8 @@ export class StaffController {
 // Accepting an invitation precedes membership, so this identity-level action
 // authenticates the actor, then checks the token/email/route shop atomically.
 @Controller('staff-invitations/:shopId')
-@UseGuards(JwtAuthGuard, ThrottlerGuard)
-@Throttle({ default: { limit: 30, ttl: 60_000 } })
+@UseGuards(JwtAuthGuard)
+@RateLimit('invitationProof')
 export class StaffInvitationController {
   constructor(private readonly staff: StaffService) {}
   @Post('preview')

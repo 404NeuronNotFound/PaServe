@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Body,
   Controller,
@@ -12,6 +13,7 @@ import { PublicProductService } from './public-product.service.js';
 import { ProductSelectionDto } from './public-product.dto.js';
 
 @Controller('menu/:shopSlug/products/:productId')
+@RateLimit('publicRead')
 export class PublicProductController {
   constructor(private readonly products: PublicProductService) {}
   @Get()
@@ -23,6 +25,7 @@ export class PublicProductController {
     res.setHeader('Cache-Control', 'no-store');
     return this.products.details(slug, id);
   }
+  @RateLimit('quote')
   @Post('quote')
   quote(
     @Param('shopSlug') slug: string,

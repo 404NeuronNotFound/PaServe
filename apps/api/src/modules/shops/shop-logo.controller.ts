@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Body,
   Controller,
@@ -35,6 +36,7 @@ export class ShopLogoController {
     return this.logos.delete(req.user.id, req.shopMembership.shopId);
   }
 
+  @RateLimit('upload')
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {

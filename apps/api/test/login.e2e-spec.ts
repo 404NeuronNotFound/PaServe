@@ -1,8 +1,9 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { ApiRateLimitGuard } from '../src/common/rate-limiting/api-rate-limit.guard.js';
 import { hash, argon2id } from 'argon2';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -82,7 +83,7 @@ describe('Login and session HTTP flow', () => {
           NODE_ENV: 'test',
         }),
       )
-      .overrideGuard(ThrottlerGuard)
+      .overrideProvider(ApiRateLimitGuard)
       .useValue({ canActivate: () => true })
       .compile();
     app = module.createNestApplication();
@@ -93,6 +94,7 @@ describe('Login and session HTTP flow', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     sessions.clear();
     account.isActive = true;

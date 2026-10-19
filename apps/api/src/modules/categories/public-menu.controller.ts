@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import { Controller, Get, Param, NotFoundException, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { publicTablePath, type PublicMenuResponse } from '@paserve/contracts';
@@ -6,12 +7,14 @@ import { PublicTablesRepository } from '../tables/public-tables.repository.js';
 import { TableContextService } from '../tables/table-context.service.js';
 
 @Controller('menu')
+@RateLimit('publicRead')
 export class PublicMenuController {
   constructor(
     private readonly menus: PublicMenuRepository,
     private readonly tables: PublicTablesRepository,
     private readonly contexts: TableContextService,
   ) {}
+  @RateLimit('tableContext')
   @Get(':shopSlug/table/:tableCode')
   async readTable(
     @Param('shopSlug') slug: string,

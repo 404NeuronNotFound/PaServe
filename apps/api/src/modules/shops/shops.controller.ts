@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Body,
   Controller,
@@ -64,6 +65,7 @@ export class ShopsController {
     return { membership: request.shopMembership };
   }
 
+  @RateLimit('shopCreate')
   @Post()
   create(
     @Body() dto: CreateShopDto,

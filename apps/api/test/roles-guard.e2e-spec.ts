@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import {
   Controller,
   Get,
@@ -125,6 +126,7 @@ describe('RolesGuard HTTP enforcement', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     role = 'ADMIN';
     present = true;

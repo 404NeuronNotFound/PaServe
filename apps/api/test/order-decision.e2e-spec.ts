@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import type { ShopRole } from '@paserve/contracts';
@@ -84,6 +85,7 @@ describe('Cashier order decisions', () => {
     await app.close();
   });
   beforeEach(async () => {
+    resetRateLimits(app);
     vi.resetAllMocks();
     role = 'CASHIER';
     active = true;

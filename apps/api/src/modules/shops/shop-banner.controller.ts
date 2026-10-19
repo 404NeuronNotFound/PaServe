@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Body,
   Controller,
@@ -24,6 +25,7 @@ import type { ShopBannerFile } from './shop-banner.processor.js';
 export class ShopBannerController {
   constructor(private readonly banners: ShopBannerService) {}
 
+  @RateLimit('upload')
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {

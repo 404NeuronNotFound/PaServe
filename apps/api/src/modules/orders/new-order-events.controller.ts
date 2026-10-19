@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import { SHOP_ROLES } from '@paserve/contracts';
 import { Controller, Get, Query, Req, Res } from '@nestjs/common';
 import { IsIn } from 'class-validator';
@@ -13,6 +14,7 @@ export class NewOrderEventsQuery {
 }
 
 @Controller('shops/:shopId/orders')
+@RateLimit('stream')
 export class NewOrderEventsController {
   constructor(private readonly events: NewOrderEventsService) {}
 

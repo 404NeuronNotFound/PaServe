@@ -1,3 +1,4 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Controller,
   Body,
@@ -122,6 +123,7 @@ export class ProductsController {
       dto,
     );
   }
+  @RateLimit('upload')
   @Post(':productId/image')
   @ShopResource('product', 'productId')
   @UseInterceptors(

@@ -1,3 +1,4 @@
+import { resetRateLimits } from './rate-limit-test-utils.js';
 import { ServiceUnavailableException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
@@ -87,6 +88,7 @@ describe('Confirmed order customer/staff HTTP access', () => {
     await app.close();
   });
   beforeEach(() => {
+    resetRateLimits(app);
     vi.clearAllMocks();
     role = 'CASHIER';
     order = {

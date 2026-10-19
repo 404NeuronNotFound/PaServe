@@ -1,9 +1,11 @@
+import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import { Controller, Get, NotFoundException, Param, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { PrismaService } from '../../database/prisma.service.js';
 import { NewOrderEventsService } from '../orders/new-order-events.service.js';
 
 @Controller('menu/:shopSlug')
+@RateLimit('stream')
 export class PublicMenuEventsController {
   constructor(
     private readonly prisma: PrismaService,

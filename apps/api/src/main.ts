@@ -1,3 +1,4 @@
+import { configureTrustedProxy } from './common/http/trusted-proxy.js';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -5,6 +6,7 @@ import { configureRequestBody } from './common/http/request-body.js';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  configureTrustedProxy(app);
   configureRequestBody(app);
 
   app.setGlobalPrefix('api/v1');
@@ -14,6 +16,12 @@ async function bootstrap() {
       .split(',')
       .map((value) => value.trim()),
     credentials: true,
+    exposedHeaders: [
+      'Retry-After',
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'X-RateLimit-Reset',
+    ],
   });
 
   await app.listen(process.env.PORT ?? 3000);
