@@ -32,6 +32,7 @@ import "./dashboard-sidebar.css";
 import "./dashboard-header.css";
 import "./dashboard-frame.css";
 import { DashboardSidebarNavigation } from "./DashboardSidebarNavigation";
+import { WorkspaceBreadcrumbs } from "./WorkspaceBreadcrumbs";
 
 export function OwnerDashboardLayout() {
   const membership = useActiveShop();
@@ -317,6 +318,7 @@ export function DashboardFrame({
           id="dashboard-content"
           tabIndex={-1}
         >
+          <WorkspaceBreadcrumbs membership={membership} />
           {children}
         </main>
       </div>

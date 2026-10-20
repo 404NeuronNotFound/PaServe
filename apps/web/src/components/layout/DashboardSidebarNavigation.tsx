@@ -1,26 +1,9 @@
 import { useId, useState, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import type { IconType } from "react-icons";
-import {
-  FiChevronDown,
-  FiClipboard,
-  FiCoffee,
-  FiCreditCard,
-  FiEye,
-  FiGrid,
-  FiHome,
-  FiLayers,
-  FiLayout,
-  FiPackage,
-  FiSettings,
-  FiSliders,
-  FiUser,
-  FiUsers,
-  FiTrendingUp,
-} from "react-icons/fi";
-import { hasShopPermission, type UserMembership } from "@paserve/contracts";
+import { FiChevronDown, FiHome, FiUser } from "react-icons/fi";
+import type { UserMembership } from "@paserve/contracts";
 import { shopPath } from "../../features/shops/active-shop";
-import { canUseCashier } from "../../features/cashier/access";
+import { navigationForRole } from "./workspace-navigation";
 
 function NavigationGroup({
   label,
@@ -71,101 +54,40 @@ export function DashboardSidebarNavigation({
 }) {
   const { pathname } = useLocation();
   const base = membership ? shopPath(membership.shopId) : "";
-  function destination(
-    path: string,
-    label: string,
-    Icon: IconType,
-    end = false,
-  ) {
-    return (
-      <NavLink
-        to={path}
-        end={end}
-        onClick={onNavigate}
-        title={rail ? label : undefined}
-      >
-        <Icon aria-hidden="true" />
-        <span>{label}</span>
-      </NavLink>
-    );
-  }
-  const current = (paths: string[]) =>
-    paths.some(
-      (path) =>
-        pathname === `${base}/${path}` ||
-        pathname.startsWith(`${base}/${path}/`),
-    );
-  const menuActive = current([
-    "products",
-    "categories",
-    "add-ons",
-    "menu-preview",
-  ]);
-  const managementActive = current(["tables", "staff", "settings"]);
+  const groups = membership ? navigationForRole(membership.role) : [];
   return (
     <nav aria-label="Shop navigation">
-      {membership && (
-        <div
-          className="dashboard-nav-group"
-          role="group"
-          aria-label="Workspace"
-        >
-          <p className="dashboard-nav-label">Daily workspace</p>
-          <div className="dashboard-nav-links">
-            {destination(base, "Overview", FiGrid, true)}
-            {hasShopPermission(membership.role, "shop.reports.read") &&
-              destination(`${base}/sales`, "Sales dashboard", FiTrendingUp)}
-            {hasShopPermission(membership.role, "shop.orders.overview.read") &&
-              destination(`${base}/orders`, "Orders", FiClipboard)}
-            {canUseCashier(membership.role) &&
-              destination(`${base}/cashier`, "Cashier", FiCreditCard)}
-            {hasShopPermission(
-              membership.role,
-              "shop.preparation.queue.read",
-            ) && destination(`${base}/kitchen`, "Kitchen / Barista", FiCoffee)}
+      {groups.map((group) => {
+        const active = group.items.some((item) => item.path && (
+          pathname === `${base}/${item.path}` || pathname.startsWith(`${base}/${item.path}/`)
+        ));
+        const links = group.items.map(({ path, label, icon: Icon }) => (
+          <NavLink key={path} to={path ? `${base}/${path}` : base}
+            end={!path} onClick={onNavigate} title={rail ? label : undefined}>
+            <Icon aria-hidden="true" /><span>{label}</span>
+          </NavLink>
+        ));
+        return group.id === "daily" ? (
+          <div key={group.id} className="dashboard-nav-group" role="group" aria-label={group.name}>
+            <p className="dashboard-nav-label">{group.label}</p>
+            <div className="dashboard-nav-links">{links}</div>
           </div>
-        </div>
-      )}
-      {membership && hasShopPermission(membership.role, "shop.menu.manage") && (
-        <NavigationGroup
-          key={`${base}-menu-${menuActive}`}
-          label="Menu & catalog"
-          name="Menu management"
-          rail={rail}
-          active={menuActive}
-        >
-          {destination(`${base}/products`, "Products", FiPackage)}
-          {destination(`${base}/categories`, "Categories", FiLayers)}
-          {destination(`${base}/add-ons`, "Add-ons", FiSliders)}
-          {hasShopPermission(membership.role, "shop.settings.manage") &&
-            destination(`${base}/menu-preview`, "Menu preview", FiEye)}
-        </NavigationGroup>
-      )}
-      {membership &&
-        hasShopPermission(membership.role, "shop.operations.manage") && (
-          <NavigationGroup
-            key={`${base}-management-${managementActive}`}
-            label="Shop management"
-            name="Restaurant management"
-            rail={rail}
-            active={managementActive}
-          >
-            {destination(`${base}/tables`, "Tables", FiLayout)}
-            {hasShopPermission(membership.role, "shop.staff.manage") &&
-              destination(`${base}/staff`, "Staff & invitations", FiUsers)}
-            {hasShopPermission(membership.role, "shop.settings.manage") &&
-              destination(`${base}/settings`, "Shop settings", FiSettings)}
+        ) : (
+          <NavigationGroup key={`${base}-${group.id}-${active}`} label={group.label}
+            name={group.name} rail={rail} active={active}>
+            {links}
           </NavigationGroup>
-        )}
-      <div
-        className="dashboard-nav-group dashboard-nav-account"
-        role="group"
-        aria-label="Account"
-      >
+        );
+      })}
+      <div className="dashboard-nav-group dashboard-nav-account" role="group" aria-label="Account">
         <p className="dashboard-nav-label">Personal</p>
         <div className="dashboard-nav-links">
-          {destination("/app/shops", "Your shops", FiHome, true)}
-          {destination("/app/account", "Your account", FiUser)}
+          <NavLink to="/app/shops" end onClick={onNavigate} title={rail ? "Your shops" : undefined}>
+            <FiHome aria-hidden="true" /><span>Your shops</span>
+          </NavLink>
+          <NavLink to="/app/account" onClick={onNavigate} title={rail ? "Your account" : undefined}>
+            <FiUser aria-hidden="true" /><span>Your account</span>
+          </NavLink>
         </div>
       </div>
     </nav>

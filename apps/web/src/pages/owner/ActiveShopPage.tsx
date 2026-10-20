@@ -8,9 +8,14 @@ import {
   FiUser,
 } from "react-icons/fi";
 import { useActiveShop, shopPath } from "../../features/shops/active-shop";
+import { navigationForRole } from "../../components/layout/workspace-navigation";
+import "../../components/layout/workspace-navigation.css";
 
 export function ActiveShopPage() {
   const membership = useActiveShop();
+  const tasks = navigationForRole(membership.role).flatMap((group) =>
+    group.items.filter((item) => group.id === "daily" ? Boolean(item.path) : item.path === "products"),
+  );
   // Older shops could use these names before they became reserved routes.
   const publicMenuPath = ["menu", "connection"].includes(membership.shop.slug)
     ? `/menu/${encodeURIComponent(membership.shop.slug)}`
@@ -24,12 +29,16 @@ export function ActiveShopPage() {
     <section className="shop-context-content shop-overview">
       <div className="shop-overview-hero">
         <div>
-          <p className="section-label">CURRENTLY MANAGING</p>
+          <p className="section-label">YOUR WORKSPACE</p>
           <h1 ref={heading} tabIndex={-1}>
             {membership.shop.name}
           </h1>
           <p className="shop-overview-intro">
-            Your place. Your people. A better everyday.
+            {membership.role === "CASHIER"
+              ? "Verify orders and record payments at the counter."
+              : membership.role === "KITCHEN"
+                ? "Follow the queue through preparation, ready and completed orders."
+                : "Manage daily service, your menu, and your shop."}
           </p>
           <p>Your role: {membership.role.toLowerCase()}</p>
         </div>
@@ -40,6 +49,18 @@ export function ActiveShopPage() {
         <strong>/{membership.shop.slug}</strong>
         <Link to={publicMenuPath}>View public menu</Link>
       </div>
+      {tasks.length > 0 && (
+        <nav className="workspace-quick-tasks" aria-label="Common tasks">
+          <h2>Common tasks</h2>
+          <div>
+            {tasks.map(({ path, label, icon: Icon }) => (
+              <Link key={path} className="secondary-button" to={`${shopPath(membership.shopId)}/${path}`}>
+                <Icon aria-hidden="true" />{label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      )}
       <nav className="shop-overview-actions" aria-label="Shop actions">
         {membership.role === "OWNER" && (
           <article className="shop-action-card">

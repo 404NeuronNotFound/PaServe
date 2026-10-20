@@ -307,6 +307,11 @@ it.each(["ADMIN", "MANAGER", "CASHIER", "KITCHEN"] as const)(
     setup();
     await screen.findByRole("heading", { name: "Cafe A" });
     const nav = screen.getByRole("navigation", { name: "Shop navigation" });
+    const tasks = screen.getByRole("navigation", { name: "Common tasks" });
+    expect(within(tasks).getAllByRole("link").map((link) => link.textContent)).toEqual(
+      role === "CASHIER" ? ["Cashier"] : role === "KITCHEN" ? ["Kitchen / Barista"]
+        : ["Sales dashboard", "Cashier", "Kitchen / Barista", "Products"],
+    );
     expect(
       within(nav).queryByRole("link", { name: "Shop settings" }),
     ).not.toBeInTheDocument();
@@ -459,11 +464,11 @@ it("collapses setup groups and toggles them with the keyboard", async () => {
   await screen.findByRole("heading", { name: "Cafe A" });
   const toggle = screen.getByRole("button", { name: "Menu & catalog" });
   expect(toggle).toHaveAttribute("aria-expanded", "false");
-  expect(screen.queryByRole("link", { name: "Products" })).not.toBeInTheDocument();
+  expect(within(screen.getByRole("navigation", { name: "Shop navigation" })).queryByRole("link", { name: "Products" })).not.toBeInTheDocument();
   toggle.focus();
   await user.keyboard("{Enter}");
   expect(toggle).toHaveAttribute("aria-expanded", "true");
-  expect(screen.getByRole("link", { name: "Products" })).toHaveAttribute("href", "/app/shops/a/products");
+  expect(within(screen.getByRole("navigation", { name: "Shop navigation" })).getByRole("link", { name: "Products" })).toHaveAttribute("href", "/app/shops/a/products");
   await user.keyboard(" ");
   expect(toggle).toHaveAttribute("aria-expanded", "false");
 });
@@ -481,7 +486,7 @@ it("restores an icon rail preference and keeps every permitted destination acces
   await user.click(expand);
   expect(localStorage.getItem("paserve.sidebar.collapsed")).toBe("false");
   expect(screen.getByRole("button", { name: "Collapse sidebar" })).toHaveAttribute("aria-expanded", "true");
-  expect(screen.queryByRole("link", { name: "Products" })).not.toBeInTheDocument();
+  expect(within(screen.getByRole("navigation", { name: "Shop navigation" })).queryByRole("link", { name: "Products" })).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
   expect(localStorage.getItem("paserve.sidebar.collapsed")).toBe("true");
 });
@@ -511,9 +516,9 @@ it("uses full labels and working disclosures on mobile without losing the deskto
   act(() => { query.matches = true; onChange?.(); });
   expect(shell).toHaveAttribute("data-sidebar-collapsed", "false");
   await user.click(screen.getByRole("button", { name: "Navigation" }));
-  expect(screen.queryByRole("link", { name: "Products" })).not.toBeInTheDocument();
+  expect(within(screen.getByRole("navigation", { name: "Shop navigation" })).queryByRole("link", { name: "Products" })).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Menu & catalog" }));
-  expect(screen.getByRole("link", { name: "Products" })).toBeInTheDocument();
+  expect(within(screen.getByRole("navigation", { name: "Shop navigation" })).getByRole("link", { name: "Products" })).toBeInTheDocument();
   act(() => { query.matches = false; onChange?.(); });
   expect(shell).toHaveAttribute("data-sidebar-collapsed", "true");
   expect(localStorage.getItem("paserve.sidebar.collapsed")).toBe("true");
