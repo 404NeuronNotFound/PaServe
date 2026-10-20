@@ -1,3 +1,7 @@
+import { Textarea } from "../../components/ui/textarea";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { ProductDetailsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { ErrorState } from "../../components/feedback/ErrorState";
 import { describeRequestFailure } from "../../components/feedback/request-failure";
@@ -106,7 +110,7 @@ export function ProductDetailsDialog({
         <div className="customer-dialog-body">
           <ErrorState error={details.error} resource="this product" product publicView action="load"
             pending={details.isFetching} onRetry={() => details.refetch()} retryLabel="Try again">
-            <button type="button" className="secondary-button" onClick={onClose}>Back to menu</button>
+            <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={onClose}>Back to menu</Button>
           </ErrorState>
         </div>
       ) : (
@@ -164,6 +168,8 @@ function ProductDetailsForm({
   const [error, setError] = useState("");
   const [requiresRefresh, setRequiresRefresh] = useState(false);
   const [pending, setPending] = useState(false);
+  const [initialChoices] = useState(() => JSON.stringify(choices));
+  useDraftGuard(notes !== "" || quantity !== "1" || selectedAddOns.length > 0 || JSON.stringify(choices) !== initialChoices, pending);
   const [failedImage, setFailedImage] = useState(false);
   const mounted = useRef(false);
   const submitting = useRef(false);
@@ -355,7 +361,7 @@ function ProductDetailsForm({
                 </p>
                 {!group.isRequired && (
                   <label className="product-option">
-                    <input
+                    <Input
                       type="radio"
                       name={`${prefix}-${group.id}`}
                       checked={!choices[group.id]}
@@ -368,7 +374,7 @@ function ProductDetailsForm({
                 )}
                 {options.map((option) => (
                   <label className="product-option" key={option.id}>
-                    <input
+                    <Input
                       type="radio"
                       name={`${prefix}-${group.id}`}
                       checked={choices[group.id] === option.id}
@@ -403,7 +409,7 @@ function ProductDetailsForm({
               </p>
               {addOns.map((option) => (
                 <label className="product-option" key={option.id}>
-                  <input
+                  <Input
                     type="checkbox"
                     checked={selectedAddOns.includes(option.id)}
                     disabled={
@@ -436,15 +442,15 @@ function ProductDetailsForm({
           <div className="field product-quantity-field">
             <label htmlFor={`${prefix}-quantity`}>Quantity</label>
             <div className="product-quantity-stepper">
-              <button
+              <Button variant="ghost" size="inherit"
                 type="button"
                 aria-label="Decrease quantity"
                 disabled={!validQuantity || count <= 1}
                 onClick={() => setQuantity(String(count - 1))}
               >
                 <FiMinus aria-hidden="true" />
-              </button>
-              <input
+              </Button>
+              <Input
                 id={`${prefix}-quantity`}
                 type="number"
                 inputMode="numeric"
@@ -458,7 +464,7 @@ function ProductDetailsForm({
                   !validQuantity ? `${prefix}-quantity-error` : undefined
                 }
               />
-              <button
+              <Button variant="ghost" size="inherit"
                 type="button"
                 aria-label="Increase quantity"
                 disabled={
@@ -467,7 +473,7 @@ function ProductDetailsForm({
                 onClick={() => setQuantity(String(count + 1))}
               >
                 <FiPlus aria-hidden="true" />
-              </button>
+              </Button>
             </div>
           </div>
           {!validQuantity && (
@@ -477,7 +483,7 @@ function ProductDetailsForm({
           )}
           <div className="field product-notes-field">
             <label htmlFor={`${prefix}-notes`}>Notes (optional)</label>
-            <textarea
+            <Textarea
               id={`${prefix}-notes`}
               rows={2}
               placeholder="e.g. Less ice, no onions…"
@@ -505,13 +511,13 @@ function ProductDetailsForm({
         {error && (
           <div>
             <p role="alert">{error}</p>
-            <button
+            <Button variant="outline" size="inherit"
               type="button"
               className="secondary-button"
               onClick={onRefresh}
             >
               Refresh details
-            </button>
+            </Button>
           </div>
         )}
         {preview && (
@@ -533,7 +539,7 @@ function ProductDetailsForm({
             </p>
           )}
         </div>
-        <button
+        <Button variant="default" size="inherit"
           aria-busy={pending}
           className="primary-button"
           type="submit"
@@ -549,7 +555,7 @@ function ProductDetailsForm({
         >
           <FiShoppingBag aria-hidden="true" />
           {pending ? "Adding…" : "Add to cart"}
-        </button>
+        </Button>
       </footer>
     </form>
   );

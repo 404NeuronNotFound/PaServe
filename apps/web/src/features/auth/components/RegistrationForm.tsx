@@ -1,3 +1,6 @@
+import { Input } from "../../../components/ui/input";
+import { Button } from "../../../components/ui/button";
+import { useDraftGuard } from "../../../app/router/useDraftGuard";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -36,6 +39,7 @@ export function RegistrationForm({
     retry: false,
     gcTime: 0,
   });
+  const navigationGuard = useDraftGuard(Object.values(fields).some(Boolean), mutation.isPending);
 
   useEffect(() => {
     if (!mutation.isPending && pendingFocus.current) {
@@ -87,6 +91,7 @@ export function RegistrationForm({
       });
       setFields({ email: "", password: "", confirmPassword: "" });
       mutation.reset();
+      navigationGuard.release();
       onSuccess(result);
     } catch (error: unknown) {
       if (
@@ -135,7 +140,7 @@ export function RegistrationForm({
       >
         <div className="field">
           <label htmlFor="email">Email address</label>
-          <input
+          <Input
             id="email"
             name="email"
             type="email"
@@ -162,7 +167,7 @@ export function RegistrationForm({
         <div className="field">
           <label htmlFor="password">Password</label>
           <div className="password-input">
-            <input
+            <Input
               id="password"
               name="password"
               type={showPasswords ? "text" : "password"}
@@ -177,7 +182,7 @@ export function RegistrationForm({
               aria-invalid={Boolean(errors.password)}
               aria-describedby={`password-hint${errors.password ? " password-error" : ""}`}
             />
-            <button
+            <Button variant="ghost" size="inherit"
               className="password-toggle"
               type="button"
               aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
@@ -191,7 +196,7 @@ export function RegistrationForm({
               ) : (
                 <FiEye aria-hidden="true" />
               )}
-            </button>
+            </Button>
           </div>
           <p className="field-hint" id="password-hint">
             Use {REGISTRATION_LIMITS.passwordMin}–
@@ -206,7 +211,7 @@ export function RegistrationForm({
         </div>
         <div className="field">
           <label htmlFor="confirmPassword">Confirm password</label>
-          <input
+          <Input
             id="confirmPassword"
             name="confirmPassword"
             type={showPasswords ? "text" : "password"}
@@ -231,7 +236,7 @@ export function RegistrationForm({
           )}
         </div>
         {formError && <InlineMessage>{formError}</InlineMessage>}
-        <button
+        <Button variant="default" size="inherit"
           aria-busy={mutation.isPending}
           className="primary-button"
           type="submit"
@@ -243,7 +248,7 @@ export function RegistrationForm({
           ) : (
             <FiArrowRight className="button-icon" aria-hidden="true" />
           )}
-        </button>
+        </Button>
       </form>
     </>
   );

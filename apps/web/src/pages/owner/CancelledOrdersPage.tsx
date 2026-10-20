@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/button";
+import { OrderCard } from "../../components/paserve/OrderCard";
 import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CurrentUserResponse } from "@paserve/contracts";
@@ -144,7 +146,7 @@ function CancelledOrdersWorkspace({ userId }: { userId: string }) {
               aria-label="Cancelled / rejected orders, newest placement first"
             >
               {orders.map((order) => (
-                <li key={order.id} className="active-order-card">
+                <OrderCard key={order.id} className="active-order-card">
                   <OrderCardIdentity
                     orderNumber={order.orderNumber}
                     mode={order.mode}
@@ -193,7 +195,7 @@ function CancelledOrdersWorkspace({ userId }: { userId: string }) {
                       <dd>{order.decidedBy ?? "Not captured"}</dd>
                     </div>
                   </dl>
-                </li>
+                </OrderCard>
               ))}
             </ul>
           )}
@@ -203,15 +205,15 @@ function CancelledOrdersWorkspace({ userId }: { userId: string }) {
         className="active-orders-pagination"
         aria-label="Cancelled / rejected orders pagination"
       >
-        <button
+        <Button variant="outline" size="inherit" type="submit"
           className="secondary-button"
           disabled={cursors.length === 1 || query.isFetching}
           onClick={() => setCursors((values) => values.slice(0, -1))}
         >
           Previous
-        </button>
+        </Button>
         <span>Page {cursors.length}</span>
-        <button
+        <Button variant="outline" size="inherit" type="submit"
           className="secondary-button"
           disabled={
             !query.isSuccess || !query.data.nextCursor || query.isFetching
@@ -222,7 +224,7 @@ function CancelledOrdersWorkspace({ userId }: { userId: string }) {
           }}
         >
           Next
-        </button>
+        </Button>
       </nav>
     </section>
   );

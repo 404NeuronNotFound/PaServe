@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { useEffect, useRef, useState } from "react";
 import { SHOP_LOGO_LIMITS, SHOP_BANNER_LIMITS } from "@paserve/contracts";
 import { cropRectangle } from "../../lib/image-crop";
@@ -222,7 +224,7 @@ export function BrandImageCropper({
         </p>
         <label>
           Zoom
-          <input
+          <Input
             type="range"
             min="1"
             max="4"
@@ -234,7 +236,7 @@ export function BrandImageCropper({
         </label>
         <label>
           Horizontal position
-          <input
+          <Input
             type="range"
             min="0"
             max="100"
@@ -245,7 +247,7 @@ export function BrandImageCropper({
         </label>
         <label>
           Vertical position
-          <input
+          <Input
             type="range"
             min="0"
             max="100"
@@ -257,22 +259,22 @@ export function BrandImageCropper({
       </div>
       {error && <InlineMessage>{error}</InlineMessage>}
       <footer>
-        <button
+        <Button variant="outline" size="inherit"
           type="button"
           className="secondary-button"
           disabled={pending}
           onClick={onClose}
         >
           Cancel crop
-        </button>
-        <button
+        </Button>
+        <Button variant="default" size="inherit"
           type="button"
           className="primary-button"
           disabled={!ready || pending || Boolean(error)}
           onClick={apply}
         >
           {pending ? "Preparing…" : "Use crop"}
-        </button>
+        </Button>
       </footer>
     </dialog>
   );

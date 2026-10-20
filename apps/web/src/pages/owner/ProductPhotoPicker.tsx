@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FiImage, FiUploadCloud, FiRefreshCw, FiX } from "react-icons/fi";
 import { PRODUCT_IMAGE_LIMITS, PRODUCT_IMAGE_TYPES } from "@paserve/contracts";
@@ -73,7 +75,7 @@ export function ProductPhotoPicker({
           </span>
         )}
       </div>
-      <input
+      <Input
         ref={input}
         id={`${id}-file`}
         className="product-photo-input"
@@ -87,7 +89,7 @@ export function ProductPhotoPicker({
           event.target.value = "";
         }}
       />
-      <button
+      <Button variant="ghost" size="inherit"
         className={`product-photo-dropzone${dragging ? " is-dragging" : ""}${source ? " has-photo" : ""}`}
         type="button"
         disabled={disabled || pending}
@@ -159,7 +161,7 @@ export function ProductPhotoPicker({
               : `Choose ${kind === "product" ? "photo" : kind}`}
           </span>
         </span>
-      </button>
+      </Button>
       <p id={`${id}-hint`} className="field-hint">
         JPEG, PNG or WebP, up to 5 MB. {hint}
       </p>
@@ -174,7 +176,7 @@ export function ProductPhotoPicker({
                 : `${(file.size / (1024 * 1024)).toFixed(1)} MB`}
             </small>
           </span>
-          <button
+          <Button variant="outline" size="inherit"
             className="secondary-button"
             type="button"
             disabled={disabled || pending}
@@ -186,11 +188,11 @@ export function ProductPhotoPicker({
           >
             <FiX aria-hidden="true" />
             {kind === "product" ? "Remove photo" : "Cancel selection"}
-          </button>
+          </Button>
         </div>
       )}
       {!file && error && (
-        <button
+        <Button variant="outline" size="inherit"
           className="secondary-button"
           type="button"
           disabled={disabled || pending}
@@ -202,7 +204,7 @@ export function ProductPhotoPicker({
         >
           <FiRefreshCw aria-hidden="true" />
           Clear selection
-        </button>
+        </Button>
       )}
       {error && <InlineMessage id={`${id}-error`}>{error}</InlineMessage>}
       {pending && (

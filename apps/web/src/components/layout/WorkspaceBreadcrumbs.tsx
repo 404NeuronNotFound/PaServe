@@ -1,4 +1,5 @@
 import { Link, matchPath, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import type { UserMembership } from "@paserve/contracts";
 import { shopPath } from "../../features/shops/active-shop";
 import { navigationForRole } from "./workspace-navigation";
@@ -6,22 +7,26 @@ import "./workspace-navigation.css";
 
 export function WorkspaceBreadcrumbs({ membership }: { membership: UserMembership | null }) {
   const { pathname } = useLocation();
-  if (!membership) return null;
-  const base = shopPath(membership.shopId);
-  const item = navigationForRole(membership.role).flatMap((group) => group.items)
+  const base = membership ? shopPath(membership.shopId) : "";
+  const item = (membership ? navigationForRole(membership.role) : []).flatMap((group) => group.items)
     .find((destination) => destination.path
       ? pathname === `${base}/${destination.path}` || pathname.startsWith(`${base}/${destination.path}/`)
       : pathname === base || pathname === `${base}/`);
   // Do not name unknown or unauthorized destinations in a recovery shell.
-  if (!item) return null;
   let detail: string | undefined;
-  if (item.path === "orders") {
+  if (item?.path === "orders") {
     if (pathname === `${base}/orders/completed`) detail = "Completed orders";
     else if (pathname === `${base}/orders/cancelled`) detail = "Cancelled / rejected";
     else if (matchPath(`${base}/orders/:orderId`, pathname)) detail = "Order details";
-  } else if (item.path === "products" && matchPath(`${base}/products/:productId/customize`, pathname)) {
+  } else if (item?.path === "products" && matchPath(`${base}/products/:productId/customize`, pathname)) {
     detail = "Product customization";
   }
+  const title = detail ?? (item?.path === "orders" ? "Active orders" : item?.label) ?? "Shop workspace";
+  const shopName = membership?.shop.name;
+  useEffect(() => {
+    document.title = `${title}${shopName ? ` · ${shopName}` : ""} · PaServe`;
+  }, [title, shopName, pathname]);
+  if (!membership || !item) return null;
   return (
     <nav className="workspace-breadcrumbs" aria-label="Breadcrumb">
       <ol>

@@ -1,3 +1,6 @@
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { ORDER_INPUT_LIMITS, isValidOrderQuantity } from "@paserve/contracts";
 import { useEffect, useId, useRef, useState } from "react";
 import { FiMinus, FiPlus } from "react-icons/fi";
@@ -43,6 +46,7 @@ export function CartQuantityControl({
       mounted.current = false;
     };
   }, []);
+  useDraftGuard(draft !== String(item.quantity), pending);
   const count = Number(draft);
   const valid = /^\d+$/.test(draft) && isValidOrderQuantity(count);
   const draftPreview =
@@ -128,7 +132,7 @@ export function CartQuantityControl({
       <fieldset disabled={pending}>
         <legend className="sr-only">Quantity for {item.productName}</legend>
         <div className="customer-cart-stepper">
-          <button
+          <Button variant="outline" size="inherit"
             type="button"
             className="secondary-button"
             aria-label={`Decrease quantity for ${item.productName}`}
@@ -136,8 +140,8 @@ export function CartQuantityControl({
             onClick={() => void update(count - 1)}
           >
             <FiMinus aria-hidden="true" />
-          </button>
-          <input
+          </Button>
+          <Input
             ref={input}
             id={id}
             aria-label={`Quantity for ${item.productName}`}
@@ -155,7 +159,7 @@ export function CartQuantityControl({
               setRetryQuantity(null);
             }}
           />
-          <button
+          <Button variant="outline" size="inherit"
             type="button"
             className="secondary-button"
             aria-label={`Increase quantity for ${item.productName}`}
@@ -163,17 +167,17 @@ export function CartQuantityControl({
             onClick={() => void update(count + 1)}
           >
             <FiPlus aria-hidden="true" />
-          </button>
+          </Button>
         </div>
         {(pending || draft !== String(item.quantity)) && (
-          <button
+          <Button variant="default" size="inherit"
             type="submit"
             className="primary-button customer-cart-quantity-save"
             aria-label={`Update quantity for ${item.productName}`}
             disabled={!valid || count === item.quantity}
           >
             {pending ? "Updating…" : "Update"}
-          </button>
+          </Button>
         )}
       </fieldset>
       <p id={`${id}-hint`} className="sr-only">

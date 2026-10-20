@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { useId, useState, type FormEvent } from "react";
 import {
   normalizeOwnerOrderFilters,
@@ -156,7 +158,7 @@ export function OrderFilters({
             )}
             <label>
               From date
-              <input
+              <Input
                 type="date"
                 min="1000-01-01"
                 max="9998-12-31"
@@ -166,7 +168,7 @@ export function OrderFilters({
             </label>
             <label>
               To date
-              <input
+              <Input
                 type="date"
                 min="1000-01-01"
                 max="9998-12-31"
@@ -176,7 +178,7 @@ export function OrderFilters({
             </label>
             <label>
               Table label
-              <input
+              <Input
                 value={draft.table ?? ""}
                 maxLength={TABLE_LIMITS.numberMaxLength * 2}
                 disabled={draft.mode === "TAKEOUT"}
@@ -191,12 +193,12 @@ export function OrderFilters({
             the saved label exactly, ignoring case.
           </p>
           <div className="owner-order-filter-actions">
-            <button className="primary-button" type="submit">
+            <Button variant="default" size="inherit" className="primary-button" type="submit">
               Apply filters
-            </button>
-            <button className="secondary-button" type="button" onClick={clear}>
+            </Button>
+            <Button variant="outline" size="inherit" className="secondary-button" type="button" onClick={clear}>
               Clear filters
-            </button>
+            </Button>
           </div>
           {error && <InlineMessage>{error}</InlineMessage>}
         </form>
@@ -204,9 +206,9 @@ export function OrderFilters({
       {summary && (
         <div className="owner-order-filter-summary">
           <p>Applied: {summary}</p>
-          <button type="button" className="secondary-button" onClick={clear}>
+          <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={clear}>
             Clear applied filters
-          </button>
+          </Button>
         </div>
       )}
     </>

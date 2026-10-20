@@ -9,6 +9,7 @@ type DecisionDialogProps = {
   title: string;
   description: string;
   confirmLabel: string;
+  confirmDisabled?: boolean;
   pendingLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
@@ -26,6 +27,7 @@ function OpenDecisionDialog({
   title,
   description,
   confirmLabel,
+  confirmDisabled = false,
   pendingLabel = pendingActionLabel(confirmLabel),
   cancelLabel = "Cancel",
   destructive = false,
@@ -77,7 +79,7 @@ function OpenDecisionDialog({
   }
 
   async function confirm() {
-    if (running.current || closing || closeTimer.current) return;
+    if (confirmDisabled || running.current || closing || closeTimer.current) return;
     running.current = true;
     setPending(true);
     setError("");
@@ -132,7 +134,7 @@ function OpenDecisionDialog({
           pending={pending}
           pendingLabel={pendingLabel}
           type="button"
-          disabled={pending || closing}
+          disabled={pending || closing || confirmDisabled}
           onClick={() => {
             void confirm();
           }}

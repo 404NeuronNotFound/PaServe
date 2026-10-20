@@ -5,6 +5,8 @@ import type { ProductSelectionQuoteResponse } from "@paserve/contracts";
 import { CartNotesEditor } from "./CartNotesEditor";
 import { cartCheckoutLines, createCartPricePreview, useCart } from "../../features/cart/cart";
 import { useFeedbackStore } from "../../app/stores/feedback";
+import { MemoryRouter } from "react-router-dom";
+import { CustomerCart } from "./CustomerCart";
 
 const quote: ProductSelectionQuoteResponse = {
   productId: "coffee", productName: "Coffee", currency: "PHP",
@@ -16,6 +18,33 @@ const quote: ProductSelectionQuoteResponse = {
 beforeEach(() => {
   useCart.setState({ shops: {} });
   useFeedbackStore.getState().clear();
+});
+it("protects unsaved notes on cart dismissal while retaining saved cart lines", async () => {
+  const show = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "showModal");
+  const close = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "close");
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: function (this: HTMLDialogElement) { this.open = true; } });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value: function (this: HTMLDialogElement) { this.open = false; } });
+  useCart.getState().add("cafe", quote, createCartPricePreview(quote));
+  const view = render(<MemoryRouter><CustomerCart shop={{ name: "Cafe", slug: "cafe", description: null }} /></MemoryRouter>);
+  try {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "View cart (2)" }));
+    await user.click(screen.getByRole("button", { name: /notes for Coffee/ }));
+    await user.clear(screen.getByRole("textbox"));
+    await user.type(screen.getByRole("textbox"), "No sugar");
+    await user.click(screen.getByRole("button", { name: "Continue shopping" }));
+    expect(await screen.findByRole("dialog", { name: "Discard unsaved cart edits?" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("textbox")).toHaveValue("No sugar");
+    await user.click(screen.getByRole("button", { name: "Continue shopping" }));
+    await user.click(screen.getByRole("button", { name: "Discard edits" }));
+    expect(useCart.getState().shops.cafe[0].notes).toBe("Less ice");
+    expect(useCart.getState().shops.cafe[0].quantity).toBe(2);
+  } finally {
+    view.unmount();
+    if (show) Object.defineProperty(HTMLDialogElement.prototype, "showModal", show); else delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).showModal;
+    if (close) Object.defineProperty(HTMLDialogElement.prototype, "close", close); else delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).close;
+  }
 });
 function setup(notes: string | undefined = "Less ice") {
   useCart.getState().add("cafe", { ...quote, notes }, createCartPricePreview(quote));

@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FiDownload, FiPrinter, FiX } from "react-icons/fi";
@@ -91,14 +92,14 @@ export function TableQrDialog({
     >
       <header className="table-qr-heading">
         <h2 id={titleId}>QR for Table {table.number}</h2>
-        <button
+        <Button variant="outline" size="inherit"
           className="secondary-button"
           type="button"
           onClick={onClose}
           aria-label="Close QR preview"
         >
           <FiX aria-hidden="true" />
-        </button>
+        </Button>
       </header>
       {unavailable ? (
         <InlineMessage>
@@ -119,9 +120,9 @@ export function TableQrDialog({
           {error && (
             <>
               <InlineMessage>{error}</InlineMessage>
-              <button className="secondary-button" onClick={retry}>
+              <Button variant="outline" size="inherit" type="submit" className="secondary-button" onClick={retry}>
                 Try again
-              </button>
+              </Button>
             </>
           )}
           {qr && !error && (
@@ -156,13 +157,13 @@ export function TableQrDialog({
           )}
           {actionError && <InlineMessage>{actionError}</InlineMessage>}
           <footer className="table-qr-actions">
-            <button
+            <Button variant="default" size="inherit" type="submit"
               className="primary-button"
               disabled={!qr || !imageReady || !!error}
               onClick={print}
             >
               <FiPrinter aria-hidden="true" /> Print card
-            </button>
+            </Button>
             {qr && !error && (
               <a
                 className="secondary-button"

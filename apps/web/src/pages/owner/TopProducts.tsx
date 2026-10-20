@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -48,13 +49,13 @@ export function TopProducts({
             Confirmed, paid, completed orders only.
           </p>
         </div>
-        <button
+        <Button variant="outline" size="inherit" type="submit"
           className="secondary-button"
           disabled={query.isFetching}
           onClick={() => void query.refetch()}
         >
           Refresh top products
-        </button>
+        </Button>
       </div>
       <div className="daily-analytics-controls">
         <label htmlFor="top-products-metric">

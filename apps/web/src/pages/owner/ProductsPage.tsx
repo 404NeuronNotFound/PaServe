@@ -1,3 +1,7 @@
+import { ProductCard } from "../../components/paserve/ProductCard";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import { PageHeader } from "../../components/paserve/PageHeader";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { EmptyState } from "../../components/feedback/EmptyState";
 import { ErrorState } from "../../components/feedback/ErrorState";
@@ -618,13 +622,13 @@ function ProductWorkspace({ userId }: { userId: string }) {
   }
   return (
     <section className="products-page" aria-labelledby="products-title">
-      <header className="products-heading">
+      <PageHeader className="products-heading">
         <div>
           <p className="section-label">THE HEART OF YOUR MENU</p>
           <h1 id="products-title">Products</h1>
           <p>Favorites worth coming back for, at {membership.shop.name}.</p>
         </div>
-        <button
+        <Button variant="default" size="inherit"
           id="create-product-button"
           className="primary-button product-create-fab"
           type="button"
@@ -643,8 +647,8 @@ function ProductWorkspace({ userId }: { userId: string }) {
             <FiPlus />
           </span>
           <span>Create product</span>
-        </button>
-      </header>
+        </Button>
+      </PageHeader>
       {query.isSuccess && !denied && (
         <div
           className="product-view-switch"
@@ -652,7 +656,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
           aria-label="Product view"
         >
           {[false, true].map((archived) => (
-            <button
+            <Button variant="ghost" size="inherit"
               key={String(archived)}
               id={archived ? "product-view-archived" : "product-view-active"}
               type="button"
@@ -677,7 +681,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                   ).length
                 }
               </span>
-            </button>
+            </Button>
           ))}
         </div>
       )}
@@ -730,7 +734,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                 </strong>
                 <p>Arrange your menu highlights. Hidden items stay hidden.</p>
               </div>
-              <button
+              <Button variant="outline" size="inherit"
                 id="reorder-featured-items"
                 className="secondary-button"
                 type="button"
@@ -751,7 +755,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                 }}
               >
                 <FiMove aria-hidden="true" /> Reorder featured items
-              </button>
+              </Button>
             </div>
           )}
         {query.isSuccess && !unverified && query.data.products.length > 0 && (
@@ -761,7 +765,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                 <label htmlFor="product-search">Find a product</label>
                 <div className="product-search-input">
                   <FiSearch aria-hidden="true" />
-                  <input
+                  <Input
                     id="product-search"
                     type="search"
                     placeholder="Search name, category or description"
@@ -821,14 +825,14 @@ function ProductWorkspace({ userId }: { userId: string }) {
                   : "No matching products"}
               </p>
               {hasFilters && (
-                <button
+                <Button variant="outline" size="inherit"
                   type="button"
                   className="secondary-button"
                   disabled={browsingLocked}
                   onClick={clearFilters}
                 >
                   Clear filters
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -877,7 +881,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                     )}
                   </div>
                   {!showArchived && group.activeCount >= 2 && (
-                    <button
+                    <Button variant="outline" size="inherit"
                       id={`reorder-products-${group.key}`}
                       type="button"
                       className="secondary-button"
@@ -902,12 +906,12 @@ function ProductWorkspace({ userId }: { userId: string }) {
                     >
                       <FiMove aria-hidden="true" />
                       Reorder
-                    </button>
+                    </Button>
                   )}
                 </header>
                 <ul className="products-list">
                   {group.products.map((product) => (
-                    <li
+                    <ProductCard variant="management"
                       key={product.id}
                       data-status={
                         product.isArchived ? "ARCHIVED" : product.status
@@ -1027,7 +1031,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                           {formatProductPrice(product.price)}
                         </strong>
                         {!product.isArchived && (
-                          <button
+                          <Button variant="outline" size="inherit"
                             id={`edit-product-${product.id}`}
                             className="secondary-button"
                             type="button"
@@ -1045,7 +1049,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                           >
                             <FiEdit2 aria-hidden="true" />
                             Edit
-                          </button>
+                          </Button>
                         )}
                         {!product.isArchived ? (
                           <ProductActionsMenu
@@ -1061,7 +1065,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                               denied
                             }
                           >
-                            <button
+                            <Button variant="outline" size="inherit"
                               className="secondary-button"
                               type="button"
                               aria-label={`Customize ${product.name}`}
@@ -1082,9 +1086,9 @@ function ProductWorkspace({ userId }: { userId: string }) {
                             >
                               <FiSliders aria-hidden="true" />
                               Customize
-                            </button>
+                            </Button>
                             {!product.isArchived && (
-                              <button
+                              <Button variant="outline" size="inherit"
                                 id={`feature-product-${product.id}`}
                                 className="secondary-button"
                                 type="button"
@@ -1107,11 +1111,11 @@ function ProductWorkspace({ userId }: { userId: string }) {
                                   : product.isFeatured
                                     ? "Unfeature"
                                     : "Feature"}
-                              </button>
+                              </Button>
                             )}
                             {!product.isArchived &&
                               product.status !== "HIDDEN" && (
-                                <button
+                                <Button variant="outline" size="inherit"
                                   className="secondary-button"
                                   type="button"
                                   aria-label={`Hide ${product.name}`}
@@ -1132,11 +1136,11 @@ function ProductWorkspace({ userId }: { userId: string }) {
                                   {availableBusy === product.id
                                     ? "Updating…"
                                     : "Hide"}
-                                </button>
+                                </Button>
                               )}
                             {!product.isArchived &&
                               product.status !== "AVAILABLE" && (
-                                <button
+                                <Button variant="outline" size="inherit"
                                   className="secondary-button"
                                   type="button"
                                   aria-label={`Make ${product.name} available`}
@@ -1157,11 +1161,11 @@ function ProductWorkspace({ userId }: { userId: string }) {
                                   {availableBusy === product.id
                                     ? "Updating…"
                                     : "Make available"}
-                                </button>
+                                </Button>
                               )}
                             {!product.isArchived &&
                               product.status === "AVAILABLE" && (
-                                <button
+                                <Button variant="outline" size="inherit"
                                   className="secondary-button"
                                   type="button"
                                   aria-label={`Mark ${product.name} sold out`}
@@ -1182,7 +1186,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                                   {availableBusy === product.id
                                     ? "Updating…"
                                     : "Mark sold out"}
-                                </button>
+                                </Button>
                               )}
                             {!product.isArchived &&
                               product.status === "SOLD_OUT" && (
@@ -1190,7 +1194,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                                   Temporarily unavailable
                                 </span>
                               )}
-                            <button
+                            <Button variant="outline" size="inherit"
                               id={`archive-product-${product.id}`}
                               className="secondary-button"
                               type="button"
@@ -1221,10 +1225,10 @@ function ProductWorkspace({ userId }: { userId: string }) {
                                 <FiArchive aria-hidden="true" />
                               )}
                               {product.isArchived ? "Restore" : "Archive"}
-                            </button>
+                            </Button>
                           </ProductActionsMenu>
                         ) : (
-                          <button
+                          <Button variant="outline" size="inherit"
                             id={`archive-product-${product.id}`}
                             className="secondary-button"
                             type="button"
@@ -1248,10 +1252,10 @@ function ProductWorkspace({ userId }: { userId: string }) {
                             }
                           >
                             <FiRotateCcw aria-hidden="true" /> {archiveBusy && archiveTarget === product.id ? "Restoring…" : "Restore"}
-                          </button>
+                          </Button>
                         )}
                       </div>
-                    </li>
+                    </ProductCard>
                   ))}
                 </ul>
               </section>
@@ -1260,16 +1264,16 @@ function ProductWorkspace({ userId }: { userId: string }) {
         ) : showArchived ? (
           <EmptyState title="Nothing archived." icon={<FiArchive />}
             description="Archived products stay here until you restore them. Your active menu is in the other view.">
-            <button type="button" className="secondary-button" disabled={browsingLocked}
-              onClick={() => { setShowArchived(false); clearFilters(); }}>Back to active products</button>
+            <Button variant="outline" size="inherit" type="button" className="secondary-button" disabled={browsingLocked}
+              onClick={() => { setShowArchived(false); clearFilters(); }}>Back to active products</Button>
           </EmptyState>
         ) : (
           <EmptyState title="Start with a favorite." icon={<FiCoffee />}
             description="Create your first product to bring this menu to life.">
-            <button type="button" className="primary-button" disabled={browsingLocked || denied}
+            <Button variant="default" size="inherit" type="button" className="primary-button" disabled={browsingLocked || denied}
               onClick={() => { setInitialCategoryId(""); setCreating(true); }}>
               Add your first product
-            </button>
+            </Button>
           </EmptyState>
         )}
       </section>
@@ -1277,7 +1281,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
         <footer className="product-page-footer">
           {pageCount > 1 && (
             <nav className="product-pagination" aria-label="Product pages">
-              <button
+              <Button variant="outline" size="inherit"
                 type="button"
                 className="secondary-button"
                 aria-label="Previous product page"
@@ -1285,7 +1289,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                 onClick={() => changePage(currentPage - 1)}
               >
                 <FiChevronLeft aria-hidden="true" /> Previous
-              </button>
+              </Button>
               <div className="product-page-numbers">
                 {Array.from(
                   { length: Math.min(5, pageCount) },
@@ -1293,7 +1297,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                     Math.max(1, Math.min(currentPage - 2, pageCount - 4)) +
                     index,
                 ).map((number) => (
-                  <button
+                  <Button variant="outline" size="inherit"
                     key={number}
                     type="button"
                     className="secondary-button"
@@ -1303,13 +1307,13 @@ function ProductWorkspace({ userId }: { userId: string }) {
                     onClick={() => changePage(number)}
                   >
                     {number}
-                  </button>
+                  </Button>
                 ))}
               </div>
               <span>
                 Page {currentPage} of {pageCount}
               </span>
-              <button
+              <Button variant="outline" size="inherit"
                 type="button"
                 className="secondary-button"
                 aria-label="Next product page"
@@ -1317,7 +1321,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                 onClick={() => changePage(currentPage + 1)}
               >
                 Next <FiChevronRight aria-hidden="true" />
-              </button>
+              </Button>
             </nav>
           )}
         </footer>
@@ -1325,11 +1329,11 @@ function ProductWorkspace({ userId }: { userId: string }) {
       {query.isSuccess && !denied && query.data.products.length > 0 && hasFilters && filteredProducts.length === 0 && (
         <EmptyState title="No products found." icon={<FiSearch />}
           description="Try another name or clear the filters to browse your menu.">
-          <button type="button" className="secondary-button" disabled={browsingLocked}
+          <Button variant="outline" size="inherit" type="button" className="secondary-button" disabled={browsingLocked}
             onClick={() => {
               clearFilters();
               requestAnimationFrame(() => document.getElementById("product-search")?.focus());
-            }}>Reset product filters</button>
+            }}>Reset product filters</Button>
         </EmptyState>
       )}
       {query.isSuccess && !denied && !showArchived && !hasFilters && categories.isSuccess &&
@@ -1339,10 +1343,10 @@ function ProductWorkspace({ userId }: { userId: string }) {
               description={category.isVisible
                 ? "Add a product to start filling this category. Empty categories stay out of the customer menu."
                 : "Add a product to this category. The category will stay hidden until you choose to show it."}>
-              <button type="button" className="secondary-button" disabled={browsingLocked}
+              <Button variant="outline" size="inherit" type="button" className="secondary-button" disabled={browsingLocked}
                 onClick={() => { setInitialCategoryId(category.id); setCreating(true); }}>
                 Add product to {category.name}
-              </button>
+              </Button>
             </EmptyState>
           ))}
       {query.isSuccess &&
@@ -1367,7 +1371,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                 : "Create a product or restore one from Archived products."}
             </p>
             {
-              <button
+              <Button variant="outline" size="inherit"
                 type="button"
                 className="secondary-button"
                 disabled={browsingLocked}
@@ -1379,7 +1383,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                 {showArchived
                   ? "Back to active products"
                   : "View archived products"}
-              </button>
+              </Button>
             }
           </div>
         )}
@@ -1393,7 +1397,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
               extras now, or do it later from More.
             </p>
             <div className="customization-actions">
-              <button
+              <Button variant="default" size="inherit" type="submit"
                 className="primary-button"
                 disabled={
                   ordering || archiveBusy || Boolean(availableBusy) || denied
@@ -1405,13 +1409,13 @@ function ProductWorkspace({ userId }: { userId: string }) {
                 }
               >
                 Customize product
-              </button>
-              <button
+              </Button>
+              <Button variant="outline" size="inherit" type="submit"
                 className="secondary-button"
                 onClick={() => setCreatedProduct(null)}
               >
                 Done
-              </button>
+              </Button>
             </div>
           </div>
         )}

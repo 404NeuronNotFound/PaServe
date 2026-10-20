@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { useEffect, useId, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -162,13 +163,13 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
                     "Unable to check the invitation. Please try again.")
                   : "Unable to check the invitation. Please try again."}
               </InlineMessage>
-              <button
+              <Button variant="outline" size="inherit" type="submit"
                 className="secondary-button"
                 onClick={() => void preview.refetch()}
                 disabled={busy}
               >
                 Check invitation again
-              </button>
+              </Button>
             </>
           ) : (
             <p>
@@ -207,12 +208,12 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
           <InlineMessage>
             Unable to check your session. Check your connection and try again.
           </InlineMessage>
-          <button
+          <Button variant="default" size="inherit" type="submit"
             className="primary-button"
             onClick={() => void session.refetch()}
           >
             Try again
-          </button>
+          </Button>
         </>
       ) : (
         <>
@@ -246,7 +247,7 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
             />
           )}
           <p className="account-note">
-            <button
+            <Button variant="outline" size="inherit" type="submit"
               className="secondary-button"
               onClick={() => {
                 setRegister(!register);
@@ -256,7 +257,7 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
               {register
                 ? "Already have an account? Sign in"
                 : "New to PaServe? Create an account"}
-            </button>
+            </Button>
           </p>
         </>
       )}

@@ -1,3 +1,6 @@
+import { useDraftGuard } from "../../app/router/useDraftGuard";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { StaffSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { EmptyState } from "../../components/feedback/EmptyState";
@@ -167,6 +170,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const copyingGuard = useRef(false);
   const [lostAccess, setLostAccess] = useState(false);
   const [decision, setDecision] = useState<Decision | null>(null);
+  useDraftGuard(Boolean(email), busy);
   const [search, setSearch] = useState("");
   const authorized =
     hasShopPermission(membership.role, "shop.staff.manage") && !lostAccess;
@@ -392,7 +396,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
             </p>
             <div className="staff-search">
               <FiSearch aria-hidden="true" />
-              <input
+              <Input
                 aria-label="Search shop members"
                 ref={searchInput}
                 placeholder="Search by email or role"
@@ -400,7 +404,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 onChange={(event) => setSearch(event.target.value)}
               />
               {search && (
-                <button
+                <Button variant="ghost" size="inherit"
                   type="button"
                   aria-label="Clear member search"
                   onClick={() => {
@@ -409,7 +413,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                   }}
                 >
                   <FiX aria-hidden="true" />
-                </button>
+                </Button>
               )}
             </div>
             {search && (
@@ -445,7 +449,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                     </span>
                   ) : (
                     <div className="staff-actions">
-                      <button
+                      <Button variant="outline" size="inherit" type="submit"
                         className="secondary-button"
                         disabled={busy}
                         onClick={() =>
@@ -457,7 +461,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                         }
                       >
                         {member.isEnabled ? "Disable" : "Enable"}
-                      </button>
+                      </Button>
                       <SelectField
                         id={`role-${member.id}`}
                         label={`Role for ${member.email}`}
@@ -475,7 +479,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                         }}
                         disabled={busy}
                       />
-                      <button
+                      <Button variant="outline" size="inherit" type="submit"
                         className="secondary-button"
                         disabled={busy}
                         onClick={() =>
@@ -487,7 +491,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                         }
                       >
                         <FiUserMinus aria-hidden="true" /> Remove
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </li>
@@ -497,7 +501,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
               <EmptyState icon={<FiUsers />} title={search ? "No members match your search." : "No shop members to show."}
                 description={search ? "Try another name or email, or show the full team." : "Invite a teammate and choose the access they need for this shop."}>
                 {search && (
-                  <button
+                  <Button variant="outline" size="inherit" type="submit"
                     className="secondary-button"
                     onClick={() => {
                       setSearch("");
@@ -505,17 +509,17 @@ function StaffWorkspace({ userId }: { userId: string }) {
                     }}
                   >
                     Show all members
-                  </button>
+                  </Button>
                 )}
-                {!search && <button type="button" className="primary-button" disabled={busy}
-                  onClick={() => document.getElementById("staff-email")?.focus()}>Invite your first teammate</button>}
+                {!search && <Button variant="default" size="inherit" type="button" className="primary-button" disabled={busy}
+                  onClick={() => document.getElementById("staff-email")?.focus()}>Invite your first teammate</Button>}
               </EmptyState>
             )}
             {!search && query.data.members.length > 0 && query.data.members.every((member) => member.role === "OWNER") && (
               <EmptyState icon={<FiUsers />} title="Your team starts with you."
                 description="No staff have joined this shop yet. Invite a teammate and choose the access they need.">
-                <button type="button" className="primary-button" disabled={busy}
-                  onClick={() => document.getElementById("staff-email")?.focus()}>Invite your first teammate</button>
+                <Button variant="default" size="inherit" type="button" className="primary-button" disabled={busy}
+                  onClick={() => document.getElementById("staff-email")?.focus()}>Invite your first teammate</Button>
               </EmptyState>
             )}
           </section>
@@ -532,8 +536,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
             {!query.data.invitations.length ? (
               <EmptyState icon={<FiMail />} title="No invitations yet."
                 description="Your first invitation will appear here. Create a link and share it with your teammate.">
-                <button type="button" className="secondary-button" disabled={busy}
-                  onClick={() => document.getElementById("staff-email")?.focus()}>Start an invitation</button>
+                <Button variant="outline" size="inherit" type="button" className="secondary-button" disabled={busy}
+                  onClick={() => document.getElementById("staff-email")?.focus()}>Start an invitation</Button>
               </EmptyState>
             ) : (
               <ul className="staff-list">
@@ -570,7 +574,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                       </div>
                     </div>
                     {["PENDING", "EXPIRED"].includes(invitation.status) && (
-                      <button
+                      <Button variant="outline" size="inherit" type="submit"
                         className="secondary-button"
                         disabled={busy}
                         onClick={() =>
@@ -582,7 +586,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                         }
                       >
                         Revoke invitation
-                      </button>
+                      </Button>
                     )}
                   </li>
                 ))}
@@ -610,7 +614,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
             >
               <div className="field">
                 <label htmlFor="staff-email">Staff email address</label>
-                <input
+                <Input
                   ref={invitationEmail}
                   id="staff-email"
                   type="email"
@@ -641,11 +645,11 @@ function StaffWorkspace({ userId }: { userId: string }) {
               <p id="staff-role-description" className="staff-role-description">
                 {roleDescriptions[role]}
               </p>
-              <button
+              <Button variant="default" size="inherit" type="submit"
                 aria-busy={busy || query.isFetching} className="primary-button" disabled={busy || query.isFetching}>
                 {busy ? "Creating invitation…" : query.isFetching ? "Refreshing staff…" : "Create invitation link"}
                 <FiArrowUpRight aria-hidden="true" />
-              </button>
+              </Button>
             </form>
             <p className="staff-hint">
               <FiLock aria-hidden="true" />
@@ -668,20 +672,20 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 <label htmlFor="invitation-link">
                   Invitation link — save it before leaving this page
                 </label>
-                <input
+                <Input
                   id="invitation-link"
                   value={link}
                   readOnly
                   onFocus={(event) => event.target.select()}
                 />
-                <button
+                <Button variant="outline" size="inherit" type="submit"
                   className="secondary-button"
                   onClick={() => void copy()}
                   disabled={copying || busy}
                 >
                   <FiLink aria-hidden="true" />
                   {copying ? "Copying…" : "Copy invitation link"}
-                </button>
+                </Button>
               </div>
             )}
           </div>

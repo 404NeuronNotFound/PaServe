@@ -4,6 +4,7 @@ import { api } from "../../lib/api/client";
 export function ConnectionPage() {
   const [status, setStatus] = useState("checking...");
   useEffect(() => {
+    document.title = "Connection · PaServe";
     api
       .get<{ api: string; database: string }>("/health")
       .then(({ data }) => setStatus(`${data.api} / ${data.database}`))

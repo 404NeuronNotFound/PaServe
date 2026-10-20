@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { useRef, useState } from "react";
 import { FiCopy } from "react-icons/fi";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
@@ -41,7 +42,7 @@ export function OrderNumber({
       <div className="order-receipt-number-row">
         <p className="order-receipt-number-value">{value ?? "Unavailable"}</p>
         {value && (
-          <button
+          <Button variant="outline" size="inherit"
             aria-busy={copying}
             className="secondary-button"
             type="button"
@@ -50,7 +51,7 @@ export function OrderNumber({
           >
             <FiCopy aria-hidden="true" />
             {copying ? "Copying…" : "Copy order number"}
-          </button>
+          </Button>
         )}
       </div>
       {!compact && (

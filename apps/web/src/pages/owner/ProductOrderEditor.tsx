@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { useEffect, useRef, useState } from "react";
 import { FiArrowUp, FiArrowDown, FiLoader } from "react-icons/fi";
 import type { MenuProduct } from "@paserve/contracts";
@@ -32,6 +34,7 @@ export function ProductOrderEditor({
   const dirty = draft.some(
     (product, index) => product.id !== original[index].id,
   );
+  useDraftGuard(dirty, pending);
   useEffect(() => {
     mounted.current = true;
     const node = dialog.current;
@@ -135,7 +138,7 @@ export function ProductOrderEditor({
                 </small>
               </div>
               <div className="category-order-controls">
-                <button
+                <Button variant="outline" size="inherit"
                   type="button"
                   className="secondary-button"
                   aria-label={`Move ${product.name} up`}
@@ -143,8 +146,8 @@ export function ProductOrderEditor({
                   onClick={() => move(index, -1)}
                 >
                   <FiArrowUp aria-hidden="true" />
-                </button>
-                <button
+                </Button>
+                <Button variant="outline" size="inherit"
                   type="button"
                   className="secondary-button"
                   aria-label={`Move ${product.name} down`}
@@ -152,7 +155,7 @@ export function ProductOrderEditor({
                   onClick={() => move(index, 1)}
                 >
                   <FiArrowDown aria-hidden="true" />
-                </button>
+                </Button>
               </div>
             </li>
           ))}
@@ -167,7 +170,7 @@ export function ProductOrderEditor({
         </p>
         {error && <InlineMessage>{error}</InlineMessage>}
         <div className="category-editor-actions">
-          <button
+          <Button variant="default" size="inherit"
             aria-busy={pending}
             type="button"
             className="primary-button"
@@ -176,15 +179,15 @@ export function ProductOrderEditor({
           >
             {pending && <FiLoader className="is-spinning" aria-hidden="true" />}
             {pending ? "Saving order…" : "Save order"}
-          </button>
-          <button
+          </Button>
+          <Button variant="outline" size="inherit"
             type="button"
             className="secondary-button"
             disabled={pending || closing}
             onClick={() => (dirty ? setDiscard(true) : finishClose())}
           >
             Cancel
-          </button>
+          </Button>
         </div>
         <DecisionDialog
           open={discard}

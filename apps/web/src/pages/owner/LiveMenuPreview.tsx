@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { PublicMenuResponse } from "@paserve/contracts";
@@ -45,7 +46,7 @@ export function LiveMenuPreview({
     <section className="live-menu-preview" aria-label="Customer menu preview">
       <div className="menu-preview-toolbar">
         <div role="group" aria-label="Preview width">
-          <button
+          <Button variant="outline" size="inherit"
             className="secondary-button"
             type="button"
             aria-pressed={width === "phone"}
@@ -53,8 +54,8 @@ export function LiveMenuPreview({
           >
             <FiSmartphone aria-hidden="true" />
             Phone
-          </button>
-          <button
+          </Button>
+          <Button variant="outline" size="inherit"
             className="secondary-button"
             type="button"
             aria-pressed={width === "desktop"}
@@ -62,9 +63,9 @@ export function LiveMenuPreview({
           >
             <FiMonitor aria-hidden="true" />
             Desktop
-          </button>
+          </Button>
         </div>
-        <button
+        <Button variant="outline" size="inherit"
           className="secondary-button"
           type="button"
           disabled={menu.isFetching}
@@ -72,7 +73,7 @@ export function LiveMenuPreview({
         >
           <FiRefreshCw aria-hidden="true" />
           {menu.isFetching ? "Refreshing…" : "Refresh menu"}
-        </button>
+        </Button>
       </div>
       <p className="field-hint" role="status">
         {unsaved

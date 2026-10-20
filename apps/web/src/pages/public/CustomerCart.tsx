@@ -1,3 +1,5 @@
+import { ConfirmDialog } from "../../components/paserve/ConfirmDialog";
+import { Button } from "../../components/ui/button";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FiArrowRight, FiShoppingBag, FiTrash2 } from "react-icons/fi";
 import type {
@@ -33,6 +35,7 @@ export function CustomerCart({
 }) {
   const items = useCart((state) => cartItemsForShop(state.shops, shop.slug));
   const [open, setOpen] = useState(false);
+  const [discardEdits, setDiscardEdits] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [review, setReview] = useState<CartReviewSnapshot | null>(null);
   const [edits, setEdits] = useState<Record<string, boolean>>({});
@@ -41,6 +44,11 @@ export function CustomerCart({
       previous[id] === editing ? previous : { ...previous, [id]: editing },
     );
   }, []);
+  function closeCart() {
+    if (submitting) return;
+    if (Object.values(edits).some(Boolean)) { setDiscardEdits(true); return; }
+    setReview(null); setOpen(false);
+  }
   const [mode, setMode] = useState<"DINE_IN" | "TAKEOUT">(
     table ? "DINE_IN" : "TAKEOUT",
   );
@@ -62,7 +70,7 @@ export function CustomerCart({
   }, [items]);
   return (
     <>
-      <button
+      <Button variant="ghost" size="inherit"
         type="button"
         className="customer-cart-button"
         aria-label={`View cart (${count})`}
@@ -81,7 +89,7 @@ export function CustomerCart({
             {formatCartPrice(subtotal)}
           </strong>
         )}
-      </button>
+      </Button>
       {open && (
         <CustomerDialog
           title={`${shop.name} ${review ? "order review" : "cart"}`}
@@ -89,11 +97,7 @@ export function CustomerCart({
           className="customer-cart-dialog"
           eyebrow={review ? "Review & place" : "Your picks"}
           pending={submitting}
-          onClose={() => {
-            if (submitting) return;
-            setReview(null);
-            setOpen(false);
-          }}
+          onClose={closeCart}
         >
           <div className="customer-dialog-body">
             {review ? (
@@ -117,14 +121,14 @@ export function CustomerCart({
                     </span>
                     <h3>Your cart is empty.</h3>
                     <p>Find a favorite on the menu and make it yours.</p>
-                    <button
+                    <Button variant="default" size="inherit"
                       ref={browse}
                       className="primary-button"
                       type="button"
-                      onClick={() => setOpen(false)}
+                      onClick={closeCart}
                     >
                       Browse menu <FiArrowRight aria-hidden="true" />
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <p className="customer-cart-intro">
@@ -162,7 +166,7 @@ export function CustomerCart({
                           shopSlug={shop.slug}
                           onEditingChange={onEditingChange}
                         />
-                        <button
+                        <Button variant="outline" size="inherit"
                           type="button"
                           data-cart-remove
                           className="secondary-button customer-cart-remove"
@@ -174,7 +178,7 @@ export function CustomerCart({
                           }}
                         >
                           <FiTrash2 aria-hidden="true" />
-                        </button>
+                        </Button>
                       </div>
                     </li>
                   ))}
@@ -208,19 +212,23 @@ export function CustomerCart({
             {!review && (
               <>
                 {!!items.length && (
-                  <button
+                  <Button variant="outline" size="inherit"
                     type="button"
                     className="secondary-button customer-cart-continue"
-                    onClick={() => setOpen(false)}
+                    onClick={closeCart}
                   >
                     Continue shopping <FiArrowRight aria-hidden="true" />
-                  </button>
+                  </Button>
                 )}
               </>
             )}
           </footer>
         </CustomerDialog>
       )}
+      <ConfirmDialog open={discardEdits} title="Discard unsaved cart edits?"
+        description="Unsaved quantity or note edits will be discarded. Your saved cart items will remain."
+        confirmLabel="Discard edits" cancelLabel="Keep editing" destructive
+        onConfirm={() => { setReview(null); setOpen(false); }} onClose={() => setDiscardEdits(false)} />
     </>
   );
 }

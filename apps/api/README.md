@@ -116,3 +116,27 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+
+### Rate limiting and reverse proxies
+
+Rate-limited routes return `429 RATE_LIMIT_EXCEEDED` and an integer-seconds
+`Retry-After`. See [the rate-limit policy](../../docs/security.md#phase-24-rate-limiting-2026-10-19)
+for budgets, covered routes, retries and storage limits. Counters currently use
+one in-memory store per API process; replicas need shared storage or gateway limits.
+
+`TRUSTED_PROXY_CIDRS` is optional and defaults to no proxy trust. Set only actual
+trusted proxy IPs/CIDRs behind a controlled reverse proxy. Never trust arbitrary
+forwarded headers or all-network ranges. Client IPv6 budgets group addresses by /64.
+No database migration or additional dependency is required for this feature.
+
+
+### Security headers
+
+The API bootstrap enables installed NestJS 12 security headers before parsers,
+CORS and routes. JSON API documents use a deny-by-default CSP, framing protection,
+nosniff, no-referrer and restricted browser permissions. Production sends one-year
+HSTS for the API host only; local development does not. TLS/redirects remain the
+reverse proxy's responsibility. No additional Helmet dependency is required.
+The separately hosted SPA needs its own generated header configuration; see
+[secure headers and CSP](../../docs/security.md#phase-24-secure-headers-and-csp-2026-10-19).

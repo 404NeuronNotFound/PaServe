@@ -155,9 +155,7 @@
   padding: 10px 12px;
   border: 0;
   outline: none;
-  background: transparent;
-  color: var(--color-text);
-  font-size: 14px;
+
 }
 .selection-search input::placeholder {
   color: var(--color-muted);
@@ -172,13 +170,8 @@
   min-height: 44px;
   flex-shrink: 0;
   border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--color-text);
+
   cursor: pointer;
-}
-.selection-search button:hover {
-  background: var(--color-secondary);
 }
 .selection-list-caption {
   display: flex;
@@ -433,9 +426,6 @@
     flex: 1;
     min-width: 0;
     width: auto;
-  }
-  .selection-search input {
-    font-size: 16px;
   }
   .selection-tools .primary-button {
     padding: 12px;

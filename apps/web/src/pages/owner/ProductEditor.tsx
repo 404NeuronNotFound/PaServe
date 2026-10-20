@@ -1,3 +1,7 @@
+import { Textarea } from "../../components/ui/textarea";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { isValidCatalogName } from "@paserve/contracts";
 import { SelectField } from "../../components/forms/SelectField";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -147,6 +151,7 @@ export function ProductEditor({
       );
     };
   }, [product]);
+  useDraftGuard(dirty && !closing, busy || uploading);
   useEffect(() => {
     if (!dirty || closing) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -452,7 +457,7 @@ export function ProductEditor({
                   : "Bring a new favorite to your menu."}
               </p>
             </div>
-            <button
+            <Button variant="outline" size="inherit"
               type="button"
               className="secondary-button category-modal-close"
               aria-label="Close product form"
@@ -460,12 +465,12 @@ export function ProductEditor({
               onClick={requestClose}
             >
               <FiX aria-hidden="true" />
-            </button>
+            </Button>
           </header>
           <form ref={form} noValidate onSubmit={(event) => void submit(event)}>
             <div className="field">
               <label htmlFor="product-name">Product name</label>
-              <input
+              <Input
                 ref={nameInput}
                 id="product-name"
                 name="name"
@@ -489,7 +494,7 @@ export function ProductEditor({
             <div className="product-form-grid">
               <div className="field">
                 <label htmlFor="product-price">Price</label>
-                <input
+                <Input
                   id="product-price"
                   name="price"
                   inputMode="decimal"
@@ -564,14 +569,14 @@ export function ProductEditor({
                     ? "Categories couldn’t be loaded. Keep the current category or choose Uncategorized."
                     : "Categories couldn’t be loaded. You can create in Uncategorized."}
                 </InlineMessage>
-                <button
+                <Button variant="outline" size="inherit"
                   className="secondary-button"
                   type="button"
                   disabled={categories.isFetching || disabled}
                   onClick={() => void categories.refetch()}
                 >
                   Refresh categories
-                </button>
+                </Button>
               </div>
             )}
             {product ? (
@@ -611,7 +616,7 @@ export function ProductEditor({
               <label htmlFor="product-description">
                 Description <span className="field-hint">(optional)</span>
               </label>
-              <textarea
+              <Textarea
                 id="product-description"
                 name="description"
                 rows={3}
@@ -663,7 +668,7 @@ export function ProductEditor({
               <div>
                 <div className="field">
                   <label htmlFor="product-image">Saved photo</label>
-                  <input
+                  <Input
                     id="product-image"
                     value={imageUrl}
                     readOnly
@@ -675,7 +680,7 @@ export function ProductEditor({
                     automatically.
                   </p>
                   {product && imageUrl && (
-                    <button
+                    <Button variant="outline" size="inherit"
                       type="button"
                       className="secondary-button"
                       disabled={disabled}
@@ -685,7 +690,7 @@ export function ProductEditor({
                       }}
                     >
                       Remove saved photo
-                    </button>
+                    </Button>
                   )}
                   {product && imageSaved && !imageUrl && (
                     <p className="field-hint" role="status">
@@ -695,7 +700,7 @@ export function ProductEditor({
                   {fieldError("imageUrl")}
                 </div>
                 <label className="product-featured-field">
-                  <input
+                  <Input
                     name="isFeatured"
                     type="checkbox"
                     checked={featured}
@@ -706,7 +711,7 @@ export function ProductEditor({
                 </label>
                 <div className="field">
                   <label htmlFor="product-sort">Display order</label>
-                  <input
+                  <Input
                     id="product-sort"
                     name="sortOrder"
                     inputMode="numeric"
@@ -754,16 +759,16 @@ export function ProductEditor({
                           : "Ready for a new favorite."}
               </p>
               <div className="category-editor-actions">
-                <button
+                <Button variant="outline" size="inherit"
                   className="secondary-button"
                   type="button"
                   disabled={mutation.isPending || uploading || closing}
                   onClick={requestClose}
                 >
                   {created ? "Done" : "Cancel"}
-                </button>
+                </Button>
                 {(!created || photo) && (
-                  <button
+                  <Button variant="default" size="inherit"
                     aria-busy={mutation.isPending || uploading}
                     className="primary-button"
                     type="submit"
@@ -789,7 +794,7 @@ export function ProductEditor({
                           : product
                             ? "Save changes"
                             : "Create product"}
-                  </button>
+                  </Button>
                 )}
               </div>
             </footer>

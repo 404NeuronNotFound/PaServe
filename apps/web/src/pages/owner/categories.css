@@ -364,7 +364,7 @@
 .categories-list .category-delete-button {
   margin: 0;
   flex-shrink: 0;
-  color: var(--color-error);
+
 }
 .categories-menu-summary {
   min-width: 260px;
@@ -494,13 +494,11 @@
   width: 100%;
   min-height: 128px;
   border: 1px solid var(--color-border);
-  border-radius: 11px;
+
   padding: 14px 16px;
-  background: var(--color-surface);
-  color: var(--color-text);
+
   font: inherit;
-  font-size: 16px;
-  line-height: 1.6;
+
   resize: vertical;
 }
 .category-editor textarea:focus {

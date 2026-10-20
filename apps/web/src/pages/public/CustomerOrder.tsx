@@ -1,3 +1,6 @@
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import type {
@@ -126,6 +129,7 @@ export function CustomerOrder({
     return () => { mounted.current = false; };
   }, []);
   const [pending, setPending] = useState(false);
+  const navigationGuard = useDraftGuard(false, pending);
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState<CustomerOrderResponse["order"] | null>(
     null,
@@ -294,6 +298,7 @@ export function CustomerOrder({
       setAttempt(null);
       setReview(null);
       pendingOrders.remove(key);
+      navigationGuard.release();
       onOrderPlaced?.(data.order);
     } catch (cause) {
       if (!mounted.current) return;
@@ -364,7 +369,7 @@ export function CustomerOrder({
           <legend>Order type</legend>
           {table && (
             <label>
-              <input
+              <Input
                 type="radio"
                 name={`order-mode-${shopSlug}`}
                 value="DINE_IN"
@@ -378,7 +383,7 @@ export function CustomerOrder({
             </label>
           )}
           <label>
-            <input
+            <Input
               type="radio"
               name={`order-mode-${shopSlug}`}
               value="TAKEOUT"
@@ -447,7 +452,7 @@ export function CustomerOrder({
       )}
       <div className="customer-order-actions">
         {visibleReview && !attempt && (
-          <button
+          <Button variant="outline" size="inherit"
             type="button"
             className="secondary-button"
             disabled={pending}
@@ -458,9 +463,9 @@ export function CustomerOrder({
             }}
           >
             Edit cart
-          </button>
+          </Button>
         )}
-        <button
+        <Button variant="default" size="inherit"
           aria-busy={pending}
           key={
             attempt
@@ -493,7 +498,7 @@ export function CustomerOrder({
                   ? "Place pickup order"
                   : "Place dine-in order"}
           {!pending && <FiArrowRight aria-hidden="true" />}
-        </button>
+        </Button>
       </div>
     </div>
   );

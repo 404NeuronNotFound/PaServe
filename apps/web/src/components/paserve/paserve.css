@@ -1,0 +1,42 @@
+/* Shared domain layout; feature CSS only composes task-specific content. */
+:where(.page-header) { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-6); margin-bottom: var(--spacing-6); overflow-wrap: anywhere; }
+:where(.page-header) h1 { margin: 0; font-family: var(--font-display); font-size: var(--text-page-title); }
+:where(.page-header) p { color: var(--color-muted); line-height: var(--line-body); }
+
+:where(.menu-product-card) {
+  display: flex;
+  gap: 24px;
+  min-width: 0;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease;
+}
+
+:where(.active-order-card) {
+  position: relative;
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1.15fr) minmax(145px, 0.85fr) minmax(230px, 1.35fr)
+    minmax(90px, auto) max-content;
+  align-items: center;
+  gap: 24px;
+  padding: 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 2px 3px #17251b02;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+:where(.sales-metric) {
+  border-radius: var(--radius-card);
+  min-height: 196px;
+}

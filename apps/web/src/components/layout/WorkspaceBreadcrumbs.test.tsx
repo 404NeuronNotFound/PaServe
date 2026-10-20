@@ -10,6 +10,14 @@ const membership: UserMembership = {
   id: "member-a", shopId: "a", role: "OWNER",
   shop: { id: "a", name: "Cafe A", slug: "cafe-a", isActive: true },
 };
+it.each([
+  ["sales", "Sales dashboard"], ["tables", "Tables"], ["orders", "Active orders"],
+  ["orders/completed", "Completed orders"], ["orders/cancelled", "Cancelled / rejected"], ["add-ons", "Add-ons"],
+])("sets a fresh workspace title for %s", (path, title) => {
+  document.title = "Previous page";
+  setup(`/app/shops/a/${path}`);
+  expect(document.title).toBe(`${title} · Cafe A · PaServe`);
+});
 function setup(path: string, member: UserMembership | null = membership) {
   render(<MemoryRouter initialEntries={[path]}><WorkspaceBreadcrumbs membership={member} /></MemoryRouter>);
 }

@@ -315,10 +315,6 @@
 .order-reference-side > span.is-current {
   background: var(--color-text);
 }
-.customer-order-page .order-reference-flip {
-  background: var(--color-canvas);
-  border-color: transparent;
-}
 .order-receipt-qr {
   padding: 20px;
   margin-bottom: 16px;
@@ -403,36 +399,23 @@
   gap: 10px;
   min-height: 44px;
   padding: 12px 18px;
-  border-radius: 12px;
-  font-size: 0.8125rem;
-  font-weight: 650;
+
   text-decoration: none;
   transition:
     background 180ms ease,
     border-color 180ms ease,
     transform 180ms ease;
 }
-.customer-order-page .secondary-button {
-  color: var(--color-text);
-  background: var(--color-surface);
-  border-color: var(--color-border);
-}
 .customer-order-page .secondary-button:hover:not(:disabled) {
   background: var(--color-secondary);
   border-color: var(--color-muted);
 }
 .customer-order-page .primary-button {
-  background: var(--menu-primary);
-  color: var(--menu-on-primary);
+
   border: 1px solid var(--menu-primary);
 }
 .customer-order-page .primary-button:hover {
   transform: translateY(-1px);
-}
-.order-receipt-number .secondary-button {
-  color: var(--menu-on-accent);
-  background: var(--menu-accent);
-  border-color: var(--menu-accent);
 }
 .order-receipt-number .secondary-button:hover:not(:disabled) {
   color: var(--menu-on-accent);

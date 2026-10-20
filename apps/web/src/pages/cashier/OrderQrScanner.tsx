@@ -1,3 +1,6 @@
+import { Textarea } from "../../components/ui/textarea";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { describeRequestFailure } from "../../components/feedback/request-failure";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -331,13 +334,13 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
           >
             <FiCamera aria-hidden="true" /> Start camera
           </PendingButton>
-          <button
+          <Button variant="outline" size="inherit" type="submit"
             className="secondary-button"
             onClick={stopCamera}
             disabled={phase === "idle"}
           >
             <FiPause aria-hidden="true" /> Stop camera
-          </button>
+          </Button>
         </div>
         {cameras.length > 1 && (
           <SelectField
@@ -368,9 +371,9 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
         </p>
         {error && <InlineMessage>{error}</InlineMessage>}
         {error && !lostAccess && !busy && (
-          <button type="button" className="secondary-button" onClick={() => {
+          <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => {
             document.getElementById("scanner-order-number")?.focus();
-          }}>Use manual order lookup</button>
+          }}>Use manual order lookup</Button>
         )}
         {lostAccess && (
           <Link
@@ -400,7 +403,7 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
             <label htmlFor="scanner-order-number">Find by order number</label>
             <div className="scanner-number-input">
               <FiHash aria-hidden="true" />
-              <input
+              <Input
                 id="scanner-order-number"
                 value={number}
                 onChange={(event) => setNumber(event.target.value)}
@@ -437,7 +440,7 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
               <label htmlFor="scanner-image">
                 <FiUpload aria-hidden="true" /> Choose an order QR image
               </label>
-              <input
+              <Input
                 id="scanner-image"
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
@@ -453,7 +456,7 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
             <form onSubmit={manual}>
               <div className="field">
                 <label htmlFor="scanner-paste">Paste order QR contents</label>
-                <textarea
+                <Textarea
                   id="scanner-paste"
                   value={pasted}
                   onChange={(event) => setPasted(event.target.value)}

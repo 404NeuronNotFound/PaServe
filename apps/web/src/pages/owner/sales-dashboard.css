@@ -57,9 +57,7 @@
   min-height: 44px;
   padding: 10px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  color: var(--color-text);
-  background: var(--color-surface);
+
   font: inherit;
 }
 .daily-analytics-controls button {
@@ -140,9 +138,7 @@
   min-height: 44px;
   padding: 10px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  color: var(--color-text);
-  background: var(--color-surface);
+
   font: inherit;
 }
 .sales-range-help {
@@ -363,10 +359,10 @@
   color: var(--color-text);
 }
 .sales-dashboard .sales-refresh {
-  border-radius: 12px;
+
   padding-inline: 16px;
   min-height: 44px;
-  font-size: 12px;
+
   gap: 9px;
 }
 .sales-toolbar {
@@ -403,18 +399,16 @@
   min-height: 44px;
   padding: 8px 10px;
   font: 550 12px var(--font-ui, sans-serif);
-  color: var(--color-text);
-  background: var(--color-canvas);
+
   border: 1px solid var(--color-border);
-  border-radius: 9px;
+
 }
 .sales-today {
   min-height: 44px;
   border: 1px solid var(--color-border);
-  border-radius: 9px;
+
   padding: 8px 13px;
-  background: transparent;
-  color: var(--color-text);
+
   font: 600 11px var(--font-ui, sans-serif);
   cursor: pointer;
 }

@@ -202,10 +202,9 @@
   width: 44px;
   min-height: 44px;
   border: 1px solid transparent;
-  border-radius: 12px;
-  background: transparent;
+
   cursor: pointer;
-  color: var(--color-text);
+
 }
 .brand-color-palette button span {
   width: 26px;
@@ -286,6 +285,7 @@
 .brand-crop-controls input {
   width: 100%;
   min-height: 44px;
+
   accent-color: var(--color-text);
 }
 .brand-crop-dialog footer {

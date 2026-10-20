@@ -1,3 +1,6 @@
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import {
   isValidCatalogName,
   normalizeCatalogName,
@@ -76,6 +79,7 @@ export function CustomizationEditor({
     else if (validationField === "name") nameInput.current?.focus();
   }, [validation, validationField, moreSettings, busy]);
   const dirty = JSON.stringify(values) !== JSON.stringify(initial);
+  useDraftGuard(dirty, busy);
   const dialog = useRef<HTMLDialogElement>(null),
     nameInput = useRef<HTMLInputElement>(null);
   const id = useId();
@@ -174,7 +178,7 @@ export function CustomizationEditor({
                 {record ? "Edit" : "Create"} {label}
               </h2>
             </div>
-            <button
+            <Button variant="outline" size="inherit"
               type="button"
               className="secondary-button"
               aria-label="Close editor"
@@ -182,7 +186,7 @@ export function CustomizationEditor({
               onClick={close}
             >
               <FiX aria-hidden="true" />
-            </button>
+            </Button>
           </header>
           {kind === "group" && !record && (
             <p className="field-hint">
@@ -197,7 +201,7 @@ export function CustomizationEditor({
           )}
           <div className="field">
             <label htmlFor={`${id}-name`}>Name</label>
-            <input
+            <Input
               id={`${id}-name`}
               ref={nameInput}
               aria-invalid={validationField === "name"}
@@ -242,7 +246,7 @@ export function CustomizationEditor({
           {kind !== "group" && (
             <div className="field">
               <label htmlFor={`${id}-price`}>Extra charge (PHP)</label>
-              <input
+              <Input
                 id={`${id}-price`}
                 ref={priceInput}
                 inputMode="decimal"
@@ -269,7 +273,7 @@ export function CustomizationEditor({
           )}
           {kind === "variant" && (
             <label className="customization-check">
-              <input
+              <Input
                 type="checkbox"
                 checked={values.isDefault}
                 disabled={busy}
@@ -292,7 +296,7 @@ export function CustomizationEditor({
           )}
           {kind === "group" && (
             <label className="customization-check">
-              <input
+              <Input
                 type="checkbox"
                 checked={values.isRequired}
                 disabled={busy}
@@ -311,7 +315,7 @@ export function CustomizationEditor({
             <summary>More settings</summary>
             <div className="customization-more-body">
               <label className="customization-check">
-                <input
+                <Input
                   type="checkbox"
                   checked={values.isAvailable}
                   disabled={busy}
@@ -330,7 +334,7 @@ export function CustomizationEditor({
               </p>
               <div className="field">
                 <label htmlFor={`${id}-order`}>List position</label>
-                <input
+                <Input
                   ref={orderInput}
                   id={`${id}-order`}
                   inputMode="numeric"
@@ -356,7 +360,7 @@ export function CustomizationEditor({
           <footer>
             <div className="customization-footer-context">
               {kind !== "group" && record && onDelete && (
-                <button
+                <Button variant="outline" size="inherit"
                   type="button"
                   className="secondary-button"
                   disabled={busy || blocked}
@@ -364,7 +368,7 @@ export function CustomizationEditor({
                 >
                   <FiTrash2 aria-hidden="true" />
                   Delete {label}
-                </button>
+                </Button>
               )}
               {(busy || dirty) && (
                 <span className="field-hint" role="status">
@@ -373,15 +377,15 @@ export function CustomizationEditor({
               )}
             </div>
             <div className="customization-footer-actions">
-              <button
+              <Button variant="outline" size="inherit"
                 type="button"
                 className="secondary-button"
                 disabled={busy}
                 onClick={close}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button variant="default" size="inherit" type="submit"
                 className="primary-button"
                 aria-busy={busy}
                 disabled={busy || blocked || Boolean(record && !dirty)}
@@ -391,7 +395,7 @@ export function CustomizationEditor({
                   : record
                     ? "Save changes"
                     : `Create ${label}`}
-              </button>
+              </Button>
             </div>
           </footer>
         </form>

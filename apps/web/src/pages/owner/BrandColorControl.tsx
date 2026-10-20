@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { menuTheme } from "../../lib/menu-theme";
 import {
   DEFAULT_MENU_PRIMARY_COLOR,
@@ -42,7 +44,7 @@ export function BrandColorControl({
     >
       <div className="brand-color-display">
         <label className="brand-color-well">
-          <input
+          <Input
             type="color"
             aria-label={`Choose ${label}`}
             value={color}
@@ -69,7 +71,7 @@ export function BrandColorControl({
         aria-label={`${label} palette`}
       >
         {palette.map(([name, hex]) => (
-          <button
+          <Button variant="ghost" size="inherit"
             type="button"
             key={hex}
             disabled={disabled}
@@ -78,9 +80,9 @@ export function BrandColorControl({
             onClick={() => onChange(hex)}
           >
             <span style={{ background: hex }} aria-hidden="true" />
-          </button>
+          </Button>
         ))}
-        <button
+        <Button variant="ghost" size="inherit"
           type="button"
           className="brand-color-reset"
           disabled={disabled}
@@ -88,7 +90,7 @@ export function BrandColorControl({
           aria-label={`Reset ${label}`}
         >
           Default
-        </button>
+        </Button>
       </div>
       <p className="field-hint">
         Text contrast adjusts automatically. Menu backgrounds, fonts, and spacing

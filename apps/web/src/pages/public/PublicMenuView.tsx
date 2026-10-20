@@ -1,4 +1,7 @@
-﻿import type { PublicMenuResponse } from "@paserve/contracts";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { ProductCard } from "../../components/paserve/ProductCard";
+import type { PublicMenuResponse } from "@paserve/contracts";
 import { memo, useDeferredValue, useId, useMemo, useState } from "react";
 import { EmptyState } from "../../components/feedback/EmptyState";
 import type { CustomerOrderResponse } from "@paserve/contracts";
@@ -128,7 +131,7 @@ export function PublicMenuView({
               <label className="menu-search" htmlFor={`${prefix}-search`}>
                 <FiSearch aria-hidden="true" />
                 <span className="sr-only">Search menu</span>
-                <input
+                <Input
                   id={`${prefix}-search`}
                   type="search"
                   placeholder="Find your next favorite…"
@@ -136,13 +139,13 @@ export function PublicMenuView({
                   onChange={(event) => setSearch(event.target.value)}
                 />
                 {search && (
-                  <button
+                  <Button variant="ghost" size="inherit"
                     type="button"
                     aria-label="Clear search"
                     onClick={() => setSearch("")}
                   >
                     <FiX aria-hidden="true" />
-                  </button>
+                  </Button>
                 )}
               </label>
             )}
@@ -171,7 +174,7 @@ export function PublicMenuView({
       {!products.length && (
         <EmptyState title="No items are available on this menu yet." icon={<FiCoffee />}
           description={preview ? "Add a visible product to start building this menu." : "The shop has no items to show right now. Ask the staff about availability or check again shortly."}>
-          {!preview && <button type="button" className="secondary-button" onClick={() => window.location.reload()}>Refresh menu</button>}
+          {!preview && <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => window.location.reload()}>Refresh menu</Button>}
         </EmptyState>
       )}
       <div className="menu-search-status-slot">
@@ -186,13 +189,13 @@ export function PublicMenuView({
         <div className="menu-empty">
           <FiSearch aria-hidden="true" />
           <p>No matches. Try another craving.</p>
-          <button
+          <Button variant="outline" size="inherit"
             type="button"
             className="secondary-button"
             onClick={() => setSearch("")}
           >
             Clear search
-          </button>
+          </Button>
         </div>
       )}
       <div className="menu-sections" aria-busy={searchPending}>
@@ -261,7 +264,7 @@ const MenuSection = memo(function MenuSection({
       {description && <p className="menu-section-description">{description}</p>}
       <ul className="menu-products">
         {products.map((product) => (
-          <li
+          <ProductCard
             className="menu-product-card"
             data-sold-out={product.status === "SOLD_OUT" ? "true" : undefined}
             key={product.id}
@@ -296,7 +299,7 @@ const MenuSection = memo(function MenuSection({
                 <strong className="menu-product-price">
                   {formatProductPrice(product.price)}
                 </strong>
-                <button
+                <Button variant="ghost" size="inherit"
                   type="button"
                   className="menu-product-details-button"
                   aria-label={`View details for ${product.name}`}
@@ -309,10 +312,10 @@ const MenuSection = memo(function MenuSection({
                 >
                   <span>View details</span>
                   <FiArrowUpRight aria-hidden="true" />
-                </button>
+                </Button>
               </div>
             </div>
-          </li>
+          </ProductCard>
         ))}
       </ul>
     </section>

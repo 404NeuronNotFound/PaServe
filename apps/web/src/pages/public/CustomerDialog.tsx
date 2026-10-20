@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { PublicMenuResponse } from "@paserve/contracts";
@@ -53,7 +54,7 @@ export function CustomerDialog({
           {eyebrow && <p className="customer-dialog-eyebrow">{eyebrow}</p>}
           <h2 id={titleId}>{title}</h2>
         </div>
-        <button
+        <Button variant="outline" size="inherit"
           type="button"
           className="secondary-button"
           aria-label="Close"
@@ -62,7 +63,7 @@ export function CustomerDialog({
           onClick={onClose}
         >
           <FiX aria-hidden="true" />
-        </button>
+        </Button>
       </header>
       {children}
     </dialog>,

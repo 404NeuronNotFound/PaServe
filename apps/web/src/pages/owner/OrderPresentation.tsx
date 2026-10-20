@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/button";
+import { PageHeader } from "../../components/paserve/PageHeader";
 import type { ReactNode } from "react";
 import type { ActiveOrderSummary } from "@paserve/contracts";
 import { OrderViewsNavigation } from "./OrderViewsNavigation";
@@ -35,7 +37,7 @@ export function OrderPageHeader({
   const Icon = viewIcons[view];
   return (
     <>
-      <header className="active-orders-header">
+      <PageHeader className="active-orders-header">
         <div className="owner-orders-heading">
           <span className="owner-orders-emblem">
             <Icon aria-hidden="true" />
@@ -46,7 +48,7 @@ export function OrderPageHeader({
             <p>{children}</p>
           </div>
         </div>
-        <button
+        <Button variant="outline" size="inherit" type="submit"
           className="secondary-button owner-orders-refresh"
           disabled={fetching}
           onClick={onRefresh}
@@ -56,8 +58,8 @@ export function OrderPageHeader({
             className={fetching ? "is-refreshing" : undefined}
           />
           {fetching ? "Refreshing…" : "Refresh"}
-        </button>
-      </header>
+        </Button>
+      </PageHeader>
       <OrderViewsNavigation />
     </>
   );

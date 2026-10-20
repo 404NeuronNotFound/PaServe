@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useState } from "react";
@@ -114,27 +115,27 @@ export function DailyAnalytics({
           role="group"
           aria-label="Analytics aggregation"
         >
-          <button
+          <Button variant="outline" size="inherit" type="submit"
             className="secondary-button"
             aria-pressed={period === "daily"}
             onClick={() => setPeriod("daily")}
           >
             Daily
-          </button>
-          <button
+          </Button>
+          <Button variant="outline" size="inherit" type="submit"
             className="secondary-button"
             aria-pressed={weekly}
             onClick={() => setPeriod("weekly")}
           >
             Weekly
-          </button>
-          <button
+          </Button>
+          <Button variant="outline" size="inherit" type="submit"
             className="secondary-button"
             aria-pressed={monthly}
             onClick={() => setPeriod("monthly")}
           >
             Monthly
-          </button>
+          </Button>
         </div>
       </div>
       <p className="sales-range-help">

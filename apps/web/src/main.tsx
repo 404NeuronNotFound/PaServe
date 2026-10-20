@@ -6,6 +6,8 @@ import "./components/feedback/feedback.css";
 import App from "./App.tsx";
 import "./responsive.css";
 import "./accessibility.css";
+import "./components/ui/ui.css";
+import "./components/paserve/paserve.css";
 import "./menu-brand.css";
 import "./motion.css";
 

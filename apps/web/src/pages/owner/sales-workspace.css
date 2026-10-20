@@ -30,7 +30,7 @@
   font-size: 14px;
 }
 .sales-dashboard .sales-refresh {
-  background: var(--color-surface);
+
   box-shadow: 0 2px 3px #15251b04;
 }
 .sales-period-panel {
@@ -67,11 +67,10 @@
   gap: 2px;
 }
 .sales-period-panel .sales-report-mode button {
-  border-color: transparent;
-  border-radius: 8px;
+
   min-height: 44px;
   padding-inline: 15px;
-  font-size: 12px;
+
   box-shadow: none;
 }
 .sales-period-panel .sales-toolbar {
@@ -84,10 +83,6 @@
 .sales-period-panel > :is(p, .feedback-inline) {
   grid-column: 1 / -1;
   margin: 0;
-}
-.sales-period input {
-  background: var(--color-surface);
-  font-size: 13px;
 }
 .sales-section-nav {
   display: flex;
@@ -130,10 +125,7 @@
   margin-bottom: 24px;
 }
 .sales-hero,
-.sales-metric {
-  border-radius: 18px;
-  min-height: 196px;
-}
+
 .sales-hero {
   padding: 24px 26px;
   box-shadow: 0 6px 16px #15251b0b;
@@ -193,8 +185,7 @@
 }
 .sales-dashboard .daily-analytics-heading > button {
   min-width: 44px;
-  border-radius: 10px;
-  font-size: 11px;
+
   padding-inline: 12px;
 }
 .daily-analytics-table {
@@ -424,6 +415,7 @@
   flex: 1;
   min-width: 0;
   min-height: 44px;
+
   accent-color: var(--sales-chart-current);
   cursor: pointer;
 }
@@ -824,7 +816,7 @@
 @container sales (max-width: 420px) {
   .sales-header .sales-refresh {
     padding-inline: 12px;
-    font-size: 11px;
+
   }
   .sales-header h1 {
     font-size: 34px;

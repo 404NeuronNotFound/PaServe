@@ -1,3 +1,7 @@
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import { PageHeader } from "../../components/paserve/PageHeader";
+import { MetricCard as Metric } from "../../components/paserve/MetricCard";
 import {
   MetricsSkeleton,
   ReportSkeleton,
@@ -32,7 +36,6 @@ import {
   FiLayers,
   FiActivity,
 } from "react-icons/fi";
-import type { IconType } from "react-icons";
 import { shopPath, useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
 import { getDailySales } from "../../features/orders/daily-sales";
@@ -89,37 +92,6 @@ function reportAccessUnavailable(error: unknown) {
   );
 }
 
-function Metric({
-  id,
-  title,
-  value,
-  note,
-  Icon,
-  number,
-}: {
-  id: string;
-  title: string;
-  value: string;
-  note: string;
-  Icon: IconType;
-  number: string;
-}) {
-  return (
-    <article className="sales-metric" aria-labelledby={id}>
-      <div className="sales-metric-top">
-        <span className="sales-metric-icon">
-          <Icon aria-hidden="true" />
-        </span>
-        <span className="sales-metric-index" aria-hidden="true">
-          {number}
-        </span>
-      </div>
-      <h2 id={id}>{title}</h2>
-      <strong className="sales-amount">{value}</strong>
-      <p>{note}</p>
-    </article>
-  );
-}
 
 export function SalesDashboardPage() {
   const { shopId, role } = useActiveShop();
@@ -257,7 +229,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
 
   return (
     <section className="sales-dashboard" aria-labelledby="sales-title">
-      <header className="sales-header">
+      <PageHeader className="sales-header">
         <div>
           <p className="sales-eyebrow">
             <span aria-hidden="true" /> YOUR BUSINESS, AT A GLANCE
@@ -270,7 +242,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
             <strong>{shop.name}</strong>
           </p>
         </div>
-        <button
+        <Button variant="outline" size="inherit" type="submit"
           className="secondary-button sales-refresh"
           disabled={!valid || query.isFetching}
           onClick={refreshSales}
@@ -280,8 +252,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
             className={query.isFetching ? "sales-refreshing" : undefined}
           />{" "}
           Refresh sales
-        </button>
-      </header>
+        </Button>
+      </PageHeader>
       <div className="sales-period-panel" id="sales-overview">
         <div className="sales-period-panel-heading">
           <span className="sales-kicker">REPORTING PERIOD</span>
@@ -292,14 +264,14 @@ function SalesWorkspace({ userId }: { userId: string }) {
           role="group"
           aria-label="Sales report period"
         >
-          <button
+          <Button variant="outline" size="inherit" type="submit"
             className="secondary-button"
             aria-pressed={!custom}
             onClick={() => setCustom(false)}
           >
             Single day
-          </button>
-          <button
+          </Button>
+          <Button variant="outline" size="inherit" type="submit"
             className="secondary-button"
             aria-pressed={custom}
             onClick={() => {
@@ -308,7 +280,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
             }}
           >
             Custom Date
-          </button>
+          </Button>
         </div>
         <div className="sales-toolbar">
           {custom ? (
@@ -322,7 +294,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
             >
               <label htmlFor="custom-sales-start">
                 Start date
-                <input
+                <Input
                   id="custom-sales-start"
                   type="date"
                   value={customDraft.start}
@@ -335,7 +307,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
               </label>
               <label htmlFor="custom-sales-end">
                 End date
-                <input
+                <Input
                   id="custom-sales-end"
                   type="date"
                   value={customDraft.end}
@@ -346,20 +318,20 @@ function SalesWorkspace({ userId }: { userId: string }) {
                   }
                 />
               </label>
-              <button
+              <Button variant="outline" size="inherit"
                 className="secondary-button"
                 type="submit"
                 disabled={!validDraft}
               >
                 Apply date range
-              </button>
+              </Button>
             </form>
           ) : (
             <div className="sales-period">
               <FiCalendar aria-hidden="true" />
               <label htmlFor="sales-date">
                 Business date
-                <input
+                <Input
                   id="sales-date"
                   type="date"
                   value={date}
@@ -371,7 +343,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
                   }
                 />
               </label>
-              <button
+              <Button variant="ghost" size="inherit" type="submit"
                 className="sales-today"
                 aria-pressed={date === today}
                 onClick={() => {
@@ -380,7 +352,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 }}
               >
                 Today
-              </button>
+              </Button>
             </div>
           )}
           <span id="sales-timezone" className="sales-timezone">
@@ -580,20 +552,20 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 role="group"
                 aria-label="Payment mix basis"
               >
-                <button
+                <Button variant="outline" size="inherit" type="submit"
                   className="secondary-button"
                   aria-pressed={paymentBasis === "SALES"}
                   onClick={() => setPaymentBasis("SALES")}
                 >
                   Sales share
-                </button>
-                <button
+                </Button>
+                <Button variant="outline" size="inherit" type="submit"
                   className="secondary-button"
                   aria-pressed={paymentBasis === "ORDERS"}
                   onClick={() => setPaymentBasis("ORDERS")}
                 >
                   Order share
-                </button>
+                </Button>
               </div>
               <div className="sales-payment-visual">
                 <div className="sales-payment-ring" aria-hidden="true">
@@ -799,11 +771,11 @@ function SalesWorkspace({ userId }: { userId: string }) {
                     No completed orders for this{" "}
                     {custom ? "date range" : "business day"}.
                   </p>
-                  <button type="button" className="secondary-button" onClick={() => {
+                  <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => {
                     const control = document.getElementById(custom ? "custom-sales-start" : "sales-date");
                     control?.scrollIntoView?.({ block: "center" });
                     control?.focus();
-                  }}>Choose another reporting period</button>
+                  }}>Choose another reporting period</Button>
                 </div>
               ) : (
                 <>

@@ -1,5 +1,6 @@
+import { Button } from "../../components/ui/button";
 import { ReceiptSkeleton } from "../../components/feedback/LoadingSkeleton";
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { FiCoffee } from "react-icons/fi";
 import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
@@ -43,10 +44,10 @@ function ReceiptRead({
   const title = receipt
     ? `Receipt ${receipt.orderNumber} · ${receipt.shopName}`
     : "Order receipt";
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.title = `${title} · PaServe`;
     heading.current?.focus();
-  }, [title, loading]);
+  }, [title, loading, denied]);
   const menuUrl =
     receipt?.mode === "DINE_IN"
       ? `/${encodeURIComponent(shopSlug)}/table/${encodeURIComponent(receipt.table!.code)}`
@@ -97,13 +98,13 @@ function ReceiptRead({
           <footer>
             <p>Keep this receipt for your records.</p>
             <div className="order-receipt-footer-actions">
-              <button
+              <Button variant="outline" size="inherit"
                 type="button"
                 className="secondary-button"
                 onClick={retry}
               >
                 Refresh receipt
-              </button>
+              </Button>
               <Link
                 className="primary-button"
                 to={trackingPath(shopSlug, orderId)}
@@ -130,13 +131,13 @@ function ReceiptRead({
                 ? "Your receipt will be available after the cashier confirms your order and payment. You can follow your order on the tracking page."
                 : "We could not load this receipt. Try again when connected, or ask the counter staff for help."}
           </InlineMessage>
-          <button
+          <Button variant="outline" size="inherit"
             type="button"
             className="secondary-button"
             onClick={retry}
           >
             Try again
-          </button>
+          </Button>
           <Link
             className="secondary-button"
             to={trackingPath(shopSlug, orderId)}

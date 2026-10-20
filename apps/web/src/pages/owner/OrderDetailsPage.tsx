@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { useEffect, useRef, useState } from "react";
 import { OrderDetailsSkeleton } from "../../components/feedback/LoadingSkeleton";
@@ -350,22 +351,22 @@ function OrderDetailsWorkspace({
               {(Object.keys(actionLabels) as PreparationAction[])
                 .filter(permitted)
                 .map((action) => (
-                  <button
+                  <Button variant="default" size="inherit" type="submit"
                     key={action}
                     className="primary-button"
                     disabled={mutation.isPending || query.isFetching}
                     onClick={() => setConfirm(action)}
                   >
                     {actionLabels[action]}
-                  </button>
+                  </Button>
                 ))}
               {permitted("RECEIPT") && (
-                <button
+                <Button variant="outline" size="inherit" type="submit"
                   className="secondary-button"
                   onClick={() => setReceipt((value) => !value)}
                 >
                   {receipt ? "Hide receipt" : "View receipt"}
-                </button>
+                </Button>
               )}
             </div>
             {!order.permittedActions.length && (
@@ -384,12 +385,12 @@ function OrderDetailsWorkspace({
               aria-label="Saved paid receipt"
             >
               <div className="receipt-print-controls">
-                <button
+                <Button variant="outline" size="inherit" type="submit"
                   className="secondary-button"
                   onClick={() => window.print()}
                 >
                   <FiPrinter aria-hidden="true" /> Print receipt
-                </button>
+                </Button>
               </div>
               <ReceiptDocument
                 shopDetails={order.shopDetails}

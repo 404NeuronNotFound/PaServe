@@ -1,3 +1,4 @@
+import { Button } from "../../../components/ui/button";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate, useLocation } from "react-router-dom";
@@ -43,14 +44,14 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
       <main className="connection-page">
         <h1>Unable to check your session</h1>
         <p>Please check your connection and try again.</p>
-        <button
+        <Button variant="default" size="inherit"
           className="primary-button"
           onClick={() => {
             void session.refetch();
           }}
         >
           Try again
-        </button>
+        </Button>
       </main>
     );
   }

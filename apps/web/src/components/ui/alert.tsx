@@ -1,7 +1,6 @@
 import type { ComponentProps } from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cn } from "../../lib/utils";
-import "./ui.css";
 
 export function Alert({ asChild = false, unstyled = false, variant = "default", className, role = "alert", ...props }:
   ComponentProps<"div"> & { asChild?: boolean; unstyled?: boolean; variant?: "default" | "destructive" }) {

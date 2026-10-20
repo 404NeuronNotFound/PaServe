@@ -1,3 +1,7 @@
+import { useDraftGuard } from "../../app/router/useDraftGuard";
+import { Button } from "../../components/ui/button";
+import { Textarea } from "../../components/ui/textarea";
+import { Input } from "../../components/ui/input";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
@@ -29,6 +33,7 @@ export function CreateShopPage() {
   const navigate = useNavigate();
   const mutation = useMutation({ mutationFn: createShop, retry: false });
 
+  const navigationGuard = useDraftGuard(Boolean(name || description), mutation.isPending);
   useEffect(() => {
     document.title = "Create your shop · PaServe";
     heading.current?.focus();
@@ -84,6 +89,7 @@ export function CreateShopPage() {
       );
       void client.invalidateQueries({ queryKey: currentUserKey });
       feedback.toast("Your shop was created.");
+      navigationGuard.release();
       void navigate("/app/account", {
         replace: true,
         state: { createdShopName: result.shop.name },
@@ -195,7 +201,7 @@ export function CreateShopPage() {
           >
             <div className="field">
               <label htmlFor="shop-name">Shop name</label>
-              <input
+              <Input
                 id="shop-name"
                 name="name"
                 autoComplete="organization"
@@ -221,7 +227,7 @@ export function CreateShopPage() {
               <label htmlFor="shop-description">
                 Description <span className="field-hint">(optional)</span>
               </label>
-              <textarea
+              <Textarea
                 id="shop-description"
                 name="description"
                 rows={4}
@@ -261,7 +267,7 @@ export function CreateShopPage() {
             <p className="sr-only" role="status">
               {mutation.isPending ? "Creating your shop. Please wait." : ""}
             </p>
-            <button
+            <Button variant="default" size="inherit"
               aria-busy={mutation.isPending}
               className="primary-button"
               disabled={mutation.isPending}
@@ -276,7 +282,7 @@ export function CreateShopPage() {
               ) : (
                 <FiArrowRight className="button-icon" aria-hidden="true" />
               )}
-            </button>
+            </Button>
             <Link className="shop-create-cancel" to="/app/account">
               Cancel and return to your account
             </Link>

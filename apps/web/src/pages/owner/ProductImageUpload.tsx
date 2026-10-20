@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -155,7 +156,7 @@ export function ProductImageUpload({
     >
       {saved && <InlineMessage tone="success">Photo saved. Product details save separately.</InlineMessage>}
       {file && (
-        <button
+        <Button variant="outline" size="inherit"
           aria-busy={pending}
           type="button"
           className="secondary-button"
@@ -168,7 +169,7 @@ export function ProductImageUpload({
             <FiUpload aria-hidden="true" />
           )}
           {pending ? "Uploading..." : "Upload image"}
-        </button>
+        </Button>
       )}
     </ProductPhotoPicker>
   );

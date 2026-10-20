@@ -1,9 +1,12 @@
+import { useEffect, useState } from "react";
+import { NavigationProtection } from "./NavigationProtection";
 import {
-  BrowserRouter,
+  createBrowserRouter,
+  createRoutesFromElements,
+  RouterProvider,
   Navigate,
   Outlet,
   Route,
-  Routes,
 } from "react-router-dom";
 import { RegisterPage } from "../../pages/public/RegisterPage";
 import { PublicMenuPage } from "../../pages/public/PublicMenuPage";
@@ -41,10 +44,12 @@ import { JoinShopPage } from "../../pages/public/JoinShopPage";
 import { KitchenRoute } from "../../features/kitchen/KitchenRoute";
 import { KitchenPage } from "../../pages/kitchen/KitchenPage";
 
+let sharedRouter: ReturnType<typeof createBrowserRouter> | undefined;
+let routerConsumers = 0;
+
 export function AppRouter() {
-  return (
-    <BrowserRouter>
-      <Routes>
+  const [router] = useState(() => sharedRouter ??= createBrowserRouter(createRoutesFromElements(
+      <Route element={<NavigationProtection><Outlet /></NavigationProtection>}>
         <Route path="/:shopSlug/table/:tableCode" element={<PublicMenuPage />} />
         <Route path="/menu/:shopSlug" element={<PublicMenuPage />} />
         <Route
@@ -104,12 +109,26 @@ export function AppRouter() {
         ))}
         <Route path="/:shopSlug" element={<PublicMenuPage />} />
         <Route path="*" element={<PageNotFound />} />
-      </Routes>
-    </BrowserRouter>
-  );
+      </Route>
+  )));
+  useEffect(() => {
+    routerConsumers++;
+    return () => {
+      routerConsumers--;
+      // StrictMode immediately remounts effects; defer disposal until it settles.
+      queueMicrotask(() => {
+        if (!routerConsumers && sharedRouter === router) {
+          router.dispose();
+          sharedRouter = undefined;
+        }
+      });
+    };
+  }, [router]);
+  return <RouterProvider router={router} />;
 }
 
 function PageNotFound() {
+  useEffect(() => { document.title = "Page not found · PaServe"; }, []);
   return (
     <main className="connection-page">
       <h1>Page not found</h1>

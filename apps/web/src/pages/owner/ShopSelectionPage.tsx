@@ -1,5 +1,7 @@
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { ShopLogo } from "../../components/shops/ShopLogo";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
 import type { CurrentUserResponse } from "@paserve/contracts";
@@ -42,6 +44,7 @@ export function ResolveActiveShop() {
 }
 
 export function ShopSelectionPage() {
+  useEffect(() => { document.title = "Your shops ? PaServe"; }, []);
   const user =
     useQueryClient().getQueryData<CurrentUserResponse>(currentUserKey)!.user;
   const shops = user.memberships.filter(
@@ -127,7 +130,7 @@ export function ShopSelectionPage() {
                   <label className="sr-only" htmlFor="shop-search">
                     Search shops
                   </label>
-                  <input
+                  <Input
                     id="shop-search"
                     ref={searchInput}
                     type="search"
@@ -137,13 +140,13 @@ export function ShopSelectionPage() {
                     aria-describedby="selection-search-hint"
                   />
                   {search && (
-                    <button
+                    <Button variant="ghost" size="inherit"
                       type="button"
                       aria-label="Clear search"
                       onClick={clearSearch}
                     >
                       <FiX aria-hidden="true" />
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}
@@ -212,13 +215,13 @@ export function ShopSelectionPage() {
               <InlineMessage tone="info" className="selection-empty-message">
                 Try a different name, role or menu address.
               </InlineMessage>
-              <button
+              <Button variant="outline" size="inherit"
                 className="secondary-button"
                 type="button"
                 onClick={clearSearch}
               >
                 Show all shops
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="selection-empty">

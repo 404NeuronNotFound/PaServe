@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { MenuSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useState } from "react";
 import { ErrorState } from "../../components/feedback/ErrorState";
@@ -123,7 +124,7 @@ function PublicMenuSession({
             unavailableMessage={code ? "This table link is unavailable. Ask staff for the current QR code." : "This menu is unavailable. Ask the shop for its current menu link."} />
         )}
         {code && (
-          <button
+          <Button variant="outline" size="inherit" type="submit"
             className="secondary-button"
             onClick={() => {
               useCustomerTables.getState().clear(shopSlug);
@@ -133,7 +134,7 @@ function PublicMenuSession({
             }}
           >
             Browse for pickup
-          </button>
+          </Button>
         )}
       </main>
     );

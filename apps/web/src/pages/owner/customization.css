@@ -22,7 +22,7 @@
   margin: 0;
   padding: 8px 22px 8px 10px;
   border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-  border-radius: 999px;
+
   box-shadow:
     0 8px 28px #0003,
     0 2px 6px #0002;
@@ -239,10 +239,7 @@
   padding: 14px 18px;
   border: 0;
   border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--color-muted);
-  font-weight: 600;
+
 }
 .customization-tabs button[aria-selected="true"] {
   color: var(--color-text);
@@ -320,9 +317,7 @@
   width: 44px;
   flex: 0 0 44px;
   border: 0;
-  border-radius: 12px;
-  background: transparent;
-  color: var(--color-muted);
+
 }
 .customization-add-option,
 .customization-text-button {
@@ -330,21 +325,19 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: transparent;
-  color: var(--color-text);
-  font-size: 14px;
+
 }
 .customization-add-option {
   width: 100%;
   border: 1px dashed var(--color-border);
-  border-radius: 12px;
+
   margin-top: 12px;
 }
 .customization-text-button {
   border: 0;
   padding: 8px 0;
   margin-top: 20px;
-  color: var(--color-muted);
+
 }
 .customization-onboarding {
   padding: 40px 24px;
@@ -452,6 +445,7 @@
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+
   accent-color: var(--color-text);
 }
 .customization-notice {

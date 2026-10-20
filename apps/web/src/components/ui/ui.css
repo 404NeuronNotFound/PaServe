@@ -35,7 +35,7 @@
   color: var(--color-text);
   border-color: var(--color-control-border);
 }
-.ui-button.ui-button-ghost,
+.ui-button.ui-button-ghost:not([aria-pressed="true"]):not([aria-selected="true"]),
 .ui-button.ui-button-link {
   background: transparent;
   color: var(--color-text);
@@ -136,3 +136,36 @@
 @media print {
   .ui-table-container { overflow: visible; }
 }
+
+/* Layered primitives share the same neutral, theme-aware surfaces. */
+.ui-modal-overlay { position: fixed; inset: 0; z-index: 200; background: #101c1680; }
+.ui-dialog-content, .ui-sheet-content {
+  position: fixed; z-index: 201; box-sizing: border-box;
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(var(--app-viewport-height, 100dvh) - 24px);
+  overflow: auto; overscroll-behavior: contain;
+  padding: var(--spacing-6); border: 1px solid var(--color-border);
+  border-radius: var(--radius-dialog); background: var(--color-surface); color: var(--color-text);
+  box-shadow: var(--shadow-dialog); overflow-wrap: anywhere;
+}
+.ui-dialog-content { left: 50%; top: calc(var(--app-viewport-top, 0px) + var(--app-viewport-height, 100dvh) / 2); transform: translate(-50%, -50%); }
+.ui-dialog-content > h2, .ui-sheet-content > h2 { margin-top: 0; padding-right: 44px; font-family: var(--font-display); }
+.ui-sheet-content { top: var(--app-viewport-top, 0px); bottom: auto; height: var(--app-viewport-height, 100dvh); max-height: var(--app-viewport-height, 100dvh); width: min(420px, 100vw); border-radius: 0; }
+.ui-sheet-left { left: 0; } .ui-sheet-right { right: 0; }
+.ui-modal-close { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 44px; min-height: 44px; border: 1px solid var(--color-control-border); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
+.ui-tabs-list { display: flex; flex-wrap: wrap; gap: var(--spacing-1); padding: var(--spacing-1); border-radius: var(--radius-panel); background: var(--color-secondary); }
+.ui-tabs-trigger { min-height: 44px; padding: var(--spacing-2) var(--spacing-4); border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; color: var(--color-text); font: inherit; cursor: pointer; }
+.ui-tabs-trigger[data-state="active"] { background: var(--color-surface); border-color: var(--color-control-border); font-weight: var(--weight-semibold); }
+.ui-tabs-content { min-width: 0; padding-block: var(--spacing-4); }
+.ui-tabs-content[data-state="inactive"] { display: none; }
+.ui-dropdown-content, .ui-tooltip-content { z-index: 210; max-width: calc(100vw - 24px); border: 1px solid var(--color-control-border); border-radius: var(--radius-panel); background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-popover); overflow-wrap: anywhere; }
+.ui-dropdown-content { min-width: min(200px, calc(100vw - 24px)); max-height: min(var(--radix-dropdown-menu-content-available-height), 70dvh); overflow: auto; padding: var(--spacing-1); }
+.ui-dropdown-item { display: flex; align-items: center; min-height: 44px; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-control); cursor: pointer; outline-offset: -3px; }
+.ui-dropdown-item[data-highlighted] { background: var(--color-secondary); outline: 2px solid var(--color-focus); }
+.ui-dropdown-item[data-disabled] { opacity: 0.65; pointer-events: none; }
+.ui-dropdown-label { padding: var(--spacing-2) var(--spacing-3); font-weight: var(--weight-semibold); }
+.ui-dropdown-separator { height: 1px; margin: var(--spacing-1); background: var(--color-border); }
+.ui-tooltip-content { max-width: min(280px, calc(100vw - 24px)); padding: var(--spacing-2) var(--spacing-3); font-size: var(--text-xs); }
+.ui-tabs-trigger:focus-visible, .ui-modal-close:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+@media (forced-colors: active) { .ui-dropdown-item[data-highlighted], .ui-tabs-trigger:focus-visible, .ui-modal-close:focus-visible { outline-color: Highlight; } }
+@media print { .ui-modal-overlay, .ui-sheet-content, .ui-dropdown-content, .ui-tooltip-content { display: none; } }

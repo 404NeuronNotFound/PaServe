@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -68,6 +70,7 @@ export function ShopBannerUpload({
     },
     [preview],
   );
+  useDraftGuard(Boolean(file) || cropping, pending);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (file || pending || cropping) {
@@ -188,7 +191,7 @@ export function ShopBannerUpload({
     >
       {saved && <InlineMessage tone="success">Banner saved. Business details save separately.</InlineMessage>}
       <div className="shop-context-actions">
-        <button
+        <Button variant="default" size="inherit"
           aria-busy={pending}
           type="button"
           className="primary-button"
@@ -197,7 +200,7 @@ export function ShopBannerUpload({
         >
           <FiUpload aria-hidden="true" />
           {pending ? "Saving banner..." : "Upload banner"}
-        </button>
+        </Button>
       </div>
     </BrandPhotoPicker>
   );

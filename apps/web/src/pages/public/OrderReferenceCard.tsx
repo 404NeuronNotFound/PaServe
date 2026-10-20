@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { useId, useRef, useState } from "react";
 import { FiRotateCw } from "react-icons/fi";
 import type { CustomerOrderQr as QrCredential } from "../../features/cart/customer-order-qr";
@@ -54,7 +55,7 @@ export function OrderReferenceCard({
           <span className={showNumber ? "is-current" : ""} />
           {showNumber ? "Order number" : "QR code"}
         </span>
-        <button
+        <Button variant="outline" size="inherit"
           ref={flip}
           type="button"
           className="secondary-button order-reference-flip"
@@ -63,7 +64,7 @@ export function OrderReferenceCard({
         >
           <FiRotateCw aria-hidden="true" />{" "}
           {showNumber ? "Show QR code" : "Show order number"}
-        </button>
+        </Button>
       </div>
       {showNumber && (
         <p className="order-reference-hint">

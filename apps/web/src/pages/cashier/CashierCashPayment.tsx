@@ -1,3 +1,6 @@
+import { useDraftGuard } from "../../app/router/useDraftGuard";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
@@ -90,6 +93,7 @@ export function CashierCashPayment({
   const controller = useRef<AbortController | null>(null);
   const attempt = useRef<string | null>(null);
   const resultHeading = useRef<HTMLHeadingElement>(null);
+  useDraftGuard(!review?.payment && Boolean(amount || reference || description || receivedConfirmed), busy && pendingAction === "record");
   const normalized = normalizeCashAmount(amount);
   const change =
     review && normalized
@@ -436,18 +440,18 @@ export function CashierCashPayment({
             {!blocked &&
               review.order.status === "CONFIRMED" &&
               review.order.paymentStatus === "PAID" && (
-                <button
+                <Button variant="outline" size="inherit"
                   type="button"
                   className="secondary-button"
                   disabled={busy}
                   onClick={() => setShowReceipt(true)}
                 >
                   <FiFileText aria-hidden="true" /> View receipt
-                </button>
+                </Button>
               )}
-            <button className="primary-button" onClick={onNext}>
+            <Button variant="default" size="inherit" type="submit" className="primary-button" onClick={onNext}>
               Scan another order <FiArrowRight aria-hidden="true" />
-            </button>
+            </Button>
           </div>
         </div>
       </section>
@@ -485,7 +489,7 @@ export function CashierCashPayment({
                   <label htmlFor="other-payment-description">
                     Payment method description
                   </label>
-                  <input
+                  <Input
                     id="other-payment-description"
                     value={description}
                     maxLength={80}
@@ -530,7 +534,7 @@ export function CashierCashPayment({
               <label htmlFor="gcash-reference">
                 Reference note / number (optional)
               </label>
-              <input
+              <Input
                 id="gcash-reference"
                 value={reference}
                 maxLength={200}
@@ -560,7 +564,7 @@ export function CashierCashPayment({
                 </InlineMessage>
               )}
               <label className="cashier-gcash-confirm">
-                <input
+                <Input
                   type="checkbox"
                   checked={receivedConfirmed}
                   disabled={busy || blocked || confirm}
@@ -583,7 +587,7 @@ export function CashierCashPayment({
                 <span className="cashier-cash-currency" aria-hidden="true">
                   ₱
                 </span>
-                <input
+                <Input
                   id="cash-amount"
                   inputMode="decimal"
                   autoComplete="off"
@@ -695,9 +699,9 @@ export function CashierCashPayment({
     <section className="scanner-panel" aria-label="Order payment">
       <h2>{manual ? recordLabel : "Collect cash"}</h2>
       {controls}
-      <button className="secondary-button" onClick={onNext} disabled={busy}>
+      <Button variant="outline" size="inherit" type="submit" className="secondary-button" onClick={onNext} disabled={busy}>
         Scan another order
-      </button>
+      </Button>
     </section>
   );
 }

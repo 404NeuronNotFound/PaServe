@@ -31,7 +31,7 @@
   width: 44px;
   height: 44px;
   padding: 12px;
-  border-radius: 50%;
+
 }
 .customer-cart-dialog .customer-dialog-body {
   min-height: 0;
@@ -84,11 +84,6 @@
   gap: 8px;
   min-height: 44px;
   margin: 0;
-}
-.customer-cart-dialog .primary-button {
-  border-color: var(--menu-primary);
-  background: var(--menu-primary);
-  color: var(--menu-on-primary);
 }
 .customer-cart-intro {
   margin: 0 0 16px;
@@ -177,11 +172,7 @@
   margin: 0;
   padding: 6px 0;
   border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--color-text);
-  font-size: 16px;
-  font-weight: 600;
+
   text-align: center;
   font-variant-numeric: tabular-nums;
   appearance: textfield;
@@ -197,13 +188,11 @@
   width: 44px;
   padding: 0;
   border: 0;
-  border-radius: 10px;
-  background: transparent;
+
 }
 .customer-cart-dialog .customer-cart-quantity-save {
   padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 12px;
+
 }
 .customer-cart-quantity-form .field-hint {
   margin: 8px 0 0;
@@ -217,9 +206,7 @@
 }
 .customer-cart-dialog .customer-cart-notes > button {
   padding: 10px 8px;
-  border-color: transparent;
-  background: transparent;
-  font-size: 12px;
+
   white-space: nowrap;
 }
 .customer-cart-line-note {
@@ -243,10 +230,7 @@
   grid-row: 2;
   width: 44px;
   padding: 0;
-  border-color: transparent;
-  background: transparent;
-  color: var(--color-muted);
-  border-radius: 12px;
+
 }
 form.customer-cart-notes {
   display: grid;
@@ -269,9 +253,7 @@ form.customer-cart-notes {
   min-height: 88px;
   padding: 10px 12px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-surface);
-  color: var(--color-text);
+
   font: inherit;
   resize: vertical;
 }
@@ -314,10 +296,7 @@ form.customer-cart-notes {
 }
 .customer-cart-dialog .customer-cart-continue {
   padding: 12px 18px;
-  border-radius: 13px;
-  color: var(--color-muted);
-  border-color: transparent;
-  background: transparent;
+
 }
 .customer-cart-price-notice {
   grid-column: 1 / -1;
@@ -455,8 +434,7 @@ form.customer-cart-notes {
 .customer-cart-dialog .customer-order-actions .primary-button {
   flex: 1;
   min-height: 48px;
-  font-size: 14px;
-  border-radius: 12px;
+
 }
 .customer-cart-dialog .customer-order-actions .secondary-button {
   min-height: 48px;
@@ -480,13 +458,6 @@ form.customer-cart-notes {
 }
 .customer-cart-dialog .customer-dialog-heading h2 {
   letter-spacing: -0.035em;
-}
-.customer-cart-dialog .secondary-button {
-  color: var(--color-text);
-}
-.customer-cart-dialog .customer-dialog-heading > button {
-  border-color: var(--color-border);
-  background: var(--color-surface);
 }
 .customer-cart-dialog .customer-cart-line-total {
   overflow-wrap: anywhere;

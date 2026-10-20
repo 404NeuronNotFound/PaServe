@@ -1,3 +1,6 @@
+import { Button } from "../../components/ui/button";
+import { StatusBadge } from "../../components/paserve/StatusBadge";
+import { OrderCard } from "../../components/paserve/OrderCard";
 import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -173,20 +176,20 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
               aria-label="Active orders, oldest first"
             >
               {orders.map((order) => (
-                <li key={order.id} className="active-order-card">
+                <OrderCard key={order.id} className="active-order-card">
                   <OrderCardIdentity
                     orderNumber={order.orderNumber}
                     mode={order.mode}
                     tableNumber={order.tableNumber}
                   />
                   <div className="active-order-state">
-                    <span
+                    <StatusBadge
                       className="active-order-badge"
-                      data-state={order.preparationStatus ?? order.status}
+                      state={order.preparationStatus ?? order.status}
                       data-payment={order.paymentStatus}
                     >
                       {statusLabel(order)}
-                    </span>
+                    </StatusBadge>
                     <span className="active-order-payment">
                       {order.status === "CONFIRMED" ? "Confirmed · " : ""}
                       {order.paymentStatus === "PAID" ? "Paid" : "Unpaid"}
@@ -219,7 +222,7 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
                     <strong>{formatCartPrice(order.totalPrice)}</strong>
                   </div>
                   <OrderDetailsLink shopId={shopId} orderId={order.id} />
-                </li>
+                </OrderCard>
               ))}
             </ul>
           )}
@@ -229,15 +232,15 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
         className="active-orders-pagination"
         aria-label="Active orders pagination"
       >
-        <button
+        <Button variant="outline" size="inherit" type="submit"
           className="secondary-button"
           disabled={cursors.length === 1 || query.isFetching}
           onClick={() => setCursors((values) => values.slice(0, -1))}
         >
           Previous
-        </button>
+        </Button>
         <span>Page {cursors.length}</span>
-        <button
+        <Button variant="outline" size="inherit" type="submit"
           className="secondary-button"
           disabled={
             !query.isSuccess || !query.data.nextCursor || query.isFetching
@@ -248,7 +251,7 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
           }}
         >
           Next
-        </button>
+        </Button>
       </nav>
     </section>
   );

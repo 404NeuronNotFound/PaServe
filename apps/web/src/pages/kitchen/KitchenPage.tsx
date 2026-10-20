@@ -1,3 +1,5 @@
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -230,14 +232,14 @@ function NewOrders() {
           </p>
         </div>
         <div className="kitchen-refresh">
-          <button
+          <Button variant="outline" size="inherit" type="submit"
             className="secondary-button"
             disabled={queue.isFetching}
             onClick={() => void queue.refetch()}
           >
             <FiRefreshCw aria-hidden="true" />
             {queue.isFetching ? "Refreshing…" : "Refresh orders"}
-          </button>
+          </Button>
           <span role="status">
             {queue.dataUpdatedAt
               ? `Last checked ${time(new Date(queue.dataUpdatedAt).toISOString())} · checks every 15s`
@@ -250,34 +252,34 @@ function NewOrders() {
         role="group"
         aria-label="Preparation views"
       >
-        <button
+        <Button variant="ghost" size="inherit" type="submit"
           aria-pressed={state === "QUEUED"}
           onClick={() => setState("QUEUED")}
         >
           <FiClock aria-hidden="true" />
           Queued
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost" size="inherit" type="submit"
           aria-pressed={state === "PREPARING"}
           onClick={() => setState("PREPARING")}
         >
           <FiCoffee aria-hidden="true" />
           Preparing
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost" size="inherit" type="submit"
           aria-pressed={state === "READY"}
           onClick={() => setState("READY")}
         >
           <FiCheck aria-hidden="true" />
           Ready
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost" size="inherit" type="submit"
           aria-pressed={state === "COMPLETED"}
           onClick={() => setState("COMPLETED")}
         >
           <FiArchive aria-hidden="true" />
           Completed
-        </button>
+        </Button>
       </div>
       <div hidden={state !== "COMPLETED"}>
         <HistorySearch
@@ -342,14 +344,14 @@ function NewOrders() {
           </p>
           <div className="empty-state-actions">
             {state === "COMPLETED" && (history.search || history.from || history.to || historyCursor) ? (
-              <button type="button" className="secondary-button" onClick={() => {
+              <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => {
                 setHistory({ limit: 12 }); setCursors([null]);
-              }}>Reset history filters</button>
+              }}>Reset history filters</Button>
             ) : state !== "QUEUED" ? (
-              <button type="button" className="secondary-button" onClick={() => setState("QUEUED")}>View queued orders</button>
+              <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => setState("QUEUED")}>View queued orders</Button>
             ) : (
-              <button type="button" className="secondary-button" disabled={queue.isFetching}
-                onClick={() => void queue.refetch()}>{queue.isFetching ? "Refreshing queue…" : "Check for new orders"}</button>
+              <Button variant="outline" size="inherit" type="button" className="secondary-button" disabled={queue.isFetching}
+                onClick={() => void queue.refetch()}>{queue.isFetching ? "Refreshing queue…" : "Check for new orders"}</Button>
             )}
           </div>
         </div>
@@ -392,7 +394,7 @@ function NewOrders() {
                   minute: "2-digit",
                 })}
               </time>
-              <button
+              <Button variant="outline" size="inherit" type="submit"
                 className="secondary-button"
                 aria-label={`View details for ${order.orderNumber}`}
                 onClick={(event) => {
@@ -401,7 +403,7 @@ function NewOrders() {
                 }}
               >
                 View details <FiChevronRight aria-hidden="true" />
-              </button>
+              </Button>
             </li>
           ))}
         </ol>
@@ -431,7 +433,7 @@ function NewOrders() {
             Page {cursors.length} · Up to 12 orders per page
           </span>
           <div>
-            <button
+            <Button variant="outline" size="inherit" type="submit"
               className="secondary-button"
               disabled={cursors.length === 1 || queue.isFetching}
               onClick={() => {
@@ -440,8 +442,8 @@ function NewOrders() {
               }}
             >
               <FiChevronLeft aria-hidden="true" /> Previous
-            </button>
-            <button
+            </Button>
+            <Button variant="outline" size="inherit" type="submit"
               className="secondary-button"
               disabled={!queue.hasNextPage || queue.isFetching}
               onClick={() => {
@@ -453,7 +455,7 @@ function NewOrders() {
               }}
             >
               Next <FiChevronRight aria-hidden="true" />
-            </button>
+            </Button>
           </div>
         </nav>
       )}
@@ -469,13 +471,13 @@ function NewOrders() {
       )}
       {state !== "COMPLETED" && queue.hasNextPage && (
         <div className="kitchen-load-more">
-          <button
+          <Button variant="outline" size="inherit" type="submit"
             className="secondary-button"
             disabled={queue.isFetching}
             onClick={() => void queue.fetchNextPage()}
           >
             {queue.isFetchingNextPage ? "Loading more…" : "Load more orders"}
-          </button>
+          </Button>
           <p>Earlier tickets always stay at the top.</p>
         </div>
       )}
@@ -521,7 +523,7 @@ function HistorySearch({
         Order number
         <div>
           <FiSearch aria-hidden="true" />
-          <input
+          <Input
             name="search"
             type="search"
             placeholder="Search ORD-000016"
@@ -532,18 +534,18 @@ function HistorySearch({
       </label>
       <label>
         From
-        <input name="from" type="date" />
+        <Input name="from" type="date" />
       </label>
       <label>
         To
-        <input name="to" type="date" />
+        <Input name="to" type="date" />
       </label>
-      <button className="primary-button" type="submit">
+      <Button variant="default" size="inherit" className="primary-button" type="submit">
         Find orders
-      </button>
-      <button className="secondary-button" type="reset">
+      </Button>
+      <Button variant="outline" size="inherit" className="secondary-button" type="reset">
         Clear filters
-      </button>
+      </Button>
       {error && (
         <div className="kitchen-history-filter-error">
           <InlineMessage>{error}</InlineMessage>
@@ -579,9 +581,9 @@ function TicketDetails({
     >
       <header>
         <span className="section-label">COMPLETED ORDER</span>
-        <button autoFocus className="secondary-button" onClick={onClose}>
+        <Button variant="outline" size="inherit" type="submit" autoFocus className="secondary-button" onClick={onClose}>
           <FiX aria-hidden="true" /> Close details
-        </button>
+        </Button>
       </header>
       <ol className="kitchen-tickets">
         <Ticket order={order} first={false} now={now} onStarted={() => {}} />
@@ -862,7 +864,7 @@ function Ticket({
         {order.preparationStatus === "QUEUED" &&
           hasShopPermission(role, "shop.preparation.status.update") && (
             <div className="kitchen-ticket-action">
-              <button
+              <Button variant="default" size="inherit" type="submit"
                 aria-busy={pending}
                 className="primary-button"
                 disabled={pending}
@@ -871,7 +873,7 @@ function Ticket({
               >
                 <FiPlay aria-hidden="true" />
                 {pending ? "Starting preparation…" : "Start preparing"}
-              </button>
+              </Button>
               {transition.isError &&
                 transition.variables.source === "QUEUED" && (
                   <InlineMessage>
@@ -885,7 +887,7 @@ function Ticket({
         {preparing &&
           hasShopPermission(role, "shop.preparation.status.update") && (
             <div className="kitchen-ticket-action">
-              <button
+              <Button variant="default" size="inherit" type="submit"
                 aria-busy={pending}
                 className="primary-button"
                 disabled={pending}
@@ -894,7 +896,7 @@ function Ticket({
               >
                 <FiCheck aria-hidden="true" />
                 {pending ? "Marking ready…" : "Mark ready"}
-              </button>
+              </Button>
               {transition.isError &&
                 transition.variables.source === "PREPARING" && (
                   <InlineMessage>
@@ -910,7 +912,7 @@ function Ticket({
             <p className="kitchen-completion-hint">
               Only complete after the customer has received this order.
             </p>
-            <button
+            <Button variant="default" size="inherit" type="submit"
               aria-busy={pending}
               className="primary-button"
               disabled={pending}
@@ -923,7 +925,7 @@ function Ticket({
                 : order.mode === "TAKEOUT"
                   ? "Mark collected"
                   : "Mark served"}
-            </button>
+            </Button>
             {transition.isError && transition.variables.source === "READY" && (
               <InlineMessage>
                 Couldn’t confirm completion. {transition.error.message} Refresh

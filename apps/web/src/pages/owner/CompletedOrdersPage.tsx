@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/button";
+import { OrderCard } from "../../components/paserve/OrderCard";
 import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
@@ -165,7 +167,7 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
               aria-label="Completed orders, newest completion first"
             >
               {orders.map((order) => (
-                <li key={order.id} className="active-order-card">
+                <OrderCard key={order.id} className="active-order-card">
                   <OrderCardIdentity
                     orderNumber={order.orderNumber}
                     mode={order.mode}
@@ -217,7 +219,7 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
                     orderId={order.id}
                     receipt
                   />
-                </li>
+                </OrderCard>
               ))}
             </ul>
           )}
@@ -227,15 +229,15 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
         className="active-orders-pagination"
         aria-label="Completed orders pagination"
       >
-        <button
+        <Button variant="outline" size="inherit" type="submit"
           className="secondary-button"
           disabled={cursors.length === 1 || query.isFetching}
           onClick={() => setCursors((values) => values.slice(0, -1))}
         >
           Previous
-        </button>
+        </Button>
         <span>Page {cursors.length}</span>
-        <button
+        <Button variant="outline" size="inherit" type="submit"
           className="secondary-button"
           disabled={
             !query.isSuccess || !query.data.nextCursor || query.isFetching
@@ -246,7 +248,7 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
           }}
         >
           Next
-        </button>
+        </Button>
       </nav>
     </section>
   );

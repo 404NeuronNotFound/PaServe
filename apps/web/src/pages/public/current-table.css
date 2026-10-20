@@ -69,6 +69,7 @@
 }
 .customer-order-mode input {
   flex-shrink: 0;
+
   accent-color: var(--color-text);
 }
 @media (max-width: 520px) {

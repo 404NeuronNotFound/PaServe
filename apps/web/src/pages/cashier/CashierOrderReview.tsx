@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { useEffect, useRef, type ReactNode } from "react";
 import { FiCheckCircle, FiArrowLeft } from "react-icons/fi";
 import type { VerifyOrderQrResponse } from "@paserve/contracts";
@@ -181,9 +182,9 @@ export function CashierOrderReview({
             </p>
           )}
           {children}
-          <button className="secondary-button" onClick={onNext} disabled={busy}>
+          <Button variant="outline" size="inherit" type="submit" className="secondary-button" onClick={onNext} disabled={busy}>
             <FiArrowLeft aria-hidden="true" /> Scan another order
-          </button>
+          </Button>
         </aside>
       </div>
     </section>

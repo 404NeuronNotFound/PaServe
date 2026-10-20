@@ -67,9 +67,7 @@
   resize: vertical;
   width: 100%;
   border: 1px solid var(--color-border);
-  background: var(--color-canvas);
-  color: var(--color-text);
-  border-radius: 12px;
+
   padding: 12px;
 }
 .phase-two .scanner-result {
@@ -143,10 +141,9 @@
   width: 100%;
   min-height: 80px;
   resize: vertical;
-  background: var(--color-canvas);
-  color: var(--color-text);
+
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+
   padding: 12px;
 }
 .phase-two .cashier-review-screen {
@@ -221,8 +218,7 @@
   border: 0;
   min-width: 0;
   width: 100%;
-  background: transparent;
-  font-size: 24px;
+
   font-variant-numeric: tabular-nums;
 }
 .phase-two .cashier-cash-input:focus-within {
@@ -534,12 +530,12 @@
 }
 .phase-two .scanner-number-input input {
   border: 0;
-  background: transparent;
+
   min-width: 0;
   width: 100%;
   padding-left: 0;
   font-variant-numeric: tabular-nums;
-  font-size: 17px;
+
   letter-spacing: 0.5px;
 }
 .phase-two .scanner-number-input:focus-within {
@@ -590,8 +586,7 @@
   padding-bottom: 4px;
 }
 .phase-two .scanner-more input[type="file"] {
-  font-size: 12px;
-  background: var(--color-canvas);
+
   padding: 8px;
 }
 .phase-two .scanner-more input::file-selector-button {
@@ -607,7 +602,7 @@
 }
 .phase-two .scanner-more textarea {
   min-height: 84px;
-  font-size: 12px;
+
 }
 .phase-two .scanner-handoff {
   margin-top: 24px;

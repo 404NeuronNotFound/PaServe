@@ -256,7 +256,7 @@
 .phase-two .staff-link input {
   width: 100%;
   min-width: 0;
-  font-size: 12px;
+
 }
 .phase-two .staff-search {
   display: flex;
@@ -276,9 +276,9 @@
   width: 100%;
   min-width: 0;
   border: 0;
-  background: transparent;
+
   padding-left: 0;
-  font-size: 16px;
+
   min-height: 46px;
 }
 .phase-two .staff-search:focus-within {
@@ -289,12 +289,11 @@
   display: grid;
   place-items: center;
   border: 0;
-  background: transparent;
-  color: var(--color-muted);
+
   width: 44px;
   height: 44px;
   flex-shrink: 0;
-  border-radius: 10px;
+
 }
 .phase-two .staff-search-results {
   color: var(--color-muted);
@@ -397,9 +396,6 @@
   gap: 7px;
   align-items: center;
   justify-content: center;
-}
-.phase-two .staff-list .secondary-button {
-  font-size: 12px;
 }
 .phase-two .staff-invitation-avatar {
   background: var(--color-canvas);

@@ -1,3 +1,4 @@
+import { Input } from "../../components/ui/input";
 import { useId, useState } from "react";
 import type { SalesTrendPeriod } from "@paserve/contracts";
 import { formatCartPrice } from "../../lib/money";
@@ -158,7 +159,7 @@ export function SalesTrendChart({
           </div>
           <label className="sales-chart-inspector">
             Inspect comparison day{" "}
-            <input
+            <Input
               type="range"
               min="0"
               max={current.days.length - 1}

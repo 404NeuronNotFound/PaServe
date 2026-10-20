@@ -101,10 +101,6 @@
 .active-orders-header button {
   flex-shrink: 0;
 }
-.owner-orders-refresh {
-  border-radius: 12px;
-  background: var(--color-surface);
-}
 .owner-orders-pulse {
   display: flex;
   align-items: center;
@@ -221,18 +217,13 @@
   min-height: 46px;
   padding: 12px 14px 12px 42px;
   border: 1px solid var(--color-border);
-  border-radius: 11px;
-  color: var(--color-text);
-  background: var(--color-canvas);
+
   font: inherit;
-  font-size: 13px;
+
 }
 .owner-order-search-controls button {
   min-height: 46px;
-  border-radius: 11px;
-}
-.owner-order-search-controls button[type="submit"] {
-  background: var(--color-secondary);
+
 }
 .owner-order-search > p:not([id]):not(.feedback-inline) {
   display: inline-flex;
@@ -305,11 +296,9 @@
   min-height: 46px;
   padding: 12px 14px;
   border: 1px solid var(--color-border);
-  border-radius: 11px;
-  color: var(--color-text);
-  background: var(--color-surface);
+
   font: inherit;
-  font-size: 13px;
+
 }
 .owner-order-filter-grid .select-field-trigger {
   min-height: 46px;
@@ -354,7 +343,7 @@
   flex: 1 1 240px;
 }
 .owner-order-filter-summary button {
-  font-size: 12px;
+
   flex-shrink: 0;
 }
 .owner-order-filter-actions {
@@ -417,24 +406,7 @@
   padding: 0;
   margin: 0;
 }
-.active-order-card {
-  position: relative;
-  display: grid;
-  grid-template-columns:
-    minmax(180px, 1.15fr) minmax(145px, 0.85fr) minmax(230px, 1.35fr)
-    minmax(90px, auto) max-content;
-  align-items: center;
-  gap: 24px;
-  padding: 24px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 17px;
-  box-shadow: 0 2px 3px #17251b02;
-  transition:
-    border-color 180ms ease,
-    box-shadow 180ms ease,
-    transform 180ms ease;
-}
+
 .active-order-card:hover,
 .active-order-card:focus-within {
   border-color: color-mix(in srgb, var(--color-muted) 55%, var(--color-border));

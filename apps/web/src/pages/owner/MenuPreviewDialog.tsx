@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { useEffect, useRef } from "react";
 import type { PublicMenuResponse } from "@paserve/contracts";
 import { LiveMenuPreview } from "./LiveMenuPreview";
@@ -36,14 +37,14 @@ export function MenuPreviewDialog({
     >
       <header className="menu-preview-heading">
         <h2 id="preview-dialog-title">Preview changes</h2>
-        <button
+        <Button variant="outline" size="inherit"
           ref={close}
           type="button"
           className="secondary-button"
           onClick={onClose}
         >
           Back to editing
-        </button>
+        </Button>
       </header>
       <LiveMenuPreview draft={draft} unsaved={unsaved} />
     </dialog>

@@ -1,3 +1,7 @@
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
+import { PageHeader } from "../../components/paserve/PageHeader";
 import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { EmptyState } from "../../components/feedback/EmptyState";
@@ -132,6 +136,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
     retry: false,
     networkMode: "always",
   });
+  useDraftGuard(Boolean(name), mutation.isPending);
   async function saveOrder(
     categoryIds: string[],
     expectedOrder: string[],
@@ -460,7 +465,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
     [401, 403, 404].includes(query.error.response?.status ?? 0);
   return (
     <section className="categories-page" aria-labelledby="categories-title">
-      <header className="categories-heading">
+      <PageHeader className="categories-heading">
         <div className="categories-heading-copy">
           <p className="section-label">YOUR MENU, ONE CHAPTER AT A TIME</p>
           <h1 id="categories-title">Categories</h1>
@@ -500,7 +505,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             <p>Organized for your guests. Flexible for you.</p>
           </div>
         )}
-      </header>
+      </PageHeader>
       <div className="categories-layout">
         <section
           className="categories-list-panel"
@@ -519,7 +524,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               !query.isError &&
               query.data.categories.length > 1 &&
               !reordering && (
-                <button
+                <Button variant="outline" size="inherit"
                   id="category-reorder-button"
                   type="button"
                   className="secondary-button categories-reorder"
@@ -538,7 +543,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                 >
                   <FiShuffle aria-hidden="true" />
                   Reorder categories
-                </button>
+                </Button>
               )}
           </div>
           {visibilityError && (unverified || !displayedCategories.some((category) => category.id === visibilityError.id)) && (
@@ -618,7 +623,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                     )}
                   </div>
                   <div className="category-actions">
-                    <button
+                    <Button variant="outline" size="inherit"
                       type="button"
                       className="secondary-button"
                       aria-label={`${category.isVisible ? "Hide" : "Show"} ${category.name}`}
@@ -649,8 +654,8 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                         : category.isVisible
                           ? "Hide"
                           : "Show"}
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="outline" size="inherit"
                       id={`category-edit-${category.id}`}
                       type="button"
                       className="secondary-button category-edit-button"
@@ -667,8 +672,8 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                     >
                       <FiEdit2 aria-hidden="true" />
                       Edit
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="outline" size="inherit"
                       id={`category-delete-${category.id}`}
                       type="button"
                       className="secondary-button category-delete-button"
@@ -685,7 +690,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                     >
                       <FiTrash2 aria-hidden="true" />
                       Delete
-                    </button>
+                    </Button>
                   </div>
                   {visibilityError?.id === category.id && (
                     <InlineMessage className="category-visibility-error">
@@ -698,15 +703,15 @@ function CategoryWorkspace({ userId }: { userId: string }) {
           ) : (
             <EmptyState title="A place for every favorite." icon={<FiLayers />}
               description="Create your first category to start organizing your menu.">
-              <button type="button" className="primary-button"
+              <Button variant="default" size="inherit" type="button" className="primary-button"
                 disabled={creationUncertain || mutation.isPending || lostAccess}
                 onClick={() => { input.current?.scrollIntoView?.({ block: "center" }); input.current?.focus(); }}>
                 Name your first category
-              </button>
+              </Button>
             </EmptyState>
           )}
           {(!requestDenied || unverified) && !query.isPending && (
-            <button
+            <Button variant="outline" size="inherit"
               type="button"
               className="secondary-button categories-refresh"
               disabled={
@@ -731,7 +736,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               }}
             >
               {query.isFetching ? "Refreshing…" : "Refresh categories"}
-            </button>
+            </Button>
           )}
           {editing && (
             <CategoryEditor
@@ -771,7 +776,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
           >
             <div className="field">
               <label htmlFor="category-name">Category name</label>
-              <input
+              <Input
                 ref={input}
                 id="category-name"
                 name="name"
@@ -816,7 +821,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             <p className="sr-only" role="status">
               {mutation.isPending ? "Creating category. Please wait." : ""}
             </p>
-            <button
+            <Button variant="default" size="inherit"
               className="primary-button"
               type="submit"
               disabled={
@@ -835,7 +840,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                 <FiPlus aria-hidden="true" />
               )}
               {mutation.isPending ? "Creating category…" : "Create category"}
-            </button>
+            </Button>
           </form>
         </section>
       </div>

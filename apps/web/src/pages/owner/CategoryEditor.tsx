@@ -1,3 +1,7 @@
+import { Textarea } from "../../components/ui/textarea";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { isValidCatalogName, normalizeCatalogName } from "@paserve/contracts";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -57,6 +61,7 @@ export function CategoryEditor({
       }),
     retry: false,
   });
+  useDraftGuard(dirty, mutation.isPending);
   useEffect(() => {
     active.current = true;
     const node = dialog.current;
@@ -202,7 +207,7 @@ export function CategoryEditor({
                 A little polish for <strong>{category.name}</strong>.
               </p>
             </div>
-            <button
+            <Button variant="outline" size="inherit"
               className="secondary-button category-modal-close"
               type="button"
               aria-label="Close category editor"
@@ -210,7 +215,7 @@ export function CategoryEditor({
               onClick={requestClose}
             >
               <FiX aria-hidden="true" />
-            </button>
+            </Button>
           </header>
           <form
             noValidate
@@ -219,7 +224,7 @@ export function CategoryEditor({
           >
             <div className="field">
               <label htmlFor="edit-category-name">Category name</label>
-              <input
+              <Input
                 ref={input}
                 id="edit-category-name"
                 required
@@ -250,7 +255,7 @@ export function CategoryEditor({
               <label htmlFor="edit-category-description">
                 Description <span className="field-hint">(optional)</span>
               </label>
-              <textarea
+              <Textarea
                 id="edit-category-description"
                 rows={4}
                 placeholder="What makes this part of your menu special?"
@@ -299,7 +304,7 @@ export function CategoryEditor({
                     : "No changes yet"}
               </p>
               <div className="category-editor-actions">
-                <button
+                <Button variant="default" size="inherit"
                   aria-busy={mutation.isPending}
                   className="primary-button"
                   type="submit"
@@ -313,15 +318,15 @@ export function CategoryEditor({
                     <FiCheck aria-hidden="true" />
                   )}
                   {mutation.isPending ? "Saving…" : "Save changes"}
-                </button>
-                <button
+                </Button>
+                <Button variant="outline" size="inherit"
                   className="secondary-button"
                   type="button"
                   disabled={mutation.isPending || closing}
                   onClick={requestClose}
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </footer>
           </form>

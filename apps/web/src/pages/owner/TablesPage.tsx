@@ -1,3 +1,7 @@
+import { useDraftGuard } from "../../app/router/useDraftGuard";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import { PageHeader } from "../../components/paserve/PageHeader";
 import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ErrorState } from "../../components/feedback/ErrorState";
@@ -76,6 +80,7 @@ function TableWorkspace({ userId }: { userId: string }) {
     retry: false,
     networkMode: "always",
   });
+  useDraftGuard(Boolean(number), mutation.isPending);
   const denied =
     isAxiosError(query.error) &&
     [401, 403, 404].includes(query.error.response?.status ?? 0);
@@ -186,11 +191,11 @@ function TableWorkspace({ userId }: { userId: string }) {
     query.isFetching;
   return (
     <section className="tables-page" aria-labelledby="tables-title">
-      <header className="tables-heading">
+      <PageHeader className="tables-heading">
         <p className="section-label">YOUR RESTAURANT</p>
         <h1 id="tables-title">Tables</h1>
         <p>Create and view tables for {membership.shop.name}.</p>
-      </header>
+      </PageHeader>
       <div className="tables-layout">
         <section className="tables-panel" aria-labelledby="saved-tables-title">
           <h2 id="saved-tables-title">
@@ -203,13 +208,13 @@ function TableWorkspace({ userId }: { userId: string }) {
               unavailableMessage="Your access changed. Refresh the shop workspace to continue." />
           )}
           {(query.isError || uncertain) && !denied && !lostAccess && (
-            <button
+            <Button variant="outline" size="inherit" type="submit"
               className="secondary-button"
               disabled={query.isFetching || mutation.isPending}
               onClick={() => void refresh()}
             >
               {query.isFetching ? "Refreshing…" : "Refresh tables"}
-            </button>
+            </Button>
           )}
           {query.isSuccess &&
             !lostAccess &&
@@ -224,7 +229,7 @@ function TableWorkspace({ userId }: { userId: string }) {
                     <span className="table-status">
                       {table.isActive ? "Active" : "Inactive"}
                     </span>
-                    <button
+                    <Button variant="outline" size="inherit"
                       type="button"
                       className="secondary-button"
                       disabled={!table.isActive || disabled}
@@ -232,7 +237,7 @@ function TableWorkspace({ userId }: { userId: string }) {
                       aria-label={`Generate QR for Table ${table.number}`}
                     >
                       Generate QR
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -251,7 +256,7 @@ function TableWorkspace({ userId }: { userId: string }) {
           <form onSubmit={(event) => void submit(event)} noValidate>
             <div className="field">
               <label htmlFor="table-number">Table number</label>
-              <input
+              <Input
                 id="table-number"
                 ref={input}
                 type="text"
@@ -279,7 +284,7 @@ function TableWorkspace({ userId }: { userId: string }) {
               )}
             </div>
             {error && <InlineMessage>{error}</InlineMessage>}
-            <button
+            <Button variant="default" size="inherit"
               aria-busy={mutation.isPending}
               className="primary-button"
               disabled={disabled}
@@ -287,7 +292,7 @@ function TableWorkspace({ userId }: { userId: string }) {
             >
               <FiPlus aria-hidden="true" />
               {mutation.isPending ? "Creating…" : "Create table"}
-            </button>
+            </Button>
           </form>
         </section>
       </div>

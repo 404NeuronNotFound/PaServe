@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { useEffect, useRef, useState } from "react";
 import { FiArrowUp, FiArrowDown, FiLoader } from "react-icons/fi";
 import type { MenuCategory } from "@paserve/contracts";
@@ -25,6 +27,7 @@ export function CategoryOrderEditor({
   const dirty = draft.some(
     (category, index) => category.id !== original[index].id,
   );
+  useDraftGuard(dirty, pending);
   useEffect(() => {
     mounted.current = true;
     title.current?.focus();
@@ -102,7 +105,7 @@ export function CategoryOrderEditor({
               </small>
             </div>
             <div className="category-order-controls">
-              <button
+              <Button variant="outline" size="inherit"
                 type="button"
                 className="secondary-button"
                 aria-label={`Move ${category.name} up`}
@@ -110,8 +113,8 @@ export function CategoryOrderEditor({
                 onClick={() => move(index, -1)}
               >
                 <FiArrowUp aria-hidden="true" />
-              </button>
-              <button
+              </Button>
+              <Button variant="outline" size="inherit"
                 type="button"
                 className="secondary-button"
                 aria-label={`Move ${category.name} down`}
@@ -119,7 +122,7 @@ export function CategoryOrderEditor({
                 onClick={() => move(index, 1)}
               >
                 <FiArrowDown aria-hidden="true" />
-              </button>
+              </Button>
             </div>
           </li>
         ))}
@@ -134,7 +137,7 @@ export function CategoryOrderEditor({
       </p>
       {error && <InlineMessage>{error}</InlineMessage>}
       <div className="category-editor-actions">
-        <button
+        <Button variant="default" size="inherit"
           aria-busy={pending}
           type="button"
           className="primary-button"
@@ -143,15 +146,15 @@ export function CategoryOrderEditor({
         >
           {pending && <FiLoader className="is-spinning" aria-hidden="true" />}
           {pending ? "Saving order…" : "Save order"}
-        </button>
-        <button
+        </Button>
+        <Button variant="outline" size="inherit"
           type="button"
           className="secondary-button"
           disabled={pending}
           onClick={() => (dirty ? setDiscard(true) : onClose())}
         >
           Cancel
-        </button>
+        </Button>
       </div>
       <DecisionDialog
         open={discard}

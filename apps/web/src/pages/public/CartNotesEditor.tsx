@@ -1,3 +1,6 @@
+import { Textarea } from "../../components/ui/textarea";
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   CUSTOMER_NOTE_MAX_LENGTH,
@@ -31,6 +34,7 @@ export function CartNotesEditor({
     onEditingChange?.(key, editing);
     return () => onEditingChange?.(key, false);
   }, [onEditingChange, item.lineId, editing]);
+  useDraftGuard(editing && draft !== (expected.notes ?? ""));
   const valid = isValidCustomerNote(draft);
   const changed =
     normalizeCustomerNote(draft) !==
@@ -54,7 +58,7 @@ export function CartNotesEditor({
             <CustomerNote notes={item.notes} />
           </div>
         )}
-        <button
+        <Button variant="outline" size="inherit"
           ref={trigger}
           className="secondary-button"
           type="button"
@@ -68,7 +72,7 @@ export function CartNotesEditor({
         >
           <FiEdit2 aria-hidden="true" />{" "}
           {item.notes ? "Edit notes" : "Add notes"}
-        </button>
+        </Button>
       </div>
     );
 
@@ -91,7 +95,7 @@ export function CartNotesEditor({
       }}
     >
       <label htmlFor={id}>Notes for {item.productName} (optional)</label>
-      <textarea
+      <Textarea
         ref={textarea}
         id={id}
         rows={3}
@@ -120,16 +124,16 @@ export function CartNotesEditor({
         </InlineMessage>
       )}
       <div className="customer-cart-note-actions">
-        <button
+        <Button variant="outline" size="inherit"
           className="secondary-button"
           type="submit"
           disabled={!valid || !changed}
         >
           Save notes
-        </button>
-        <button className="secondary-button" type="button" onClick={close}>
+        </Button>
+        <Button variant="outline" size="inherit" className="secondary-button" type="button" onClick={close}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

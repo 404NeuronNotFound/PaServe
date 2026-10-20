@@ -1,3 +1,6 @@
+import { Textarea } from "../../components/ui/textarea";
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
@@ -54,6 +57,7 @@ export function CashierOrderDecision({
   const running = useRef(false);
   const active = useRef(false);
   const request = useRef<AbortController | null>(null);
+  useDraftGuard(!decision && Boolean(reason), busy && pendingAction !== "refresh");
   const resultHeading = useRef<HTMLHeadingElement>(null);
   useConfirmedOrderEvents(
     order.shopId,
@@ -204,9 +208,9 @@ export function CashierOrderDecision({
             Reason: {decision.rejectionReason}
           </p>
         )}
-        <button className="secondary-button" onClick={onNext}>
+        <Button variant="outline" size="inherit" type="submit" className="secondary-button" onClick={onNext}>
           Scan another order
-        </button>
+        </Button>
       </section>
     );
   return (
@@ -233,7 +237,7 @@ export function CashierOrderDecision({
           <label htmlFor="cashier-rejection-reason">
             Rejection reason (optional)
           </label>
-          <textarea
+          <Textarea
             id="cashier-rejection-reason"
             value={reason}
             maxLength={300}

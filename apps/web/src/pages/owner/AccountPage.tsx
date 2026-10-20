@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { ShopLogo } from "../../components/shops/ShopLogo";
 import { useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -56,14 +57,14 @@ export function AccountPage() {
         </span>
         <div className="header-actions">
           <AppearanceToggle />
-          <button
+          <Button variant="outline" size="inherit" type="submit"
             className="secondary-button"
             disabled={logout.isPending}
             onClick={() => logout.mutate()}
           >
             <FiLogOut aria-hidden="true" />
             {logout.isPending ? "Signing out…" : "Sign out"}
-          </button>
+          </Button>
         </div>
       </header>
       <div className="workspace-body">

@@ -1,3 +1,5 @@
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
@@ -223,7 +225,7 @@ function ProductCustomization({ productId }: { productId: string }) {
             aria-label="Customization sections"
           >
             {(["choices", "addons"] as const).map((value) => (
-              <button
+              <Button variant="ghost" size="inherit" type="submit"
                 key={value}
                 id={`customization-${value}-tab`}
                 role="tab"
@@ -264,7 +266,7 @@ function ProductCustomization({ productId }: { productId: string }) {
                       ).length
                     : assigned.size}
                 </span>
-              </button>
+              </Button>
             ))}
           </div>
           <section
@@ -281,13 +283,13 @@ function ProductCustomization({ productId }: { productId: string }) {
                   Group choices like Size or Temperature, then add the options.
                 </p>
               </div>
-              <button
+              <Button variant="default" size="inherit" type="submit"
                 className="primary-button"
                 disabled={locked || Boolean(editor)}
                 onClick={() => edit({ kind: "group" })}
               >
                 <FiPlus aria-hidden="true" /> Create group
-              </button>
+              </Button>
             </div>
             <div className="customization-groups">
               {scopeGroups
@@ -327,7 +329,7 @@ function ProductCustomization({ productId }: { productId: string }) {
                           </div>
                         </div>
                         {group.id && (
-                          <button
+                          <Button variant="ghost" size="inherit" type="submit"
                             className="customization-icon-button"
                             disabled={locked || Boolean(editor)}
                             aria-label={`Edit ${group.name} group`}
@@ -342,7 +344,7 @@ function ProductCustomization({ productId }: { productId: string }) {
                             }
                           >
                             <FiEdit2 aria-hidden="true" />
-                          </button>
+                          </Button>
                         )}
                       </header>
                       <ul className="customization-list">
@@ -368,7 +370,7 @@ function ProductCustomization({ productId }: { productId: string }) {
                                 ? "No extra charge"
                                 : `+${formatProductPrice(item.priceAdjustment)}`}
                             </span>
-                            <button
+                            <Button variant="ghost" size="inherit" type="submit"
                               className="customization-icon-button"
                               disabled={locked || Boolean(editor)}
                               aria-label={`Edit ${item.name} option`}
@@ -378,7 +380,7 @@ function ProductCustomization({ productId }: { productId: string }) {
                               }
                             >
                               <FiEdit2 aria-hidden="true" />
-                            </button>
+                            </Button>
                           </li>
                         ))}
                       </ul>
@@ -388,7 +390,7 @@ function ProductCustomization({ productId }: { productId: string }) {
                           or Large.
                         </p>
                       )}
-                      <button
+                      <Button variant="ghost" size="inherit" type="submit"
                         className="customization-add-option"
                         disabled={locked || Boolean(editor)}
                         aria-label={`Add option to ${group.name}`}
@@ -397,7 +399,7 @@ function ProductCustomization({ productId }: { productId: string }) {
                         }
                       >
                         <FiPlus aria-hidden="true" /> Add option
-                      </button>
+                      </Button>
                     </section>
                   );
                 })}
@@ -413,14 +415,14 @@ function ProductCustomization({ productId }: { productId: string }) {
                 </p>
               </div>
             )}
-            <button
+            <Button variant="ghost" size="inherit" type="submit"
               className="customization-text-button"
               ref={createOption}
               disabled={locked || Boolean(editor)}
               onClick={() => edit({ kind: "variant", groupId: null })}
             >
               <FiPlus aria-hidden="true" /> Add standalone option
-            </button>
+            </Button>
           </section>
           <section
             className="customization-product-addons"
@@ -438,7 +440,7 @@ function ProductCustomization({ productId }: { productId: string }) {
                   Choose extras for this product. Changes save automatically.
                 </p>
               </div>
-              <button
+              <Button variant="default" size="inherit" type="submit"
                 className="primary-button"
                 disabled={locked || Boolean(editor)}
                 onClick={() => edit({ kind: "addon" })}
@@ -446,13 +448,13 @@ function ProductCustomization({ productId }: { productId: string }) {
               >
                 <FiPlus aria-hidden="true" />
                 Create add-on
-              </button>
+              </Button>
             </div>
             <div className="customization-panel product-addon-list">
               <div className="addon-library-toolbar">
                 <div className="field">
                   <label htmlFor="product-addon-search">Find an add-on</label>
-                  <input
+                  <Input
                     id="product-addon-search"
                     type="search"
                     placeholder="Find an extra…"
@@ -473,7 +475,7 @@ function ProductCustomization({ productId }: { productId: string }) {
                   >
                     <div>
                       <label className="customization-check">
-                        <input
+                        <Input
                           type="checkbox"
                           checked={assigned.has(item.id)}
                           disabled={locked || Boolean(editor)}
@@ -514,7 +516,7 @@ function ProductCustomization({ productId }: { productId: string }) {
                         ? "Free"
                         : `+${formatProductPrice(item.priceAdjustment)}`}
                     </span>
-                    <button
+                    <Button variant="ghost" size="inherit" type="submit"
                       className="customization-icon-button"
                       disabled={locked || Boolean(editor)}
                       aria-label={`Edit shared ${item.name}`}
@@ -522,7 +524,7 @@ function ProductCustomization({ productId }: { productId: string }) {
                       onClick={() => edit({ kind: "addon", record: item })}
                     >
                       <FiEdit2 aria-hidden="true" />
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -537,12 +539,12 @@ function ProductCustomization({ productId }: { productId: string }) {
                       : "Create an extra, then select it here to offer it on this product."}
                   </p>
                   {search && (
-                    <button
+                    <Button variant="ghost" size="inherit" type="submit"
                       className="customization-text-button"
                       onClick={() => setSearch("")}
                     >
                       Clear search
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}

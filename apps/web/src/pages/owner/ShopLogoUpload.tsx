@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { useEffect, useRef, useState } from "react";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { useQueryClient } from "@tanstack/react-query";
@@ -72,6 +74,7 @@ export function ShopLogoUpload({
     },
     [preview],
   );
+  useDraftGuard(Boolean(file) || cropping, pending);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (file || pending || cropping) {
@@ -227,7 +230,7 @@ export function ShopLogoUpload({
       >
         {savedMessage && <InlineMessage tone="success">{savedMessage}</InlineMessage>}
         <div className="shop-context-actions">
-          <button
+          <Button variant="default" size="inherit"
             aria-busy={pending}
             type="button"
             className="primary-button"
@@ -236,9 +239,9 @@ export function ShopLogoUpload({
           >
             <FiUpload aria-hidden="true" />
             {pending ? "Saving logo..." : "Upload logo"}
-          </button>
+          </Button>
           {savedUrl && (
-            <button
+            <Button variant="outline" size="inherit"
               type="button"
               className="secondary-button"
               disabled={
@@ -251,7 +254,7 @@ export function ShopLogoUpload({
               onClick={() => setConfirmDelete(true)}
             >
               <FiTrash2 aria-hidden="true" /> Remove logo
-            </button>
+            </Button>
           )}
         </div>
       </BrandPhotoPicker>

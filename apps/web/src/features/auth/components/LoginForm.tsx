@@ -1,3 +1,5 @@
+import { Input } from "../../../components/ui/input";
+import { Button } from "../../../components/ui/button";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -127,7 +129,7 @@ export function LoginForm({
       >
         <div className="field">
           <label htmlFor="login-email">Email address</label>
-          <input
+          <Input
             ref={emailRef}
             id="login-email"
             name="email"
@@ -169,7 +171,7 @@ export function LoginForm({
         <div className="field">
           <label htmlFor="login-password">Password</label>
           <div className="password-input">
-            <input
+            <Input
               ref={passwordRef}
               id="login-password"
               name="password"
@@ -200,7 +202,7 @@ export function LoginForm({
                 errors.password ? "login-password-error" : undefined
               }
             />
-            <button
+            <Button variant="ghost" size="inherit"
               className="password-toggle"
               type="button"
               disabled={mutation.isPending}
@@ -214,7 +216,7 @@ export function LoginForm({
               ) : (
                 <FiEye aria-hidden="true" />
               )}
-            </button>
+            </Button>
           </div>
           {errors.password && (
             <InlineMessage className="field-error" id="login-password-error">
@@ -227,7 +229,7 @@ export function LoginForm({
             {formError}
           </InlineMessage>
         )}
-        <button
+        <Button variant="default" size="inherit"
           aria-busy={mutation.isPending}
           className="primary-button"
           type="submit"
@@ -239,7 +241,7 @@ export function LoginForm({
           ) : (
             <FiArrowRight className="button-icon" aria-hidden="true" />
           )}
-        </button>
+        </Button>
       </form>
     </>
   );

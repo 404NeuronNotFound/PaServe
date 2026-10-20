@@ -28,6 +28,11 @@
   .phase-two .cashier-review-layout {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* This toolbar contains no fixed Create action, so it can safely query its
+     own width while the surrounding product workspace remains uncontained. */
+  .product-browse-controls { container: product-browse / inline-size; }
+  .products-page .product-filter-fields { grid-template-columns: minmax(0, 1fr); }
+  .product-filter-fields > * { min-width: 0; }
   :is(.tables-layout, .categories-layout, .settings-assets, .settings-form-grid,
     .staff-grid, .cashier-scanner, .cashier-review-layout) > * {
     min-width: 0;
@@ -122,6 +127,11 @@
 
 /* The sidebar reduces the available width even on a desktop-size viewport. */
 @media screen {
+  @container product-browse (min-width: 701px) {
+    .products-page .product-filter-fields {
+      grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+    }
+  }
   @container workspace (min-width: 781px) {
     .tables-layout,
     .categories-layout,

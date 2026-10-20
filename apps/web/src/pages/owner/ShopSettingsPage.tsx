@@ -1,3 +1,7 @@
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
+import { Button } from "../../components/ui/button";
+import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { FormSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -193,9 +197,9 @@ function SettingsState({
       <h1>{title}</h1>
       <p role="alert">{message}</p>
       {retry && (
-        <button className="primary-button" onClick={retry}>
+        <Button variant="default" size="inherit" type="submit" className="primary-button" onClick={retry}>
           Try again
-        </button>
+        </Button>
       )}
       <Link className="secondary-button" to={shopPath(membership.shopId)}>
         Back to shop
@@ -235,6 +239,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
   const dirty = fields.some(
     ({ key }) => normalizedValue(key, values[key]) !== baseline[key],
   );
+  const navigationGuard = useDraftGuard(dirty || logoDirty || bannerDirty, busy);
   const resetNoticeKey = `settings-reset:${shop.id}`;
   useEffect(
     () => () => {
@@ -415,14 +420,14 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
             this address.
           </p>
         </div>
-        <button
+        <Button variant="outline" size="inherit"
           id="preview-settings-changes"
           className="secondary-button"
           type="button"
           onClick={() => setPreviewOpen(true)}
         >
           Preview changes
-        </button>
+        </Button>
       </div>
       <div className="settings-assets">
         <ShopLogoUpload
@@ -494,7 +499,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                     }))}
                   />
                 ) : "multiline" in field ? (
-                  <textarea
+                  <Textarea
                     id={`settings-${field.key}`}
                     name={field.key}
                     rows={3}
@@ -514,7 +519,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                     }
                   />
                 ) : (
-                  <input
+                  <Input
                     id={`settings-${field.key}`}
                     name={field.key}
                     type={"type" in field ? field.type : "text"}
@@ -599,7 +604,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
           <span className="field-hint" role="status">
             {dirty ? "Unsaved changes" : "All changes saved"}
           </span>
-          <button
+          <Button variant="default" size="inherit"
             aria-busy={mutation.isPending}
             type="submit"
             className="primary-button"
@@ -607,8 +612,8 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
           >
             <FiSave aria-hidden="true" />
             {mutation.isPending ? "Saving…" : "Save settings"}
-          </button>
-          <button
+          </Button>
+          <Button variant="outline" size="inherit"
             type="button"
             className="secondary-button"
             disabled={!dirty || busy}
@@ -616,7 +621,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
           >
             <FiRotateCcw aria-hidden="true" />
             Reset changes
-          </button>
+          </Button>
           <Link
             className="secondary-button"
             to={shopPath(shop.id)}
@@ -625,7 +630,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                 event.preventDefault();
                 return;
               }
-              if (dirty || logoDirty || bannerDirty) {
+              if (!navigationGuard.protected && (dirty || logoDirty || bannerDirty)) {
                 event.preventDefault();
                 setDecision("leave");
               }

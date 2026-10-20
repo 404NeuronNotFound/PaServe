@@ -1,7 +1,6 @@
 import type { ComponentProps } from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cn } from "../../lib/utils";
-import "./ui.css";
 
 // Shadcn composition, with semantic native elements supported through Slot.
 export function Card({ asChild = false, className, ...props }: ComponentProps<"div"> & { asChild?: boolean }) {

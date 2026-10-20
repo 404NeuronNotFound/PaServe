@@ -1,6 +1,5 @@
 import type { ComponentProps } from "react";
 import { cn } from "../../lib/utils";
-import "./ui.css";
 
 /** A named, keyboard-focusable overflow region around a semantic table. */
 export function Table({ className, scrollLabel, containerClassName, ...props }: ComponentProps<"table"> & {

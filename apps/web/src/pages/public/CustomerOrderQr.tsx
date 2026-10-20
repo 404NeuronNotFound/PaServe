@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/button";
 import { useEffect, useState } from "react";
 import {
   createCustomerQrImage,
@@ -80,7 +81,7 @@ export function CustomerOrderQr({
             : "Your order QR is unavailable in this session. Ask the counter staff for help using your order number."}
         </InlineMessage>
         {onUseOrderNumber ? (
-          <button type="button" className="secondary-button" onClick={onUseOrderNumber}>Use order number</button>
+          <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={onUseOrderNumber}>Use order number</Button>
         ) : credential && <p>Show order number <strong>{credential.orderNumber}</strong> to the counter staff. You do not need to place another order.</p>}
         </>
       ) : current?.error ? (
@@ -89,7 +90,7 @@ export function CustomerOrderQr({
             Could not display the order QR. Try again or ask the counter staff
             for help.
           </InlineMessage>
-          <button
+          <Button variant="outline" size="inherit" type="submit"
             className="secondary-button"
             onClick={() => {
               setState(null);
@@ -97,7 +98,7 @@ export function CustomerOrderQr({
             }}
           >
             Retry QR display
-          </button>
+          </Button>
         </>
       ) : current?.image ? (
         <>

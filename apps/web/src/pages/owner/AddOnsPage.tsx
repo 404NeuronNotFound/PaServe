@@ -1,3 +1,5 @@
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
@@ -94,7 +96,7 @@ function AddOnLibrary() {
           >
             <FiRefreshCw aria-hidden="true" />
           </PendingButton>
-          <button
+          <Button variant="default" size="inherit" type="submit"
             className="primary-button addon-create-fab"
             ref={createAddOn}
             disabled={locked || query.isPending || Boolean(editor)}
@@ -107,7 +109,7 @@ function AddOnLibrary() {
               <FiPlus />
             </span>
             <span>Create add-on</span>
-          </button>
+          </Button>
         </div>
       </header>
       {error && !editor && <InlineMessage>{error}</InlineMessage>}
@@ -126,7 +128,7 @@ function AddOnLibrary() {
           <div className="addon-library-toolbar">
             <div className="field">
               <label htmlFor="addon-search">Search add-ons</label>
-              <input
+              <Input
                 id="addon-search"
                 type="search"
                 placeholder="Find an extra…"
@@ -215,7 +217,7 @@ function AddOnLibrary() {
                     ? "Free"
                     : `+${formatProductPrice(item.priceAdjustment)}`}
                 </span>
-                <button
+                <Button variant="ghost" size="inherit" type="submit"
                   className="customization-icon-button"
                   disabled={locked || Boolean(editor)}
                   aria-label={`Edit ${item.name}`}
@@ -226,7 +228,7 @@ function AddOnLibrary() {
                   }}
                 >
                   <FiEdit2 aria-hidden="true" />
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -241,12 +243,12 @@ function AddOnLibrary() {
                   : "Create an extra, then choose the products that offer it."}
               </p>
               {search && (
-                <button
+                <Button variant="ghost" size="inherit" type="submit"
                   className="customization-text-button"
                   onClick={() => setSearch("")}
                 >
                   Clear search
-                </button>
+                </Button>
               )}
             </div>
           )}
