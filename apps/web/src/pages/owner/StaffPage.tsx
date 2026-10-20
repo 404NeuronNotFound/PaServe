@@ -155,6 +155,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const [role, setRole] = useState<StaffRole>("CASHIER");
   const [error, setError] = useState("");
   const [link, setLink] = useState("");
+  const [linkRecipient, setLinkRecipient] = useState("");
+  const [linkInvitationId, setLinkInvitationId] = useState("");
   const [busy, setBusy] = useState(false);
   const [copying, setCopying] = useState(false);
   const copyingGuard = useRef(false);
@@ -207,6 +209,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
     try {
       await work();
       if (!stillHere()) return;
+      if (decision?.kind === "revoke" && decision.id === linkInvitationId)
+        setLink("");
       setDecision(null);
       feedback.toast(success);
       // Membership changes may also invalidate cached account/shop roles.
@@ -256,9 +260,11 @@ function StaffWorkspace({ userId }: { userId: string }) {
         const result = await inviteStaff(shopId, { email: normalized, role });
         if (stillHere()) {
           setLink(staffInvitationLink(shopId, result.token));
+          setLinkRecipient(normalized);
+          setLinkInvitationId(result.invitation.id);
           setEmail("");
         }
-      }, "Invitation created.");
+      }, `Invitation link created for ${normalized}.`);
     } catch (failure) {
       if (stillHere()) setError(errorMessage(failure));
     }
@@ -637,6 +643,9 @@ function StaffWorkspace({ userId }: { userId: string }) {
             {error && <InlineMessage>{error}</InlineMessage>}
             {link && (
               <div className="staff-link field">
+                <InlineMessage tone="success">
+                  Invitation link ready for {linkRecipient}. Share it directly with your teammate.
+                </InlineMessage>
                 <label htmlFor="invitation-link">
                   Invitation link — save it before leaving this page
                 </label>
@@ -710,7 +719,11 @@ function StaffWorkspace({ userId }: { userId: string }) {
                     : revokeInvitation(shopId, decision.id),
             accessDecision?.success ??
               roleDecision?.success ??
-              "Staff access updated.",
+              (decision.kind === "revoke"
+                ? `Invitation revoked for ${decision.email}.`
+                : decision.kind === "remove"
+                  ? `Shop access removed for ${decision.email}.`
+                  : "Staff access updated."),
           );
         }}
       />

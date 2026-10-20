@@ -10,6 +10,7 @@ import { uploadShopBanner } from "../../features/shops/api/banner";
 import { currentUserKey } from "../../features/auth/api/session";
 import { BrandPhotoPicker } from "./BrandPhotoPicker";
 import { feedback } from "../../app/stores/feedback";
+import { InlineMessage } from "../../components/feedback/InlineMessage";
 
 export function ShopBannerUpload({
   shopId,
@@ -45,6 +46,7 @@ export function ShopBannerUpload({
     onPreview?.(preview || savedUrl || null);
   }, [preview, savedUrl, onPreview]);
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState(0);
   const [refreshRequired, setRefreshRequired] = useState(false);
@@ -97,6 +99,7 @@ export function ShopBannerUpload({
       return;
     running.current = true;
     setPending(true);
+    setSaved(false);
     onPending(true);
     setError("");
     setProgress(0);
@@ -121,6 +124,7 @@ export function ShopBannerUpload({
       });
       setUploadedBanner({ previous: bannerUrl, url: result.shop.bannerUrl });
       clear();
+      setSaved(true);
       feedback.toast("Shop banner saved.");
     } catch (failure) {
       if (!stillHere()) return;
@@ -169,10 +173,12 @@ export function ShopBannerUpload({
       progress={progress}
       hint={`JPEG, PNG or WebP, up to 5 MB and 16 megapixels. Crop to a wide, 3:1 frame; wide screens may crop the top and bottom. Your image saves separately from business details for ${name}.`}
       onCropping={(value) => {
+        if (value) setSaved(false);
         setCropping(value);
         onPending(value);
       }}
       onChange={(selected, message) => {
+        setSaved(false);
         setFile(selected);
         setError(message);
         setPreview(
@@ -180,6 +186,7 @@ export function ShopBannerUpload({
         );
       }}
     >
+      {saved && <InlineMessage tone="success">Banner saved. Business details save separately.</InlineMessage>}
       <div className="shop-context-actions">
         <button
           aria-busy={pending}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { FiUpload, FiTrash2 } from "react-icons/fi";
@@ -49,6 +50,7 @@ export function ShopLogoUpload({
     onPreview?.(preview || savedUrl || null);
   }, [preview, savedUrl, onPreview]);
   const [error, setError] = useState("");
+  const [savedMessage, setSavedMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState(0);
   const [refreshRequired, setRefreshRequired] = useState(false);
@@ -101,6 +103,7 @@ export function ShopLogoUpload({
       return;
     running.current = true;
     setPending(true);
+    setSavedMessage("");
     onPending(true);
     setError("");
     setProgress(0);
@@ -156,6 +159,7 @@ export function ShopLogoUpload({
       });
       setUploadedLogo({ previous: logoUrl, url: result.shop.logoUrl });
       clear();
+      setSavedMessage(removing ? "Logo removed. Business details save separately." : "Logo saved. Business details save separately.");
       feedback.toast(removing ? "Shop logo removed." : "Shop logo saved.");
     } catch (failure) {
       if (!stillHere()) return;
@@ -206,10 +210,12 @@ export function ShopLogoUpload({
         progress={progress}
         hint={`Crop to a square, 1:1 frame. Your image saves separately from business details for ${name}.`}
         onCropping={(value) => {
+          if (value) setSavedMessage("");
           setCropping(value);
           onPending(value);
         }}
         onChange={(selected, message) => {
+          setSavedMessage("");
           setFile(selected);
           setError(message);
           setPreview(
@@ -219,6 +225,7 @@ export function ShopLogoUpload({
           );
         }}
       >
+        {savedMessage && <InlineMessage tone="success">{savedMessage}</InlineMessage>}
         <div className="shop-context-actions">
           <button
             aria-busy={pending}

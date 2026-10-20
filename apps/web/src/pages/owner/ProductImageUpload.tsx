@@ -14,6 +14,7 @@ import {
 import { currentUserKey } from "../../features/auth/api/session";
 import { feedback } from "../../app/stores/feedback";
 import { ProductPhotoPicker } from "./ProductPhotoPicker";
+import { InlineMessage } from "../../components/feedback/InlineMessage";
 
 export function ProductImageUpload({
   userId,
@@ -37,6 +38,7 @@ export function ProductImageUpload({
   const client = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
   const [refreshRequired, setRefreshRequired] = useState(false);
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -62,6 +64,7 @@ export function ProductImageUpload({
     setPending(true);
     onPending(true);
     setError("");
+    setSaved(false);
     setProgress(0);
     try {
       const result = await uploadProductImage(
@@ -100,6 +103,7 @@ export function ProductImageUpload({
       }
       onUploaded(result.product);
       setFile(null);
+      setSaved(true);
       feedback.toast("Product image uploaded.");
     } catch (failure) {
       if (!stillHere()) return;
@@ -146,8 +150,10 @@ export function ProductImageUpload({
       onChange={(selected, message) => {
         setFile(selected);
         setError(message);
+        setSaved(false);
       }}
     >
+      {saved && <InlineMessage tone="success">Photo saved. Product details save separately.</InlineMessage>}
       {file && (
         <button
           aria-busy={pending}

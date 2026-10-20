@@ -113,6 +113,16 @@ it("uploads a selected banner and updates saved settings without overwriting tex
     shop: { name: "Original details", bannerUrl: result.shop.bannerUrl },
   });
   expect(onPending).toHaveBeenLastCalledWith(false);
+  expect(screen.getByText("Banner saved. Business details save separately.").closest("p")).toHaveAttribute("role", "status");
+  useFeedbackStore.getState().clearTransient();
+  expect(screen.getByText("Banner saved. Business details save separately.")).toBeInTheDocument();
+  vi.mocked(uploadShopBanner).mockRejectedValue(new Error("Disconnected"));
+  await selectAndCrop(user, screen.getByLabelText(/Banner.*optional/), file());
+  expect(screen.queryByText("Banner saved. Business details save separately.")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Upload banner" }));
+  await screen.findByText(/We could not confirm/);
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+  expect(screen.queryByText("Banner saved. Business details save separately.")).not.toBeInTheDocument();
 });
 it("rejects oversized and unsupported selections without uploading", () => {
   setup();

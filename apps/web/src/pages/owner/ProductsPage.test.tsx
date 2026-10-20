@@ -1007,6 +1007,7 @@ it("uploads an image immediately while keeping other edits unsaved", async () =>
     imageProduct.imageUrl,
   );
   expect(modal.getByLabelText("Product name")).toHaveValue("Latte changed");
+  expect(modal.getByText("Photo saved. Product details save separately.").closest("p")).toHaveAttribute("role", "status");
   expect(client.getQueryData(productsKey("user-a", "a"))).toEqual({
     products: [imageProduct],
   });

@@ -120,6 +120,7 @@ it("uploads a selected logo and updates shop identities without overwriting text
     user: { memberships: [{ shop: { logoUrl: result.shop.logoUrl } }] },
   });
   expect(onPending).toHaveBeenLastCalledWith(false);
+  expect(screen.getByText("Logo saved. Business details save separately.").closest("p")).toHaveAttribute("role", "status");
 });
 it("rejects oversized and unsupported selections without uploading", () => {
   setup();
@@ -218,6 +219,7 @@ it("confirms logo removal and clears saved identities without overwriting drafts
   const buttons = screen.getAllByRole("button", { name: "Remove logo" });
   await user.click(buttons[buttons.length - 1]);
   await vi.waitFor(() => expect(deleteShopLogo).toHaveBeenCalledWith("shop"));
+  expect((await screen.findByText("Logo removed. Business details save separately.")).closest("p")).toHaveAttribute("role", "status");
   await vi.waitFor(() =>
     expect(
       client.getQueryData(["shops", "member", "shop", "settings"]),

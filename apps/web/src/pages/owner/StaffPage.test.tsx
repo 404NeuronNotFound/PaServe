@@ -7,6 +7,7 @@ import { MemoryRouter } from "react-router-dom";
 import type { ShopRole, ShopStaffResponse } from "@paserve/contracts";
 import { ActiveShopContext } from "../../features/shops/active-shop";
 import { StaffPage } from "./StaffPage";
+import { useFeedbackStore } from "../../app/stores/feedback";
 import {
   changeStaffRole,
   inviteStaff,
@@ -56,6 +57,7 @@ const data: ShopStaffResponse = {
   ],
 };
 beforeEach(() => {
+  useFeedbackStore.getState().clear();
   vi.resetAllMocks();
   vi.mocked(listStaff).mockResolvedValue(data);
   HTMLDialogElement.prototype.showModal = function () {
@@ -133,6 +135,26 @@ it("creates a link for a normalized email and defaults to cashier", async () => 
     `${window.location.origin}/join/shop-a#token=${"a".repeat(64)}`,
   );
   expect(localStorage.length).toBe(0);
+  expect(screen.getByText("Invitation link ready for new@example.com. Share it directly with your teammate.").closest("p")).toHaveAttribute("role", "status");
+  expect(useFeedbackStore.getState().notices.at(-1)?.message).toBe("Invitation link created for new@example.com.");
+  await user.click(screen.getByRole("button", { name: "Revoke invitation" }));
+  await user.click(screen.getAllByRole("button", { name: "Revoke invitation" }).at(-1)!);
+  await vi.waitFor(() => expect(screen.queryByLabelText(/Invitation link — save it/)).not.toBeInTheDocument());
+  expect(screen.queryByText(/Invitation link ready for/)).not.toBeInTheDocument();
+});
+it("does not report invitation success while pending or after failure", async () => {
+  let reject!: (failure: Error) => void;
+  vi.mocked(inviteStaff).mockReturnValue(new Promise((_resolve, rejectRequest) => { reject = rejectRequest; }));
+  const user = setup();
+  await user.type(await screen.findByLabelText("Staff email address"), "new@example.com");
+  await user.click(screen.getByRole("button", { name: "Create invitation link" }));
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+  expect(screen.queryByText(/Invitation link ready for/)).not.toBeInTheDocument();
+  reject(new Error("Offline"));
+  await screen.findByText(/Unable to complete this action/);
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+  expect(screen.queryByText(/Invitation link ready for/)).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Staff email address")).toHaveValue("new@example.com");
 });
 it("keeps invalid emails out of the invitation API", async () => {
   const user = setup();
@@ -357,6 +379,7 @@ it("confirms and revokes only the selected invitation", async () => {
     screen.getAllByRole("button", { name: "Revoke invitation" }).at(-1)!,
   );
   expect(revokeInvitation).toHaveBeenCalledWith("shop-a", "invite-a");
+  await vi.waitFor(() => expect(useFeedbackStore.getState().notices.at(-1)?.message).toBe("Invitation revoked for new@example.com."));
 });
 it("confirms a role change before saving", async () => {
   const user = setup();
