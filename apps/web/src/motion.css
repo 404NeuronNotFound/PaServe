@@ -1,0 +1,27 @@
+/* Transforms do not change dimensions; state and actions update immediately. */
+.product-details-total strong {
+  display: inline-block;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .customization-more[open] .customization-more-body {
+    animation: reveal-customization 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .customization-page [role="tabpanel"]:not([hidden]) {
+    animation: reveal-customization 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .kitchen-state-switch button,
+  .owner-orders-navigation a {
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+  dialog:is(.brand-crop-dialog, .table-qr-dialog, .kitchen-details)[open] {
+    animation: reveal-dialog 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+@keyframes reveal-customization {
+  from { opacity: 0.85; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes reveal-dialog {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

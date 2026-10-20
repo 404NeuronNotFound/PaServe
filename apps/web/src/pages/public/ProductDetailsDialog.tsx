@@ -34,6 +34,7 @@ import {
   FiSlash,
 } from "react-icons/fi";
 import "./product-details.css";
+import { useChangeMotion } from "../../components/feedback/useChangeMotion";
 import { CurrentTable } from "./CurrentTable";
 
 export function ProductDetailsDialog({
@@ -192,6 +193,7 @@ function ProductDetailsForm({
       })
     : undefined;
   const total = pricePreview?.totalPrice;
+  const totalMotion = useChangeMotion<HTMLElement>(total ?? "", "price");
   const groups = [
     ...optionGroups,
     ...(variants.some((variant) => variant.optionGroupId === null)
@@ -520,7 +522,7 @@ function ProductDetailsForm({
         <div className="product-details-total">
           <p role="status">
             <span>Estimated total</span>{" "}
-            <strong>{total ? formatCartPrice(total) : "—"}</strong>
+            <strong ref={totalMotion}>{total ? formatCartPrice(total) : "—"}</strong>
           </p>
           <p className="field-hint">{PRICE_PREVIEW_NOTICE}</p>
           {!complete && isOrderable && (

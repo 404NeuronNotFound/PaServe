@@ -20,6 +20,7 @@ import "./customer-cart.css";
 import { CustomerOrder } from "./CustomerOrder";
 import { CurrentTable } from "./CurrentTable";
 import { CartReview, type CartReviewSnapshot } from "./CartReview";
+import { useChangeMotion } from "../../components/feedback/useChangeMotion";
 
 export function CustomerCart({
   shop,
@@ -46,6 +47,7 @@ export function CustomerCart({
   const browse = useRef<HTMLButtonElement>(null);
   const removedIndex = useRef<number | null>(null);
   const count = cartItemCount(items);
+  const countMotion = useChangeMotion<HTMLSpanElement>(count, "count");
   const subtotal = cartEstimatedSubtotal(items);
   useEffect(() => {
     if (removedIndex.current === null) return;
@@ -70,7 +72,7 @@ export function CustomerCart({
         {table && (
           <span className="customer-cart-table">Table {table.number}</span>
         )}
-        <span className="customer-cart-count" aria-hidden="true">
+        <span ref={countMotion} className="customer-cart-count" aria-hidden="true">
           {count}
         </span>
         {!!count && (

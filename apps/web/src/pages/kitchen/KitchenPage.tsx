@@ -46,6 +46,7 @@ import {
 } from "../../features/kitchen/queue";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { useChangeMotion } from "../../components/feedback/useChangeMotion";
 import "./kitchen.css";
 import { useNewOrderEvents } from "../../features/orders/useNewOrderEvents";
 import { usePreparationEvents } from "../../features/orders/usePreparationEvents";
@@ -683,8 +684,12 @@ function Ticket({
     Math.floor((now - Date.parse(order.queuedAt)) / 60_000),
   );
   const count = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const updateMotion = useChangeMotion<HTMLLIElement>(
+    JSON.stringify([order.preparationStatus, order.items, order.tableNumber, order.mode]),
+    "queue",
+  );
   return (
-    <li className={`kitchen-ticket${first ? " kitchen-ticket-first" : ""}`}>
+    <li ref={updateMotion} className={`kitchen-ticket${first ? " kitchen-ticket-first" : ""}`}>
       <article aria-label={`Order ${order.orderNumber}`}>
         <div
           className={`kitchen-ticket-ribbon${completed ? " kitchen-ribbon-completed" : preparing ? " kitchen-ribbon-preparing" : ready ? " kitchen-ribbon-ready" : ""}`}

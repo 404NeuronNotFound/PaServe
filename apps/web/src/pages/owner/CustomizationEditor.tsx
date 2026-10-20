@@ -309,43 +309,45 @@ export function CustomizationEditor({
             onToggle={(event) => setMoreSettings(event.currentTarget.open)}
           >
             <summary>More settings</summary>
-            <label className="customization-check">
-              <input
-                type="checkbox"
-                checked={values.isAvailable}
-                disabled={busy}
-                onChange={(e) =>
-                  setValues({ ...values, isAvailable: e.target.checked })
-                }
-              />
-              Available to customers
-            </label>
-            <p className="field-hint">
-              {kind === "addon"
-                ? "Turn off to hide this add-on on every product that offers it. Creating an add-on does not automatically add it to a product."
-                : kind === "group"
-                  ? "Turn off to hide this group and its options from customers."
-                  : "Turn off to hide this option from customers."}
-            </p>
-            <div className="field">
-              <label htmlFor={`${id}-order`}>List position</label>
-              <input
-                ref={orderInput}
-                id={`${id}-order`}
-                inputMode="numeric"
-                aria-invalid={validationField === "order"}
-                aria-describedby={`${id}-order-help${validationField === "order" ? ` ${id}-validation` : ""}`}
-                value={values.sortOrder}
-                disabled={busy}
-                onChange={(e) => {
-                  setValues({ ...values, sortOrder: e.target.value });
-                  if (validationField === "order") { setValidation(""); setValidationField(null); }
-                }}
-              />
-              <span className="field-hint" id={`${id}-order-help`}>
-                Lower numbers appear first. For example: Regular 0, Medium 1,
-                Large 2. This changes the order customers see, not the price.
-              </span>
+            <div className="customization-more-body">
+              <label className="customization-check">
+                <input
+                  type="checkbox"
+                  checked={values.isAvailable}
+                  disabled={busy}
+                  onChange={(e) =>
+                    setValues({ ...values, isAvailable: e.target.checked })
+                  }
+                />
+                Available to customers
+              </label>
+              <p className="field-hint">
+                {kind === "addon"
+                  ? "Turn off to hide this add-on on every product that offers it. Creating an add-on does not automatically add it to a product."
+                  : kind === "group"
+                    ? "Turn off to hide this group and its options from customers."
+                    : "Turn off to hide this option from customers."}
+              </p>
+              <div className="field">
+                <label htmlFor={`${id}-order`}>List position</label>
+                <input
+                  ref={orderInput}
+                  id={`${id}-order`}
+                  inputMode="numeric"
+                  aria-invalid={validationField === "order"}
+                  aria-describedby={`${id}-order-help${validationField === "order" ? ` ${id}-validation` : ""}`}
+                  value={values.sortOrder}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setValues({ ...values, sortOrder: e.target.value });
+                    if (validationField === "order") { setValidation(""); setValidationField(null); }
+                  }}
+                />
+                <span className="field-hint" id={`${id}-order-help`}>
+                  Lower numbers appear first. For example: Regular 0, Medium 1,
+                  Large 2. This changes the order customers see, not the price.
+                </span>
+              </div>
             </div>
           </details>
           {(validation || error) && (
