@@ -1,8 +1,61 @@
 /* Shared screen behavior; printing keeps its independent receipt/QR layout. */
 @media screen {
+  /* Mobile is the safe baseline, including browsers without container queries.
+     Never contain Products: its Create action must stay viewport-anchored. */
+  :is(.public-menu, .customer-order-page, .dashboard-content,
+    .tables-page, .categories-page, .staff-workspace, .shop-settings-card,
+    .cashier-workspace, .kitchen-workspace, .products-page, .sales-dashboard) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  /* Keep existing page width caps; only gutters are shared across screens. */
+  .public-menu.public-menu,
+  .customer-order-page.customer-order-page,
+  .phase-two .dashboard-content {
+    padding-inline: max(var(--layout-gutter), env(safe-area-inset-left, 0px))
+      max(var(--layout-gutter), env(safe-area-inset-right, 0px));
+  }
   :is(.tables-page, .categories-page, .staff-workspace, .shop-settings-card,
     .cashier-workspace, .kitchen-workspace) {
     container: workspace / inline-size;
+  }
+  .tables-layout,
+  .categories-layout,
+  .settings-assets,
+  .phase-two .settings-form-grid,
+  .phase-two .staff-grid,
+  .phase-two .cashier-scanner,
+  .phase-two .cashier-review-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :is(.tables-layout, .categories-layout, .settings-assets, .settings-form-grid,
+    .staff-grid, .cashier-scanner, .cashier-review-layout) > * {
+    min-width: 0;
+  }
+  .tables-create,
+  .categories-create-panel,
+  .phase-two .staff-invite-panel {
+    grid-row: 1;
+  }
+  :is(.staff-permissions-scroll, .daily-analytics-table,
+    .sales-payment-table-scroll, .peak-hours-chart-scroll) {
+    min-width: 0;
+    max-width: 100%;
+    overflow: auto;
+    overscroll-behavior-inline: contain;
+  }
+  /* Bound scanner media without changing receipt/QR geometry. */
+  .scanner-panel video {
+    max-width: 100%;
+  }
+  .order-receipt-topline {
+    flex-wrap: wrap;
+  }
+  .order-receipt-topline > span,
+  .menu-topline > span,
+  .kitchen-history-filters :is(label, input) {
+    min-width: 0;
+    max-width: 100%;
   }
   #root:has(.dashboard-shell) {
     height: var(--app-viewport-height, 100dvh);
@@ -68,44 +121,97 @@
 }
 
 /* The sidebar reduces the available width even on a desktop-size viewport. */
-@container workspace (max-width: 780px) {
-  .tables-layout,
-  .categories-layout,
-  .settings-assets,
-  .phase-two .settings-form-grid,
-  .phase-two .staff-grid,
-  .phase-two .cashier-scanner,
-  .phase-two .cashier-review-layout {
-    grid-template-columns: minmax(0, 1fr);
+@media screen {
+  @container workspace (min-width: 781px) {
+    .tables-layout,
+    .categories-layout,
+    .phase-two .staff-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+    }
+    .settings-assets,
+    .phase-two .settings-form-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .phase-two .cashier-scanner {
+      grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+    }
+    .phase-two .cashier-review-layout {
+      grid-template-columns: minmax(0, 1.5fr) minmax(290px, 1fr);
+    }
+    .tables-create,
+    .categories-create-panel,
+    .phase-two .staff-invite-panel {
+      grid-row: auto;
+    }
   }
-  .tables-create,
-  .categories-create-panel,
-  .phase-two .staff-invite-panel {
-    grid-row: 1;
+  @container workspace (max-width: 780px) {
+    .categories-create-panel {
+      position: static;
+    }
+    .categories-menu-summary {
+      display: none;
+    }
+    .phase-two .staff-list > li {
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .phase-two .staff-actions {
+      width: 100%;
+      padding-left: 0;
+    }
+    .phase-two .staff-actions > :is(button, .select-field) {
+      flex: 1 1 112px;
+    }
+    .kitchen-heading {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .kitchen-refresh {
+      justify-items: start;
+    }
+    .kitchen-history > li {
+      grid-template-columns: 30px minmax(0, 1fr) auto;
+      gap: var(--spacing-3);
+    }
+    .kitchen-history-summary {
+      grid-column: 2;
+      grid-row: 2;
+    }
+    .kitchen-history time {
+      grid-column: 2;
+      overflow-wrap: anywhere;
+    }
+    .kitchen-history button {
+      grid-column: 3;
+      grid-row: 1 / 4;
+    }
   }
-  .categories-create-panel {
-    position: static;
-  }
-  .categories-menu-summary {
-    display: none;
-  }
-  .phase-two .staff-list > li {
-    flex-wrap: wrap;
-    align-items: flex-start;
-  }
-  .phase-two .staff-actions {
-    width: 100%;
-    padding-left: 0;
-  }
-  .phase-two .staff-actions > :is(button, .select-field) {
-    flex: 1 1 112px;
-  }
-  .kitchen-heading {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .kitchen-refresh {
-    justify-items: start;
+  @container workspace (max-width: 480px) {
+    .kitchen-history > li {
+      grid-template-columns: minmax(0, 1fr);
+      padding: var(--spacing-4);
+    }
+    .kitchen-history-check {
+      display: none;
+    }
+    .kitchen-history :is(.kitchen-history-identity, .kitchen-history-summary, time, button) {
+      grid-column: 1;
+      grid-row: auto;
+    }
+    .kitchen-history-summary span {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    .kitchen-history-filters label {
+      flex: 1 1 100%;
+    }
+    .kitchen-pagination > div {
+      flex-wrap: wrap;
+    }
+    .kitchen-state-switch button {
+      flex: 1 1 120px;
+      min-width: 0;
+    }
   }
 }
 

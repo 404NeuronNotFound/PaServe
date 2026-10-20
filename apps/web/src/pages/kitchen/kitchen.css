@@ -502,7 +502,7 @@
 }
 .kitchen-history-search {
   flex: 1;
-  min-width: 200px !important;
+  min-width: min(200px, 100%);
 }
 .kitchen-history-search > div {
   display: flex;

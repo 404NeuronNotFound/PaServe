@@ -49,6 +49,7 @@
   --icon-lg: 20px;
   --icon-feature: 24px;
   --control-target-min: 44px;
+  --layout-gutter: clamp(16px, 2vw, 32px);
   --color-canvas: #f5f3ec;
   --color-surface: #fffefa;
   --color-secondary: #e9ecdf;
