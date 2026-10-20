@@ -2,7 +2,8 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { ProductCard } from "../../components/paserve/ProductCard";
 import type { PublicMenuResponse } from "@paserve/contracts";
-import { memo, useDeferredValue, useId, useMemo, useState } from "react";
+import { memo, useDeferredValue, useId, useMemo, useRef, useState } from "react";
+import { useMenuSections } from "./useMenuSections";
 import { EmptyState } from "../../components/feedback/EmptyState";
 import type { CustomerOrderResponse } from "@paserve/contracts";
 import {
@@ -39,6 +40,14 @@ export function PublicMenuView({
   const prefix = useId();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [availableOnly, setAvailableOnly] = useState(false);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const browseBar = useRef<HTMLDivElement>(null);
+  const sectionContainer = useRef<HTMLDivElement>(null);
+  function clearSearch() {
+    setSearch("");
+    searchInput.current?.focus();
+  }
   const selected = products.find((product) => product.id === selectedId);
   const deferredSearch = useDeferredValue(search);
   const searchPending = search !== deferredSearch;
@@ -46,8 +55,9 @@ export function PublicMenuView({
   const { shown, sections } = useMemo(() => {
     const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
     const matches = (product: PublicMenuResponse["products"][number]) =>
-      !term || [product.name, product.description, categoryNames.get(product.categoryId ?? "")]
-        .some((value) => value?.toLocaleLowerCase().includes(term));
+      (!availableOnly || (product.status === "AVAILABLE" && product.isOrderable)) &&
+      (!term || [product.name, product.description, categoryNames.get(product.categoryId ?? "")]
+        .some((value) => value?.toLocaleLowerCase().includes(term)));
     const shown = products.filter(matches);
     const featured = featuredProducts.filter(matches);
     const byCategory = new Map<string | null, PublicMenuResponse["products"]>();
@@ -87,7 +97,9 @@ export function PublicMenuView({
         : []),
     ];
     return { shown, sections };
-  }, [categories, products, featuredProducts, term]);
+  }, [categories, products, featuredProducts, term, availableOnly]);
+  const sectionIds = useMemo(() => sections.map((section) => `${prefix}-${section.id}`), [sections, prefix]);
+  const navigation = useMenuSections(sectionIds, sectionContainer, browseBar);
   return (
     <Root
       className="public-menu"
@@ -125,15 +137,19 @@ export function PublicMenuView({
         </header>
       </div>
       {(!preview || !!products.length) && (
-        <div className="menu-browse-bar">
+        <div className="menu-browse-bar" ref={browseBar}>
           <div className="menu-browse-tools">
             {!!products.length && (
               <label className="menu-search" htmlFor={`${prefix}-search`}>
                 <FiSearch aria-hidden="true" />
                 <span className="sr-only">Search menu</span>
                 <Input
+                  ref={searchInput}
                   id={`${prefix}-search`}
                   type="search"
+                  autoComplete="off"
+                  enterKeyHint="search"
+                  aria-controls={`${prefix}-items`}
                   placeholder="Find your next favorite…"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
@@ -142,7 +158,7 @@ export function PublicMenuView({
                   <Button variant="ghost" size="inherit"
                     type="button"
                     aria-label="Clear search"
-                    onClick={() => setSearch("")}
+                    onClick={clearSearch}
                   >
                     <FiX aria-hidden="true" />
                   </Button>
@@ -158,10 +174,24 @@ export function PublicMenuView({
               />
             )}
           </div>
+          {!!products.length && (
+            <div className="menu-browse-options">
+              <Button variant="outline" type="button" aria-pressed={availableOnly} aria-controls={`${prefix}-items`}
+                onClick={() => setAvailableOnly((value) => !value)}>
+                Available now
+              </Button>
+              <span>Browse categories or search by item name.</span>
+            </div>
+          )}
           {!!sections.length && (
             <nav className="menu-category-nav" aria-label="Menu categories">
               {sections.map((section) => (
-                <a key={section.id} href={`#${prefix}-${section.id}`}>
+                <a key={section.id} href={`#${prefix}-${section.id}`}
+                  aria-current={navigation.active === `${prefix}-${section.id}` ? "location" : undefined}
+                  onClick={() => {
+                    navigation.select(`${prefix}-${section.id}`);
+                    document.getElementById(`${prefix}-${section.id}`)?.focus({ preventScroll: true });
+                  }}>
                   {section.id === "featured" && <FiStar aria-hidden="true" />}
                   {section.name}
                   <span>{section.items.length}</span>
@@ -178,27 +208,28 @@ export function PublicMenuView({
         </EmptyState>
       )}
       <div className="menu-search-status-slot">
-        {term && (
+        {(term || availableOnly) && (
           <p className="menu-search-status" role="status" aria-live={searchPending ? "off" : "polite"}>
-            {shown.length} {shown.length === 1 ? "item" : "items"} matching “
-            {deferredSearch.trim()}”
+            {shown.length} {shown.length === 1 ? "item" : "items"}
+            {term ? ` matching “${deferredSearch.trim()}”` : ""}
+            {availableOnly ? " available now" : ""}
           </p>
         )}
       </div>
-      {term && products.length > 0 && !shown.length && (
+      {(term || availableOnly) && products.length > 0 && !shown.length && (
         <div className="menu-empty">
           <FiSearch aria-hidden="true" />
-          <p>No matches. Try another craving.</p>
+          <p>{availableOnly ? "No available items match these filters." : "No matches. Try another craving."}</p>
           <Button variant="outline" size="inherit"
             type="button"
             className="secondary-button"
-            onClick={() => setSearch("")}
+            onClick={() => { setAvailableOnly(false); clearSearch(); }}
           >
-            Clear search
+            {availableOnly ? "Show all items" : "Clear search"}
           </Button>
         </div>
       )}
-      <div className="menu-sections" aria-busy={searchPending}>
+      <div className="menu-sections" id={`${prefix}-items`} ref={sectionContainer} aria-busy={searchPending}>
         {sections.map((section, index) => (
           <MenuSection
             key={section.id}
@@ -247,7 +278,7 @@ const MenuSection = memo(function MenuSection({
 }) {
   const statusPrefix = useId();
   return (
-    <section className="public-menu-section" aria-label={title}>
+    <section className="public-menu-section" aria-label={title} data-menu-section={id}>
       <div className="menu-section-heading">
         <div>
           <span className="menu-section-number" aria-hidden="true">
@@ -271,7 +302,7 @@ const MenuSection = memo(function MenuSection({
           >
             <ProductMedia product={product} />
             <div className="menu-product-body">
-              {(product.isFeatured || product.status === "SOLD_OUT") && (
+              {(product.isFeatured || product.status === "SOLD_OUT" || !product.isOrderable) && (
                 <div className="menu-product-badges">
                   {product.isFeatured && (
                     <Badge variant="brand" className="menu-accent-badge">
@@ -279,12 +310,12 @@ const MenuSection = memo(function MenuSection({
                       Featured
                     </Badge>
                   )}
-                  {product.status === "SOLD_OUT" && (
+                  {(product.status === "SOLD_OUT" || !product.isOrderable) && (
                     <Badge
                       className="menu-sold-out-badge"
                       id={`${statusPrefix}-${product.id}-sold-out`}
                     >
-                      Sold out
+                      {product.status === "SOLD_OUT" ? "Sold out" : "Unavailable"}
                     </Badge>
                   )}
                 </div>
@@ -304,7 +335,7 @@ const MenuSection = memo(function MenuSection({
                   className="menu-product-details-button"
                   aria-label={`View details for ${product.name}`}
                   aria-describedby={
-                    product.status === "SOLD_OUT"
+                    product.status === "SOLD_OUT" || !product.isOrderable
                       ? `${statusPrefix}-${product.id}-sold-out`
                       : undefined
                   }
