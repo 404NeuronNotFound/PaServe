@@ -20,6 +20,7 @@ import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import "./public-menu.css";
 import { CurrentTable } from "./CurrentTable";
 import { YourActiveOrders } from "./YourActiveOrders";
+import { Badge } from "../../components/ui/badge";
 
 export function PublicMenuView({
   menu,
@@ -270,18 +271,18 @@ const MenuSection = memo(function MenuSection({
               {(product.isFeatured || product.status === "SOLD_OUT") && (
                 <div className="menu-product-badges">
                   {product.isFeatured && (
-                    <span className="menu-accent-badge">
+                    <Badge variant="brand" className="menu-accent-badge">
                       <FiStar aria-hidden="true" />
                       Featured
-                    </span>
+                    </Badge>
                   )}
                   {product.status === "SOLD_OUT" && (
-                    <span
+                    <Badge
                       className="menu-sold-out-badge"
                       id={`${statusPrefix}-${product.id}-sold-out`}
                     >
                       Sold out
-                    </span>
+                    </Badge>
                   )}
                 </div>
               )}

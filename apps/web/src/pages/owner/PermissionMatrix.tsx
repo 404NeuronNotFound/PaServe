@@ -1,3 +1,4 @@
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import {
   SHOP_PERMISSIONS,
   SHOP_ROLES,
@@ -35,40 +36,33 @@ export function PermissionMatrix() {
         Ownership and billing are reserved policies; this page does not provide
         those actions.
       </p>
-      <div
-        className="staff-permissions-scroll"
-        role="region"
-        aria-label="Role permission matrix"
-        tabIndex={0}
-      >
-        <table>
-          <caption>Shop permissions by role</caption>
-          <thead>
-            <tr>
-              <th scope="col">Capability</th>
+      <Table containerClassName="staff-permissions-scroll" scrollLabel="Role permission matrix">
+          <TableCaption>Shop permissions by role</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">Capability</TableHead>
               {SHOP_ROLES.map((role) => (
-                <th scope="col" key={role}>
+                <TableHead scope="col" key={role}>
                   {role === "KITCHEN"
                     ? "Kitchen / Barista"
                     : role[0] + role.slice(1).toLowerCase()}
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {SHOP_PERMISSIONS.map((permission) => (
-              <tr key={permission}>
-                <th scope="row">{labels[permission]}</th>
+              <TableRow key={permission}>
+                <TableHead scope="row">{labels[permission]}</TableHead>
                 {SHOP_ROLES.map((role) => (
-                  <td key={role}>
+                  <TableCell key={role}>
                     {hasShopPermission(role, permission) ? "Allowed" : "Denied"}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
     </details>
   );
 }

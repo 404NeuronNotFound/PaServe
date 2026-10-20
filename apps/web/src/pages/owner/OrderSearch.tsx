@@ -5,6 +5,9 @@ import {
 } from "@paserve/contracts";
 import { FiSearch, FiX } from "react-icons/fi";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
 
 export function OrderSearch({
   search,
@@ -36,12 +39,12 @@ export function OrderSearch({
       aria-label="Search orders in this view"
       onSubmit={submit}
     >
-      <label htmlFor={id}>Search orders</label>
+      <Label htmlFor={id}>Search orders</Label>
       <div className="owner-order-search-controls">
         <span className="owner-order-search-icon">
           <FiSearch aria-hidden="true" />
         </span>
-        <input
+        <Input
           ref={input}
           id={id}
           type="search"
@@ -55,13 +58,13 @@ export function OrderSearch({
             setError("");
           }}
         />
-        <button className="secondary-button" type="submit">
+        <Button variant="outline" type="submit">
           <FiSearch aria-hidden="true" />
           Search
-        </button>
+        </Button>
         {(search || draft) && (
-          <button
-            className="secondary-button"
+          <Button
+            variant="outline"
             type="button"
             onClick={() => {
               setDraft("");
@@ -72,7 +75,7 @@ export function OrderSearch({
           >
             <FiX aria-hidden="true" />
             Clear search
-          </button>
+          </Button>
         )}
       </div>
       <p id={`${id}-help`}>

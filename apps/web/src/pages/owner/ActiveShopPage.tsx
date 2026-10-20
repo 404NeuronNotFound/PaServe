@@ -1,3 +1,4 @@
+import { Card } from "../../components/ui/card";
 import { ShopLogo } from "../../components/shops/ShopLogo";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
@@ -63,7 +64,7 @@ export function ActiveShopPage() {
       )}
       <nav className="shop-overview-actions" aria-label="Shop actions">
         {membership.role === "OWNER" && (
-          <article className="shop-action-card">
+          <Card asChild className="shop-action-card"><article>
             <span className="shop-action-icon">
               <FiSettings aria-hidden="true" />
             </span>
@@ -79,9 +80,9 @@ export function ActiveShopPage() {
               Shop settings
               <FiArrowUpRight aria-hidden="true" />
             </Link>
-          </article>
+          </article></Card>
         )}
-        <article className="shop-action-card">
+        <Card asChild className="shop-action-card"><article>
           <span className="shop-action-icon">
             <FiUsers aria-hidden="true" />
           </span>
@@ -92,8 +93,8 @@ export function ActiveShopPage() {
             Switch shop
             <FiArrowUpRight aria-hidden="true" />
           </Link>
-        </article>
-        <article className="shop-action-card">
+        </article></Card>
+        <Card asChild className="shop-action-card"><article>
           <span className="shop-action-icon">
             <FiUser aria-hidden="true" />
           </span>
@@ -104,7 +105,7 @@ export function ActiveShopPage() {
             Your account
             <FiArrowUpRight aria-hidden="true" />
           </Link>
-        </article>
+        </article></Card>
       </nav>
     </section>
   );

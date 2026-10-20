@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 import { FiLoader } from "react-icons/fi";
+import { Button } from "../ui/button";
 import "./pending-button.css";
 
 /** Controlled pending UI; request handlers retain their own synchronous write guards. */
@@ -17,8 +18,11 @@ export function PendingButton({
   iconOnly?: boolean;
 }) {
   return (
-    <button
+    <Button
       {...props}
+      type={props.type ?? "submit"}
+      variant="unstyled"
+      size="inherit"
       className={`pending-button ${className}`}
       disabled={disabled || pending}
       aria-busy={pending}
@@ -42,6 +46,6 @@ export function PendingButton({
           </span>
         </span>
       </span>
-    </button>
+    </Button>
   );
 }
