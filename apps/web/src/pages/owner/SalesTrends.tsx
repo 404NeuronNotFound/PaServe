@@ -1,3 +1,4 @@
+import { Table } from "../../components/ui/table";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery } from "@tanstack/react-query";
@@ -191,13 +192,7 @@ export function SalesTrends({
           </details>
           <details className="sales-comparison-details">
             <summary>View daily comparison data</summary>
-            <div
-              className="daily-analytics-table"
-              tabIndex={0}
-              role="region"
-              aria-label="Sales trends daily comparison"
-            >
-              <table>
+            <Table containerClassName="daily-analytics-table" scrollLabel="Sales trends daily comparison">
                 <caption>
                   Daily gross sales on a shared scale. Solid bars: selected
                   period; outlined bars: previous period. Zero-sale days are
@@ -239,8 +234,7 @@ export function SalesTrends({
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
+              </Table>
           </details>
         </>
       )}

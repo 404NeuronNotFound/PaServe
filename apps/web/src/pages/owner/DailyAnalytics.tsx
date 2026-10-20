@@ -1,3 +1,6 @@
+import { ListPagination } from "../../components/paserve/ListPagination";
+import { listPage } from "../../lib/list-page";
+import { Table } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
@@ -36,6 +39,8 @@ export function DailyAnalytics({
   enabled?: boolean;
 }) {
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [pagination, setPagination] = useState({ scope: "", page: 1 });
+  const scope = `${userId}:${shopId}:${period}:${start}:${end}`;
   const weekly = period === "weekly";
   const monthly = period === "monthly";
   const title = monthly ? "Monthly" : weekly ? "Weekly" : "Daily";
@@ -80,6 +85,7 @@ export function DailyAnalytics({
             key: day.businessDate,
             label: `${day.businessDate}${day.businessDate === today ? " (in progress)" : ""}`,
           })));
+  const history = listPage<NonNullable<typeof rows>[number]>(rows || [], pagination.scope === scope ? pagination.page : 1, 25);
   return (
     <section
       className="daily-analytics"
@@ -173,13 +179,10 @@ export function DailyAnalytics({
               description={`All ${monthly ? "months" : weekly ? "weeks" : "days"} are shown below. Choose another reporting period above, or check again after paid orders are completed.`}
               label="sales history" pending={query.isFetching} onRefresh={() => void query.refetch()} />
           )}
-          <div
-            className="daily-analytics-table"
-            tabIndex={0}
-            role="region"
-            aria-label={`${title} performance table`}
-          >
-            <table>
+          <p className="management-results" role="status">
+            Rows {history.first}-{history.last} of {history.total}. Range totals include every row in the selected period.
+          </p>
+          <Table containerClassName="daily-analytics-table" scrollLabel={`${title} performance table`}>
               <caption>
                 {title} aggregation by completion date
                 {monthly
@@ -200,20 +203,20 @@ export function DailyAnalytics({
                         ? "Business week (Mon–Sun)"
                         : "Business date"}
                   </th>
-                  <th scope="col">Gross sales</th>
-                  <th scope="col">Orders</th>
-                  <th scope="col">Items sold</th>
-                  <th scope="col">Average order value</th>
+                  <th scope="col" data-numeric>Gross sales</th>
+                  <th scope="col" data-numeric>Orders</th>
+                  <th scope="col" data-numeric>Items sold</th>
+                  <th scope="col" data-numeric>Average order value</th>
                 </tr>
               </thead>
               <tbody>
-                {rows?.map((day) => (
+                {history.records.map((day) => (
                   <tr key={day.key}>
                     <th scope="row">{day.label}</th>
-                    <td>{formatCartPrice(day.totalSales)}</td>
-                    <td>{day.completedOrders.toLocaleString("en-PH")}</td>
-                    <td>{day.itemsSold.toLocaleString("en-PH")}</td>
-                    <td>
+                    <td data-numeric>{formatCartPrice(day.totalSales)}</td>
+                    <td data-numeric>{day.completedOrders.toLocaleString("en-PH")}</td>
+                    <td data-numeric>{day.itemsSold.toLocaleString("en-PH")}</td>
+                    <td data-numeric>
                       {formatCartPrice(
                         calculateAverageOrderValue(
                           day.totalSales,
@@ -227,10 +230,10 @@ export function DailyAnalytics({
               <tfoot>
                 <tr>
                   <th scope="row">Range total</th>
-                  <td>{formatCartPrice(report.totalSales)}</td>
-                  <td>{report.completedOrders.toLocaleString("en-PH")}</td>
-                  <td>{report.itemsSold.toLocaleString("en-PH")}</td>
-                  <td>
+                  <td data-numeric>{formatCartPrice(report.totalSales)}</td>
+                  <td data-numeric>{report.completedOrders.toLocaleString("en-PH")}</td>
+                  <td data-numeric>{report.itemsSold.toLocaleString("en-PH")}</td>
+                  <td data-numeric>
                     {formatCartPrice(
                       calculateAverageOrderValue(
                         report.totalSales,
@@ -240,8 +243,11 @@ export function DailyAnalytics({
                   </td>
                 </tr>
               </tfoot>
-            </table>
-          </div>
+            </Table>
+          <ListPagination label="Sales history pagination" page={history.page} pageCount={history.pageCount}
+            hasNext={history.hasNext} pending={query.isFetching}
+            onPrevious={() => setPagination({ scope, page: history.page - 1 })}
+            onNext={() => setPagination({ scope, page: history.page + 1 })} />
         </>
       )}
     </section>

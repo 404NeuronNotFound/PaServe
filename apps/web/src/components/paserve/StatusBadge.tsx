@@ -4,6 +4,8 @@ const labels = {
   PENDING_CONFIRMATION: "Pending confirmation", CONFIRMED: "Confirmed", REJECTED: "Rejected",
   CANCELLED: "Cancelled", QUEUED: "Queued", PREPARING: "Preparing", READY: "Ready", COMPLETED: "Completed",
   AVAILABLE: "Available", SOLD_OUT: "Sold out", HIDDEN: "Hidden", ARCHIVED: "Archived",
+  ENABLED: "Enabled", DISABLED: "Disabled", INACTIVE: "Account inactive",
+  PENDING: "Pending", ACCEPTED: "Accepted", EXPIRED: "Expired", REVOKED: "Revoked",
 };
 export function StatusBadge({ state, children, ...props }: Omit<ComponentProps<typeof Badge>, "variant"> & { state: keyof typeof labels }) {
   return <Badge variant={state === "REJECTED" || state === "CANCELLED" ? "destructive" : "default"}

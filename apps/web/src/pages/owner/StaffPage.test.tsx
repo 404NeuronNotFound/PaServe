@@ -56,6 +56,51 @@ const data: ShopStaffResponse = {
     },
   ],
 };
+
+it("pages a large roster, filters before paging and keeps the invitation draft", async () => {
+  vi.mocked(listStaff).mockResolvedValue({ ...data, members: Array.from({ length: 21 }, (_, index) => ({
+    ...data.members[1], id: `member-${index}`, email: `member${String(index).padStart(2, "0")}@example.com`, isEnabled: index % 2 === 0,
+  })) });
+  const user = setup();
+  await user.type(await screen.findByLabelText("Staff email address"), "draft@example.com");
+  const pager = within(screen.getByRole("navigation", { name: "Shop members pagination" }));
+  expect(screen.getByText("member00@example.com")).toBeInTheDocument();
+  expect(screen.queryByText("member20@example.com")).not.toBeInTheDocument();
+  await user.click(pager.getByRole("button", { name: "Next" }));
+  await user.click(pager.getByRole("button", { name: "Next" }));
+  expect(screen.getByText("member20@example.com")).toBeInTheDocument();
+  expect(pager.getByRole("button", { name: "Next" })).toBeDisabled();
+  await user.click(screen.getByRole("combobox", { name: "Filter member access" }));
+  await user.click(screen.getByRole("option", { name: "Access disabled" }));
+  expect(pager.getByRole("status")).toHaveTextContent("Page 1 of 1");
+  expect(screen.getByText("member01@example.com")).toBeInTheDocument();
+  expect(screen.queryByText("member20@example.com")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Staff email address")).toHaveValue("draft@example.com");
+  await user.click(screen.getByRole("combobox", { name: "Sort members" }));
+  await user.click(screen.getByRole("option", { name: "Email Z to A" }));
+  const team = within(screen.getByRole("region", { name: "Shop members" }));
+  expect(within(team.getByRole("list")).getAllByRole("listitem")[0]).toHaveTextContent("member19@example.com");
+  await user.type(screen.getByLabelText("Search shop members"), "member19");
+  expect(screen.getByText("member19@example.com")).toBeInTheDocument();
+}, 10000);
+
+it("searches all returned invitations before paging and recovers from no matches", async () => {
+  vi.mocked(listStaff).mockResolvedValue({ ...data, invitations: Array.from({ length: 21 }, (_, index) => ({
+    ...data.invitations[0], id: `invitation-${index}`, email: `invite${index}@example.com`,
+  })) });
+  const user = setup();
+  await screen.findByLabelText("Search invitations");
+  const pager = within(screen.getByRole("navigation", { name: "Invitations pagination" }));
+  await user.click(pager.getByRole("button", { name: "Next" }));
+  await user.type(screen.getByLabelText("Search invitations"), "invite20@");
+  expect(screen.getByText("invite20@example.com")).toBeInTheDocument();
+  expect(pager.getByRole("status")).toHaveTextContent("Page 1 of 1");
+  await user.type(screen.getByLabelText("Search invitations"), "absent");
+  expect(screen.getByText("No matching invitations.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Clear invitation filters" }));
+  expect(screen.getByLabelText("Search invitations")).toHaveFocus();
+  expect(screen.getByText("invite0@example.com")).toBeInTheDocument();
+});
 beforeEach(() => {
   useFeedbackStore.getState().clear();
   vi.resetAllMocks();
@@ -347,7 +392,7 @@ it("displays and protects the sole owner without removal or role controls", asyn
   expect(within(team).getByText("owner@example.com")).toBeInTheDocument();
   const badge = within(team).getByText("Owner", { exact: true });
   expect(badge).toHaveAccessibleDescription(/Owner memberships are protected/);
-  expect(within(team).queryByRole("combobox")).not.toBeInTheDocument();
+  expect(within(badge.closest("li")!).queryByRole("combobox")).not.toBeInTheDocument();
   expect(
     within(team).queryByRole("button", { name: "Disable" }),
   ).not.toBeInTheDocument();
@@ -517,7 +562,7 @@ it("finds shared KITCHEN memberships when searching for barista", async () => {
   const team = screen.getByRole("region", { name: "Shop members" });
   expect(within(team).getByText("staff@example.com")).toBeInTheDocument();
   expect(within(team).queryByText("owner@example.com")).not.toBeInTheDocument();
-  expect(screen.getByRole("status")).toHaveTextContent("1 member found.");
+  expect(screen.getByText(/1 member found/)).toHaveTextContent("1 member found.");
   expect(changeStaffRole).not.toHaveBeenCalled();
 });
 
@@ -809,7 +854,7 @@ it("filters members by email or role and restores search focus on clear", async 
   await user.type(search, "CASHIER");
   expect(within(team).getByText("staff@example.com")).toBeInTheDocument();
   expect(within(team).queryByText("owner@example.com")).not.toBeInTheDocument();
-  expect(screen.getByRole("status")).toHaveTextContent("1 member found.");
+  expect(screen.getByText(/1 member found/)).toHaveTextContent("1 member found.");
   await user.click(screen.getByRole("button", { name: "Clear member search" }));
   expect(search).toHaveFocus();
   expect(within(team).getByText("owner@example.com")).toBeInTheDocument();

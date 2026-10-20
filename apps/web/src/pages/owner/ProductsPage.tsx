@@ -1,3 +1,5 @@
+import { StatusBadge } from "../../components/paserve/StatusBadge";
+import { RowActions } from "../../components/paserve/RowActions";
 import { ProductCard } from "../../components/paserve/ProductCard";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
@@ -998,15 +1000,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                         </small>
                         {product.description && <p>{product.description}</p>}
                         <div className="product-card-meta">
-                          <span className="category-visibility">
-                            {product.isArchived
-                              ? "Archived"
-                              : product.status === "AVAILABLE"
-                                ? "Available"
-                                : product.status === "SOLD_OUT"
-                                  ? "Sold out"
-                                  : "Hidden"}
-                          </span>
+                          <StatusBadge className="category-visibility" state={product.isArchived ? "ARCHIVED" : product.status} />
                           {product.isArchived && (
                             <span>
                               Previous status:{" "}
@@ -1026,7 +1020,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                           )}
                         </div>
                       </div>
-                      <div className="product-card-actions">
+                      <RowActions label={`Actions for ${product.name}`} className="product-card-actions">
                         <strong className="product-price">
                           {formatProductPrice(product.price)}
                         </strong>
@@ -1254,7 +1248,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                             <FiRotateCcw aria-hidden="true" /> {archiveBusy && archiveTarget === product.id ? "Restoring…" : "Restore"}
                           </Button>
                         )}
-                      </div>
+                      </RowActions>
                     </ProductCard>
                   ))}
                 </ul>

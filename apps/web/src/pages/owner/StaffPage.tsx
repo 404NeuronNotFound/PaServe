@@ -1,4 +1,8 @@
+import { StatusBadge } from "../../components/paserve/StatusBadge";
+import { RowActions } from "../../components/paserve/RowActions";
 import { FormField } from "../../components/forms/FormField";
+import { ListPagination } from "../../components/paserve/ListPagination";
+import { listPage } from "../../lib/list-page";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -175,6 +179,18 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const [decision, setDecision] = useState<Decision | null>(null);
   useDraftGuard(Boolean(email), busy);
   const [search, setSearch] = useState("");
+  const [memberPage, setMemberPage] = useState(1);
+  const [invitationPage, setInvitationPage] = useState(1);
+  const [accessFilter, setAccessFilter] = useState("");
+  const [memberSort, setMemberSort] = useState("roster");
+  const [invitationSearch, setInvitationSearch] = useState("");
+  const [invitationStatus, setInvitationStatus] = useState("");
+  function resetMembers() {
+    setSearch("");
+    setAccessFilter("");
+    setMemberPage(1);
+    searchInput.current?.focus();
+  }
   const authorized =
     hasShopPermission(membership.role, "shop.staff.manage") && !lostAccess;
   const query = useQuery({
@@ -343,8 +359,21 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const members = query.data.members.filter((member) =>
     `${member.email} ${member.role} ${member.role === "KITCHEN" ? "barista" : ""}`
       .toLowerCase()
-      .includes(search.trim().toLowerCase()),
+      .includes(search.trim().toLowerCase()) &&
+      (!accessFilter || (accessFilter === "inactive" ? !member.isActive :
+        accessFilter === "enabled" ? member.isEnabled && member.isActive : !member.isEnabled)),
   );
+  if (memberSort !== "roster") members.sort((a, b) =>
+    memberSort === "role" ? a.role.localeCompare(b.role) || a.email.localeCompare(b.email) :
+      memberSort === "email-desc" ? b.email.localeCompare(a.email) : a.email.localeCompare(b.email));
+  const memberResults = listPage(members, memberPage, 10);
+  const invitations = query.data.invitations.filter((invitation) =>
+    `${invitation.email} ${invitation.role} ${invitation.role === "KITCHEN" ? "barista" : ""}`
+      .toLowerCase().includes(invitationSearch.trim().toLowerCase()) &&
+    (!invitationStatus || invitation.status === invitationStatus));
+  const invitationResults = listPage(invitations, invitationPage, 10);
+  const hasMemberFilters = Boolean(search || accessFilter);
+  const hasInvitationFilters = Boolean(invitationSearch || invitationStatus);
   const pendingCount = query.data.invitations.filter(
     (invitation) => invitation.status === "PENDING",
   ).length;
@@ -419,7 +448,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 ref={searchInput}
                 placeholder="Search by email or role"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); setMemberPage(1); }}
               />
               {search && (
                 <Button variant="ghost" size="inherit"
@@ -427,6 +456,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                   aria-label="Clear member search"
                   onClick={() => {
                     setSearch("");
+                    setMemberPage(1);
                     searchInput.current?.focus();
                   }}
                 >
@@ -434,14 +464,31 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 </Button>
               )}
             </div>
-            {search && (
-              <p className="staff-search-results" role="status">
-                {members.length} {members.length === 1 ? "member" : "members"}{" "}
-                found.
-              </p>
-            )}
+            <div className="management-filters">
+              <FormField id="staff-access-filter" label="Filter member access">
+                <SelectField id="staff-access-filter" label="Filter member access" value={accessFilter}
+                  disabled={busy} onChange={(value) => { setAccessFilter(value); setMemberPage(1); }}
+                  options={[{ value: "", label: "All access states" }, { value: "enabled", label: "Enabled and active" },
+                    { value: "disabled", label: "Access disabled" }, { value: "inactive", label: "Account inactive" }]} />
+              </FormField>
+              <FormField id="staff-sort" label="Sort members">
+                <SelectField id="staff-sort" label="Sort members" value={memberSort}
+                  disabled={busy} onChange={(value) => { setMemberSort(value); setMemberPage(1); }}
+                  options={[{ value: "roster", label: "Roster order" }, { value: "email", label: "Email A to Z" },
+                    { value: "email-desc", label: "Email Z to A" }, { value: "role", label: "Role, then email" }]} />
+              </FormField>
+            </div>
+            <p className="management-results" role="status">
+              Sorted by {memberSort === "roster" ? "roster order (oldest membership first)" :
+                memberSort === "role" ? "role, then email (A to Z)" : memberSort === "email-desc" ? "email (Z to A)" : "email (A to Z)"}.
+            </p>
+            <p className="management-results staff-search-results" role="status">
+              {memberResults.first}-{memberResults.last} of {members.length} {members.length === 1 ? "member" : "members"}
+              {hasMemberFilters ? " found." : "."}
+            </p>
+            {hasMemberFilters && <Button variant="outline" disabled={busy} onClick={resetMembers}>Clear member filters</Button>}
             <ul className="staff-list">
-              {members.map((member) => (
+              {memberResults.records.map((member) => (
                 <li key={member.id}>
                   <div className="staff-person">
                     <span className="staff-avatar" aria-hidden="true">
@@ -455,7 +502,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                           : member.role.toLowerCase()}
                         {!member.isActive ? " · account inactive" : ""}
                       </span>
-                      <span>{member.isEnabled ? "Enabled" : "Disabled"}</span>
+                      <StatusBadge state={member.isEnabled ? "ENABLED" : "DISABLED"} />
                     </div>
                   </div>
                   {member.role === "OWNER" ? (
@@ -466,8 +513,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
                       <FiLock aria-hidden="true" /> Owner
                     </span>
                   ) : (
-                    <div className="staff-actions">
-                      <Button variant="outline" size="inherit" type="submit"
+                    <RowActions label={`Actions for ${member.email}`} className="staff-actions">
+                      <Button variant="outline" size="inherit" type="button"
                         className="secondary-button"
                         disabled={busy}
                         onClick={() =>
@@ -497,7 +544,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                         }}
                         disabled={busy}
                       />
-                      <Button variant="outline" size="inherit" type="submit"
+                      <Button variant="outline" size="inherit" type="button"
                         className="secondary-button"
                         disabled={busy}
                         onClick={() =>
@@ -510,30 +557,32 @@ function StaffWorkspace({ userId }: { userId: string }) {
                       >
                         <FiUserMinus aria-hidden="true" /> Remove
                       </Button>
-                    </div>
+                    </RowActions>
                   )}
                 </li>
               ))}
             </ul>
+            <ListPagination label="Shop members pagination" page={memberResults.page} pageCount={memberResults.pageCount}
+              hasNext={memberResults.hasNext} pending={busy}
+              onPrevious={() => setMemberPage(memberResults.page - 1)} onNext={() => setMemberPage(memberResults.page + 1)} />
             {!members.length && (
-              <EmptyState icon={<FiUsers />} title={search ? "No members match your search." : "No shop members to show."}
-                description={search ? "Try another name or email, or show the full team." : "Invite a teammate and choose the access they need for this shop."}>
-                {search && (
-                  <Button variant="outline" size="inherit" type="submit"
+              <EmptyState icon={<FiUsers />} title={hasMemberFilters ? "No members match your search." : "No shop members to show."}
+                description={hasMemberFilters ? "Try another email, role or access state, or show the full team." : "Invite a teammate and choose the access they need for this shop."}>
+                {hasMemberFilters && (
+                  <Button variant="outline" size="inherit" type="button"
                     className="secondary-button"
                     onClick={() => {
-                      setSearch("");
-                      searchInput.current?.focus();
+                      resetMembers();
                     }}
                   >
                     Show all members
                   </Button>
                 )}
-                {!search && <Button variant="default" size="inherit" type="button" className="primary-button" disabled={busy}
+                {!hasMemberFilters && <Button variant="default" size="inherit" type="button" className="primary-button" disabled={busy}
                   onClick={() => document.getElementById("staff-email")?.focus()}>Invite your first teammate</Button>}
               </EmptyState>
             )}
-            {!search && query.data.members.length > 0 && query.data.members.every((member) => member.role === "OWNER") && (
+            {!hasMemberFilters && query.data.members.length > 0 && query.data.members.every((member) => member.role === "OWNER") && (
               <EmptyState icon={<FiUsers />} title="Your team starts with you."
                 description="No staff have joined this shop yet. Invite a teammate and choose the access they need.">
                 <Button variant="default" size="inherit" type="button" className="primary-button" disabled={busy}
@@ -551,6 +600,28 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 {query.data.invitations.length}
               </span>
             </header>
+            <p className="management-results">Showing up to 100 recent invitations. Search and filters apply to this history.</p>
+            <div className="management-filters">
+              <FormField id="invitation-search" label="Search invitations">
+                <Input id="invitation-search" type="search" autoComplete="off" value={invitationSearch}
+                  placeholder="Email or role" onChange={(event) => { setInvitationSearch(event.target.value); setInvitationPage(1); }} />
+              </FormField>
+              <FormField id="invitation-status-filter" label="Filter invitation status">
+                <SelectField id="invitation-status-filter" label="Filter invitation status" value={invitationStatus}
+                  disabled={busy} onChange={(value) => { setInvitationStatus(value); setInvitationPage(1); }}
+                  options={[{ value: "", label: "All invitation states" }, ...["PENDING", "ACCEPTED", "EXPIRED", "REVOKED"].map((value) => ({ value, label: value[0] + value.slice(1).toLowerCase() }))]} />
+              </FormField>
+            </div>
+            <p className="management-results" role="status">
+              {invitationResults.first}-{invitationResults.last} of {invitations.length} invitations
+              {hasInvitationFilters ? " found in recent history." : " in recent history."}
+            </p>
+            {hasInvitationFilters && <Button variant="outline" disabled={busy} onClick={() => {
+              setInvitationSearch(""); setInvitationStatus(""); setInvitationPage(1);
+              document.getElementById("invitation-search")?.focus();
+            }}>Clear invitation filters</Button>}
+            {hasInvitationFilters && query.data.invitations.length > 0 && !invitations.length && <EmptyState icon={<FiMail />} title="No matching invitations."
+              description="Try another email, role or status, or clear the invitation filters." />}
             {!query.data.invitations.length ? (
               <EmptyState icon={<FiMail />} title="No invitations yet."
                 description="Your first invitation will appear here. Create a link and share it with your teammate.">
@@ -559,7 +630,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
               </EmptyState>
             ) : (
               <ul className="staff-list">
-                {query.data.invitations.map((invitation) => (
+                {invitationResults.records.map((invitation) => (
                   <li key={invitation.id}>
                     <div className="staff-person">
                       <span
@@ -574,11 +645,10 @@ function StaffWorkspace({ userId }: { userId: string }) {
                           {invitation.role === "KITCHEN"
                             ? "kitchen / barista"
                             : invitation.role.toLowerCase()}{" "}
-                          <span
-                            className={`staff-invitation-status is-${invitation.status.toLowerCase()}`}
-                          >
+                          <StatusBadge state={invitation.status}
+                            className={`staff-invitation-status is-${invitation.status.toLowerCase()}`}>
                             {invitation.status.toLowerCase()}
-                          </span>
+                          </StatusBadge>
                         </span>
                         <span>
                           <FiClock aria-hidden="true" />{" "}
@@ -592,7 +662,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                       </div>
                     </div>
                     {["PENDING", "EXPIRED"].includes(invitation.status) && (
-                      <Button variant="outline" size="inherit" type="submit"
+                      <Button variant="outline" size="inherit" type="button"
                         className="secondary-button"
                         disabled={busy}
                         onClick={() =>
@@ -610,6 +680,9 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 ))}
               </ul>
             )}
+            <ListPagination label="Invitations pagination" page={invitationResults.page} pageCount={invitationResults.pageCount}
+              hasNext={invitationResults.hasNext} pending={busy}
+              onPrevious={() => setInvitationPage(invitationResults.page - 1)} onNext={() => setInvitationPage(invitationResults.page + 1)} />
           </section>
         </div>
         <section
@@ -701,7 +774,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                   readOnly
                   onFocus={(event) => event.target.select()}
                 />
-                <Button variant="outline" size="inherit" type="submit"
+                <Button variant="outline" size="inherit" type="button"
                   className="secondary-button"
                   onClick={() => void copy()}
                   disabled={copying || busy}

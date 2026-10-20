@@ -91,6 +91,25 @@ function setup(
   );
   return { ...render(view()), view };
 }
+it("pages a long history without changing range totals and resets for a new range", async () => {
+  vi.mocked(getDailyAnalytics).mockResolvedValue(fixtures("2026-10-01", "2026-10-31").daily);
+  const { rerender, view } = setup("2026-10-01", "2026-10-31");
+  const table = await screen.findByRole("table");
+  const pager = within(screen.getByRole("navigation", { name: "Sales history pagination" }));
+  expect(within(table).getAllByRole("row")).toHaveLength(27);
+  expect(table).toHaveTextContent("2026-10-01");
+  expect(table).not.toHaveTextContent("2026-10-31");
+  const total = within(table).getByRole("row", { name: /Range total/ }).textContent;
+  fireEvent.click(pager.getByRole("button", { name: "Next" }));
+  expect(table).toHaveTextContent("2026-10-31");
+  expect(table).not.toHaveTextContent("2026-10-01");
+  expect(within(table).getByRole("row", { name: /Range total/ }).textContent).toBe(total);
+  expect(pager.getByRole("button", { name: "Next" })).toBeDisabled();
+  vi.mocked(getDailyAnalytics).mockResolvedValue(fixtures("2026-10-01", "2026-10-02").daily);
+  rerender(view("2026-10-01", "2026-10-02"));
+  await waitFor(() => expect(screen.getByRole("table")).toHaveTextContent("2026-10-02"));
+  expect(screen.getByRole("navigation", { name: "Sales history pagination" })).toHaveTextContent("Page 1 of 1");
+});
 it("uses supplied dates and weighted average without adding another date picker", async () => {
   vi.mocked(getDailyAnalytics).mockResolvedValue(fixtures().daily);
   const { container } = setup();

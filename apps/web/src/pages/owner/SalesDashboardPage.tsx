@@ -1,3 +1,4 @@
+import { Table } from "../../components/ui/table";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { PageHeader } from "../../components/paserve/PageHeader";
@@ -643,13 +644,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
                   {custom ? "date range" : "business day"}.
                 </p>
               )}
-              <div
-                className="sales-payment-table-scroll"
-                tabIndex={0}
-                role="region"
-                aria-label="Payment method shares table"
-              >
-                <table className="sales-payment-table">
+              <Table containerClassName="sales-payment-table-scroll" scrollLabel="Payment method shares table" className="sales-payment-table">
                   <caption className="sr-only">
                     Sales and order counts by payment method
                   </caption>
@@ -733,8 +728,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
                       </td>
                     </tr>
                   </tfoot>
-                </table>
-              </div>
+                </Table>
               <p className="sales-panel-footnote">
                 Confirmed, paid, completed order totals only; cash tender/change
                 are excluded. Zero-value paid orders count toward order share.

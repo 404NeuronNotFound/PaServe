@@ -9,6 +9,7 @@ import "./accessibility.css";
 import "./components/ui/ui.css";
 import "./components/paserve/paserve.css";
 import "./components/forms/forms.css";
+import "./components/paserve/management.css";
 import "./menu-brand.css";
 import "./motion.css";
 

@@ -1,4 +1,5 @@
-import { Button } from "../../components/ui/button";
+import { StatusBadge } from "../../components/paserve/StatusBadge";
+import { ListPagination } from "../../components/paserve/ListPagination";
 import { OrderCard } from "../../components/paserve/OrderCard";
 import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -174,9 +175,9 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
                     tableNumber={order.tableNumber}
                   />
                   <div className="active-order-state">
-                    <span className="active-order-badge" data-state="COMPLETED">
+                    <StatusBadge className="active-order-badge" state="COMPLETED">
                       Fulfilled
-                    </span>
+                    </StatusBadge>
                     <span className="active-order-payment">
                       Confirmed · Paid
                     </span>
@@ -225,31 +226,18 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
           )}
         </>
       )}
-      <nav
+      <ListPagination
+        label="Completed orders pagination"
         className="active-orders-pagination"
-        aria-label="Completed orders pagination"
-      >
-        <Button variant="outline" size="inherit" type="submit"
-          className="secondary-button"
-          disabled={cursors.length === 1 || query.isFetching}
-          onClick={() => setCursors((values) => values.slice(0, -1))}
-        >
-          Previous
-        </Button>
-        <span>Page {cursors.length}</span>
-        <Button variant="outline" size="inherit" type="submit"
-          className="secondary-button"
-          disabled={
-            !query.isSuccess || !query.data.nextCursor || query.isFetching
-          }
-          onClick={() => {
-            if (query.isSuccess && query.data.nextCursor)
-              setCursors((values) => [...values, query.data.nextCursor]);
-          }}
-        >
-          Next
-        </Button>
-      </nav>
+        page={cursors.length}
+        hasNext={Boolean(query.isSuccess && query.data.nextCursor)}
+        pending={query.isFetching}
+        onPrevious={() => setCursors((values) => values.slice(0, -1))}
+        onNext={() => {
+          if (query.isSuccess && query.data.nextCursor)
+            setCursors((values) => [...values, query.data.nextCursor]);
+        }}
+      />
     </section>
   );
 }

@@ -1,4 +1,4 @@
-import { Button } from "../../components/ui/button";
+import { ListPagination } from "../../components/paserve/ListPagination";
 import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { OrderCard } from "../../components/paserve/OrderCard";
 import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
@@ -228,31 +228,18 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
           )}
         </>
       )}
-      <nav
+      <ListPagination
+        label="Active orders pagination"
         className="active-orders-pagination"
-        aria-label="Active orders pagination"
-      >
-        <Button variant="outline" size="inherit" type="submit"
-          className="secondary-button"
-          disabled={cursors.length === 1 || query.isFetching}
-          onClick={() => setCursors((values) => values.slice(0, -1))}
-        >
-          Previous
-        </Button>
-        <span>Page {cursors.length}</span>
-        <Button variant="outline" size="inherit" type="submit"
-          className="secondary-button"
-          disabled={
-            !query.isSuccess || !query.data.nextCursor || query.isFetching
-          }
-          onClick={() => {
-            if (query.isSuccess && query.data.nextCursor)
-              setCursors((values) => [...values, query.data.nextCursor]);
-          }}
-        >
-          Next
-        </Button>
-      </nav>
+        page={cursors.length}
+        hasNext={Boolean(query.isSuccess && query.data.nextCursor)}
+        pending={query.isFetching}
+        onPrevious={() => setCursors((values) => values.slice(0, -1))}
+        onNext={() => {
+          if (query.isSuccess && query.data.nextCursor)
+            setCursors((values) => [...values, query.data.nextCursor]);
+        }}
+      />
     </section>
   );
 }
