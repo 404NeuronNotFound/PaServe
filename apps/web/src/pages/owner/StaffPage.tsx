@@ -148,10 +148,12 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const client = useQueryClient();
   const heading = useRef<HTMLHeadingElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
+  const invitationEmail = useRef<HTMLInputElement>(null);
   const headingFocused = useRef(false);
   const mounted = useRef(false);
   const running = useRef(false);
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [role, setRole] = useState<StaffRole>("CASHIER");
   const [error, setError] = useState("");
   const [link, setLink] = useState("");
@@ -250,9 +252,12 @@ function StaffWorkspace({ userId }: { userId: string }) {
     event.preventDefault();
     const normalized = email.trim().toLowerCase();
     if (!isEmail(normalized) || normalized.length > 254) {
-      setError("Enter a valid email address.");
+      setError("");
+      setEmailError("Enter a valid email address.");
+      invitationEmail.current?.focus();
       return;
     }
+    setEmailError("");
     if (running.current) return;
     try {
       await run(async () => {
@@ -599,16 +604,23 @@ function StaffWorkspace({ userId }: { userId: string }) {
               <div className="field">
                 <label htmlFor="staff-email">Staff email address</label>
                 <input
+                  ref={invitationEmail}
                   id="staff-email"
                   type="email"
                   autoComplete="email"
                   maxLength={254}
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setEmailError("");
+                  }}
+                  aria-invalid={Boolean(emailError)}
+                  aria-describedby={emailError ? "staff-email-error" : undefined}
                   disabled={busy}
                   required
                   placeholder="name@example.com"
                 />
+                {emailError && <InlineMessage id="staff-email-error">{emailError}</InlineMessage>}
               </div>
               <SelectField
                 id="staff-role"

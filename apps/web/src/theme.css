@@ -5,7 +5,9 @@
   --color-primary: #243329;
   --color-primary-hover: #3b4e3b;
   --color-text: #243329;
-  --color-muted: #667063;
+  --color-muted: #5d675b;
+  --color-focus: #243329;
+  --color-control-border: #7c8777;
   --color-border: #d6d9cc;
   --color-lime: #c9ef83;
 }
@@ -1216,6 +1218,8 @@
   --color-secondary: #2a382b;
   --color-text: #edf1e5;
   --color-muted: #b5c2ad;
+  --color-focus: #c9ef83;
+  --color-control-border: #7c9174;
   --color-border: #3e503c;
   --color-error: #ffb3a4;
   --color-error-surface: #3e2725;

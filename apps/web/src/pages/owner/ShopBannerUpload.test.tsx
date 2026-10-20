@@ -134,6 +134,7 @@ it("rejects oversized and unsupported selections without uploading", () => {
   expect(
     screen.getByText("Choose a JPEG, PNG or WebP image."),
   ).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Replace banner" })).toHaveAccessibleDescription(/Choose a JPEG, PNG or WebP image\./);
   fireEvent.change(screen.getByLabelText(/Banner.*optional/), {
     target: {
       files: [

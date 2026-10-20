@@ -36,6 +36,7 @@ function OpenDecisionDialog({
 }: DecisionDialogProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
+  const errorSummary = useRef<HTMLParagraphElement>(null);
   const running = useRef(false);
   const active = useRef(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,6 +59,9 @@ function OpenDecisionDialog({
         previousFocus.focus();
     };
   }, []);
+  useEffect(() => {
+    if (error && !pending) errorSummary.current?.focus();
+  }, [error, pending]);
 
   function finishClose() {
     if (!active.current || closeTimer.current) return;
@@ -112,7 +116,7 @@ function OpenDecisionDialog({
       )}
       <h2 id={titleId}>{title}</h2>
       <p id={descriptionId}>{description}</p>
-      {error && <InlineMessage>{error}</InlineMessage>}
+      {error && <InlineMessage ref={errorSummary} tabIndex={-1}>{error}</InlineMessage>}
       <div className="feedback-dialog-actions">
         <button
           ref={cancel}

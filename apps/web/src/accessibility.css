@@ -1,0 +1,35 @@
+/* Focus color follows the actual light/dark surface, including the dark header. */
+.workspace-header,
+.welcome-panel {
+  --color-focus: var(--color-lime);
+}
+:root :is(a, button, input, textarea, select, summary, [tabindex="0"]):focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+.field input:not([type="checkbox"]):not([type="radio"]),
+.field textarea,
+.field select,
+.select-field-trigger,
+.menu-search {
+  border-color: var(--color-control-border);
+}
+:root [aria-invalid="true"]:is(input, textarea, select, button) {
+  border-color: var(--color-error);
+}
+@media (forced-colors: active) {
+  :root :is(a, button, input, textarea, select, summary, [tabindex="0"]):focus-visible {
+    outline-color: Highlight;
+    box-shadow: none;
+  }
+}
+/* Preserve state text and native scrolling; remove decorative movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

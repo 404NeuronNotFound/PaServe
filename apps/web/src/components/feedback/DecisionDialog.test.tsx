@@ -138,6 +138,9 @@ it("keeps action errors inside the dialog and lets the user retry", async () => 
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "The action could not be completed.",
   );
+  expect(screen.getByRole("alert")).toHaveFocus();
+  await user.tab();
+  expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
   expect(screen.queryByText("Sensitive details")).not.toBeInTheDocument();
   expect(screen.getByRole("dialog")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Delete" }));

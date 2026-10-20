@@ -163,6 +163,13 @@ it("keeps invalid emails out of the invitation API", async () => {
     screen.getByRole("button", { name: "Create invitation link" }),
   );
   expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
+  const email = screen.getByLabelText("Staff email address");
+  expect(email).toHaveFocus();
+  expect(email).toHaveAttribute("aria-invalid", "true");
+  expect(email).toHaveAccessibleDescription("Enter a valid email address.");
+  await user.type(email, "valid@example.com");
+  expect(email).toHaveAttribute("aria-invalid", "false");
+  expect(screen.queryByText("Enter a valid email address.")).not.toBeInTheDocument();
   expect(inviteStaff).not.toHaveBeenCalled();
 });
 

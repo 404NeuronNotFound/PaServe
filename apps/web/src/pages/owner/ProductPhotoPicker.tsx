@@ -92,7 +92,7 @@ export function ProductPhotoPicker({
         type="button"
         disabled={disabled || pending}
         aria-label={`${file || currentImageUrl ? "Replace" : "Choose"} ${kind === "product" ? "photo" : kind}`}
-        aria-describedby={`${id}-hint`}
+        aria-describedby={`${id}-hint${error ? ` ${id}-error` : ""}`}
         onClick={() => input.current?.click()}
         onDragOver={(event) => {
           event.preventDefault();

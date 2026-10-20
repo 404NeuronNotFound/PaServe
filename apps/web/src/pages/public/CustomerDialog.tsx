@@ -40,6 +40,8 @@ export function CustomerDialog({
       ref={ref}
       className={`customer-dialog ${className}`}
       aria-labelledby={titleId}
+      aria-modal="true"
+      aria-busy={pending}
       style={menuTheme(shop.primaryColor, shop.accentColor)}
       onCancel={(event) => {
         event.preventDefault();

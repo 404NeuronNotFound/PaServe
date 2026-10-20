@@ -52,11 +52,12 @@ it.each([
   ["staff", <StaffSkeleton />],
   ["forms", <FormSkeleton label="Loading settings" />],
 ])(
-  "announces %s loading once and hides placeholder content and actions",
+  "provides a quiet %s loading label and hides placeholder content and actions",
   (_, element) => {
     const { container } = render(element);
     expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(screen.getByRole("status").textContent).not.toBe("");
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "off");
     const shapes = container.querySelector('[aria-busy="true"]');
     expect(shapes).toHaveAttribute("aria-hidden", "true");
     expect(shapes).not.toContainElement(screen.getByRole("status"));

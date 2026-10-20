@@ -32,7 +32,8 @@ function LoadingRegion({
 }) {
   return (
     <div className={`loading-skeleton ${className}`}>
-      <span className="sr-only" role="status">
+      {/* Readable when explored, without a chorus of live updates as sections load. */}
+      <span className="sr-only" role="status" aria-live="off" aria-atomic="true">
         {label}
       </span>
       <div aria-busy="true" aria-hidden="true">

@@ -66,10 +66,15 @@ export function CustomizationEditor({
     [discard, setDiscard] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [moreSettings, setMoreSettings] = useState(false);
+  const [validationField, setValidationField] = useState<"name" | "price" | "order" | null>(null);
   const orderInput = useRef<HTMLInputElement>(null);
+  const priceInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (validation.startsWith("List position")) orderInput.current?.focus();
-  }, [validation, moreSettings]);
+    if (!validation || busy) return;
+    if (validationField === "order") orderInput.current?.focus();
+    else if (validationField === "price") priceInput.current?.focus();
+    else if (validationField === "name") nameInput.current?.focus();
+  }, [validation, validationField, moreSettings, busy]);
   const dirty = JSON.stringify(values) !== JSON.stringify(initial);
   const dialog = useRef<HTMLDialogElement>(null),
     nameInput = useRef<HTMLInputElement>(null);
@@ -111,6 +116,7 @@ export function CustomizationEditor({
     if (busy || blocked) return;
     const name = normalizeCatalogName(values.name, true);
     if (!isValidCatalogName(name, PRODUCT_VARIANT_LIMITS.nameMax, true)) {
+      setValidationField("name");
       setValidation(
         "Enter a name up to 80 characters without control characters.",
       );
@@ -121,6 +127,7 @@ export function CustomizationEditor({
       kind !== "group" &&
       !PRODUCT_PRICE_PATTERN.test(values.priceAdjustment)
     ) {
+      setValidationField("price");
       setValidation(
         "Enter an extra charge from 0 to 99999999.99, using up to two decimal places.",
       );
@@ -130,6 +137,7 @@ export function CustomizationEditor({
       !/^\d{1,7}$/.test(values.sortOrder) ||
       Number(values.sortOrder) > PRODUCT_VARIANT_LIMITS.sortOrderMax
     ) {
+      setValidationField("order");
       setValidation("List position must be a whole number from 0 to 1000000.");
       setMoreSettings(true);
       return;
@@ -139,10 +147,12 @@ export function CustomizationEditor({
       values.isDefault &&
       Number(values.priceAdjustment) !== 0
     ) {
+      setValidationField("price");
       setValidation("The default option must have an extra charge of 0.");
       return;
     }
     setValidation("");
+    setValidationField(null);
     await onSave({ ...values, name, sortOrder: Number(values.sortOrder) });
   }
   return (
@@ -156,7 +166,7 @@ export function CustomizationEditor({
           close();
         }}
       >
-        <form onSubmit={(event) => void submit(event)}>
+        <form noValidate aria-busy={busy} onSubmit={(event) => void submit(event)}>
           <header>
             <div>
               <p className="section-label">MENU CUSTOMIZATION</p>
@@ -190,6 +200,8 @@ export function CustomizationEditor({
             <input
               id={`${id}-name`}
               ref={nameInput}
+              aria-invalid={validationField === "name"}
+              aria-describedby={validationField === "name" ? `${id}-validation` : undefined}
               value={values.name}
               placeholder={
                 kind === "group"
@@ -199,7 +211,10 @@ export function CustomizationEditor({
                     : "e.g. Extra Shot or No Onions"
               }
               disabled={busy}
-              onChange={(e) => setValues({ ...values, name: e.target.value })}
+              onChange={(e) => {
+                setValues({ ...values, name: e.target.value });
+                if (validationField === "name") { setValidation(""); setValidationField(null); }
+              }}
               required
             />
             <span className="field-hint">
@@ -229,13 +244,16 @@ export function CustomizationEditor({
               <label htmlFor={`${id}-price`}>Extra charge (PHP)</label>
               <input
                 id={`${id}-price`}
+                ref={priceInput}
                 inputMode="decimal"
-                aria-describedby={`${id}-price-help`}
+                aria-invalid={validationField === "price"}
+                aria-describedby={`${id}-price-help${validationField === "price" ? ` ${id}-validation` : ""}`}
                 value={values.priceAdjustment}
                 disabled={busy || (kind === "variant" && values.isDefault)}
-                onChange={(e) =>
-                  setValues({ ...values, priceAdjustment: e.target.value })
-                }
+                onChange={(e) => {
+                  setValues({ ...values, priceAdjustment: e.target.value });
+                  if (validationField === "price") { setValidation(""); setValidationField(null); }
+                }}
                 required
               />
               <span className="field-hint" id={`${id}-price-help`}>
@@ -315,12 +333,14 @@ export function CustomizationEditor({
                 ref={orderInput}
                 id={`${id}-order`}
                 inputMode="numeric"
-                aria-describedby={`${id}-order-help`}
+                aria-invalid={validationField === "order"}
+                aria-describedby={`${id}-order-help${validationField === "order" ? ` ${id}-validation` : ""}`}
                 value={values.sortOrder}
                 disabled={busy}
-                onChange={(e) =>
-                  setValues({ ...values, sortOrder: e.target.value })
-                }
+                onChange={(e) => {
+                  setValues({ ...values, sortOrder: e.target.value });
+                  if (validationField === "order") { setValidation(""); setValidationField(null); }
+                }}
               />
               <span className="field-hint" id={`${id}-order-help`}>
                 Lower numbers appear first. For example: Regular 0, Medium 1,
@@ -329,7 +349,7 @@ export function CustomizationEditor({
             </div>
           </details>
           {(validation || error) && (
-            <InlineMessage>{validation || error}</InlineMessage>
+            <InlineMessage id={`${id}-validation`}>{validation || error}</InlineMessage>
           )}
           <footer>
             <div className="customization-footer-context">
