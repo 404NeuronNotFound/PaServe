@@ -1,0 +1,50 @@
+/* Shop colors decorate bounded surfaces; application text/surfaces stay neutral.
+   Load after shared controls and accessibility so Day/Night hover rules cannot
+   replace one half of a shop's contrast-tested foreground/background pair. */
+:root :is(.public-menu, .customer-dialog, .customer-order-page) .primary-button,
+:root :is(.public-menu, .customer-dialog, .customer-order-page) .primary-button:hover:not(:disabled) {
+  background: var(--menu-primary);
+  color: var(--menu-on-primary);
+  border-color: var(--color-control-border);
+}
+:root :is(.public-menu, .customer-dialog, .customer-order-page) .primary-button:hover:not(:disabled) {
+  opacity: 1;
+}
+:root .customer-cart-button,
+:root .customer-cart-button:hover:not(:disabled) {
+  background: var(--menu-primary);
+  color: var(--menu-on-primary);
+  border-color: var(--color-control-border);
+}
+:root .menu-category-nav a:hover,
+:root .menu-product-details-button:hover {
+  background: var(--menu-primary);
+  color: var(--menu-on-primary);
+  border-color: var(--color-control-border);
+}
+:root .menu-category-nav a:first-child {
+  background: var(--menu-accent);
+  color: var(--menu-on-accent);
+  border-color: var(--color-control-border);
+}
+:root .public-menu :is(.menu-category-nav a, .menu-product-details-button) {
+  border-color: var(--color-control-border);
+}
+:root .customer-cart-dialog .customer-order-mode label:has(input:checked) {
+  border-color: var(--color-control-border);
+}
+/* Two opaque rings remain visible on arbitrary brand colors and page surfaces.
+   Keep the full pair even when primary and accent are identical. */
+:root :is(.public-menu, .customer-dialog, .customer-order-page)
+  :is(a, button, input, textarea, select, summary, [tabindex="0"]):focus-visible {
+  outline: 3px solid #000000;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px #ffffff;
+}
+@media (forced-colors: active) {
+  :root :is(.public-menu, .customer-dialog, .customer-order-page)
+    :is(a, button, input, textarea, select, summary, [tabindex="0"]):focus-visible {
+    outline-color: Highlight;
+    box-shadow: none;
+  }
+}

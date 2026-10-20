@@ -1,22 +1,5 @@
-/* Color balance guides emphasis, not column widths.
-   Warm white is the canvas, sage provides context, green anchors actions. */
+/* Global element defaults. Visual tokens are owned by theme.css. */
 :root {
-  --color-canvas: #fafaf7;
-  --color-surface: #ffffff;
-  --color-secondary: #e4ebe4;
-  --color-primary: #284d3e;
-  --color-primary-hover: #203f33;
-  --color-text: #23352c;
-  --color-muted: #59665d;
-  --color-border: #c7d0c8;
-  --color-error: #a32f27;
-  --color-error-surface: #fff2ef;
-  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-  --space-1: 8px;
-  --space-2: 16px;
-  --space-3: 24px;
-  --space-4: 32px;
-  --space-6: 48px;
   font-family: var(--font-ui);
   color: var(--color-text);
   background: var(--color-canvas);
@@ -58,13 +41,13 @@ input {
   gap: 10px;
   width: fit-content;
   font-size: 23px;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   letter-spacing: -0.6px;
   text-decoration: none;
   color: var(--color-primary);
   align-self: start;
   margin-top: 0;
-  min-height: 44px;
+  min-height: var(--control-target-min);
 }
 .brand-icon {
   width: 25px;
@@ -74,7 +57,7 @@ input {
 }
 .welcome-panel {
   background: var(--color-secondary);
-  padding: 16px 24px;
+  padding: var(--spacing-4) var(--spacing-6);
 }
 .welcome-content {
   display: none;
@@ -86,15 +69,15 @@ input {
 }
 .section-label {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   color: var(--color-muted);
-  margin: 0 0 16px;
+  margin: 0 0 var(--spacing-4);
 }
 .welcome-content h2 {
   margin: 0;
   font-size: clamp(28px, 2.25vw, 36px);
   line-height: 1.22;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   letter-spacing: -1px;
 }
 .welcome-description {
@@ -106,7 +89,7 @@ input {
 }
 .form-panel {
   background: var(--color-canvas);
-  padding: 32px 24px 24px;
+  padding: var(--spacing-8) var(--spacing-6) var(--spacing-6);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -124,7 +107,7 @@ input {
   font-size: clamp(28px, 2.5vw, 36px);
   line-height: 1.25;
   letter-spacing: -0.8px;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   margin: 0;
 }
 .form-content > .section-label,
@@ -133,7 +116,7 @@ input {
 }
 .form-intro {
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.6;
   margin: var(--space-2) 0 var(--space-4);
 }
@@ -144,9 +127,9 @@ input {
 }
 .field label {
   display: block;
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 8px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--spacing-2);
 }
 .field input {
   display: block;
@@ -157,7 +140,7 @@ input {
   padding: 0 14px;
   color: var(--color-text);
   background: var(--color-surface);
-  font-size: 16px;
+  font-size: var(--text-md);
   transition: border-color 0.15s;
 }
 .field input::placeholder {
@@ -172,9 +155,9 @@ input {
   border-color: var(--color-error);
 }
 .field-hint {
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.6;
-  margin: 8px 0 0;
+  margin: var(--spacing-2) 0 0;
   color: var(--color-muted);
 }
 .field-error {
@@ -183,8 +166,8 @@ input {
   gap: 6px;
   color: var(--color-error);
   font-size: 13px;
-  line-height: 1.5;
-  margin: 8px 0 0;
+  line-height: var(--line-body);
+  margin: var(--spacing-2) 0 0;
 }
 .field-error svg {
   width: 15px;
@@ -223,23 +206,23 @@ input {
 }
 .primary-button {
   min-height: 50px;
-  padding: 13px 20px;
+  padding: 13px var(--spacing-5);
   margin-top: 2px;
   border: 0;
   border-radius: 6px;
-  background: var(--color-primary);
+  background: var(--color-action);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   transition: background 0.15s;
 }
 .primary-button:hover {
-  background: var(--color-primary-hover);
+  background: var(--color-action-hover);
 }
 .button-icon {
   width: 18px;
@@ -260,25 +243,25 @@ input:disabled,
 .form-error {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--spacing-2);
   color: var(--color-error);
   background: var(--color-error-surface);
   border: 1px solid #edc6be;
   border-radius: 6px;
-  padding: 12px;
+  padding: var(--spacing-3);
   font-size: 13px;
-  line-height: 1.5;
+  line-height: var(--line-body);
   margin: 0;
 }
 .form-error svg {
-  width: 18px;
-  height: 18px;
+  width: var(--icon-md);
+  height: var(--icon-md);
   flex-shrink: 0;
 }
 .account-note {
-  margin: 24px 0 0;
+  margin: var(--spacing-6) 0 0;
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.6;
   text-align: center;
 }
@@ -288,14 +271,14 @@ input:disabled,
   align-self: center;
   text-align: center;
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 .success-icon {
   display: block;
   color: var(--color-primary);
   width: 40px;
   height: 40px;
-  margin: 0 0 24px;
+  margin: 0 0 var(--spacing-6);
   stroke-width: 1.5;
 }
 .registration-success p {
@@ -306,17 +289,17 @@ input:disabled,
 }
 .registration-success strong {
   color: var(--color-text);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 .connection-page {
   margin: 64px auto;
-  padding: 32px;
+  padding: var(--spacing-8);
   max-width: 680px;
 }
 .connection-page h1 {
   font-size: 28px;
   line-height: 1.3;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   letter-spacing: -0.6px;
 }
 .connection-page p {
@@ -324,7 +307,7 @@ input:disabled,
 }
 .connection-page a {
   display: inline-block;
-  margin-top: 20px;
+  margin-top: var(--spacing-5);
   color: var(--color-primary);
   text-underline-offset: 4px;
 }
@@ -348,7 +331,7 @@ input:disabled,
   .welcome-panel {
     grid-column: 1;
     grid-row: 1 / -1;
-    padding: 0 clamp(24px, 4vw, 72px);
+    padding: 0 clamp(var(--spacing-6), 4vw, 72px);
     display: grid;
     grid-template-rows: subgrid;
   }
@@ -358,7 +341,7 @@ input:disabled,
   .form-panel {
     grid-column: 2;
     grid-row: 1 / -1;
-    padding: 0 clamp(32px, 5vw, 88px);
+    padding: 0 clamp(var(--spacing-8), 5vw, 88px);
     display: grid;
     grid-template-rows: subgrid;
   }
@@ -384,7 +367,7 @@ input:disabled,
   top: 8px;
   left: 8px;
   z-index: 10;
-  padding: 12px 16px;
+  padding: var(--spacing-3) var(--spacing-4);
   background: var(--color-primary);
   color: white;
   border-radius: 6px;

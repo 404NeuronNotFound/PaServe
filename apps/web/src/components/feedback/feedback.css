@@ -13,14 +13,14 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-2);
   max-width: 560px;
-  padding: 10px 12px 10px 16px;
+  padding: 10px var(--spacing-3) 10px var(--spacing-4);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
-  background: var(--color-surface);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-raised);
   color: var(--color-text);
-  box-shadow: 0 8px 32px #0003;
+  box-shadow: var(--shadow-toast);
   pointer-events: auto;
   animation: feedback-enter 220ms ease-out;
 }
@@ -31,8 +31,8 @@
   gap: 10px;
   flex: 1;
   margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--text-sm);
+  line-height: var(--line-body);
   overflow-wrap: anywhere;
   min-width: 0;
 }
@@ -47,16 +47,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 8px 12px;
+  min-width: var(--control-target-min);
+  min-height: var(--control-target-min);
+  padding: var(--spacing-2) var(--spacing-3);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: transparent;
   color: var(--color-text);
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
 }
 .feedback-action:hover,
@@ -64,7 +64,7 @@
   background: var(--color-secondary);
 }
 .feedback-dismiss {
-  padding: 8px;
+  padding: var(--spacing-2);
   border-color: transparent;
 }
 .feedback-action:disabled,
@@ -79,8 +79,8 @@
 .feedback-banner {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px max(16px, env(safe-area-inset-left));
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) max(var(--spacing-4), env(safe-area-inset-left));
   border-bottom: 1px solid var(--color-border);
   background: var(--color-secondary);
   color: var(--color-text);
@@ -94,7 +94,7 @@
 .feedback-inline {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--spacing-2);
   overflow-wrap: anywhere;
 }
 .feedback-inline > span {
@@ -106,15 +106,15 @@
   color: var(--color-text);
 }
 .feedback-inline.shop-created-status {
-  padding: 12px;
+  padding: var(--spacing-3);
   border-radius: 10px;
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 .feedback-action-error {
   flex-basis: 100%;
-  margin: 4px 0 0;
+  margin: var(--spacing-1) 0 0;
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 .feedback-dialog {
   box-sizing: border-box;
@@ -123,10 +123,10 @@
   overflow: auto;
   padding: 28px;
   border: 1px solid var(--color-border);
-  border-radius: 24px;
+  border-radius: var(--radius-dialog);
   color: var(--color-text);
-  background: var(--color-surface);
-  box-shadow: 0 20px 60px #0004;
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-dialog);
 }
 .feedback-dialog[open] {
   animation: feedback-dialog-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -147,7 +147,7 @@
   place-items: center;
   width: 48px;
   height: 48px;
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-5);
   border: 1px solid var(--color-border);
   border-radius: 15px;
   background: var(--color-secondary);
@@ -155,7 +155,7 @@
   font-size: 21px;
 }
 .feedback-dialog h2 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--spacing-3);
   font:
     400 28px Georgia,
     "Times New Roman",
@@ -172,11 +172,11 @@
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 24px;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-6);
 }
 .feedback-dialog-actions .secondary-button {
-  min-height: 44px;
+  min-height: var(--control-target-min);
   margin: 0;
 }
 @keyframes feedback-dialog-in {
@@ -216,7 +216,7 @@
 }
 .feedback-dialog-actions .primary-button {
   width: auto;
-  min-height: 44px;
+  min-height: var(--control-target-min);
   margin: 0;
 }
 .feedback-dialog-actions .feedback-destructive {
@@ -252,7 +252,7 @@
     width: 100%;
   }
   .feedback-dialog {
-    padding: 20px;
+    padding: var(--spacing-5);
   }
 }
 @keyframes feedback-enter {

@@ -10,11 +10,7 @@
   flex-shrink: 0;
   align-items: flex-start;
   padding: 28px 32px;
-  background: linear-gradient(
-    120deg,
-    color-mix(in srgb, var(--menu-accent) 8%, var(--color-surface)),
-    var(--color-surface) 75%
-  );
+  background: var(--color-surface);
 }
 .customer-cart-dialog .customer-dialog-eyebrow {
   margin: 0 0 8px;
@@ -60,7 +56,7 @@
   margin-bottom: 20px;
   border: 1px solid var(--color-border);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--menu-accent) 12%, var(--color-surface));
+  background: var(--color-surface);
   color: var(--color-text);
 }
 .customer-cart-empty-icon svg {
@@ -169,7 +165,7 @@
   align-items: center;
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--menu-accent) 12%, var(--color-surface));
+  background: var(--color-surface);
 }
 /* Outrank the shared dialog's full-width number input rule. */
 .customer-cart-dialog .customer-cart-quantity-form input[type="number"] {
@@ -231,7 +227,7 @@
   grid-row: 1;
   padding: 10px 12px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--menu-accent) 8%, var(--color-secondary));
+  background: var(--color-secondary);
 }
 .customer-cart-line-note > span {
   color: var(--color-muted);
@@ -340,9 +336,6 @@ form.customer-cart-notes {
   .customer-cart-dialog .secondary-button:hover:not(:disabled) {
     background: var(--color-secondary);
     color: var(--color-text);
-  }
-  .customer-cart-dialog .primary-button:hover:not(:disabled) {
-    filter: brightness(0.94);
   }
 }
 @media (max-width: 520px) {
@@ -483,7 +476,7 @@ form.customer-cart-notes {
     var(--menu-primary) 20%,
     var(--color-border)
   );
-  background: color-mix(in srgb, var(--menu-accent) 10%, var(--color-surface));
+  background: var(--color-surface);
 }
 .customer-cart-dialog .customer-dialog-heading h2 {
   letter-spacing: -0.035em;

@@ -46,6 +46,11 @@ it("falls back safely for missing and invalid colors", () => {
   for (const color of [null, undefined, "", "red", "#abc", "url(unsafe)"])
     expect(menuTheme(color)).toEqual(menuTheme("#243329"));
 });
+it("rejects malformed runtime colors without throwing or leaking style expressions", () => {
+  // API/cache data can be malformed despite the TypeScript response contract.
+  for (const color of [42, {}, ["#FFFFFF"], true, "#11223344", "var(--color-text)", "#000000; color:red"])
+    expect(menuTheme(color as string, color as string)).toEqual(menuTheme());
+});
 it("defaults and resets accent independently of primary color", () => {
   for (const color of [null, undefined, "", "red", "#abc", "url(unsafe)"])
     expect(menuTheme("#112233", color)).toMatchObject({

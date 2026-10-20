@@ -7,7 +7,7 @@ import {
 } from "@paserve/contracts";
 
 const validColor = (value: string | null | undefined, fallback: string) =>
-  value && isValidShopPrimaryColor(value)
+  typeof value === "string" && isValidShopPrimaryColor(value)
     ? normalizeShopPrimaryColor(value) || fallback
     : fallback;
 

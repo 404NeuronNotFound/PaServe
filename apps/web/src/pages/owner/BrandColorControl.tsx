@@ -91,7 +91,8 @@ export function BrandColorControl({
         </button>
       </div>
       <p className="field-hint">
-        Text contrast adjusts automatically. Fine-tune the hex value below.
+        Text contrast adjusts automatically. Menu backgrounds, fonts, and spacing
+        stay consistent. Fine-tune the hex value below.
       </p>
     </div>
   );

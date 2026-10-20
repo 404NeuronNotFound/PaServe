@@ -173,11 +173,7 @@
 .cart-review-notes {
   padding: 12px;
   border-radius: 10px;
-  background: color-mix(
-    in srgb,
-    var(--menu-accent, var(--color-lime)) 7%,
-    var(--color-canvas)
-  );
+  background: var(--color-canvas);
   white-space: pre-wrap;
 }
 .cart-review-notes svg {

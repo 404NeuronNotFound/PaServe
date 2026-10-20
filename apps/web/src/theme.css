@@ -1,4 +1,54 @@
 :root {
+  /* Phase 26 foundation. See docs/design-system.md#foundation. */
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, monospace;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-page-title: clamp(28px, 3vw, 44px);
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --line-heading: 1.2;
+  --line-control: 1.4;
+  --line-body: 1.5;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+  /* Preserve the older eight-pixel spacing names for existing consumers. */
+  --space-1: var(--spacing-2);
+  --space-2: var(--spacing-4);
+  --space-3: var(--spacing-6);
+  --space-4: var(--spacing-8);
+  --space-6: var(--spacing-12);
+  --radius-sm: 8px;
+  --radius-control: 11px;
+  --radius-inset: 12px;
+  --radius-panel: 14px;
+  --radius-card: 20px;
+  --radius-dialog: 24px;
+  --radius-pill: 999px;
+  --shadow-none: none;
+  --shadow-raised: 0 2px 6px #101c181a;
+  --shadow-control: 0 4px 12px #24332912;
+  --shadow-control-hover: 0 8px 18px #24332924;
+  --shadow-popover: 0 16px 40px #0003;
+  --shadow-toast: 0 8px 32px #0003;
+  --shadow-dialog: 0 20px 60px #0004;
+  --icon-sm: 16px;
+  --icon-md: 18px;
+  --icon-lg: 20px;
+  --icon-feature: 24px;
+  --control-target-min: 44px;
   --color-canvas: #f5f3ec;
   --color-surface: #fffefa;
   --color-secondary: #e9ecdf;
@@ -10,24 +60,32 @@
   --color-control-border: #7c8777;
   --color-border: #d6d9cc;
   --color-lime: #c9ef83;
+  --color-error: #a32f27;
+  --color-error-surface: #fff2ef;
+  /* Role aliases separate interaction colors from the fixed brand anchor. */
+  --color-action: var(--color-primary);
+  --color-action-hover: var(--color-primary-hover);
+  --color-on-action: #f8f7f1;
+  --color-surface-raised: var(--color-surface);
+  --color-on-brand: #f3f0e5;
 }
 .auth-page {
   display: grid;
   grid-template-columns: 1.12fr 1fr;
   grid-template-rows: 1fr;
   min-height: calc(100svh - 24px);
-  margin: 12px;
+  margin: var(--spacing-3);
   border: 1px solid var(--color-border);
-  border-radius: 24px;
+  border-radius: var(--radius-dialog);
   overflow: hidden;
 }
 .welcome-panel {
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 36px clamp(32px, 4.5vw, 72px) 28px;
+  padding: 36px clamp(var(--spacing-8), 4.5vw, 72px) 28px;
   background: var(--color-primary);
-  color: #f3f0e5;
+  color: var(--color-on-brand);
   overflow: hidden;
 }
 .wordmark {
@@ -73,25 +131,25 @@
 }
 .little-star {
   color: var(--color-lime);
-  font-size: 24px;
+  font-size: var(--text-2xl);
   line-height: 1;
 }
 .welcome-content h2 {
   max-width: 560px;
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display);
   font-size: clamp(58px, 6.8vw, 104px);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   letter-spacing: -4px;
   line-height: 0.95;
 }
 .welcome-content h2 em {
   color: var(--color-lime);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 .welcome-description {
   max-width: 360px;
-  margin: 24px 0 0;
+  margin: var(--spacing-6) 0 0;
   color: #ccd3c6;
   font-size: 15px;
   line-height: 1.75;
@@ -100,7 +158,7 @@
   position: relative;
   width: min(100%, 430px);
   height: 310px;
-  margin: 24px auto 14px;
+  margin: var(--spacing-6) auto 14px;
 }
 .coffee-art svg {
   position: absolute;
@@ -145,10 +203,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 24px;
+  margin-top: var(--spacing-6);
   padding-top: 18px;
   border-top: 1px solid #506049;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: #d1d9c9;
 }
 .welcome-footer svg {
@@ -167,11 +225,11 @@
 .form-topline {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--spacing-3);
   width: 100%;
   color: var(--color-muted);
   font-size: 9px;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   letter-spacing: 1.5px;
 }
 .edition-mark {
@@ -181,7 +239,7 @@
   width: 100%;
   max-width: 420px;
   margin: auto;
-  padding: 32px 0;
+  padding: var(--spacing-8) 0;
   align-self: auto;
 }
 .form-content > .section-label {
@@ -194,22 +252,22 @@
   line-height: 1.12;
 }
 .form-intro {
-  margin: 16px 0 30px;
-  font-size: 14px;
+  margin: var(--spacing-4) 0 30px;
+  font-size: var(--text-sm);
   line-height: 1.65;
 }
 .registration-form {
-  gap: 20px;
+  gap: var(--spacing-5);
 }
 .field label {
   margin-bottom: 9px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 .field input {
   height: 54px;
-  border-radius: 11px;
-  padding-inline: 16px;
+  border-radius: var(--radius-control);
+  padding-inline: var(--spacing-4);
   background: #fffefa;
   transition:
     border-color 150ms,
@@ -231,22 +289,22 @@
   padding-right: 58px;
 }
 .field-hint {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .password-toggle {
   top: 5px;
   right: 5px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 .primary-button {
   min-height: 54px;
-  margin-top: 4px;
+  margin-top: var(--spacing-1);
   padding: 14px 22px;
   gap: 14px;
-  border: 1px solid var(--color-primary);
-  border-radius: 11px;
-  color: #f8f7f1;
-  font-size: 14px;
+  border: 1px solid var(--color-action);
+  border-radius: var(--radius-control);
+  color: var(--color-on-action);
+  font-size: var(--text-sm);
   transition:
     background-color 240ms ease,
     transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -290,10 +348,10 @@
 }
 .account-note a {
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 .account-note + .account-note {
-  margin-top: 16px;
+  margin-top: var(--spacing-4);
   padding-top: 18px;
   border-top: 1px solid var(--color-border);
   font-size: 11px;
@@ -326,8 +384,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 24px 40px;
+  gap: var(--spacing-5);
+  padding: var(--spacing-6) 40px;
   background: var(--color-primary);
   color: #f3f0e5;
 }
@@ -343,9 +401,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 10px 16px;
+  gap: var(--spacing-2);
+  min-height: var(--control-target-min);
+  padding: 10px var(--spacing-4);
   border: 1px solid #718268;
   border-radius: 10px;
   background: transparent;
@@ -363,20 +421,20 @@
 .account-content {
   max-width: 1216px;
   margin: 0 auto;
-  padding: 48px 44px 30px;
+  padding: var(--spacing-12) 44px 30px;
   width: 100%;
 }
 .account-greeting h1 {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 400;
+  font-family: var(--font-display);
+  font-weight: var(--weight-regular);
   font-size: clamp(56px, 5.8vw, 88px);
   letter-spacing: -2px;
   line-height: 0.98;
 }
 .account-greeting > p:last-child {
   color: var(--color-muted);
-  margin: 24px 0 32px;
+  margin: var(--spacing-6) 0 var(--spacing-8);
 }
 .lime-period {
   color: #668629;
@@ -385,28 +443,28 @@
   display: inline-block;
   width: 7px;
   height: 7px;
-  margin-right: 8px;
+  margin-right: var(--spacing-2);
   border-radius: 50%;
   background: #65842d;
 }
 .account-grid {
   display: grid;
   grid-template-columns: 0.85fr 1.4fr;
-  gap: 24px;
-  margin-top: 24px;
+  gap: var(--spacing-6);
+  margin-top: var(--spacing-6);
 }
 .profile-card,
 .membership-card {
-  padding: 32px;
+  padding: var(--spacing-8);
   border: 1px solid var(--color-border);
-  border-radius: 20px;
+  border-radius: var(--radius-card);
   background: var(--color-surface);
   min-width: 0;
 }
 .card-heading {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--spacing-3);
   align-items: baseline;
 }
 .card-heading svg {
@@ -421,14 +479,14 @@
   place-items: center;
   width: 72px;
   height: 72px;
-  margin: 24px 0;
+  margin: var(--spacing-6) 0;
   border-radius: 22px;
   background: var(--color-lime);
-  font-family: Georgia, serif;
+  font-family: var(--font-display);
   font-size: 38px;
 }
 .account-grid h2 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--spacing-3);
   font-size: 25px;
   font-weight: 550;
   letter-spacing: -0.8px;
@@ -447,17 +505,17 @@
 }
 .profile-status {
   margin-top: 28px;
-  padding-top: 20px;
+  padding-top: var(--spacing-5);
   border-top: 1px solid var(--color-border);
   color: var(--color-muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .membership-card {
   background: #e8edda;
 }
 .empty-workspace {
-  margin-top: 32px;
-  padding: 30px 24px;
+  margin-top: var(--spacing-8);
+  padding: 30px var(--spacing-6);
   border: 1px dashed #b3bca5;
   border-radius: 13px;
   text-align: center;
@@ -469,17 +527,17 @@
 }
 .empty-workspace p {
   max-width: 280px;
-  margin: 16px auto 8px;
+  margin: var(--spacing-4) auto var(--spacing-2);
   font-size: 15px;
   line-height: 1.6;
 }
 .empty-workspace > span {
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 1.6;
   color: var(--color-muted);
 }
 .membership-list {
-  margin: 24px 0 0;
+  margin: var(--spacing-6) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -499,7 +557,7 @@
   width: 44px;
   height: 44px;
   flex-shrink: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-inset);
   background: var(--color-surface);
 }
 .membership-list strong {
@@ -511,14 +569,14 @@
   display: block;
   margin-top: 6px;
   color: var(--color-muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .workspace-footer {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  margin-top: 48px;
-  padding-top: 24px;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-12);
+  padding-top: var(--spacing-6);
   border-top: 1px solid var(--color-border);
   color: var(--color-muted);
   font-size: 11px;
@@ -526,13 +584,13 @@
 .workspace-footer > span:last-child {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-2);
   letter-spacing: 1px;
 }
 .skip-link {
   background: var(--color-lime);
   color: var(--color-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 .wordmark-period {
   color: var(--color-lime);
@@ -546,7 +604,7 @@
   margin-left: 0;
 }
 .brand-edition {
-  margin-top: 16px;
+  margin-top: var(--spacing-4);
   color: #c1cbbb;
   font-size: 9px;
   letter-spacing: 1.6px;
@@ -561,7 +619,7 @@
 }
 .welcome-description {
   max-width: 345px;
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 .art-disc {
   position: absolute;
@@ -609,9 +667,9 @@
   line-height: 2;
 }
 .art-stamp strong {
-  font-family: Georgia, serif;
+  font-family: var(--font-display);
   font-size: 21px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   font-style: italic;
 }
 .art-caption {
@@ -623,23 +681,23 @@
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 20px 0 8px;
+  padding: var(--spacing-5) 0 var(--spacing-2);
 }
 .note-number {
   align-self: flex-start;
-  margin-top: 4px;
-  font-family: Georgia, serif;
+  margin-top: var(--spacing-1);
+  font-family: var(--font-display);
   font-size: 26px;
   color: var(--color-lime);
 }
 .daily-note p {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: #ccd3c6;
   line-height: 1.7;
 }
 .daily-note strong {
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   color: #f3f0e5;
 }
 .daily-note svg {
@@ -660,24 +718,24 @@
 }
 .auth-tabs {
   display: flex;
-  padding: 4px;
+  padding: var(--spacing-1);
   gap: 3px;
   border: 1px solid #d6d9cc;
-  border-radius: 100px;
+  border-radius: var(--radius-pill);
   background: #e9ecdf;
 }
 .auth-tabs a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 8px 14px;
-  border-radius: 100px;
+  min-height: var(--control-target-min);
+  padding: var(--spacing-2) 14px;
+  border-radius: var(--radius-pill);
   text-decoration: none;
   color: #667063;
   font-size: 11px;
   letter-spacing: 0;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   white-space: nowrap;
 }
 .auth-tabs a.active {
@@ -693,7 +751,7 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-6);
   border: 1px solid #c3cfaa;
   border-radius: 50%;
   color: #243329;
@@ -705,7 +763,7 @@
 }
 .primary-button {
   justify-content: space-between;
-  padding-inline: 20px;
+  padding-inline: var(--spacing-5);
 }
 .primary-button .button-icon {
   padding: 3px;
@@ -732,12 +790,12 @@
 .workspace-sidebar {
   display: flex;
   flex-direction: column;
-  padding: 48px 22px 24px;
+  padding: var(--spacing-12) 22px var(--spacing-6);
   border-right: 1px solid var(--color-border);
 }
 .workspace-sidebar > .section-label {
   font-size: 9px;
-  padding-left: 12px;
+  padding-left: var(--spacing-3);
 }
 .workspace-sidebar nav {
   display: flex;
@@ -749,7 +807,7 @@
   align-items: center;
   gap: 10px;
   min-height: 46px;
-  padding: 12px;
+  padding: var(--spacing-3);
   border-radius: 10px;
   text-decoration: none;
   font-size: 13px;
@@ -773,7 +831,7 @@
 }
 .sidebar-note {
   margin-top: auto;
-  padding: 42px 12px 0;
+  padding: 42px var(--spacing-3) 0;
 }
 .sidebar-note > span {
   font-size: 64px;
@@ -781,12 +839,12 @@
   line-height: 1;
 }
 .sidebar-note p {
-  font-family: Georgia, serif;
+  font-family: var(--font-display);
   font-size: 17px;
-  line-height: 1.4;
+  line-height: var(--line-control);
 }
 .account-greeting h1 em {
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   color: #6b7d4a;
 }
 .workspace-summary {
@@ -802,9 +860,9 @@
   gap: 7px;
   align-items: center;
   min-height: 32px;
-  padding: 7px 12px;
+  padding: 7px var(--spacing-3);
   border: 1px solid #d6d9cc;
-  border-radius: 100px;
+  border-radius: var(--radius-pill);
   font-size: 11px;
   background: #fffefa;
   color: #596652;
@@ -829,7 +887,7 @@
   margin-bottom: 10px;
   background: #fffefa;
   border: 1px solid #d6deca;
-  border-radius: 12px;
+  border-radius: var(--radius-inset);
 }
 .membership-list li:last-child {
   border: 1px solid #d6deca;
@@ -853,14 +911,14 @@
   }
   .form-panel {
     overflow-y: auto;
-    padding-block: clamp(16px, 3svh, 28px);
+    padding-block: clamp(var(--spacing-4), 3svh, 28px);
   }
   .welcome-panel {
-    padding-block: clamp(16px, 3svh, 28px);
+    padding-block: clamp(var(--spacing-4), 3svh, 28px);
   }
   .welcome-content {
     min-height: 0;
-    padding-top: clamp(12px, 3svh, 28px);
+    padding-top: clamp(var(--spacing-3), 3svh, 28px);
   }
   .welcome-content h2 {
     font-size: clamp(52px, min(6.5vw, 10svh), 94px);
@@ -868,39 +926,39 @@
   .coffee-art {
     height: clamp(140px, 25svh, 250px);
     width: min(100%, 360px);
-    margin-block: 16px 10px;
+    margin-block: var(--spacing-4) 10px;
   }
   .daily-note {
-    padding-top: 12px;
+    padding-top: var(--spacing-3);
   }
   .welcome-footer {
-    margin-top: 16px;
-    padding-top: 12px;
+    margin-top: var(--spacing-4);
+    padding-top: var(--spacing-3);
   }
   .form-content {
     flex-shrink: 0;
-    padding-block: clamp(10px, 2svh, 20px);
+    padding-block: clamp(10px, 2svh, var(--spacing-5));
   }
   .form-emblem {
     width: 36px;
     height: 36px;
-    margin-bottom: 16px;
+    margin-bottom: var(--spacing-4);
   }
   .form-content h1 {
     font-size: clamp(28px, 2.8vw, 38px);
   }
   .form-intro {
-    margin-block: 12px 22px;
+    margin-block: var(--spacing-3) 22px;
   }
   .registration-form {
-    gap: 16px;
+    gap: var(--spacing-4);
   }
   .account-note {
-    margin-top: 16px;
+    margin-top: var(--spacing-4);
   }
   .account-note + .account-note {
-    margin-top: 12px;
-    padding-top: 12px;
+    margin-top: var(--spacing-3);
+    padding-top: var(--spacing-3);
   }
   .account-page {
     height: 100svh;
@@ -926,7 +984,7 @@
     grid-template-rows: minmax(0, 1fr);
   }
   .welcome-content {
-    padding-top: 12px;
+    padding-top: var(--spacing-3);
   }
   .coffee-art {
     height: clamp(130px, 23svh, 180px);
@@ -946,7 +1004,7 @@
     margin-block: 10px 18px;
   }
   .form-content > .section-label {
-    margin-bottom: 12px;
+    margin-bottom: var(--spacing-3);
   }
   .registration-form {
     gap: 14px;
@@ -963,32 +1021,32 @@
     padding-block: 10px;
   }
   .brand-edition {
-    margin-top: 8px;
+    margin-top: var(--spacing-2);
   }
   .daily-note {
-    padding-top: 8px;
+    padding-top: var(--spacing-2);
   }
   .art-stamp {
     width: 90px;
     height: 90px;
   }
   .art-stamp strong {
-    font-size: 18px;
+    font-size: var(--text-lg);
   }
   .workspace-header {
-    padding-block: 16px;
+    padding-block: var(--spacing-4);
   }
   .account-content {
-    padding-block: 24px 16px;
+    padding-block: var(--spacing-6) var(--spacing-4);
   }
   .account-greeting h1 {
     font-size: clamp(44px, 4.5vw, 60px);
   }
   .account-greeting > .section-label {
-    margin-bottom: 12px;
+    margin-bottom: var(--spacing-3);
   }
   .account-greeting > p:last-child {
-    margin-block: 14px 20px;
+    margin-block: 14px var(--spacing-5);
   }
   .workspace-summary {
     padding-bottom: 18px;
@@ -1004,20 +1062,20 @@
   .profile-avatar {
     width: 52px;
     height: 52px;
-    margin-block: 16px;
+    margin-block: var(--spacing-4);
     font-size: 28px;
   }
   .profile-status {
     margin-top: 18px;
-    padding-top: 12px;
+    padding-top: var(--spacing-3);
   }
   .empty-workspace {
-    margin-top: 20px;
-    padding: 20px 16px;
+    margin-top: var(--spacing-5);
+    padding: var(--spacing-5) var(--spacing-4);
   }
   .workspace-footer {
-    margin-top: 24px;
-    padding-top: 16px;
+    margin-top: var(--spacing-6);
+    padding-top: var(--spacing-4);
   }
 }
 @media (min-width: 761px) and (max-height: 650px) {
@@ -1027,20 +1085,20 @@
     display: none;
   }
   .form-panel {
-    padding-block: 12px;
+    padding-block: var(--spacing-3);
   }
   .form-content {
-    padding-block: 8px;
+    padding-block: var(--spacing-2);
   }
   .registration-form {
     gap: 10px;
   }
   .form-intro {
-    margin-block: 8px 12px;
+    margin-block: var(--spacing-2) var(--spacing-3);
   }
   .field-hint {
     margin-top: 5px;
-    line-height: 1.4;
+    line-height: var(--line-control);
   }
   .account-note {
     margin-top: 10px;
@@ -1057,7 +1115,7 @@
     grid-template-columns: 180px minmax(0, 1fr);
   }
   .workspace-sidebar {
-    padding-inline: 12px;
+    padding-inline: var(--spacing-3);
   }
   .account-content {
     padding-inline: 28px;
@@ -1085,7 +1143,7 @@
     border-radius: 0;
   }
   .welcome-panel {
-    padding: 18px 24px;
+    padding: 18px var(--spacing-6);
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
@@ -1096,7 +1154,7 @@
   .brand-symbol {
     width: 36px;
     height: 36px;
-    border-radius: 11px;
+    border-radius: var(--radius-control);
   }
   .welcome-content,
   .welcome-footer,
@@ -1110,10 +1168,10 @@
   }
   .form-panel {
     flex: 1;
-    padding: 26px 24px 24px;
+    padding: 26px var(--spacing-6) var(--spacing-6);
   }
   .form-content {
-    padding: 32px 0;
+    padding: var(--spacing-8) 0;
     margin-block: 0 auto;
   }
   .form-content h1 {
@@ -1121,7 +1179,7 @@
     letter-spacing: -1.2px;
   }
   .form-footer {
-    margin-top: 16px;
+    margin-top: var(--spacing-4);
   }
   .form-topline {
     max-width: 420px;
@@ -1138,13 +1196,13 @@
     flex: 1;
   }
   .form-emblem {
-    margin-bottom: 20px;
+    margin-bottom: var(--spacing-5);
   }
   .workspace-body {
     display: block;
   }
   .workspace-sidebar {
-    padding: 14px 20px;
+    padding: 14px var(--spacing-5);
     border-right: 0;
     border-bottom: 1px solid var(--color-border);
   }
@@ -1158,7 +1216,7 @@
   }
   .workspace-sidebar nav a {
     min-height: 42px;
-    padding: 10px 12px;
+    padding: 10px var(--spacing-3);
     font-size: 11px;
     white-space: nowrap;
     flex-shrink: 0;
@@ -1170,13 +1228,13 @@
     font-size: clamp(48px, 10vw, 64px);
   }
   .workspace-header {
-    padding: 18px 20px;
+    padding: 18px var(--spacing-5);
   }
   .workspace-label {
     display: none;
   }
   .account-content {
-    padding: 40px 20px 24px;
+    padding: 40px var(--spacing-5) var(--spacing-6);
   }
   .account-grid {
     grid-template-columns: 1fr;
@@ -1184,10 +1242,10 @@
   }
   .profile-card,
   .membership-card {
-    padding: 24px;
+    padding: var(--spacing-6);
   }
   .workspace-footer {
-    margin-top: 32px;
+    margin-top: var(--spacing-8);
   }
 }
 @media (max-width: 360px) {
@@ -1204,7 +1262,7 @@
     font-size: 31px;
   }
   .account-content {
-    padding-inline: 16px;
+    padding-inline: var(--spacing-4);
   }
 }
 /* Appearance and finishing details retain the compact viewport layout. */
@@ -1223,6 +1281,9 @@
   --color-border: #3e503c;
   --color-error: #ffb3a4;
   --color-error-surface: #3e2725;
+  --color-action: var(--color-lime);
+  --color-action-hover: #d7f5a1;
+  --color-on-action: #203027;
 }
 .appearance-toggle {
   position: relative;
@@ -1231,9 +1292,9 @@
   width: 128px;
   min-width: 128px;
   height: 44px;
-  padding: 4px;
+  padding: var(--spacing-1);
   border: 1px solid var(--color-border);
-  border-radius: 100px;
+  border-radius: var(--radius-pill);
   background: var(--color-secondary);
   color: var(--color-muted);
   cursor: pointer;
@@ -1258,9 +1319,9 @@
   position: absolute;
   inset: 4px auto 4px 4px;
   width: calc(50% - 4px);
-  border-radius: 100px;
+  border-radius: var(--radius-pill);
   background: #fffefa;
-  box-shadow: 0 2px 6px #101c181a;
+  box-shadow: var(--shadow-raised);
   transition:
     transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
     background-color 280ms ease;
@@ -1276,7 +1337,7 @@
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 .workspace-header .appearance-toggle {
   background: #304333;
@@ -1333,7 +1394,7 @@
 .form-content > .section-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-2);
 }
 .form-content > .section-label::before {
   content: "";
@@ -1349,10 +1410,10 @@
   box-shadow: 0 2px 3px #24332903;
 }
 .primary-button {
-  box-shadow: 0 4px 12px #24332912;
+  box-shadow: var(--shadow-control);
 }
 .primary-button:hover:not(:disabled) {
-  box-shadow: 0 8px 18px #24332924;
+  box-shadow: var(--shadow-control-hover);
   transform: translateY(-2px);
 }
 .primary-button:active:not(:disabled) {
@@ -1393,12 +1454,12 @@
 }
 :root[data-appearance="night"] .primary-button,
 :root[data-appearance="night"] .registration-success a {
-  background: var(--color-lime);
-  color: #203027;
-  border-color: var(--color-lime);
+  background: var(--color-action);
+  color: var(--color-on-action);
+  border-color: var(--color-action);
 }
 :root[data-appearance="night"] .primary-button:hover:not(:disabled) {
-  background: #d7f5a1;
+  background: var(--color-action-hover);
 }
 :root[data-appearance="night"] .primary-button .button-icon {
   border-color: #819b58;
@@ -1482,15 +1543,15 @@
     padding-inline: 10px;
   }
   .header-actions {
-    gap: 8px;
+    gap: var(--spacing-2);
   }
   .workspace-header .wordmark {
-    font-size: 20px;
+    font-size: var(--text-xl);
     gap: 7px;
   }
   .workspace-header .secondary-button {
     padding-inline: 10px;
-    font-size: 12px;
+    font-size: var(--text-xs);
   }
   .workspace-header .brand-symbol {
     width: 30px;
@@ -1498,7 +1559,7 @@
   }
   .workspace-header {
     gap: 10px;
-    padding-inline: 16px;
+    padding-inline: var(--spacing-4);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1521,30 +1582,30 @@
   min-height: 0;
   overflow: auto;
   max-width: 680px;
-  padding: 24px;
+  padding: var(--spacing-6);
 }
 .shop-create-card {
   overflow: visible;
 }
 .shop-create-card h1 {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display);
   font-size: clamp(30px, 4vw, 42px);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 .shop-create-card .registration-form {
-  gap: 16px;
+  gap: var(--spacing-4);
 }
 .shop-create-card .field textarea {
   display: block;
   width: 100%;
   min-height: 100px;
   resize: vertical;
-  padding: 12px 14px;
+  padding: var(--spacing-3) 14px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   font: inherit;
-  font-size: 16px;
+  font-size: var(--text-md);
   color: var(--color-text);
   background: var(--color-surface);
 }
@@ -1565,12 +1626,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  min-height: var(--control-target-min);
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 .shop-create-link {
-  margin-top: 16px;
+  margin-top: var(--spacing-4);
   color: var(--color-text);
   border-color: var(--color-border);
   text-decoration: none;
@@ -1583,18 +1644,18 @@
 }
 .shop-context-content {
   width: min(720px, calc(100% - 32px));
-  margin: 24px auto;
+  margin: var(--spacing-6) auto;
 }
 .shop-context-content h1 {
   overflow-wrap: anywhere;
-  font-family: Georgia, serif;
+  font-family: var(--font-display);
 }
 .shop-context-content p {
   line-height: 1.6;
 }
 .shop-settings-card h2 {
-  margin: 16px 0 12px;
-  font-size: 20px;
+  margin: var(--spacing-4) 0 var(--spacing-3);
+  font-size: var(--text-xl);
 }
 .shop-settings-card .shop-context-actions .primary-button {
   width: auto;
@@ -1608,7 +1669,7 @@
   color: var(--color-text);
 }
 .dashboard-header {
-  padding: 16px 24px;
+  padding: var(--spacing-4) var(--spacing-6);
   flex-shrink: 0;
 }
 .dashboard-header .wordmark {
@@ -1630,15 +1691,15 @@
   overflow-wrap: anywhere;
 }
 .dashboard-shop-control select {
-  min-height: 44px;
+  min-height: var(--control-target-min);
   width: 100%;
-  padding: 8px 12px;
+  padding: var(--spacing-2) var(--spacing-3);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
-  font-size: 16px;
+  font-size: var(--text-md);
 }
 .dashboard-body {
   display: grid;
@@ -1648,7 +1709,7 @@
 }
 .dashboard-sidebar {
   overflow-y: auto;
-  padding: 24px 16px;
+  padding: var(--spacing-6) var(--spacing-4);
   background: var(--color-primary);
   color: #f3f0e5;
 }
@@ -1662,15 +1723,15 @@
 }
 .dashboard-sidebar nav {
   display: grid;
-  gap: 8px;
-  margin-top: 24px;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-6);
 }
 .dashboard-sidebar nav a {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  padding: 12px;
+  gap: var(--spacing-3);
+  min-height: var(--control-target-min);
+  padding: var(--spacing-3);
   border-radius: 10px;
   color: #f3f0e5;
   text-decoration: none;
@@ -1681,7 +1742,7 @@
 .dashboard-sidebar nav a[aria-current="page"] {
   background: var(--color-lime);
   color: #243329;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 .dashboard-sidebar nav a:focus-visible,
 .dashboard-account-menu summary:focus-visible {
@@ -1695,7 +1756,7 @@
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  padding: 24px;
+  padding: var(--spacing-6);
 }
 .dashboard-content .shop-context-content {
   width: min(720px, 100%);
@@ -1703,12 +1764,12 @@
 }
 .dashboard-status {
   max-width: 720px;
-  margin: 24px auto;
+  margin: var(--spacing-6) auto;
   line-height: 1.6;
 }
 .dashboard-status .primary-button {
   width: auto;
-  margin: 12px 12px 12px 0;
+  margin: var(--spacing-3) var(--spacing-3) var(--spacing-3) 0;
 }
 .dashboard-account-menu {
   position: relative;
@@ -1716,9 +1777,9 @@
 .dashboard-account-menu summary {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 10px 12px;
+  gap: var(--spacing-2);
+  min-height: var(--control-target-min);
+  padding: 10px var(--spacing-3);
   border: 1px solid #718268;
   border-radius: 10px;
   list-style: none;
@@ -1736,10 +1797,10 @@
   max-height: calc(100svh - 100px);
   overflow-y: auto;
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--color-surface);
   color: var(--color-text);
   box-shadow: 0 8px 24px #0003;
@@ -1764,11 +1825,11 @@
   .dashboard-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: var(--spacing-3);
+    padding: var(--spacing-3) var(--spacing-4);
   }
   .dashboard-header .header-actions {
-    gap: 8px;
+    gap: var(--spacing-2);
   }
   .dashboard-shop-control {
     grid-column: 1 / -1;
@@ -1782,13 +1843,13 @@
   .dashboard-navigation-toggle {
     display: inline-flex;
     align-self: flex-start;
-    margin: 12px 16px;
+    margin: var(--spacing-3) var(--spacing-4);
     flex-shrink: 0;
   }
   .dashboard-sidebar {
     flex-shrink: 0;
     max-height: 40svh;
-    padding: 12px 16px;
+    padding: var(--spacing-3) var(--spacing-4);
   }
   .dashboard-sidebar[data-open="false"] {
     display: none;
@@ -1803,7 +1864,7 @@
   }
   .dashboard-content {
     flex: 1;
-    padding: 4px 16px 24px;
+    padding: var(--spacing-1) var(--spacing-4) var(--spacing-6);
   }
 }
 @media (max-width: 420px) {
@@ -1815,7 +1876,7 @@
   list-style: none;
   padding: 0;
   display: grid;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 .shop-selection-list .secondary-button {
   display: flex;
@@ -1827,15 +1888,15 @@
 .shop-context-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 24px;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-6);
 }
 .shop-context-content .secondary-button,
 .membership-list .secondary-button,
 .shop-context-error .secondary-button {
   color: var(--color-text);
   border-color: var(--color-border);
-  min-height: 44px;
+  min-height: var(--control-target-min);
 }
 .shop-context-content .secondary-button:hover,
 .membership-list .secondary-button:hover,
@@ -1856,10 +1917,10 @@
   }
   .shop-create-content {
     overflow: visible;
-    padding: 20px 16px;
+    padding: var(--spacing-5) var(--spacing-4);
   }
   .shop-create-card {
-    padding: 20px;
+    padding: var(--spacing-5);
   }
 }
 
@@ -1882,20 +1943,20 @@
   grid-template-columns: 248px minmax(0, 1fr);
 }
 .phase-two .workspace-sidebar {
-  padding: 32px 20px 24px;
+  padding: var(--spacing-8) var(--spacing-5) var(--spacing-6);
   background: var(--color-surface);
 }
 .phase-two .account-content {
   max-width: none;
   margin: 0;
-  padding: 32px clamp(24px, 3vw, 56px);
+  padding: var(--spacing-8) clamp(var(--spacing-6), 3vw, 56px);
 }
 .phase-two .account-hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 32px;
-  margin-bottom: 24px;
+  gap: var(--spacing-8);
+  margin-bottom: var(--spacing-6);
 }
 .phase-two .account-greeting h1 {
   font-size: clamp(44px, 4.1vw, 68px);
@@ -1910,10 +1971,10 @@
   display: grid;
   grid-template-columns: 80px minmax(0, 1fr);
   align-items: center;
-  gap: 16px;
-  padding: 24px;
+  gap: var(--spacing-4);
+  padding: var(--spacing-6);
   border: 1px solid var(--color-border);
-  border-radius: 24px;
+  border-radius: var(--radius-dialog);
   background: var(--color-secondary);
 }
 .phase-two .hero-coffee-mark {
@@ -1928,7 +1989,7 @@
 }
 .phase-two .account-hero-action p {
   margin: 0;
-  font-family: Georgia, serif;
+  font-family: var(--font-display);
   font-size: 23px;
   line-height: 1.3;
 }
@@ -1938,18 +1999,18 @@
   width: 100%;
 }
 .phase-two .workspace-summary {
-  padding-bottom: 20px;
+  padding-bottom: var(--spacing-5);
 }
 .phase-two .workspace-summary > span {
   background: var(--color-surface);
   color: var(--color-muted);
   border-color: var(--color-border);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .phase-two .account-grid {
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
   align-items: start;
-  gap: 24px;
+  gap: var(--spacing-6);
 }
 .phase-two .account-grid > .profile-card {
   padding: 28px;
@@ -1964,15 +2025,15 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  margin-top: 24px;
+  margin-top: var(--spacing-6);
 }
 .phase-two .membership-list li,
 .phase-two .membership-list li:last-child {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
   align-items: start;
-  gap: 12px;
-  padding: 20px;
+  gap: var(--spacing-3);
+  padding: var(--spacing-5);
   margin: 0;
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -1990,15 +2051,15 @@
   font-size: 17px;
 }
 .phase-two .membership-list .membership-slug {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   overflow-wrap: anywhere;
 }
 .phase-two .membership-list .secondary-button {
   grid-column: 2;
   justify-self: start;
-  margin: 4px 0 0;
-  padding: 8px 14px;
+  margin: var(--spacing-1) 0 0;
+  padding: var(--spacing-2) 14px;
 }
 .phase-two .shop-icon {
   background: var(--color-secondary);
@@ -2009,7 +2070,7 @@
   padding-top: 18px;
 }
 .phase-two .dashboard-content {
-  padding: 32px clamp(24px, 3vw, 56px);
+  padding: var(--spacing-8) clamp(var(--spacing-6), 3vw, 56px);
 }
 .phase-two .dashboard-content .shop-context-content {
   width: 100%;
@@ -2046,20 +2107,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 32px;
-  padding: clamp(24px, 3vw, 48px);
+  gap: var(--spacing-8);
+  padding: clamp(var(--spacing-6), 3vw, var(--spacing-12));
   border: 1px solid var(--color-border);
-  border-radius: 24px;
+  border-radius: var(--radius-dialog);
   background: var(--color-secondary);
 }
 .phase-two .shop-overview-hero > div {
   min-width: 0;
 }
 .phase-two .shop-overview h1 {
-  margin: 12px 0 16px;
+  margin: var(--spacing-3) 0 var(--spacing-4);
   font-size: clamp(38px, 4.6vw, 72px);
   line-height: 1.08;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   letter-spacing: -2px;
 }
 .phase-two .shop-overview-intro {
@@ -2089,9 +2150,9 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px 24px;
-  padding: 20px 4px;
-  margin: 12px 0 24px;
+  gap: var(--spacing-4) var(--spacing-6);
+  padding: var(--spacing-5) var(--spacing-1);
+  margin: var(--spacing-3) 0 var(--spacing-6);
   border-bottom: 1px solid var(--color-border);
 }
 .phase-two .shop-overview-address .section-label {
@@ -2099,8 +2160,8 @@
 }
 .phase-two .shop-overview-address strong {
   overflow-wrap: anywhere;
-  font-family: ui-monospace, monospace;
-  font-size: 14px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
 }
 .phase-two .shop-overview-address > span:last-child {
   color: var(--color-muted);
@@ -2110,7 +2171,7 @@
 .phase-two .shop-overview-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
-  gap: 20px;
+  gap: var(--spacing-5);
 }
 .phase-two .shop-action-card {
   position: relative;
@@ -2120,7 +2181,7 @@
   padding: 28px;
   min-width: 0;
   border: 1px solid var(--color-border);
-  border-radius: 20px;
+  border-radius: var(--radius-card);
   text-decoration: none;
   background: var(--color-surface);
   color: var(--color-text);
@@ -2131,16 +2192,16 @@
   box-shadow: 0 10px 28px #0000000b;
 }
 .phase-two .shop-action-card .section-label {
-  margin: 4px 0 0;
+  margin: var(--spacing-1) 0 0;
   font-size: 10px;
 }
 .phase-two .shop-action-card strong {
-  font-size: 24px;
+  font-size: var(--text-2xl);
   letter-spacing: -0.7px;
 }
 .phase-two .shop-action-card > span:last-of-type {
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.6;
 }
 .phase-two .shop-action-icon {
@@ -2148,7 +2209,7 @@
   place-items: center;
   width: 48px;
   height: 48px;
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--color-secondary);
   font-size: 22px;
 }
@@ -2161,13 +2222,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 12px 18px;
-  border-radius: 11px;
-  font-size: 14px;
+  gap: var(--spacing-2);
+  min-height: var(--control-target-min);
+  padding: var(--spacing-3) 18px;
+  border-radius: var(--radius-control);
+  font-size: var(--text-sm);
   font-weight: 550;
-  line-height: 1.4;
+  line-height: var(--line-control);
   white-space: normal;
 }
 /* This control is mobile-only; shared button styles must not expose it in
@@ -2180,14 +2241,14 @@
 }
 .phase-two .dashboard-sidebar {
   min-width: 0;
-  padding: 28px 20px;
+  padding: 28px var(--spacing-5);
 }
 .phase-two .dashboard-sidebar-identity {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 20px;
-  padding-bottom: 24px;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-5);
+  padding-bottom: var(--spacing-6);
   border-bottom: 1px solid var(--color-border);
 }
 .dashboard-sidebar-identity > div {
@@ -2195,8 +2256,8 @@
   overflow-wrap: anywhere;
 }
 .dashboard-sidebar-identity strong {
-  font-size: 16px;
-  line-height: 1.4;
+  font-size: var(--text-md);
+  line-height: var(--line-control);
 }
 .dashboard-sidebar-emblem {
   display: grid;
@@ -2205,25 +2266,25 @@
   height: 44px;
   flex-shrink: 0;
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--color-secondary);
-  font-size: 20px;
+  font-size: var(--text-xl);
 }
 .dashboard-sidebar-identity .dashboard-shop-role {
-  margin: 4px 0 0;
-  font-size: 12px;
+  margin: var(--spacing-1) 0 0;
+  font-size: var(--text-xs);
 }
 .phase-two .dashboard-sidebar nav a {
   transition: background 220ms ease, color 220ms ease;
 }
 .dashboard-sidebar nav a svg {
   flex-shrink: 0;
-  font-size: 18px;
+  font-size: var(--text-lg);
 }
 .dashboard-header {
   position: relative;
   z-index: 10;
-  gap: 24px;
+  gap: var(--spacing-6);
 }
 .dashboard-shop-menu {
   position: relative;
@@ -2232,11 +2293,11 @@
 .dashboard-shop-menu summary {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-3);
   min-height: 56px;
-  padding: 8px 12px;
+  padding: var(--spacing-2) var(--spacing-3);
   border: 1px solid #718268;
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: #ffffff08;
   color: #fffefa;
   list-style: none;
@@ -2266,8 +2327,8 @@
   font-size: 11px;
 }
 .dashboard-switcher-label strong {
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: var(--text-sm);
+  line-height: var(--line-control);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2297,7 +2358,7 @@
 .dashboard-dropdown-panel {
   transform-origin: top right;
   animation: dashboard-dropdown-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  box-shadow: 0 16px 40px #0003;
+  box-shadow: var(--shadow-popover);
 }
 .dashboard-dropdown-panel .section-label {
   color: var(--color-muted);
@@ -2314,7 +2375,7 @@
   overflow-y: auto;
   display: grid;
   gap: 6px;
-  padding: 12px;
+  padding: var(--spacing-3);
   border: 1px solid var(--color-border);
   border-radius: 16px;
   background: var(--color-surface);
@@ -2330,10 +2391,10 @@
 .dashboard-shop-panel button {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-3);
   width: 100%;
   min-height: 60px;
-  padding: 12px 10px;
+  padding: var(--spacing-3) 10px;
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
@@ -2351,13 +2412,13 @@
 }
 .dashboard-shop-panel button > span:not(.shop-logo) {
   display: grid;
-  gap: 4px;
+  gap: var(--spacing-1);
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .dashboard-shop-panel button small {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-muted);
 }
 .dashboard-shop-panel button > svg {
@@ -2372,7 +2433,7 @@
     display: inline-flex;
   }
   .phase-two .dashboard-sidebar {
-    padding: 12px 16px;
+    padding: var(--spacing-3) var(--spacing-4);
     border-right: 0;
     border-bottom: 1px solid var(--color-border);
   }
@@ -2421,7 +2482,7 @@
 .phase-two .account-grid .card-heading {
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-4);
 }
 .phase-two .account-grid .shop-create-link {
   width: auto;
@@ -2435,7 +2496,7 @@
 }
 .phase-two .field-character-count {
   display: block;
-  margin-top: 4px;
+  margin-top: var(--spacing-1);
   text-align: right;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
@@ -2445,16 +2506,16 @@
   display: grid;
   grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr);
   align-items: start;
-  gap: clamp(32px, 5vw, 80px);
+  gap: clamp(var(--spacing-8), 5vw, 80px);
   max-width: 1280px;
   margin: 0 auto;
-  padding: 40px clamp(24px, 3vw, 48px);
+  padding: 40px clamp(var(--spacing-6), 3vw, var(--spacing-12));
 }
 .phase-two .shop-onboarding-intro {
-  padding: 24px 0;
+  padding: var(--spacing-6) 0;
 }
 .phase-two .shop-onboarding-intro h2 {
-  margin: 20px 0;
+  margin: var(--spacing-5) 0;
   font: 400 clamp(44px, 4.6vw, 68px)/1.06 Georgia, serif;
   letter-spacing: -2px;
 }
@@ -2468,7 +2529,7 @@
 }
 .phase-two .shop-onboarding-intro ol {
   display: grid;
-  gap: 24px;
+  gap: var(--spacing-6);
   padding: 0;
   margin: 36px 0;
   list-style: none;
@@ -2476,7 +2537,7 @@
 .phase-two .shop-onboarding-intro li {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: var(--spacing-4);
 }
 .phase-two .shop-onboarding-intro li > span {
   display: grid;
@@ -2486,19 +2547,19 @@
   height: 40px;
   border: 1px solid var(--color-border);
   border-radius: 50%;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .phase-two .shop-onboarding-intro li p {
   margin: 6px 0 0;
   font-size: 13px;
   color: var(--color-muted);
-  line-height: 1.5;
+  line-height: var(--line-body);
 }
 .phase-two .onboarding-signature {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-top: 24px;
+  gap: var(--spacing-3);
+  padding-top: var(--spacing-6);
   border-top: 1px solid var(--color-border);
   font-size: 10px;
   letter-spacing: 1.3px;
@@ -2508,27 +2569,27 @@
   width: calc(100% - 64px);
   max-width: 1280px;
   padding: 36px;
-  margin: 32px auto;
+  margin: var(--spacing-8) auto;
   background: var(--color-surface);
 }
 .phase-two.shop-selection-page h1 {
-  margin: 12px 0;
+  margin: var(--spacing-3) 0;
   font-size: clamp(36px, 4vw, 56px);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   letter-spacing: -1.5px;
 }
 .phase-two .shop-selection-list {
   grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-  gap: 16px;
-  margin: 32px 0;
+  gap: var(--spacing-4);
+  margin: var(--spacing-8) 0;
 }
 .phase-two .shop-selection-list .secondary-button {
   min-height: 112px;
-  padding: 24px;
-  gap: 16px;
+  padding: var(--spacing-6);
+  gap: var(--spacing-4);
   border-radius: 16px;
   background: var(--color-secondary);
-  font-size: 18px;
+  font-size: var(--text-lg);
   color: var(--color-text);
 }
 .phase-two .shop-selection-list .secondary-button:hover {
@@ -2536,19 +2597,19 @@
 }
 .phase-two .shop-selection-role {
   display: block;
-  margin-top: 8px;
-  font-size: 12px;
-  line-height: 1.5;
+  margin-top: var(--spacing-2);
+  font-size: var(--text-xs);
+  line-height: var(--line-body);
   color: var(--color-muted);
 }
 .phase-two .shop-settings-card {
-  padding: clamp(24px, 3vw, 40px);
+  padding: clamp(var(--spacing-6), 3vw, 40px);
   border-top: 3px solid #89a65a;
 }
 .phase-two .settings-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 28px;
+  gap: var(--spacing-5) 28px;
 }
 .phase-two .settings-group-heading,
 .phase-two .settings-field-wide,
@@ -2559,17 +2620,17 @@
   grid-column: 1 / -1;
 }
 .phase-two .settings-group-heading {
-  margin: 16px 0 0;
-  padding-top: 24px;
+  margin: var(--spacing-4) 0 0;
+  padding-top: var(--spacing-6);
   border-top: 1px solid var(--color-border);
 }
 .phase-two .settings-field {
   min-width: 0;
 }
 .phase-two .settings-branding {
-  padding: 20px 24px;
+  padding: var(--spacing-5) var(--spacing-6);
   border: 1px dashed var(--color-border);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--color-secondary);
 }
 .phase-two .settings-branding h2 {
@@ -2580,7 +2641,7 @@
   bottom: -24px;
   align-items: center;
   margin: 0 -12px -12px;
-  padding: 16px 12px;
+  padding: var(--spacing-4) var(--spacing-3);
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
 }
@@ -2604,7 +2665,7 @@
   .phase-two .hero-coffee-mark {
     width: 56px;
     height: 56px;
-    font-size: 24px;
+    font-size: var(--text-2xl);
   }
   .phase-two .account-hero-action p {
     font-size: 19px;
@@ -2620,11 +2681,11 @@
     font-size: 44px;
   }
   .phase-two .account-hero-action {
-    padding: 16px;
+    padding: var(--spacing-4);
   }
   .phase-two .account-content,
   .phase-two .dashboard-content {
-    padding-top: 24px;
+    padding-top: var(--spacing-6);
   }
   .phase-two .shop-onboarding-intro {
     padding-top: 0;
@@ -2635,33 +2696,33 @@
 }
 @media (max-width: 760px) {
   .phase-two .workspace-header {
-    padding: 14px 16px;
+    padding: 14px var(--spacing-4);
   }
   .phase-two .workspace-body {
     display: block;
   }
   .phase-two .workspace-sidebar {
-    padding: 12px 16px;
+    padding: var(--spacing-3) var(--spacing-4);
   }
   .phase-two .account-content {
-    padding: 24px 16px;
+    padding: var(--spacing-6) var(--spacing-4);
   }
   .phase-two .account-grid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: var(--spacing-5);
   }
   .phase-two .account-grid > .profile-card,
   .phase-two .account-grid > .membership-card {
-    padding: 24px;
+    padding: var(--spacing-6);
   }
   .phase-two .account-greeting h1 {
     font-size: 44px;
   }
   .phase-two .dashboard-content {
-    padding: 8px 16px 24px;
+    padding: var(--spacing-2) var(--spacing-4) var(--spacing-6);
   }
   .phase-two .shop-overview-hero {
-    padding: 24px;
+    padding: var(--spacing-6);
   }
   .phase-two .shop-overview-emblem {
     display: none;
@@ -2671,16 +2732,16 @@
   }
   .phase-two .shop-create-content {
     grid-template-columns: 1fr;
-    gap: 24px;
-    padding: 24px 16px;
+    gap: var(--spacing-6);
+    padding: var(--spacing-6) var(--spacing-4);
     overflow: visible;
   }
   .phase-two .shop-onboarding-intro {
-    padding: 0 8px;
+    padding: 0 var(--spacing-2);
   }
   .phase-two .shop-onboarding-intro h2 {
     font-size: 42px;
-    margin: 12px 0;
+    margin: var(--spacing-3) 0;
   }
   .phase-two .shop-onboarding-intro ol,
   .phase-two .onboarding-signature {
@@ -2688,12 +2749,12 @@
   }
   .phase-two.shop-selection-page .shop-context-content {
     width: calc(100% - 32px);
-    padding: 24px;
-    margin: 24px auto;
+    padding: var(--spacing-6);
+    margin: var(--spacing-6) auto;
   }
   .phase-two .settings-form-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: var(--spacing-4);
   }
   .phase-two .settings-savebar > span {
     width: 100%;
@@ -2701,15 +2762,15 @@
 }
 .shop-color-picker {
   max-width: 96px;
-  min-height: 44px;
+  min-height: var(--control-target-min);
   cursor: pointer;
 }
 .shop-settings-card .field select {
   width: 100%;
   min-height: 48px;
-  padding: 12px 16px;
+  padding: var(--spacing-3) var(--spacing-4);
   border: 1px solid var(--color-border);
-  border-radius: 11px;
+  border-radius: var(--radius-control);
   font: inherit;
   color: var(--color-text);
   background: var(--color-surface);
