@@ -4,6 +4,7 @@ import "./index.css";
 import "./theme.css";
 import "./components/feedback/feedback.css";
 import App from "./App.tsx";
+import "./responsive.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

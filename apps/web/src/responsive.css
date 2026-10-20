@@ -1,0 +1,146 @@
+/* Shared screen behavior; printing keeps its independent receipt/QR layout. */
+@media screen {
+  :is(.tables-page, .categories-page, .staff-workspace, .shop-settings-card,
+    .cashier-workspace, .kitchen-workspace) {
+    container: workspace / inline-size;
+  }
+  #root:has(.dashboard-shell) {
+    height: var(--app-viewport-height, 100dvh);
+  }
+  .dashboard-shell.dashboard-shell {
+    height: calc(var(--app-viewport-height, 100dvh) - var(--feedback-banner-height, 0px));
+  }
+  dialog:is(.customer-dialog, .category-edit-dialog, .customization-dialog,
+    .feedback-dialog, .brand-crop-dialog, .table-qr-dialog, .menu-preview-dialog,
+    .kitchen-details) {
+    position: fixed;
+    top: var(--app-viewport-top, 0px);
+    bottom: max(0px, calc(100% - var(--app-viewport-top, 0px) - var(--app-viewport-height, 100dvh)));
+    margin-block: auto;
+    max-height: calc(var(--app-viewport-height, 100dvh) - 24px);
+    max-width: calc(100% - 24px);
+    overscroll-behavior: contain;
+    scroll-padding-block: 16px;
+  }
+  .customer-dialog :is(input, textarea),
+  .dashboard-content :is(input, textarea) {
+    scroll-margin-block: 24px;
+  }
+  .customer-dialog .customer-dialog-footer {
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  }
+  .customer-cart-dialog .customer-dialog-footer {
+    max-height: calc(var(--app-viewport-height, 100dvh) * 0.55);
+  }
+  /* One scroll surface keeps the form and its actions reachable above a keyboard
+     or in landscape. Fixed headers/footers must not squeeze the body to zero. */
+  :root[data-short-viewport] .customer-dialog.customer-dialog[open] {
+    display: block;
+    overflow: auto;
+  }
+  :root[data-short-viewport] .product-details-dialog > form,
+  :root[data-short-viewport] .customer-dialog .customer-dialog-body {
+    display: block;
+    overflow: visible;
+  }
+  :root[data-short-viewport] .customer-dialog .customer-dialog-footer {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+  :root[data-short-viewport] .menu-browse-bar,
+  :root[data-short-viewport] .kitchen-state-switch,
+  :root[data-short-viewport] .customization-dialog footer,
+  :root[data-short-viewport] .phase-two .settings-savebar,
+  :root[data-short-viewport] .categories-create-panel {
+    position: static;
+  }
+  :root[data-short-viewport] .phase-two .scanner-preview {
+    min-height: 160px;
+    height: 45dvh;
+    height: calc(var(--app-viewport-height, 100dvh) * 0.45);
+    max-height: 260px;
+  }
+  :root[data-short-viewport] .phase-two .scanner-viewfinder {
+    width: auto;
+    height: 75%;
+  }
+}
+
+/* The sidebar reduces the available width even on a desktop-size viewport. */
+@container workspace (max-width: 780px) {
+  .tables-layout,
+  .categories-layout,
+  .settings-assets,
+  .phase-two .settings-form-grid,
+  .phase-two .staff-grid,
+  .phase-two .cashier-scanner,
+  .phase-two .cashier-review-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tables-create,
+  .categories-create-panel,
+  .phase-two .staff-invite-panel {
+    grid-row: 1;
+  }
+  .categories-create-panel {
+    position: static;
+  }
+  .categories-menu-summary {
+    display: none;
+  }
+  .phase-two .staff-list > li {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .phase-two .staff-actions {
+    width: 100%;
+    padding-left: 0;
+  }
+  .phase-two .staff-actions > :is(button, .select-field) {
+    flex: 1 1 112px;
+  }
+  .kitchen-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .kitchen-refresh {
+    justify-items: start;
+  }
+}
+
+@media screen and (max-width: 760px) {
+  /* Keep the mobile navigation and page on one scroll surface on short screens. */
+  :root[data-short-viewport] .dashboard-body {
+    overflow: auto;
+  }
+  :root[data-short-viewport] .dashboard-content {
+    flex: none;
+    overflow: visible;
+  }
+  :root[data-short-viewport] .dashboard-sidebar.dashboard-sidebar-premium {
+    flex-shrink: 1;
+    min-height: 120px;
+  }
+}
+
+@media screen and (max-width: 760px), screen and (pointer: coarse) {
+  .phase-two :is(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), textarea, select),
+  .customer-dialog :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
+    font-size: max(16px, 1rem);
+  }
+  .phase-two :is(button, summary),
+  .customer-dialog button {
+    min-height: 44px;
+  }
+}
+
+@media screen and (max-width: 380px) {
+  .product-details-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .product-details-dialog .product-details-image,
+  .product-details-dialog .product-details-placeholder {
+    width: 104px;
+  }
+}

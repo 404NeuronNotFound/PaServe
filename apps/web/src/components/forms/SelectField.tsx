@@ -53,27 +53,39 @@ export function SelectField({
       if (typeof node.showPopover !== "function") node.style.display = "none";
       return;
     }
+    const viewport = window.visualViewport;
     function position() {
       const rect = trigger.current?.getBoundingClientRect();
       if (!rect || !node) return;
-      const height = Math.min(
+      const viewportHeight = viewport?.height ?? window.innerHeight;
+      const viewportWidth = viewport?.width ?? window.innerWidth;
+      const top = (viewport?.offsetTop ?? 0) + 12;
+      const left = (viewport?.offsetLeft ?? 0) + 12;
+      const bottom = top + Math.max(0, viewportHeight - 24);
+      const right = left + Math.max(0, viewportWidth - 24);
+      const height = Math.max(0, Math.min(
         options.length * 48 + 16,
         280,
-        window.innerHeight - 24,
-      );
-      const width = Math.min(Math.max(rect.width, 220), window.innerWidth - 24);
+        viewportHeight - 24,
+      ));
+      const width = Math.max(0, Math.min(Math.max(rect.width, 220), viewportWidth - 24));
       node.style.width = `${width}px`;
       node.style.maxHeight = `${height}px`;
-      node.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - width - 12))}px`;
-      node.style.top = `${Math.max(12, Math.min(rect.bottom + height + 8 > window.innerHeight && rect.top > height ? rect.top - height - 8 : rect.bottom + 8, window.innerHeight - height - 12))}px`;
+      node.style.left = `${Math.max(left, Math.min(rect.left, right - width))}px`;
+      const above = rect.bottom + height + 8 > bottom && rect.top - height - 8 >= top;
+      node.style.top = `${Math.max(top, Math.min(above ? rect.top - height - 8 : rect.bottom + 8, bottom - height))}px`;
     }
     position();
     if (typeof node.showPopover === "function") node.showPopover();
     else node.style.display = "block";
     window.addEventListener("resize", position);
+    viewport?.addEventListener("resize", position);
+    viewport?.addEventListener("scroll", position);
     document.addEventListener("scroll", position, true);
     return () => {
       window.removeEventListener("resize", position);
+      viewport?.removeEventListener("resize", position);
+      viewport?.removeEventListener("scroll", position);
       document.removeEventListener("scroll", position, true);
       node.hidePopover?.();
     };
