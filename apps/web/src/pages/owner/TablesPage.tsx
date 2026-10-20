@@ -1,5 +1,6 @@
 import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { FiGrid, FiPlus } from "react-icons/fi";
@@ -197,11 +198,9 @@ function TableWorkspace({ userId }: { userId: string }) {
           </h2>
           {query.isPending && <ListSkeleton label="Loading tables…" tables />}
           {query.isError && (
-            <InlineMessage>
-              {denied
-                ? "Your access changed. Refresh the shop workspace to continue."
-                : "We couldn’t load tables. Please try again."}
-            </InlineMessage>
+            <ErrorState error={query.error} resource="tables" action="load"
+              permissionMessage="Your access changed. Refresh the shop workspace to continue."
+              unavailableMessage="Your access changed. Refresh the shop workspace to continue." />
           )}
           {(query.isError || uncertain) && !denied && !lostAccess && (
             <button

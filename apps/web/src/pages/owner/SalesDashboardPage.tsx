@@ -42,6 +42,7 @@ import {
   type PaymentMixBasis,
 } from "../../features/orders/payment-mix";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./sales-dashboard.css";
@@ -459,20 +460,10 @@ function SalesWorkspace({ userId }: { userId: string }) {
         ))}
       {valid && query.isPending && <MetricsSkeleton />}
       {valid && query.isError && (
-        <div className="sales-error">
-          <InlineMessage>
-            {denied
-              ? "Your access to this shop’s sales reports is unavailable."
-              : "We couldn’t refresh sales. Retry to load the saved report."}
-          </InlineMessage>
-          <button
-            className="secondary-button"
-            disabled={query.isFetching}
-            onClick={refreshSales}
-          >
-            Retry
-          </button>
-        </div>
+        <ErrorState error={query.error} resource="sales reports"
+          permissionMessage="Your access to this shop’s sales reports is unavailable."
+          unavailableMessage="Your access to this shop’s sales reports is unavailable."
+          pending={query.isFetching} onRetry={refreshSales} />
       )}
       {report && (
         <div className="sales-summary" aria-busy={query.isFetching}>

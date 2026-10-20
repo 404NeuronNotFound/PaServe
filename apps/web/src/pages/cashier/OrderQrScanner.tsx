@@ -1,4 +1,5 @@
 import { PendingButton } from "../../components/feedback/PendingButton";
+import { describeRequestFailure } from "../../components/feedback/request-failure";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { isAxiosError } from "axios";
@@ -132,6 +133,10 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
                 ? "Your session expired. Sign in again before scanning."
                 : "Your cashier access is no longer available. Choose another shop or ask its owner for access.",
             );
+          } else if (failure.response?.data?.code === "ORDER_TOKEN_INVALID") {
+            setError(describeRequestFailure(failure, "the saved order", { qr: true }).message);
+          } else if (!failure.response || (status && status >= 500) || status === 429) {
+            setError(`Unable to verify the order. ${describeRequestFailure(failure, "the saved order").message}`);
           } else
             setError(
               typeof failure.response?.data?.message === "string"
@@ -140,9 +145,7 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
             );
         } else
           setError(
-            failure instanceof Error
-              ? failure.message
-              : "Unable to verify the order. Please try again.",
+            describeRequestFailure(failure, "the saved order").message,
           );
       })
       .finally(() => {
@@ -364,6 +367,11 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
                 : "Start the camera when you are ready, or use another scanning option."}
         </p>
         {error && <InlineMessage>{error}</InlineMessage>}
+        {error && !lostAccess && !busy && (
+          <button type="button" className="secondary-button" onClick={() => {
+            document.getElementById("scanner-order-number")?.focus();
+          }}>Use manual order lookup</button>
+        )}
         {lostAccess && (
           <Link
             className="secondary-button"

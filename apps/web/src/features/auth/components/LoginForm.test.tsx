@@ -34,6 +34,16 @@ async function fill(user: ReturnType<typeof userEvent.setup>) {
 beforeEach(() => {
   vi.resetAllMocks();
 });
+it("explains a sign-in connection failure while preserving the credentials for retry", async () => {
+  login.mockRejectedValueOnce(new AxiosError("private network diagnostic", "ERR_NETWORK"));
+  const { user } = setup();
+  await fill(user);
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Check your connection");
+  expect(screen.getByLabelText("Password")).toHaveValue("  test passphrase  ");
+  expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  expect(screen.queryByText("private network diagnostic")).not.toBeInTheDocument();
+});
 
 it("carries a newly registered email into sign-in while keeping the password empty", () => {
   setup("staff@example.com");
@@ -87,7 +97,7 @@ it.each([401, 429, 500])(
         ? "Email or password is incorrect"
         : status === 429
           ? "Too many sign-in attempts"
-          : "We couldn’t sign you in",
+          : "Sign-in is temporarily unavailable",
     );
     await waitFor(() => expect(alert).toHaveFocus());
     expect(screen.getByLabelText("Password")).toHaveValue(

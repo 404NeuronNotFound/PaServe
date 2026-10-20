@@ -98,7 +98,11 @@ export function LoginForm({
             ? "Email or password is incorrect, or the account is unavailable."
             : isAxiosError(error) && error.response?.status === 429
               ? "Too many sign-in attempts. Please wait a minute and try again."
-              : "We couldn’t sign you in. Please try again.",
+              : isAxiosError(error) && !error.response
+                ? "We couldn’t connect to sign you in. Check your connection and try again."
+                : isAxiosError(error) && (error.response?.status ?? 0) >= 500
+                  ? "Sign-in is temporarily unavailable. Please try again shortly."
+                  : "We couldn’t sign you in. Please try again.",
         );
         pendingFocus.current = "form";
       }

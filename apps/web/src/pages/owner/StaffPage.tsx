@@ -1,6 +1,7 @@
 import { StaffSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { EmptyState } from "../../components/feedback/EmptyState";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
@@ -298,10 +299,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
     return (
       <section className="dashboard-status">
         <h1>Unable to load staff</h1>
-        <InlineMessage>{errorMessage(query.error)}</InlineMessage>
-        <button className="primary-button" onClick={() => void query.refetch()}>
-          Try again
-        </button>
+        <ErrorState error={query.error} resource="your staff and invitations"
+          pending={query.isFetching} onRetry={() => query.refetch()} retryLabel="Try again" />
       </section>
     );
   const members = query.data.members.filter((member) =>

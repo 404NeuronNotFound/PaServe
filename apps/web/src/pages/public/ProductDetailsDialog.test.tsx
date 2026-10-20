@@ -126,6 +126,40 @@ async function openDetails() {
   await within(dialog).findByLabelText(/Quantity/);
   return { user, dialog, trigger };
 }
+it("keeps an unavailable product separate from a retryable connection failure", async () => {
+  vi.mocked(api.get).mockRejectedValueOnce({ isAxiosError: true, response: { status: 404 } });
+  setup();
+  await userEvent.click(screen.getByRole("button", { name: "View details for Coffee" }));
+  const dialog = within(screen.getByRole("dialog", { name: "Coffee" }));
+  expect(await dialog.findByRole("alert")).toHaveTextContent("no longer available");
+  expect(dialog.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  await userEvent.click(dialog.getByRole("button", { name: "Back to menu" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+});
+
+it("retains selection context after network failure and retries the read successfully", async () => {
+  vi.mocked(api.get).mockRejectedValueOnce({ isAxiosError: true });
+  setup();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "View details for Coffee" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Check your connection");
+  await user.click(screen.getByRole("button", { name: "Try again" }));
+  expect(await screen.findByRole("button", { name: "Add to cart" })).toBeEnabled();
+  expect(api.post).not.toHaveBeenCalled();
+});
+
+it("requires fresh product details after a server-rejected option selection", async () => {
+  setup();
+  const { user, dialog } = await openDetails();
+  vi.mocked(api.post).mockRejectedValueOnce({ isAxiosError: true, response: { status: 400, data: { code: "PRODUCT_SELECTION_INVALID" } } });
+  await user.click(within(dialog).getByRole("button", { name: "Add to cart" }));
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent("selected options or quantity are no longer valid");
+  expect(within(dialog).getByRole("button", { name: "Add to cart" })).toBeDisabled();
+  expect(useCart.getState().shops.cafe ?? []).toHaveLength(0);
+  await user.click(within(dialog).getByRole("button", { name: "Refresh details" }));
+  await waitFor(() => expect(within(dialog).getByRole("button", { name: "Add to cart" })).toBeEnabled());
+  expect(api.post).toHaveBeenCalledTimes(1);
+});
 it("keeps the current table and shop visible while choosing product options", async () => {
   setup({ ...menu, table: { shopSlug: "cafe", code: "T12", number: "Patio 4" } });
   const { dialog } = await openDetails();

@@ -12,6 +12,8 @@ import { api } from "../../lib/api/client";
 import { feedback } from "../../app/stores/feedback";
 import { formatCartPrice } from "../../lib/money";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { describeRequestFailure } from "../../components/feedback/request-failure";
+import { PendingButton } from "../../components/feedback/PendingButton";
 
 export function CartQuantityControl({
   item,
@@ -25,6 +27,7 @@ export function CartQuantityControl({
   const [draft, setDraft] = useState(String(item.quantity));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [retryQuantity, setRetryQuantity] = useState<number | null>(null);
   const mounted = useRef(false);
   const submitting = useRef(false);
   const input = useRef<HTMLInputElement>(null);
@@ -54,17 +57,19 @@ export function CartQuantityControl({
     setDraft(String(saved?.quantity ?? item.quantity));
   }
 
-  async function update(quantity: number) {
+  async function update(quantity: number, retry = false) {
     if (submitting.current || !isValidOrderQuantity(quantity)) return;
     if (quantity === item.quantity) {
       setDraft(String(quantity));
       setError("");
+      setRetryQuantity(null);
       return;
     }
     submitting.current = true;
     setDraft(String(quantity));
     setPending(true);
     setError("");
+    if (!retry) setRetryQuantity(null);
     const pricePreview = createCartPricePreview({ ...item, quantity });
     try {
       const response = await api.post<ProductSelectionQuoteResponse>(
@@ -79,17 +84,23 @@ export function CartQuantityControl({
           .updateQuantity(shopSlug, item, response.data, pricePreview)
       ) {
         restoreSavedQuantity();
+        setRetryQuantity(null);
         setError(
           "This cart item changed. Close and reopen the cart before trying again.",
         );
         return;
       }
+      setRetryQuantity(null);
       feedback.toast("Quantity updated.");
-    } catch {
+    } catch (failure) {
       if (mounted.current) {
         restoreSavedQuantity();
+        const context = describeRequestFailure(failure, "this quantity and item availability", { product: true, publicView: true });
+        setRetryQuantity(context.retryable ? quantity : null);
         setError(
-          "We could not update this quantity. Your saved item is unchanged. Try again, or remove and add the item again if its options or availability changed.",
+          context.kind === "unknown"
+            ? "We could not update this quantity. Your saved item is unchanged. Try again, or remove and add the item again if its options or availability changed."
+            : `${context.message} Your saved item is unchanged.`,
         );
       }
     } finally {
@@ -141,6 +152,7 @@ export function CartQuantityControl({
             onChange={(event) => {
               setDraft(event.target.value);
               setError("");
+              setRetryQuantity(null);
             }}
           />
           <button
@@ -185,6 +197,12 @@ export function CartQuantityControl({
         <InlineMessage id={`${id}-error`} tone="error">
           {error}
         </InlineMessage>
+      )}
+      {retryQuantity !== null && (
+        <PendingButton type="button" className="secondary-button" pending={pending}
+          pendingLabel="Checking quantity…" onClick={() => void update(retryQuantity, true)}>
+          Retry quantity update
+        </PendingButton>
       )}
       {pending && (
         <p className="field-hint" aria-live="polite">

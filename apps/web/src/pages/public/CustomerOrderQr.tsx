@@ -9,9 +9,11 @@ import { FiCoffee } from "react-icons/fi";
 export function CustomerOrderQr({
   credential,
   compact = false,
+  onUseOrderNumber,
 }: {
   credential: QrCredential | null;
   compact?: boolean;
+  onUseOrderNumber?: () => void;
 }) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<{
@@ -71,11 +73,16 @@ export function CustomerOrderQr({
       )}
       <h2 id="customer-qr-title">Your order QR</h2>
       {unavailable ? (
+        <>
         <InlineMessage tone="warning" role="note">
           {credential
             ? "This order QR has expired. Ask the counter staff to check your order."
             : "Your order QR is unavailable in this session. Ask the counter staff for help using your order number."}
         </InlineMessage>
+        {onUseOrderNumber ? (
+          <button type="button" className="secondary-button" onClick={onUseOrderNumber}>Use order number</button>
+        ) : credential && <p>Show order number <strong>{credential.orderNumber}</strong> to the counter staff. You do not need to place another order.</p>}
+        </>
       ) : current?.error ? (
         <>
           <InlineMessage>

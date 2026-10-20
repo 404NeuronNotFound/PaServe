@@ -1,6 +1,5 @@
 import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
 import type { CurrentUserResponse } from "@paserve/contracts";
 import { FiXCircle, FiClock } from "react-icons/fi";
 import { useActiveShop } from "../../features/shops/active-shop";
@@ -10,6 +9,7 @@ import {
   getCancelledOrders,
 } from "../../features/orders/cancelled-orders";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./active-orders.css";
@@ -67,9 +67,6 @@ function CancelledOrdersWorkspace({ userId }: { userId: string }) {
         Only this shop’s owner can view cancelled / rejected orders.
       </InlineMessage>
     );
-  const denied =
-    isAxiosError(query.error) &&
-    [401, 403, 404].includes(query.error.response?.status ?? 0);
   const orders = query.isSuccess ? query.data.orders : [];
   const refresh = () => {
     if (cursor) setCursors([null]);
@@ -108,20 +105,9 @@ function CancelledOrdersWorkspace({ userId }: { userId: string }) {
         <OrderListSkeleton label="Loading cancelled / rejected orders…" />
       )}
       {query.isError && (
-        <div className="active-orders-message">
-          <InlineMessage>
-            {denied
-              ? "Your access to this shop’s orders is unavailable."
-              : "We couldn’t refresh cancelled / rejected orders. Retry to load the saved history."}
-          </InlineMessage>
-          <button
-            className="secondary-button"
-            disabled={query.isFetching}
-            onClick={() => void query.refetch()}
-          >
-            Retry
-          </button>
-        </div>
+        <ErrorState error={query.error} resource="cancelled / rejected orders"
+          permissionMessage="Your access to this shop’s orders is unavailable." unavailableMessage="Your access to this shop’s orders is unavailable."
+          pending={query.isFetching} onRetry={() => query.refetch()} />
       )}
       {query.isSuccess && (
         <>

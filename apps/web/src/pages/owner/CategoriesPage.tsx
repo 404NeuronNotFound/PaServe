@@ -1,6 +1,7 @@
 import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { EmptyState } from "../../components/feedback/EmptyState";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import {
@@ -570,13 +571,10 @@ function CategoryWorkspace({ userId }: { userId: string }) {
           ) : query.isPending ? (
             <ListSkeleton label="Loading categories…" />
           ) : query.isError ? (
-            <>
-              <InlineMessage>
-                {requestDenied
-                  ? "Your category access is unavailable. Choose another shop or sign in again."
-                  : "We couldn’t load your categories. Please check your connection."}
-              </InlineMessage>
-            </>
+            <ErrorState error={query.error} resource="your categories" action="load"
+              permissionMessage="Your category access is unavailable. Choose another shop or sign in again."
+              unavailableMessage="Your category access is unavailable. Choose another shop or sign in again."
+              pending={query.isFetching} onRetry={refreshCategories} />
           ) : query.data.categories.length ? (
             <ul className="categories-list">
               {displayedCategories.map((category, index) => (

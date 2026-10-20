@@ -6,6 +6,7 @@ import type {
   CompletePreparationResponse,
 } from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
+import { UnverifiedResponseError } from "../../lib/api/UnverifiedResponseError";
 import "../auth/api/session";
 import { isOrderNumber, isOrderTotal } from "../cart/order-receipt-fields";
 import { parseCashierItems } from "../cashier/order-items";
@@ -16,7 +17,7 @@ export function parseQueue(
   state: PreparationStatus = "QUEUED",
 ): PreparationQueueResponse {
   const invalid = () =>
-    new Error("The saved queue could not be verified. Refresh to try again.");
+    new UnverifiedResponseError("The saved queue could not be verified. Refresh to try again.");
   if (
     !data ||
     !Array.isArray(data.orders) ||

@@ -13,6 +13,7 @@ import { getWeeklyAnalytics } from "../../features/orders/weekly-analytics";
 import { getMonthlyAnalytics } from "../../features/orders/monthly-analytics";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 
 const accessUnavailable = (error: unknown) =>
@@ -59,7 +60,6 @@ export function DailyAnalytics({
     refetchOnReconnect: (q) => !accessUnavailable(q.state.error),
   });
   const report = enabled && valid && query.isSuccess ? query.data : null;
-  const denied = accessUnavailable(query.error);
   const rows =
     report &&
     ("months" in report
@@ -155,11 +155,10 @@ export function DailyAnalytics({
         <ReportSkeleton label={`Loading ${period} analytics…`} />
       )}
       {enabled && valid && query.isError && (
-        <InlineMessage>
-          {denied
-            ? `Your access to this shop’s analytics is unavailable. Automatic refresh is paused; use Refresh ${period} analytics to retry.`
-            : `We couldn’t refresh ${period} analytics. Use Refresh ${period} analytics to retry.`}
-        </InlineMessage>
+        <ErrorState error={query.error} resource={`${period} analytics`}
+          permissionMessage="Your access to this shop’s analytics is unavailable."
+          unavailableMessage="Your access to this shop’s analytics is unavailable."
+          pending={query.isFetching} onRetry={() => query.refetch()} />
       )}
       {report && (
         <>

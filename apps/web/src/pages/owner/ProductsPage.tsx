@@ -1,5 +1,6 @@
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { EmptyState } from "../../components/feedback/EmptyState";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { ProductsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { SelectField } from "../../components/forms/SelectField";
 import { useNavigate } from "react-router-dom";
@@ -845,11 +846,10 @@ function ProductWorkspace({ userId }: { userId: string }) {
         ) : query.isPending ? (
           <ProductsSkeleton />
         ) : query.isError ? (
-          <InlineMessage>
-            {denied
-              ? "Your product access is unavailable. Choose another shop or sign in again."
-              : "We couldn’t load products. Check your connection and try refreshing."}
-          </InlineMessage>
+          <ErrorState error={query.error} resource="your products" action="load"
+            permissionMessage="Your product access is unavailable. Choose another shop or sign in again."
+            unavailableMessage="Your product access is unavailable. Choose another shop or sign in again."
+            pending={query.isFetching} onRetry={refreshProducts} />
         ) : query.data.products.length ? (
           <div className="product-groups">
             {groups.map((group) => (

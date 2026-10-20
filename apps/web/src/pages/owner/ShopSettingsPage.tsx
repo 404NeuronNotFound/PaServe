@@ -3,6 +3,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { isAxiosError } from "axios";
+import { describeRequestFailure } from "../../components/feedback/request-failure";
 import isEmail from "validator/lib/isEmail";
 import isURL from "validator/lib/isURL";
 import {
@@ -168,7 +169,7 @@ export function ShopSettingsPage() {
         message={
           denied
             ? "Your access may have changed. Return to your shop to check it again."
-            : "Check your connection and try again."
+            : describeRequestFailure(settings.error, "shop settings").message
         }
         retry={denied ? undefined : () => void settings.refetch()}
       />

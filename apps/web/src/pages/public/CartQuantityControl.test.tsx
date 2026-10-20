@@ -119,6 +119,31 @@ it("restores a failed stepper change without leaving an unsaved draft", async ()
   expect(api.post).toHaveBeenCalledTimes(1);
 });
 
+it("offers a guarded retry for a failed quote without changing saved quantities", async () => {
+  setup();
+  vi.mocked(api.post).mockRejectedValueOnce({ isAxiosError: true });
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Increase quantity for Coffee" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Check your connection");
+  expect(useCart.getState().shops.cafe[0].quantity).toBe(2);
+  let resolve!: (value: { data: ProductSelectionQuoteResponse }) => void;
+  vi.mocked(api.post).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  await user.dblClick(screen.getByRole("button", { name: "Retry quantity update" }));
+  expect(screen.getByRole("button", { name: "Checking quantity…" })).toBeDisabled();
+  await act(async () => resolve({ data: { ...quote, quantity: 3, totalPrice: "3.90" } }));
+  await waitFor(() => expect(useCart.getState().shops.cafe[0].quantity).toBe(3));
+  expect(api.post).toHaveBeenCalledTimes(2);
+});
+
+it("does not offer repeat quote retries for an unavailable product", async () => {
+  setup();
+  vi.mocked(api.post).mockRejectedValueOnce({ isAxiosError: true, response: { status: 404 } });
+  await userEvent.click(screen.getByRole("button", { name: "Increase quantity for Coffee" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Return to the menu");
+  expect(screen.queryByRole("button", { name: "Retry quantity update" })).not.toBeInTheDocument();
+  expect(useCart.getState().shops.cafe[0].quantity).toBe(2);
+});
+
 it("shows quantity and estimated price immediately, then rolls back a rejected check", async () => {
   setup();
   const before = useCart.getState();

@@ -107,7 +107,11 @@ export function RegistrationForm({
         setFormError("Please check your email and password.");
         pendingFocus.current = details?.email?.length ? "email" : "password";
       } else {
-        setFormError("We couldn’t create your account. Please try again.");
+        setFormError(
+          isAxiosError(error) && (!error.response || (error.response.status ?? 0) >= 500)
+            ? "We couldn’t confirm account creation. Check your connection, then try signing in with these details before registering again."
+            : "We couldn’t create your account. Please try again.",
+        );
       }
       mutation.reset();
     } finally {

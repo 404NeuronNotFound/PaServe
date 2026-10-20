@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { FiRotateCw } from "react-icons/fi";
 import type { CustomerOrderQr as QrCredential } from "../../features/cart/customer-order-qr";
 import { CustomerOrderQr } from "./CustomerOrderQr";
@@ -12,6 +12,7 @@ export function OrderReferenceCard({
   orderNumber: string | null;
 }) {
   const [showNumber, setShowNumber] = useState(false);
+  const flip = useRef<HTMLButtonElement>(null);
   const id = useId();
   return (
     <div
@@ -32,7 +33,10 @@ export function OrderReferenceCard({
             inert={showNumber}
             aria-hidden={showNumber}
           >
-            <CustomerOrderQr credential={credential} compact />
+            <CustomerOrderQr credential={credential} compact onUseOrderNumber={orderNumber ? () => {
+              setShowNumber(true);
+              queueMicrotask(() => flip.current?.focus());
+            } : undefined} />
           </div>
           <div
             id={`${id}-number`}
@@ -51,6 +55,7 @@ export function OrderReferenceCard({
           {showNumber ? "Order number" : "QR code"}
         </span>
         <button
+          ref={flip}
           type="button"
           className="secondary-button order-reference-flip"
           aria-controls={`${id}-qr ${id}-number`}

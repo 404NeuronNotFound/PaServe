@@ -210,10 +210,12 @@ it("fails closed for an invalid token without displaying an order", async () => 
     scan(token());
   });
   expect(
-    await screen.findByText("This order QR is invalid or expired."),
+    await screen.findByText(/This order QR is invalid or expired/),
   ).toBeInTheDocument();
   expect(screen.queryByText("ORD-000042")).not.toBeInTheDocument();
   expect(screen.getByLabelText("Paste order QR contents")).toBeEnabled();
+  await userEvent.click(screen.getByRole("button", { name: "Use manual order lookup" }));
+  expect(screen.getByLabelText("Find by order number")).toHaveFocus();
 });
 it("shows an ineligible-order error and permits scanning another order", async () => {
   const message =

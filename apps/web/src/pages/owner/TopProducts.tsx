@@ -5,6 +5,7 @@ import type { TopProductMetric } from "@paserve/contracts";
 import { getTopProducts } from "../../features/orders/top-products";
 import { formatCartPrice } from "../../lib/money";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
 
 const denied = (error: unknown) =>
@@ -82,11 +83,9 @@ export function TopProducts({
         <InlineMessage tone="info">Loading top products…</InlineMessage>
       )}
       {query.isError && (
-        <InlineMessage>
-          {denied(query.error)
-            ? "Top products access is unavailable. Automatic refresh is paused; use Refresh top products to retry."
-            : "We couldn’t refresh top products. Use Refresh top products to retry."}
-        </InlineMessage>
+        <ErrorState error={query.error} resource="top products"
+          permissionMessage="Top products access is unavailable. Automatic refresh is paused; use Refresh top products to check access again."
+          pending={query.isFetching} onRetry={() => query.refetch()} />
       )}
       {report &&
         (report.productCount === 0 ? (

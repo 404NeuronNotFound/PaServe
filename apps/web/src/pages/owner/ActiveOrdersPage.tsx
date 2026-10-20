@@ -1,7 +1,6 @@
 import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
 import type {
   CurrentUserResponse,
   ActiveOrderSummary,
@@ -20,6 +19,7 @@ import {
   getActiveOrders,
 } from "../../features/orders/active-orders";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./active-orders.css";
@@ -98,9 +98,6 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
         Only this shop’s owner can view active orders.
       </InlineMessage>
     );
-  const denied =
-    isAxiosError(query.error) &&
-    [401, 403, 404].includes(query.error.response?.status ?? 0);
   const orders = query.isSuccess ? query.data.orders : [];
   const refresh = () => {
     if (cursor) setCursors([null]);
@@ -137,19 +134,9 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
         <OrderListSkeleton label="Loading active orders…" />
       )}
       {query.isError && (
-        <div className="active-orders-message">
-          <InlineMessage>
-            {denied
-              ? "Your access to this shop’s orders is unavailable."
-              : "We couldn’t refresh active orders. Retry to get the current status."}
-          </InlineMessage>
-          <button
-            className="secondary-button"
-            onClick={() => void query.refetch()}
-          >
-            Retry
-          </button>
-        </div>
+        <ErrorState error={query.error} resource="active orders"
+          permissionMessage="Your access to this shop’s orders is unavailable." unavailableMessage="Your access to this shop’s orders is unavailable."
+          pending={query.isFetching} onRetry={() => query.refetch()} />
       )}
       {query.isSuccess && (
         <>

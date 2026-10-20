@@ -20,6 +20,14 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
 });
+it("recovers an expired QR through the saved order number without renewing or resubmitting it", async () => {
+  render(<OrderReferenceCard credential={{ ...credential, expiresAt: Date.now() - 1 }} orderNumber={credential.orderNumber} />);
+  await userEvent.click(screen.getByRole("button", { name: "Use order number" }));
+  expect(screen.getByRole("region", { name: "Order number" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "Show QR code" })).toHaveFocus();
+  expect(screen.queryByRole("button", { name: "Retry QR display" })).not.toBeInTheDocument();
+  expect(createCustomerQrImage).not.toHaveBeenCalled();
+});
 it("starts on QR, flips by keyboard, preserves focus and hides inactive controls", async () => {
   const user = userEvent.setup();
   render(

@@ -1,0 +1,12 @@
+.error-state {
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.error-state > h3 { margin: 0 0 12px; font-size: 18px; }
+.error-state-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.error-state-actions > :is(button, a) { min-height: 44px; white-space: normal; }

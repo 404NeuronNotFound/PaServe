@@ -8,6 +8,7 @@ import {
   trendPercentage,
 } from "../../features/orders/sales-trends";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
 import { formatCartPrice } from "../../lib/money";
 import { SalesTrendChart } from "./SalesTrendChart";
@@ -92,11 +93,9 @@ export function SalesTrends({
         <ReportSkeleton label="Loading sales trends…" chart />
       )}
       {valid && query.isError && (
-        <InlineMessage>
-          {denied(query.error)
-            ? "Sales trends access is unavailable. Automatic refresh is paused; use Refresh sales trends to retry."
-            : "We couldn’t refresh sales trends. Use Refresh sales trends to retry."}
-        </InlineMessage>
+        <ErrorState error={query.error} resource="sales trends"
+          permissionMessage="Sales trends access is unavailable."
+          pending={query.isFetching} onRetry={() => query.refetch()} />
       )}
       {current && previous && (
         <>

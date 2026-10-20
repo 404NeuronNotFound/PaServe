@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import {
   Link,
   Navigate,
@@ -83,18 +84,9 @@ export function ActiveShopRoute() {
           <h1>
             {unavailable ? "Shop unavailable" : "Unable to open this shop"}
           </h1>
-          <p role="alert">
-            {unavailable
-              ? "This shop is unavailable or you no longer have access."
-              : "Please check your connection and try again."}
-          </p>
-          {!unavailable && (
-            <button
-              className="primary-button"
-              onClick={() => void context.refetch()}
-            >
-              Try again
-            </button>
+          {unavailable ? <p role="alert">This shop is unavailable or you no longer have access.</p> : (
+            <ErrorState error={context.error} resource="this shop workspace" publicView
+              pending={context.isFetching} onRetry={() => context.refetch()} retryLabel="Try again" />
           )}
           <Link className="secondary-button" to="/app/shops">
             Choose another shop

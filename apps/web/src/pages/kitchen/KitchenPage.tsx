@@ -8,6 +8,7 @@ import {
   type InfiniteData,
 } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import "../../components/feedback/empty-state.css";
 import {
@@ -313,23 +314,13 @@ function NewOrders() {
         <OrderListSkeleton label="Loading the saved preparation queue." kitchen history={state === "COMPLETED"} />
       )}
       {queue.isError && (
-        <InlineMessage>
-          {queue.data
-            ? "The queue could not refresh. Tickets below may be out of date. "
-            : "We couldn’t load the queue. "}
-          {queue.error.message}{" "}
-          <button
-            className="secondary-button"
-            disabled={queue.isFetching}
-            onClick={() =>
-              void (queue.isFetchNextPageError
+        <ErrorState error={queue.error} resource="preparation queue" pending={queue.isFetching}
+          notice={queue.data ? "Tickets below may be out of date. Refresh before relying on their status." : undefined}
+          onRetry={() =>
+              (queue.isFetchNextPageError
                 ? queue.fetchNextPage()
                 : queue.refetch())
-            }
-          >
-            Try again
-          </button>
-        </InlineMessage>
+          } retryLabel="Try again" />
       )}
       {queue.isSuccess && orders.length === 0 && (
         <div className="kitchen-empty">

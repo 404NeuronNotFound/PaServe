@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import type { CurrentUserResponse } from "@paserve/contracts";
 import { currentUserKey } from "../auth/api/session";
@@ -44,19 +45,10 @@ export function KitchenRoute() {
             ? "Unable to check kitchen access"
             : "Kitchen access required"}
         </h1>
-        <p role="alert">
-          {access.isError && !unavailable
-            ? "Please check your connection and try again."
-            : "You need an active kitchen, owner, admin, or manager membership in this shop."}
-        </p>
-        {access.isError && !unavailable && (
-          <button
-            className="primary-button"
-            onClick={() => void access.refetch()}
-          >
-            Try again
-          </button>
-        )}
+        {access.isError && !unavailable ? (
+          <ErrorState error={access.error} resource="kitchen access" publicView
+            pending={access.isFetching} onRetry={() => access.refetch()} retryLabel="Try again" />
+        ) : <p role="alert">You need an active kitchen, owner, admin, or manager membership in this shop.</p>}
         <Link className="secondary-button" to="/app/shops">
           Choose another shop
         </Link>

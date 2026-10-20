@@ -960,7 +960,7 @@ it("allows returning to a previous history page after the next request fails", a
   });
   await userEvent.click(screen.getByRole("button", { name: "Completed" }));
   await screen.findByText("ORD-000042");
-  vi.mocked(api.get).mockRejectedValueOnce(new Error("Connection interrupted"));
+  vi.mocked(api.get).mockRejectedValueOnce(new AxiosError("private network diagnostic", "ERR_NETWORK"));
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
   await screen.findByText(/Connection interrupted/);
   await userEvent.click(screen.getByRole("button", { name: "Previous" }));

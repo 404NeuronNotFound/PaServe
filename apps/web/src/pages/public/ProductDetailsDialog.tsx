@@ -1,4 +1,6 @@
 import { ProductDetailsSkeleton } from "../../components/feedback/LoadingSkeleton";
+import { ErrorState } from "../../components/feedback/ErrorState";
+import { describeRequestFailure } from "../../components/feedback/request-failure";
 import {
   ORDER_INPUT_LIMITS,
   isValidOrderQuantity,
@@ -101,15 +103,10 @@ export function ProductDetailsDialog({
         <ProductDetailsSkeleton />
       ) : details.isError ? (
         <div className="customer-dialog-body">
-          <p role="alert">
-            This product could not be loaded. It may no longer be available.
-          </p>
-          <button
-            className="secondary-button"
-            onClick={() => void details.refetch()}
-          >
-            Try again
-          </button>
+          <ErrorState error={details.error} resource="this product" product publicView action="load"
+            pending={details.isFetching} onRetry={() => details.refetch()} retryLabel="Try again">
+            <button type="button" className="secondary-button" onClick={onClose}>Back to menu</button>
+          </ErrorState>
         </div>
       ) : (
         <ProductDetailsForm
@@ -164,6 +161,7 @@ function ProductDetailsForm({
   const [quantity, setQuantity] = useState("1");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
+  const [requiresRefresh, setRequiresRefresh] = useState(false);
   const [pending, setPending] = useState(false);
   const [failedImage, setFailedImage] = useState(false);
   const mounted = useRef(false);
@@ -203,6 +201,7 @@ function ProductDetailsForm({
   async function addToCart() {
     if (
       submitting.current ||
+      requiresRefresh ||
       !validQuantity ||
       !validNotes ||
       !complete ||
@@ -252,11 +251,16 @@ function ProductDetailsForm({
       }
       feedback.toast("Added to cart.");
       onClose();
-    } catch {
-      if (mounted.current)
+    } catch (failure) {
+      if (mounted.current) {
+        const context = describeRequestFailure(failure, "this item selection", { product: true, publicView: true });
+        setRequiresRefresh(!context.retryable);
         setError(
-          "We could not add this item. Options, prices, or availability may have changed. Refresh details and try again.",
+          context.kind === "unknown"
+            ? "We could not add this item. Options, prices, or availability may have changed. Refresh details and try again."
+            : context.message,
         );
+      }
     } finally {
       submitting.current = false;
       if (mounted.current) {
@@ -531,6 +535,7 @@ function ProductDetailsForm({
           type="submit"
           disabled={
             pending ||
+            requiresRefresh ||
             preview ||
             !isOrderable ||
             !complete ||

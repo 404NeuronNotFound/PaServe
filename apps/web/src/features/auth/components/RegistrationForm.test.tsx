@@ -35,6 +35,15 @@ describe("Registration form", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
+  it("explains an unknown creation outcome without automatically registering again", async () => {
+    register.mockRejectedValueOnce(new AxiosError("private network diagnostic", "ERR_NETWORK"));
+    const { user } = setup();
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("try signing in with these details before registering again");
+    expect(screen.getByLabelText("Email address")).toHaveValue("Owner@Example.com");
+    expect(register).toHaveBeenCalledTimes(1);
+  });
   it("validates required fields before making a request", async () => {
     const { user } = setup();
     await user.click(screen.getByRole("button", { name: /create account/i }));

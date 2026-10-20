@@ -6,7 +6,7 @@ import {
   getAveragePrepTime,
   formatPreparationDuration,
 } from "../../features/orders/average-prep-time";
-import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
 const denied = (error: unknown) =>
   isAxiosError(error) && [401, 403, 404].includes(error.response?.status ?? 0);
@@ -65,11 +65,9 @@ export function AveragePrepTime({
         <PreparationMetricSkeleton />
       )}
       {query.isError && (
-        <InlineMessage>
-          {denied(query.error)
-            ? "Preparation report access is unavailable. Automatic refresh is paused; use Refresh prep time to retry."
-            : "We couldn’t refresh average preparation time. Use Refresh prep time to retry."}
-        </InlineMessage>
+        <ErrorState error={query.error} resource="average preparation time"
+          permissionMessage="Preparation report access is unavailable. Automatic refresh is paused; use Refresh prep time to check access again."
+          pending={query.isFetching} onRetry={() => query.refetch()} />
       )}
       {report && (
         <>

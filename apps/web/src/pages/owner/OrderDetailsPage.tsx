@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { OrderDetailsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
 import {
   FiArrowLeft,
   FiFileText,
@@ -26,6 +25,7 @@ import {
   completeOrder,
 } from "../../features/kitchen/queue";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { ReceiptDocument } from "../../components/shops/ReceiptDocument";
 import { ReceiptShopDetails } from "../../components/shops/ReceiptShopDetails";
@@ -135,9 +135,6 @@ function OrderDetailsWorkspace({
   const order = query.isSuccess ? query.data.order : null;
   const permitted = (action: OwnerOrderAction) =>
     !!order?.permittedActions.includes(action);
-  const denied =
-    isAxiosError(query.error) &&
-    [401, 403, 404].includes(query.error.response?.status ?? 0);
   return (
     <section className="shop-context-content owner-order-details">
       <Link className="owner-order-back" to={`${shopPath(shopId)}/orders`}>
@@ -169,20 +166,9 @@ function OrderDetailsWorkspace({
       <OrderViewsNavigation />
       {query.isPending && <OrderDetailsSkeleton />}
       {query.isError && (
-        <div className="active-orders-message">
-          <InlineMessage>
-            {denied
-              ? "This order is unavailable or your access has changed."
-              : "We couldn’t load the saved order details. Retry to check the latest status."}
-          </InlineMessage>
-          <button
-            className="secondary-button"
-            disabled={query.isFetching}
-            onClick={() => void query.refetch()}
-          >
-            Retry
-          </button>
-        </div>
+        <ErrorState error={query.error} resource="this order"
+          permissionMessage="This order is unavailable or your access has changed." unavailableMessage="This order is unavailable or your access has changed."
+          pending={query.isFetching} onRetry={() => query.refetch()} />
       )}
       {order && (
         <>

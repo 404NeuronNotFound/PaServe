@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { getPeakHours } from "../../features/orders/peak-hours";
 import { formatCartPrice } from "../../lib/money";
-import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
 const denied = (error: unknown) =>
   isAxiosError(error) && [401, 403, 404].includes(error.response?.status ?? 0);
@@ -71,11 +71,9 @@ export function PeakHours({
         <ReportSkeleton label="Loading peak hours…" chart />
       )}
       {query.isError && (
-        <InlineMessage>
-          {denied(query.error)
-            ? "Peak hours access is unavailable. Automatic refresh is paused; use Refresh peak hours to retry."
-            : "We couldn’t refresh peak hours. Use Refresh peak hours to retry."}
-        </InlineMessage>
+        <ErrorState error={query.error} resource="peak hours"
+          permissionMessage="Peak hours access is unavailable. Automatic refresh is paused; use Refresh peak hours to check access again."
+          pending={query.isFetching} onRetry={() => query.refetch()} />
       )}
       {report && (
         <>

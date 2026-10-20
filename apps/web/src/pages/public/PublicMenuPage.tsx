@@ -1,5 +1,6 @@
 import { MenuSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useState } from "react";
+import { ErrorState } from "../../components/feedback/ErrorState";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -106,17 +107,16 @@ function PublicMenuSession({
     return (
       <main className="public-menu">
         <h1>{code ? "Table menu unavailable" : "Menu unavailable"}</h1>
-        <p role="alert">
-          {!contextMatches ||
-          (isAxiosError(menu.error) && menu.error.response?.status === 404)
-            ? code
-              ? "This table link is unavailable. Ask staff for the current QR code."
-              : "This menu is unavailable."
-            : "We could not load this menu. Check your connection and try again."}
-        </p>
-        <button className="primary-button" onClick={() => void menu.refetch()}>
-          Try again
-        </button>
+        {!contextMatches ? (
+          <p role="alert">{code
+            ? "This table link is unavailable. Ask staff for the current QR code."
+            : "This menu is unavailable. Ask the shop for its current menu link."}</p>
+        ) : (
+          <ErrorState error={menu.error} resource={code ? "this table menu" : "this menu"} action="load"
+            publicView pending={menu.isFetching} onRetry={() => menu.refetch()} retryLabel="Try again"
+            permissionMessage="This menu is unavailable. Ask the shop staff to check the link."
+            unavailableMessage={code ? "This table link is unavailable. Ask staff for the current QR code." : "This menu is unavailable. Ask the shop for its current menu link."} />
+        )}
         {code && (
           <button
             className="secondary-button"

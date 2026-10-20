@@ -836,7 +836,9 @@ it("stops automatic polling after access denial and keeps manual retry available
     await vi.advanceTimersByTimeAsync(45000);
   });
   expect(getDailySales).toHaveBeenCalledTimes(calls);
-  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Choose another shop" })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Refresh sales" }));
   await act(async () => {
     await vi.advanceTimersByTimeAsync(25);
   });
