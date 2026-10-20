@@ -29,11 +29,13 @@ export function useChangeMotion<T extends HTMLElement>(value: string | number, k
     }
     const stop = () => animation.cancel();
     const visibility = () => { if (document.hidden) stop(); };
-    preference?.addEventListener("change", stop);
+    if (preference?.addEventListener) preference.addEventListener("change", stop);
+    else preference?.addListener?.(stop);
     document.addEventListener("visibilitychange", visibility);
     return () => {
       stop();
-      preference?.removeEventListener("change", stop);
+      if (preference?.removeEventListener) preference.removeEventListener("change", stop);
+      else preference?.removeListener?.(stop);
       document.removeEventListener("visibilitychange", visibility);
     };
   }, [value, kind]);

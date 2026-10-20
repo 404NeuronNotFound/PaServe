@@ -112,6 +112,25 @@ async function openCart() {
   );
   await userEvent.click(screen.getByRole("button", { name: "View cart (3)" }));
 }
+it("keeps the cart dialog open and blocks duplicate submission until the order response settles", async () => {
+  let reject!: (error: Error) => void;
+  vi.mocked(api.post).mockReturnValueOnce(new Promise((_resolve, fail) => { reject = fail; }));
+  await openCart();
+  await userEvent.click(screen.getByRole("button", { name: "Review order" }));
+  await userEvent.click(screen.getByRole("button", { name: "Place pickup order" }));
+  const dialog = screen.getByRole("dialog");
+  expect(dialog).toHaveAttribute("aria-busy", "true");
+  expect(screen.getByRole("button", { name: "Close" })).toBeDisabled();
+  fireEvent(dialog, new Event("cancel", { cancelable: true }));
+  expect(screen.getByRole("dialog")).toBe(dialog);
+  expect(api.post).toHaveBeenCalledOnce();
+  await act(async () => { reject(new Error("Response lost")); });
+  await waitFor(() => expect(screen.getByRole("button", { name: "Close" })).toBeEnabled());
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+  await userEvent.click(screen.getByRole("button", { name: "View cart (3)" }));
+  expect(screen.getByRole("button", { name: "Confirm previous order" })).toBeEnabled();
+  expect(api.post).toHaveBeenCalledOnce();
+});
 it("shows separate configured lines, quantities, notes, subtotal and pickup type before any submission", async () => {
   vi.mocked(api.post).mockResolvedValue(receipt);
   await openCart();

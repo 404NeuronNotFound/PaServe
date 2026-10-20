@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CustomerOrder } from "./CustomerOrder";
 import { useCart } from "../../features/cart/cart";
@@ -45,6 +45,25 @@ const response = {
     },
   },
 };
+it("ignores a late order completion after leaving and recovers with the original request", async () => {
+  let finish!: (result: typeof response) => void;
+  vi.mocked(api.post).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+  const onPlaced = vi.fn();
+  const first = render(<CustomerOrder shopSlug="cafe" onOrderPlaced={onPlaced} />);
+  await placeOrder("Place pickup order");
+  const original = vi.mocked(api.post).mock.calls[0][1];
+  first.unmount();
+  await act(async () => { finish(response); });
+  expect(onPlaced).not.toHaveBeenCalled();
+  expect(useCart.getState().shops.cafe).toHaveLength(1);
+  expect(pendingOrders.read("paserve-pending-order:v1:cafe")).not.toBeNull();
+  vi.mocked(api.post).mockResolvedValueOnce(response);
+  render(<CustomerOrder shopSlug="cafe" onOrderPlaced={onPlaced} />);
+  await userEvent.click(screen.getByRole("button", { name: "Confirm previous order" }));
+  expect(vi.mocked(api.post).mock.calls[1][1]).toEqual(original);
+  expect(onPlaced).toHaveBeenCalledOnce();
+  expect(useCart.getState().shops.cafe).toEqual([]);
+});
 beforeEach(() => {
   pendingOrders.clearMemory();
   sessionStorage.clear();

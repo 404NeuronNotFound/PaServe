@@ -7,7 +7,7 @@
   outline: 3px solid var(--color-focus);
   outline-offset: 3px;
 }
-.field input:not([type="checkbox"]):not([type="radio"]),
+.field input:where(:not([type="checkbox"]):not([type="radio"])),
 .field textarea,
 .field select,
 .select-field-trigger,

@@ -43,9 +43,11 @@ export function Banner({
 function TransientMessage({
   notice,
   dismiss,
+  obscured,
 }: {
   notice: TransientNotice;
   dismiss: (id: number) => void;
+  obscured: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -55,7 +57,7 @@ function TransientMessage({
   const running = useRef(false);
   const container = useRef<HTMLDivElement>(null);
   const remaining = useRef(notice.duration);
-  const paused = hovered || focused || hidden || pending;
+  const paused = hovered || focused || hidden || pending || obscured;
   useLayoutEffect(() => {
     const node = container.current;
     const previousFocus = document.activeElement;
@@ -160,6 +162,17 @@ function TransientMessage({
 
 export function FeedbackHost() {
   const { notices, banners, dismiss, dismissBanner } = useFeedbackStore();
+  const [modalOpen, setModalOpen] = useState(() => Boolean(document.querySelector("dialog[open]")));
+  useEffect(() => {
+    let active = true;
+    const update = () => {
+      if (active) setModalOpen(Boolean(document.querySelector("dialog[open]")));
+    };
+    const observer = new MutationObserver(update);
+    observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["open"] });
+    queueMicrotask(update);
+    return () => { active = false; observer.disconnect(); };
+  }, []);
   const bannerArea = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const area = bannerArea.current;
@@ -192,12 +205,13 @@ export function FeedbackHost() {
           />
         ))}
       </div>
-      <div className="feedback-overlay" aria-label="Status updates">
+      <div className="feedback-overlay" aria-label="Status updates" hidden={modalOpen}>
         {notices[0] && (
           <TransientMessage
             key={notices[0].id}
             notice={notices[0]}
             dismiss={dismiss}
+            obscured={modalOpen}
           />
         )}
       </div>

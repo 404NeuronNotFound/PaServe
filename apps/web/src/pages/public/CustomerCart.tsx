@@ -33,6 +33,7 @@ export function CustomerCart({
 }) {
   const items = useCart((state) => cartItemsForShop(state.shops, shop.slug));
   const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [review, setReview] = useState<CartReviewSnapshot | null>(null);
   const [edits, setEdits] = useState<Record<string, boolean>>({});
   const onEditingChange = useCallback((id: string, editing: boolean) => {
@@ -87,7 +88,9 @@ export function CustomerCart({
           shop={shop}
           className="customer-cart-dialog"
           eyebrow={review ? "Review & place" : "Your picks"}
+          pending={submitting}
           onClose={() => {
+            if (submitting) return;
             setReview(null);
             setOpen(false);
           }}
@@ -198,6 +201,7 @@ export function CustomerCart({
               initialMode={mode}
               onModeChange={setMode}
               onReviewChange={setReview}
+              onPendingChange={setSubmitting}
               editing={Object.values(edits).some(Boolean)}
               onOrderPlaced={onOrderPlaced}
             />

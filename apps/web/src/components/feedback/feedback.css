@@ -6,6 +6,9 @@
   justify-content: center;
   pointer-events: none;
 }
+.feedback-overlay[hidden] {
+  display: none;
+}
 .feedback-transient {
   display: flex;
   flex-wrap: wrap;

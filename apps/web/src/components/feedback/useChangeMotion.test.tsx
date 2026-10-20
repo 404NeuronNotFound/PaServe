@@ -82,3 +82,20 @@ it("keeps state usable when the animation API is unavailable or rejects a cue", 
   expect(screen.getByText("3")).toBeVisible();
   expect(screen.getByRole("button")).toBeEnabled();
 });
+
+it("supports reduced-motion changes on browsers with legacy media query listeners", () => {
+  let listener: (() => void) | undefined;
+  const legacy = {
+    matches: false,
+    addListener: vi.fn((callback: () => void) => { listener = callback; }),
+    removeListener: vi.fn(),
+  };
+  vi.stubGlobal("matchMedia", vi.fn(() => legacy));
+  const { rerender, unmount } = render(<Harness value={1} />);
+  rerender(<Harness value={2} />);
+  expect(animate).toHaveBeenCalledOnce();
+  act(() => { legacy.matches = true; listener?.(); });
+  expect(cancel).toHaveBeenCalledOnce();
+  unmount();
+  expect(legacy.removeListener).toHaveBeenCalledWith(listener);
+});

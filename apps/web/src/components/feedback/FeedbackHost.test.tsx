@@ -77,6 +77,44 @@ it("pauses expiration on hover and resumes with the remaining duration", () => {
   expect(screen.queryByText("Saved.")).not.toBeInTheDocument();
 });
 
+it("preserves the remaining visible time while a modal obscures a toast", async () => {
+  render(<FeedbackHost />);
+  await act(async () => {});
+  act(() => feedback.toast("Saved behind dialog."));
+  advance(1000);
+  const dialog = document.createElement("dialog");
+  await act(async () => {
+    dialog.open = true;
+    document.body.appendChild(dialog);
+  });
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  advance(10000);
+  expect(useFeedbackStore.getState().notices).toHaveLength(1);
+  await act(async () => { dialog.remove(); });
+  expect(screen.getByRole("status")).toHaveTextContent("Saved behind dialog.");
+  advance(1999);
+  expect(screen.getByText("Saved behind dialog.")).toBeVisible();
+  advance(1);
+  expect(screen.queryByText("Saved behind dialog.")).not.toBeInTheDocument();
+});
+
+it("does not start a queued message's visible lifetime until an existing modal closes", async () => {
+  const dialog = document.createElement("dialog");
+  dialog.open = true;
+  document.body.appendChild(dialog);
+  try {
+    render(<FeedbackHost />);
+    act(() => feedback.toast("Photo saved."));
+    advance(10000);
+    expect(useFeedbackStore.getState().notices).toHaveLength(1);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    await act(async () => { dialog.open = false; });
+    expect(screen.getByRole("status")).toHaveTextContent("Photo saved.");
+    advance(3000);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  } finally { dialog.remove(); }
+});
+
 it("keeps a snackbar available while its action has keyboard focus", () => {
   render(<FeedbackHost />);
   act(() => feedback.snackbar("Changed.", { label: "Undo", onClick: vi.fn() }));

@@ -78,6 +78,7 @@ export function CustomerOrder({
   onModeChange,
   initialMode,
   onReviewChange,
+  onPendingChange,
   editing = false,
   onOrderPlaced,
 }: {
@@ -86,6 +87,7 @@ export function CustomerOrder({
   onModeChange?: (mode: "DINE_IN" | "TAKEOUT") => void;
   initialMode?: "DINE_IN" | "TAKEOUT";
   onReviewChange?: (review: CartReviewSnapshot | null) => void;
+  onPendingChange?: (pending: boolean) => void;
   editing?: boolean;
   onOrderPlaced?: (order: CustomerOrderResponse["order"]) => void;
 }) {
@@ -118,6 +120,11 @@ export function CustomerOrder({
     onModeChange?.(mode);
   }, [mode, onModeChange]);
   const busy = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState<CustomerOrderResponse["order"] | null>(
@@ -189,6 +196,7 @@ export function CustomerOrder({
     if (busy.current) return;
     busy.current = true;
     setPending(true);
+    onPendingChange?.(true);
     setError("");
     let sent = attempt;
     try {
@@ -275,6 +283,9 @@ export function CustomerOrder({
         `/menu/${encodeURIComponent(shopSlug)}/orders`,
         orderSubmissionRequest(sent.request),
       );
+      // Keep the persisted attempt for explicit, idempotent recovery if the user
+      // left. A late response must not navigate or clear a newer screen's cart.
+      if (!mounted.current) return;
       if (!isCreatedOrderResponse(data, sent.request, shopSlug)) {
         throw new Error("The order response could not be confirmed.");
       }
@@ -285,6 +296,7 @@ export function CustomerOrder({
       pendingOrders.remove(key);
       onOrderPlaced?.(data.order);
     } catch (cause) {
+      if (!mounted.current) return;
       if (!sent) setReview(null);
       const status = isAxiosError(cause) ? cause.response?.status : undefined;
       const invalidContext =
@@ -336,7 +348,10 @@ export function CustomerOrder({
       }
     } finally {
       busy.current = false;
-      setPending(false);
+      if (mounted.current) {
+        setPending(false);
+        onPendingChange?.(false);
+      }
     }
   }
   return (
