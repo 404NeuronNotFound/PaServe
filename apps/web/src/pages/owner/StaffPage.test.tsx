@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError } from "axios";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -67,8 +67,7 @@ beforeEach(() => {
     this.removeAttribute("open");
   };
 });
-function setup(role: ShopRole = "OWNER") {
-  const client = new QueryClient();
+function setup(role: ShopRole = "OWNER", client = new QueryClient()) {
   client.setQueryData(["auth", "me"], { user: { id: "owner" } });
   render(
     <QueryClientProvider client={client}>
@@ -929,4 +928,74 @@ it("hides staff when stale-target recovery discovers that the owner also lost ac
   ).toBeInTheDocument();
   expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument();
   expect(listStaff).toHaveBeenCalledTimes(2);
+});
+
+
+it("hides staff data again when a background read denies access", async () => {
+  const client = new QueryClient();
+  setup("OWNER", client);
+  await screen.findByLabelText("Staff email address");
+  vi.mocked(listStaff).mockRejectedValueOnce(Object.assign(new AxiosError("Forbidden"), {
+    response: { status: 403, data: { code: "FORBIDDEN" } },
+  }));
+  await act(async () => { await client.invalidateQueries({ queryKey: ["staff", "owner", "shop-a"] }); });
+  await screen.findByRole("heading", { name: "Owner access required" });
+  expect(screen.queryByLabelText("Staff email address")).not.toBeInTheDocument();
+  expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Choose another shop" })).toBeEnabled();
+});
+
+it("does not use a cached staff list to bypass the first read in a workspace", async () => {
+  const client = new QueryClient();
+  client.setQueryData(["staff", "owner", "shop-a"], data);
+  let finish!: (data: ShopStaffResponse) => void;
+  vi.mocked(listStaff).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+  setup("OWNER", client);
+  expect(screen.queryByLabelText("Staff email address")).not.toBeInTheDocument();
+  expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument();
+  await act(async () => { finish(data); });
+  await screen.findByLabelText("Staff email address");
+});
+
+it("keeps staff drafts, focus and controls mounted during a background read", async () => {
+  const client = new QueryClient();
+  const user = setup("OWNER", client);
+  const email = await screen.findByLabelText("Staff email address");
+  const search = screen.getByLabelText("Search shop members");
+  await user.type(search, "staff");
+  await user.type(email, "draft@example.com");
+  let finish!: (data: ShopStaffResponse) => void;
+  vi.mocked(listStaff).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+  let refresh!: Promise<void>;
+  act(() => { refresh = client.invalidateQueries({ queryKey: ["staff", "owner", "shop-a"] }); });
+  await screen.findByRole("button", { name: /Refreshing staff/ });
+  expect(screen.getByLabelText("Staff email address")).toBe(email);
+  expect(email).toHaveFocus();
+  expect(email).toBeEnabled();
+  await user.type(email, ".new");
+  expect(search).toHaveValue("staff");
+  expect(screen.queryByText(/Loading staff and invitations/)).not.toBeInTheDocument();
+  await act(async () => { finish(data); await refresh; });
+  expect(email).toHaveValue("draft@example.com.new");
+  expect(email).toHaveFocus();
+  expect(await screen.findByRole("button", { name: "Create invitation link" })).toBeEnabled();
+});
+
+it("does not dismiss a staff decision or claim success while its refresh is pending", async () => {
+  const client = new QueryClient();
+  const user = setup("OWNER", client);
+  await user.click(await screen.findByRole("button", { name: "Disable" }));
+  let finish!: (data: ShopStaffResponse) => void;
+  vi.mocked(listStaff).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+  let refresh!: Promise<void>;
+  act(() => { refresh = client.invalidateQueries({ queryKey: ["staff", "owner", "shop-a"] }); });
+  await screen.findByRole("button", { name: /Refreshing staff/ });
+  await user.click(screen.getByRole("button", { name: "Disable access" }));
+  await screen.findByText(/Wait for the latest details before confirming/);
+  expect(screen.getByRole("dialog", { name: "Disable shop access?" })).toBeInTheDocument();
+  expect(setStaffAccess).not.toHaveBeenCalled();
+  expect(useFeedbackStore.getState().notices).toHaveLength(0);
+  await act(async () => { finish(data); await refresh; });
+  await user.click(screen.getByRole("button", { name: "Disable access" }));
+  expect(setStaffAccess).toHaveBeenCalledOnce();
 });

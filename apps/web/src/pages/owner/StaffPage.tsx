@@ -50,7 +50,10 @@ const roles = STAFF_ROLES.map((value) => ({
       ? "Kitchen / Barista"
       : value[0] + value.slice(1).toLowerCase(),
 }));
+class StaffRefreshPending extends Error {}
 function errorMessage(error: unknown) {
+  if (error instanceof StaffRefreshPending)
+    return "Staff details are refreshing. Wait for the latest details before confirming.";
   return isAxiosError<ApiErrorResponse>(error)
     ? (error.response?.data?.message ??
         "Unable to complete this action. Check your connection and try again.")
@@ -137,10 +140,10 @@ function roleDecisionCopy(decision: Decision, shopName: string) {
   };
 }
 export function StaffPage() {
-  const { shopId } = useActiveShop();
+  const { shopId, role } = useActiveShop();
   const userId =
     useQueryClient().getQueryData<CurrentUserResponse>(currentUserKey)!.user.id;
-  return <StaffWorkspace key={`${userId}:${shopId}`} userId={userId} />;
+  return <StaffWorkspace key={`${userId}:${shopId}:${role}`} userId={userId} />;
 }
 function StaffWorkspace({ userId }: { userId: string }) {
   const membership = useActiveShop();
@@ -203,6 +206,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
     isAxiosError(query.error) &&
     [401, 403, 404].includes(query.error.response?.status ?? 0);
   async function run(work: () => Promise<unknown>, success: string) {
+    if (query.isFetching) throw new StaffRefreshPending();
     if (running.current || !authorized || !query.isSuccess || query.isFetching)
       return;
     running.current = true;
@@ -302,7 +306,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
         </Link>
       </section>
     );
-  if (query.isPending || query.isFetching)
+  if (query.isPending || (query.isFetching && !query.isFetchedAfterMount))
     return (
       <StaffSkeleton />
     );
@@ -346,7 +350,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
         }
       : null;
   return (
-    <section className="shop-context-content staff-workspace">
+    <section className="shop-context-content staff-workspace" aria-busy={query.isFetching}>
       <header className="staff-heading">
         <div>
           <p className="section-label">YOUR PEOPLE</p>
@@ -354,6 +358,9 @@ function StaffWorkspace({ userId }: { userId: string }) {
             Staff & invitations
           </h1>
           <p>Manage access to {membership.shop.name}.</p>
+          <span className="staff-refresh-status" role={query.isFetching ? "status" : undefined}>
+            {query.isFetching ? "Refreshing staff…" : ""}
+          </span>
         </div>
         <div className="staff-overview" role="group" aria-label="Team overview">
           <span>
@@ -635,8 +642,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 {roleDescriptions[role]}
               </p>
               <button
-                aria-busy={busy} className="primary-button" disabled={busy}>
-                {busy ? "Creating invitation…" : "Create invitation link"}
+                aria-busy={busy || query.isFetching} className="primary-button" disabled={busy || query.isFetching}>
+                {busy ? "Creating invitation…" : query.isFetching ? "Refreshing staff…" : "Create invitation link"}
                 <FiArrowUpRight aria-hidden="true" />
               </button>
             </form>

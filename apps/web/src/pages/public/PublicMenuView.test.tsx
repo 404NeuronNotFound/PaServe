@@ -73,12 +73,14 @@ it("explains an unpublished menu and keeps preview guidance separate from custom
 });
 
 it("makes menu text and actions usable before secondary images load", () => {
-  const { container } = render(<PublicMenuView menu={{ ...menu, shop: { ...menu.shop, bannerUrl: "https://example.com/banner.webp" } }} />);
+  const { container } = render(<PublicMenuView menu={{ ...menu, shop: { ...menu.shop, bannerUrl: "https://example.com/banner.webp", logoUrl: "https://example.com/logo.webp" } }} />);
   expect(screen.getByRole("heading", { name: "Cafe" })).toBeVisible();
   expect(screen.getByRole("searchbox")).toBeEnabled();
   for (const button of screen.getAllByRole("button", { name: "View details for Coffee" }))
     expect(button).toBeEnabled();
-  for (const image of container.querySelectorAll(".shop-banner img, .menu-product-media img")) {
+  for (const image of container.querySelectorAll(".shop-banner img, .shop-logo img, .menu-product-media img")) {
+    expect(Number(image.getAttribute("width"))).toBeGreaterThan(0);
+    expect(Number(image.getAttribute("height"))).toBeGreaterThan(0);
     expect(image).toHaveAttribute("loading", "lazy");
     expect(image).toHaveAttribute("decoding", "async");
     expect(image).toHaveAttribute("fetchpriority", "low");

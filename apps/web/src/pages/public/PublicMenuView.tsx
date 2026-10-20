@@ -1,5 +1,5 @@
 ﻿import type { PublicMenuResponse } from "@paserve/contracts";
-import { useId, useState } from "react";
+import { memo, useDeferredValue, useId, useMemo, useState } from "react";
 import { EmptyState } from "../../components/feedback/EmptyState";
 import type { CustomerOrderResponse } from "@paserve/contracts";
 import {
@@ -36,46 +36,54 @@ export function PublicMenuView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const selected = products.find((product) => product.id === selectedId);
-  const term = search.trim().toLocaleLowerCase();
-  const matches = (product: PublicMenuResponse["products"][number]) =>
-    !term ||
-    [
-      product.name,
-      product.description,
-      categories.find((category) => category.id === product.categoryId)?.name,
-    ].some((value) => value?.toLocaleLowerCase().includes(term));
-  const shown = products.filter(matches);
-  const featured = featuredProducts.filter(matches);
-  const sections = [
-    ...(featured.length
-      ? [
-          {
-            id: "featured",
-            name: "Featured",
-            description: "A few highlights from our menu.",
-            items: featured,
-          },
-        ]
-      : []),
-    ...categories
-      .map((category) => ({
-        id: `category-${category.id}`,
-        name: category.name,
-        description: category.description,
-        items: shown.filter((product) => product.categoryId === category.id),
-      }))
-      .filter((section) => section.items.length),
-    ...(shown.some((product) => product.categoryId === null)
-      ? [
-          {
-            id: "uncategorized",
-            name: "Uncategorized",
-            description: null,
-            items: shown.filter((product) => product.categoryId === null),
-          },
-        ]
-      : []),
-  ];
+  const deferredSearch = useDeferredValue(search);
+  const searchPending = search !== deferredSearch;
+  const term = deferredSearch.trim().toLocaleLowerCase();
+  const { shown, sections } = useMemo(() => {
+    const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
+    const matches = (product: PublicMenuResponse["products"][number]) =>
+      !term || [product.name, product.description, categoryNames.get(product.categoryId ?? "")]
+        .some((value) => value?.toLocaleLowerCase().includes(term));
+    const shown = products.filter(matches);
+    const featured = featuredProducts.filter(matches);
+    const byCategory = new Map<string | null, PublicMenuResponse["products"]>();
+    for (const product of shown) {
+      const group = byCategory.get(product.categoryId);
+      if (group) group.push(product);
+      else byCategory.set(product.categoryId, [product]);
+    }
+    const sections = [
+      ...(featured.length
+        ? [
+            {
+              id: "featured",
+              name: "Featured",
+              description: "A few highlights from our menu.",
+              items: featured,
+            },
+          ]
+        : []),
+      ...categories
+        .map((category) => ({
+          id: `category-${category.id}`,
+          name: category.name,
+          description: category.description,
+          items: byCategory.get(category.id) ?? [],
+        }))
+        .filter((section) => section.items.length),
+      ...(byCategory.has(null)
+        ? [
+            {
+              id: "uncategorized",
+              name: "Uncategorized",
+              description: null,
+              items: byCategory.get(null)!,
+            },
+          ]
+        : []),
+    ];
+    return { shown, sections };
+  }, [categories, products, featuredProducts, term]);
   return (
     <Root
       className="public-menu"
@@ -165,12 +173,14 @@ export function PublicMenuView({
           {!preview && <button type="button" className="secondary-button" onClick={() => window.location.reload()}>Refresh menu</button>}
         </EmptyState>
       )}
-      {term && (
-        <p className="menu-search-status" role="status">
-          {shown.length} {shown.length === 1 ? "item" : "items"} matching “
-          {search.trim()}”
-        </p>
-      )}
+      <div className="menu-search-status-slot">
+        {term && (
+          <p className="menu-search-status" role="status" aria-live={searchPending ? "off" : "polite"}>
+            {shown.length} {shown.length === 1 ? "item" : "items"} matching “
+            {deferredSearch.trim()}”
+          </p>
+        )}
+      </div>
       {term && products.length > 0 && !shown.length && (
         <div className="menu-empty">
           <FiSearch aria-hidden="true" />
@@ -184,7 +194,7 @@ export function PublicMenuView({
           </button>
         </div>
       )}
-      <div className="menu-sections">
+      <div className="menu-sections" aria-busy={searchPending}>
         {sections.map((section, index) => (
           <MenuSection
             key={section.id}
@@ -216,7 +226,7 @@ export function PublicMenuView({
   );
 }
 
-function MenuSection({
+const MenuSection = memo(function MenuSection({
   id,
   number,
   title,
@@ -306,7 +316,7 @@ function MenuSection({
       </ul>
     </section>
   );
-}
+});
 
 function ProductMedia({
   product,
@@ -319,6 +329,8 @@ function ProductMedia({
       {product.imageUrl && failed !== product.imageUrl ? (
         <img
           src={product.imageUrl}
+          width={400}
+          height={300}
           alt=""
           loading="lazy"
           decoding="async"

@@ -283,6 +283,8 @@ function ProductDetailsForm({
           {product.imageUrl && !failedImage ? (
             <img
               className="product-details-image"
+              width={160}
+              height={160}
               src={product.imageUrl}
               alt={product.name}
               decoding="async"

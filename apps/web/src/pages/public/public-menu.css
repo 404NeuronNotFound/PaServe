@@ -562,6 +562,11 @@
   font-size: 0.875rem;
   color: var(--color-muted);
   overflow-wrap: anywhere;
+  margin: 0;
+  line-height: 1.5;
+}
+.menu-search-status-slot {
+  min-height: 24px;
 }
 .menu-page-footer {
   display: flex;

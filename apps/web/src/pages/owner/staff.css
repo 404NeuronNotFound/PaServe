@@ -496,3 +496,10 @@
     transition: none;
   }
 }
+.staff-refresh-status {
+  display: block;
+  min-height: 24px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}

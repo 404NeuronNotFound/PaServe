@@ -53,8 +53,13 @@ function PublicMenuSession({
         )
       ).data,
     retry: false,
-    staleTime: 0,
-    refetchOnWindowFocus: !code,
+    // Only public pickup display data gets a short warm cache. Table resolution
+    // still validates immediately; quotes and checkout remain authoritative.
+    staleTime: code ? 0 : 15_000,
+    gcTime: 120_000,
+    // The availability subscription owns focus/online recovery and invalidation.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   useEffect(() => {
     if (!code || !menu.isFetching) return;

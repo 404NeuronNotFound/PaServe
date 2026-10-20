@@ -14,8 +14,7 @@ afterEach(() => {
   vi.resetAllMocks();
   sessionStorage.removeItem("paserve.public-menu-layout.v1");
 });
-function setup() {
-  const client = new QueryClient();
+function setup(client = new QueryClient()) {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/cafe"]}>
@@ -522,4 +521,38 @@ it.each(["grid", "list", "compact"])("updates sold-out featured and ordinary car
   expect(screen.getAllByRole("button", {name: "View details for Coffee"})).toHaveLength(2);
   expect(search).toHaveValue("Coffee");
 
+});
+
+
+it("reuses a warm pickup display cache but revalidates immediately on an availability event", async () => {
+  const client = new QueryClient();
+  client.setQueryData(["public-menu", "cafe"], menu);
+  setup(client);
+  expect(screen.getByRole("heading", { name: "Cafe" })).toBeVisible();
+  expect(api.get).not.toHaveBeenCalled();
+  vi.mocked(api.get).mockResolvedValue({ data: { ...menu, shop: { ...menu.shop, name: "Updated Cafe" } } });
+  const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
+  act(() => notify("product_available", { shopSlug: "cafe" }));
+  await screen.findByRole("heading", { name: "Updated Cafe" });
+  expect(api.get).toHaveBeenCalledTimes(1);
+});
+
+it("keeps public navigation and search mounted while an availability read is slow", async () => {
+  const coffee = { id: "coffee", categoryId: null, name: "Coffee", slug: "coffee", price: "20.00", description: null, imageUrl: null, status: "AVAILABLE", isOrderable: true, isFeatured: false, sortOrder: 0 };
+  const response = { ...menu, products: [coffee] };
+  vi.mocked(api.get).mockResolvedValueOnce({ data: response });
+  const client = setup();
+  await screen.findByRole("heading", { name: "Cafe" });
+  const search = screen.getByRole("searchbox");
+  let finish!: (value: { data: typeof response }) => void;
+  vi.mocked(api.get).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+  let refresh!: Promise<void>;
+  act(() => { refresh = client.invalidateQueries({ queryKey: ["public-menu", "cafe"] }); });
+  fireEvent.change(search, { target: { value: "Coffee" } });
+  expect(screen.getByRole("searchbox")).toBe(search);
+  expect(search).toHaveValue("Coffee");
+  expect(screen.getByRole("button", { name: "View cart (0)" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "View details for Coffee" })).toBeEnabled();
+  await act(async () => { finish({ data: response }); await refresh; });
+  expect(screen.getByRole("searchbox")).toBe(search);
 });

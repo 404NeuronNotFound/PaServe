@@ -918,6 +918,8 @@ function ProductWorkspace({ userId }: { userId: string }) {
                         {product.imageUrl && (
                           <img
                             src={product.imageUrl}
+                            width={160}
+                            height={160}
                             alt=""
                             loading="lazy"
                             decoding="async"
