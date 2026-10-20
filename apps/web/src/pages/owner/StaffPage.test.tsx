@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { AxiosError } from "axios";
+import { AxiosError, AxiosHeaders } from "axios";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import type { ShopRole, ShopStaffResponse } from "@paserve/contracts";
@@ -170,6 +170,27 @@ it("keeps invalid emails out of the invitation API", async () => {
   expect(email).toHaveAttribute("aria-invalid", "false");
   expect(screen.queryByText("Enter a valid email address.")).not.toBeInTheDocument();
   expect(inviteStaff).not.toHaveBeenCalled();
+});
+
+it.each(["email", "role"] as const)("associates server %s validation with the field and keeps the invitation draft", async (field) => {
+  vi.mocked(inviteStaff).mockRejectedValue(new AxiosError("Invalid invitation", "400", undefined, undefined, {
+    status: 400, statusText: "Bad Request", headers: {}, config: { headers: new AxiosHeaders() },
+    data: { code: "VALIDATION_ERROR", message: "Check the invitation.", fieldErrors: { [field]: ["Review this value."] } },
+  }));
+  const user = setup();
+  const email = await screen.findByLabelText("Staff email address");
+  expect(email).toHaveAttribute("type", "email");
+  expect(email).toHaveAttribute("inputmode", "email");
+  expect(email).toHaveAttribute("autocomplete", "email");
+  expect(email).toHaveAttribute("autocapitalize", "none");
+  await user.type(email, "new@example.com");
+  await user.click(screen.getByRole("button", { name: "Create invitation link" }));
+  await screen.findByText("Review this value.");
+  expect(email).toHaveValue("new@example.com");
+  const control = field === "email" ? email : screen.getByRole("combobox", { name: /Shop role/ });
+  expect(control).toHaveAttribute("aria-invalid", "true");
+  expect(control).toHaveAttribute("aria-describedby", expect.stringContaining(`staff-${field}-error`));
+  expect(control).toHaveFocus();
 });
 
 it.each([false, true])(

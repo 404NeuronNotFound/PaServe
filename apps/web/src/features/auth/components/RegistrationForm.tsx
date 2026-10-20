@@ -1,3 +1,4 @@
+import { FormField } from "../../../components/forms/FormField";
 import { Input } from "../../../components/ui/input";
 import { Button } from "../../../components/ui/button";
 import { useDraftGuard } from "../../../app/router/useDraftGuard";
@@ -30,7 +31,8 @@ export function RegistrationForm({
   const [showPasswords, setShowPasswords] = useState(false);
   const submitting = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const pendingFocus = useRef<keyof RegistrationFields | null>(null);
+  const formErrorRef = useRef<HTMLParagraphElement>(null);
+  const pendingFocus = useRef<keyof RegistrationFields | "form" | null>(null);
   const touched = useRef<Partial<Record<keyof RegistrationFields, boolean>>>(
     {},
   );
@@ -43,12 +45,13 @@ export function RegistrationForm({
 
   useEffect(() => {
     if (!mutation.isPending && pendingFocus.current) {
-      formRef.current
-        ?.querySelector<HTMLInputElement>(`[name="${pendingFocus.current}"]`)
-        ?.focus();
+      if (pendingFocus.current === "form") formErrorRef.current?.focus();
+      else formRef.current
+          ?.querySelector<HTMLInputElement>(`[name="${pendingFocus.current}"]`)
+          ?.focus();
       pendingFocus.current = null;
     }
-  }, [errors, mutation.isPending]);
+  }, [errors, formError, mutation.isPending]);
 
   function updateField(field: keyof RegistrationFields, value: string) {
     const nextFields = { ...fields, [field]: value };
@@ -110,8 +113,9 @@ export function RegistrationForm({
           password: details?.password?.[0],
         });
         setFormError("Please check your email and password.");
-        pendingFocus.current = details?.email?.length ? "email" : "password";
+        pendingFocus.current = details?.email?.length ? "email" : details?.password?.length ? "password" : "form";
       } else {
+        pendingFocus.current = "form";
         setFormError(
           isAxiosError(error) && (!error.response || (error.response.status ?? 0) >= 500)
             ? "We couldn’t confirm account creation. Check your connection, then try signing in with these details before registering again."
@@ -138,8 +142,7 @@ export function RegistrationForm({
         noValidate
         aria-busy={mutation.isPending}
       >
-        <div className="field">
-          <label htmlFor="email">Email address</label>
+        <FormField id="email" label="Email address" error={errors.email} errorId="email-error" required>
           <Input
             id="email"
             name="email"
@@ -158,14 +161,8 @@ export function RegistrationForm({
             aria-invalid={Boolean(errors.email)}
             aria-describedby={errors.email ? "email-error" : undefined}
           />
-          {errors.email && (
-            <InlineMessage className="field-error" id="email-error">
-              {errors.email}
-            </InlineMessage>
-          )}
-        </div>
-        <div className="field">
-          <label htmlFor="password">Password</label>
+        </FormField>
+        <FormField id="password" label="Password" error={errors.password} errorId="password-error" required hint={<>Use {REGISTRATION_LIMITS.passwordMin} to {REGISTRATION_LIMITS.passwordMax} characters. A longer passphrase works well.</>}>
           <div className="password-input">
             <Input
               id="password"
@@ -198,19 +195,8 @@ export function RegistrationForm({
               )}
             </Button>
           </div>
-          <p className="field-hint" id="password-hint">
-            Use {REGISTRATION_LIMITS.passwordMin}–
-            {REGISTRATION_LIMITS.passwordMax} characters. A longer passphrase
-            works well.
-          </p>
-          {errors.password && (
-            <InlineMessage className="field-error" id="password-error">
-              {errors.password}
-            </InlineMessage>
-          )}
-        </div>
-        <div className="field">
-          <label htmlFor="confirmPassword">Confirm password</label>
+        </FormField>
+        <FormField id="confirmPassword" label="Confirm password" error={errors.confirmPassword} errorId="confirm-error" required>
           <Input
             id="confirmPassword"
             name="confirmPassword"
@@ -229,13 +215,8 @@ export function RegistrationForm({
               errors.confirmPassword ? "confirm-error" : undefined
             }
           />
-          {errors.confirmPassword && (
-            <InlineMessage className="field-error" id="confirm-error">
-              {errors.confirmPassword}
-            </InlineMessage>
-          )}
-        </div>
-        {formError && <InlineMessage>{formError}</InlineMessage>}
+        </FormField>
+        {formError && <InlineMessage ref={formErrorRef} tabIndex={-1}>{formError}</InlineMessage>}
         <Button variant="default" size="inherit"
           aria-busy={mutation.isPending}
           className="primary-button"

@@ -7,6 +7,7 @@ import {
 } from "react";
 import { FiCheck, FiChevronDown } from "react-icons/fi";
 import "./select-field.css";
+import { useFieldControl } from "./field-context";
 
 type Option = { value: string; label: string };
 export function SelectField({
@@ -28,6 +29,7 @@ export function SelectField({
   invalid?: boolean;
   describedBy?: string;
 }) {
+  const field = useFieldControl(id, describedBy);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -173,8 +175,9 @@ export function SelectField({
         aria-haspopup="listbox"
         aria-controls={`${id}-options`}
         aria-activedescendant={open ? `${id}-option-${active}` : undefined}
-        aria-invalid={invalid}
-        aria-describedby={`${id}-value${describedBy ? ` ${describedBy}` : ""}`}
+        aria-invalid={field["aria-invalid"] || invalid}
+        aria-required={field.required}
+        aria-describedby={`${id}-value${field["aria-describedby"] || describedBy ? ` ${field["aria-describedby"] || describedBy}` : ""}`}
         disabled={disabled}
         onKeyDown={keys}
         onBlur={(event) => {

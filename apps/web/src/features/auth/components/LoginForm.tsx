@@ -1,3 +1,4 @@
+import { FormField } from "../../../components/forms/FormField";
 import { Input } from "../../../components/ui/input";
 import { Button } from "../../../components/ui/button";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -127,8 +128,7 @@ export function LoginForm({
           void submit(event);
         }}
       >
-        <div className="field">
-          <label htmlFor="login-email">Email address</label>
+        <FormField id="login-email" label="Email address" error={errors.email} errorId="login-email-error" required>
           <Input
             ref={emailRef}
             id="login-email"
@@ -162,14 +162,8 @@ export function LoginForm({
             aria-invalid={Boolean(errors.email)}
             aria-describedby={errors.email ? "login-email-error" : undefined}
           />
-          {errors.email && (
-            <InlineMessage className="field-error" id="login-email-error">
-              {errors.email}
-            </InlineMessage>
-          )}
-        </div>
-        <div className="field">
-          <label htmlFor="login-password">Password</label>
+        </FormField>
+        <FormField id="login-password" label="Password" error={errors.password} errorId="login-password-error" required>
           <div className="password-input">
             <Input
               ref={passwordRef}
@@ -218,12 +212,7 @@ export function LoginForm({
               )}
             </Button>
           </div>
-          {errors.password && (
-            <InlineMessage className="field-error" id="login-password-error">
-              {errors.password}
-            </InlineMessage>
-          )}
-        </div>
+        </FormField>
         {formError && (
           <InlineMessage ref={errorRef} tabIndex={-1}>
             {formError}

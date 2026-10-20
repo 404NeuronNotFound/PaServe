@@ -1,3 +1,4 @@
+import { FormField } from "../../components/forms/FormField";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
@@ -486,9 +487,9 @@ export function CashierCashPayment({
             <>
               {other && (
                 <>
-                  <label htmlFor="other-payment-description">
-                    Payment method description
-                  </label>
+                  <FormField id="other-payment-description" label="Payment method description" required hint={<> Required. Up to 80 characters, such as Bank transfer or Shop
+                    voucher. Use Cash, GCash or Card for those methods. Do not
+                    enter card details. </>} error={description.length > 0 && invalidDescription ? "Enter a plain-text method description of up to 80 characters without card details." : undefined}>
                   <Input
                     id="other-payment-description"
                     value={description}
@@ -507,17 +508,7 @@ export function CashierCashPayment({
                       attempt.current = null;
                     }}
                   />
-                  <p id="other-payment-description-hint">
-                    Required. Up to 80 characters, such as Bank transfer or Shop
-                    voucher. Use Cash, GCash or Card for those methods. Do not
-                    enter card details.
-                  </p>
-                  {description.length > 0 && invalidDescription && (
-                    <InlineMessage id="other-payment-description-error">
-                      Enter a plain-text method description of up to 80
-                      characters without card details.
-                    </InlineMessage>
-                  )}
+                  </FormField>
                 </>
               )}
               <p>
@@ -531,9 +522,9 @@ export function CashierCashPayment({
                 This records the cashier’s confirmation. No gateway verification
                 is performed.
               </p>
-              <label htmlFor="gcash-reference">
-                Reference note / number (optional)
-              </label>
+              <FormField id="gcash-reference" label="Reference note / number (optional)" hint={<> {card
+                  ? "Up to 200 characters. Use a terminal receipt/reference; do not enter card numbers or security codes."
+                  : "Up to 200 characters. Recorded as a cashier note."} </>} error={invalidReference ? other || card ? "Use a receipt reference of up to 200 characters without card details." : "Enter a plain-text reference of up to 200 characters." : undefined}>
               <Input
                 id="gcash-reference"
                 value={reference}
@@ -551,18 +542,7 @@ export function CashierCashPayment({
                   attempt.current = null;
                 }}
               />
-              <p id="gcash-reference-hint">
-                {card
-                  ? "Up to 200 characters. Use a terminal receipt/reference; do not enter card numbers or security codes."
-                  : "Up to 200 characters. Recorded as a cashier note."}
-              </p>
-              {invalidReference && (
-                <InlineMessage id="gcash-reference-error">
-                  {other || card
-                    ? "Use a receipt reference of up to 200 characters without card details."
-                    : "Enter a plain-text reference of up to 200 characters."}
-                </InlineMessage>
-              )}
+              </FormField>
               <label className="cashier-gcash-confirm">
                 <Input
                   type="checkbox"
@@ -582,7 +562,10 @@ export function CashierCashPayment({
             </>
           ) : (
             <>
-              <label htmlFor="cash-amount">Amount received (PHP)</label>
+              <FormField id="cash-amount" label="Amount received (PHP)" required
+                hint={<>Enter the cash actually received, with up to two decimal places. It must cover the total. Maximum {formatCartPrice(CASH_AMOUNT_MAX)}.</>}
+                error={invalidAmount ? normalized ? "The amount received is below the order total." : `Enter a valid amount with up to two decimal places. Maximum ${formatCartPrice(CASH_AMOUNT_MAX)}.` : undefined}
+              >
               <div className="cashier-cash-input">
                 <span className="cashier-cash-currency" aria-hidden="true">
                   ₱
@@ -607,18 +590,7 @@ export function CashierCashPayment({
                   }
                 />
               </div>
-              <p id="cash-amount-hint">
-                Enter the cash actually received, with up to two decimal places.
-                It must cover the total. Maximum{" "}
-                {formatCartPrice(CASH_AMOUNT_MAX)}.
-              </p>
-              {invalidAmount && (
-                <InlineMessage id="cash-amount-error">
-                  {normalized
-                    ? "The amount received is below the order total."
-                    : `Enter a valid amount with up to two decimal places. Maximum ${formatCartPrice(CASH_AMOUNT_MAX)}.`}
-                </InlineMessage>
-              )}
+              </FormField>
               <div className="cashier-cash-change" role="status">
                 <span>Change due</span>
                 <strong>

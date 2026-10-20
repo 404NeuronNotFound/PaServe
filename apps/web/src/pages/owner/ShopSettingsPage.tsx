@@ -1,3 +1,4 @@
+import { FormField } from "../../components/forms/FormField";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { Button } from "../../components/ui/button";
@@ -470,11 +471,14 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                   : "settings-field"
               }
             >
-              <div className="field">
-                <label htmlFor={`settings-${field.key}`}>
-                  {field.label}
-                  {field.key === "name" ? " (required)" : ""}
-                </label>
+              <FormField
+                id={`settings-${field.key}`}
+                label={field.key === "name" ? `${field.label} (required)` : field.label}
+                required={field.key === "name"}
+                optional={field.key !== "name" && field.key !== "menuLayout" && field.key !== "primaryColor" && field.key !== "accentColor"}
+                hint={"hint" in field ? field.hint : `Up to ${field.max} characters.`}
+                error={errors[field.key]}
+              >
                 {(field.key === "primaryColor" ||
                   field.key === "accentColor") && (
                   <BrandColorControl
@@ -572,25 +576,13 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                     }
                   />
                 )}
-                <p className="field-hint" id={`settings-${field.key}-hint`}>
-                  {"hint" in field
-                    ? field.hint
-                    : `Up to ${field.max} characters.`}
-                </p>
+
                 {"multiline" in field && (
                   <span className="field-character-count" aria-hidden="true">
                     {values[field.key].length} / {field.max}
                   </span>
                 )}
-                {errors[field.key] && (
-                  <InlineMessage
-                    id={`settings-${field.key}-error`}
-                    className="field-error"
-                  >
-                    {errors[field.key]}
-                  </InlineMessage>
-                )}
-              </div>
+              </FormField>
             </div>
           </Fragment>
         ))}

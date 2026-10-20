@@ -1,3 +1,4 @@
+import { FormField } from "../../components/forms/FormField";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -160,6 +161,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const running = useRef(false);
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [roleError, setRoleError] = useState("");
+  const serverErrorFocus = useRef<"staff-email" | "staff-role" | null>(null);
   const [role, setRole] = useState<StaffRole>("CASHIER");
   const [error, setError] = useState("");
   const [link, setLink] = useState("");
@@ -266,6 +269,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
       return;
     }
     setEmailError("");
+    setRoleError("");
     if (running.current) return;
     try {
       await run(async () => {
@@ -279,9 +283,23 @@ function StaffWorkspace({ userId }: { userId: string }) {
         }
       }, `Invitation link created for ${normalized}.`);
     } catch (failure) {
-      if (stillHere()) setError(errorMessage(failure));
+      if (stillHere()) {
+        const fields = isAxiosError<ApiErrorResponse>(failure)
+          ? failure.response?.data.fieldErrors
+          : undefined;
+        setEmailError(fields?.email?.[0] ?? "");
+        setRoleError(fields?.role?.[0] ?? "");
+        setError(errorMessage(failure));
+        serverErrorFocus.current = fields?.email?.length
+          ? "staff-email" : fields?.role?.length ? "staff-role" : null;
+      }
     }
   }
+  useEffect(() => {
+    if (busy || !serverErrorFocus.current) return;
+    document.getElementById(serverErrorFocus.current)?.focus();
+    serverErrorFocus.current = null;
+  }, [busy, emailError, roleError]);
   async function copy() {
     if (copyingGuard.current || !link || busy) return;
     copyingGuard.current = true;
@@ -609,16 +627,19 @@ function StaffWorkspace({ userId }: { userId: string }) {
           <div className="staff-invite-body">
             <form
               className="registration-form"
+              aria-busy={busy}
               onSubmit={(event) => void submit(event)}
               noValidate
             >
-              <div className="field">
-                <label htmlFor="staff-email">Staff email address</label>
+              <FormField id="staff-email" label="Staff email address" error={emailError} required>
                 <Input
                   ref={invitationEmail}
                   id="staff-email"
                   type="email"
                   autoComplete="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   maxLength={254}
                   value={email}
                   onChange={(event) => {
@@ -631,20 +652,22 @@ function StaffWorkspace({ userId }: { userId: string }) {
                   required
                   placeholder="name@example.com"
                 />
-                {emailError && <InlineMessage id="staff-email-error">{emailError}</InlineMessage>}
-              </div>
+
+              </FormField>
+              <FormField id="staff-role" label="Shop role" required hint={roleDescriptions[role]} hintId="staff-role-description" error={roleError}>
               <SelectField
                 id="staff-role"
                 label="Shop role"
                 value={role}
                 options={roles}
-                onChange={(value) => setRole(value as StaffRole)}
+                onChange={(value) => {
+                  setRole(value as StaffRole);
+                  setRoleError("");
+                }}
                 disabled={busy}
                 describedBy="staff-role-description"
               />
-              <p id="staff-role-description" className="staff-role-description">
-                {roleDescriptions[role]}
-              </p>
+              </FormField>
               <Button variant="default" size="inherit" type="submit"
                 aria-busy={busy || query.isFetching} className="primary-button" disabled={busy || query.isFetching}>
                 {busy ? "Creating invitation…" : query.isFetching ? "Refreshing staff…" : "Create invitation link"}

@@ -1,3 +1,4 @@
+import { FormField } from "../../components/forms/FormField";
 import { Textarea } from "../../components/ui/textarea";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
@@ -178,13 +179,7 @@ export function ProductEditor({
     setErrors((current) => ({ ...current, [field]: "" }));
     setError("");
   }
-  function fieldError(field: string) {
-    return errors[field] ? (
-      <InlineMessage id={`product-${field}-error`} className="field-error">
-        {errors[field]}
-      </InlineMessage>
-    ) : null;
-  }
+
   useEffect(() => {
     if (disabled) return;
     const field = pendingFocus.current;
@@ -467,9 +462,8 @@ export function ProductEditor({
               <FiX aria-hidden="true" />
             </Button>
           </header>
-          <form ref={form} noValidate onSubmit={(event) => void submit(event)}>
-            <div className="field">
-              <label htmlFor="product-name">Product name</label>
+          <form ref={form} aria-busy={disabled} noValidate onSubmit={(event) => void submit(event)}>
+            <FormField id="product-name" label="Product name" error={errors.name} required>
               <Input
                 ref={nameInput}
                 id="product-name"
@@ -489,11 +483,10 @@ export function ProductEditor({
                 }}
                 placeholder="e.g. Iced latte"
               />
-              {fieldError("name")}
-            </div>
+
+            </FormField>
             <div className="product-form-grid">
-              <div className="field">
-                <label htmlFor="product-price">Price</label>
+              <FormField id="product-price" label="Price" error={errors.price} required hint="PHP - Up to two decimal places. Zero is allowed.">
                 <Input
                   id="product-price"
                   name="price"
@@ -512,18 +505,15 @@ export function ProductEditor({
                     }
                   }}
                 />
-                <p id="product-price-hint" className="field-hint">
-                  PHP · Up to two decimal places. Zero is allowed.
-                </p>
+
                 {PRODUCT_PRICE_PATTERN.test(price) && (
                   <p className="field-hint" role="status">
                     Menu price: <strong>{formatProductPrice(price)}</strong>
                   </p>
                 )}
-                {fieldError("price")}
-              </div>
-              <div className="field">
-                <label htmlFor="product-category">Category</label>
+
+              </FormField>
+              <FormField id="product-category" label="Category" error={errors.categoryId} errorId="product-categoryId-error">
                 <SelectField
                   id="product-category"
                   label="Category"
@@ -556,8 +546,8 @@ export function ProductEditor({
                     })) ?? []),
                   ]}
                 />
-                {fieldError("categoryId")}
-              </div>
+
+              </FormField>
             </div>
             {categories.isPending && (
               <InlineMessage tone="info">Loading categories…</InlineMessage>
@@ -612,10 +602,7 @@ export function ProductEditor({
                 }}
               />
             )}
-            <div className="field">
-              <label htmlFor="product-description">
-                Description <span className="field-hint">(optional)</span>
-              </label>
+            <FormField id="product-description" label="Description (optional)" error={errors.description} errorId="product-description-error" hint={<> {[...description].length}/{PRODUCT_LIMITS.descriptionMax} </>}>
               <Textarea
                 id="product-description"
                 name="description"
@@ -631,14 +618,8 @@ export function ProductEditor({
                 }}
                 placeholder="A short description guests will love."
               />
-              <p
-                id="product-description-hint"
-                className="field-hint category-character-count"
-              >
-                {[...description].length}/{PRODUCT_LIMITS.descriptionMax}
-              </p>
-              {fieldError("description")}
-            </div>
+
+            </FormField>
             <div className="field">
               <label htmlFor="product-status">Menu status</label>
               <SelectField
@@ -666,8 +647,8 @@ export function ProductEditor({
             <details className="product-display-options">
               <summary>Image & display options</summary>
               <div>
-                <div className="field">
-                  <label htmlFor="product-image">Saved photo</label>
+                <FormField id="product-image" label="Saved photo" error={errors.imageUrl} errorId="product-imageUrl-error" hint={<> Choose a photo above to upload. Photo links are managed
+                    automatically. </>}>
                   <Input
                     id="product-image"
                     value={imageUrl}
@@ -675,10 +656,7 @@ export function ProductEditor({
                     aria-describedby="product-image-hint"
                     placeholder="No saved photo"
                   />
-                  <p id="product-image-hint" className="field-hint">
-                    Choose a photo above to upload. Photo links are managed
-                    automatically.
-                  </p>
+
                   {product && imageUrl && (
                     <Button variant="outline" size="inherit"
                       type="button"
@@ -697,8 +675,8 @@ export function ProductEditor({
                       Save changes to remove the photo.
                     </p>
                   )}
-                  {fieldError("imageUrl")}
-                </div>
+
+                </FormField>
                 <label className="product-featured-field">
                   <Input
                     name="isFeatured"
@@ -709,8 +687,7 @@ export function ProductEditor({
                   />
                   <span>Feature this product</span>
                 </label>
-                <div className="field">
-                  <label htmlFor="product-sort">Display order</label>
+                <FormField id="product-sort" label="Display order" error={errors.sortOrder} errorId="product-sortOrder-error" hint={<> Lower numbers appear first. Default: 0. </>} hintId="product-sort-hint">
                   <Input
                     id="product-sort"
                     name="sortOrder"
@@ -726,11 +703,8 @@ export function ProductEditor({
                       }
                     }}
                   />
-                  <p id="product-sort-hint" className="field-hint">
-                    Lower numbers appear first. Default: 0.
-                  </p>
-                  {fieldError("sortOrder")}
-                </div>
+
+                </FormField>
               </div>
             </details>
             {error && !created && <InlineMessage>{error}</InlineMessage>}

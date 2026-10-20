@@ -1,0 +1,23 @@
+.form-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: var(--spacing-2);
+}
+.form-field > label {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+  line-height: var(--line-control);
+  overflow-wrap: anywhere;
+}
+.form-field > .field-hint,
+.form-field > .field-error {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--line-body);
+  overflow-wrap: anywhere;
+}
+.form-field > .field-hint { color: var(--color-muted); }
+.form-field[data-required] > label::after { content: " (required)"; }
+.form-field[data-optional] > label::after { content: " (optional)"; }
+.form-field :where(.ui-input, .ui-textarea) { min-width: 0; width: 100%; }
