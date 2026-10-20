@@ -7,6 +7,7 @@ export function useOrderListSearch() {
     search: "",
     filters: {} as OwnerOrderFilters,
     cursors: [null] as (string | null)[],
+    resetVersion: 0,
   });
   const setCursors = (value: SetStateAction<(string | null)[]>) =>
     setState((current) => ({
@@ -22,6 +23,9 @@ export function useOrderListSearch() {
     setCursors,
     applySearch,
     applyFilters,
+    clearAll: () => setState((current) => ({
+      search: "", filters: {}, cursors: [null], resetVersion: current.resetVersion + 1,
+    })),
     hasFilters: Object.keys(state.filters).length > 0,
   };
 }

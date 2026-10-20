@@ -101,6 +101,16 @@ it.each(["ADMIN", "MANAGER", "CASHIER", "KITCHEN"] as const)(
     expect(listStaff).not.toHaveBeenCalled();
   },
 );
+it("helps an owner with no staff start an invitation without submitting it", async () => {
+  vi.mocked(listStaff).mockResolvedValue({ ...data, members: [data.members[0]], invitations: [] });
+  const user = setup();
+  await user.click(await screen.findByRole("button", { name: "Invite your first teammate" }));
+  expect(screen.getByLabelText("Staff email address")).toHaveFocus();
+  expect(inviteStaff).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Start an invitation" }));
+  expect(screen.getByLabelText("Staff email address")).toHaveFocus();
+});
+
 it("creates a link for a normalized email and defaults to cashier", async () => {
   vi.mocked(inviteStaff).mockResolvedValue({
     shopId: "shop-a",

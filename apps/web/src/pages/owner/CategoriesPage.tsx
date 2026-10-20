@@ -1,5 +1,6 @@
 import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { EmptyState } from "../../components/feedback/EmptyState";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import {
@@ -697,11 +698,14 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               ))}
             </ul>
           ) : (
-            <div className="categories-empty">
-              <FiLayers aria-hidden="true" />
-              <h3>A place for every favorite.</h3>
-              <p>Create your first category to start organizing your menu.</p>
-            </div>
+            <EmptyState title="A place for every favorite." icon={<FiLayers />}
+              description="Create your first category to start organizing your menu.">
+              <button type="button" className="primary-button"
+                disabled={creationUncertain || mutation.isPending || lostAccess}
+                onClick={() => { input.current?.scrollIntoView?.({ block: "center" }); input.current?.focus(); }}>
+                Name your first category
+              </button>
+            </EmptyState>
           )}
           {(!requestDenied || unverified) && !query.isPending && (
             <button

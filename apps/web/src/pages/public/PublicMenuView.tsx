@@ -1,5 +1,6 @@
 ﻿import type { PublicMenuResponse } from "@paserve/contracts";
 import { useId, useState } from "react";
+import { EmptyState } from "../../components/feedback/EmptyState";
 import type { CustomerOrderResponse } from "@paserve/contracts";
 import {
   FiArrowUpRight,
@@ -159,10 +160,10 @@ export function PublicMenuView({
         </div>
       )}
       {!products.length && (
-        <div className="menu-empty">
-          <FiCoffee aria-hidden="true" />
-          <p>No items are available on this menu yet.</p>
-        </div>
+        <EmptyState title="No items are available on this menu yet." icon={<FiCoffee />}
+          description={preview ? "Add a visible product to start building this menu." : "The shop has no items to show right now. Ask the staff about availability or check again shortly."}>
+          {!preview && <button type="button" className="secondary-button" onClick={() => window.location.reload()}>Refresh menu</button>}
+        </EmptyState>
       )}
       {term && (
         <p className="menu-search-status" role="status">
@@ -170,7 +171,7 @@ export function PublicMenuView({
           {search.trim()}”
         </p>
       )}
-      {term && !shown.length && (
+      {term && products.length > 0 && !shown.length && (
         <div className="menu-empty">
           <FiSearch aria-hidden="true" />
           <p>No matches. Try another craving.</p>

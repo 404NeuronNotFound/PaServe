@@ -5,6 +5,7 @@ import { isAxiosError } from "axios";
 import { getPeakHours } from "../../features/orders/peak-hours";
 import { formatCartPrice } from "../../lib/money";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
 const denied = (error: unknown) =>
   isAxiosError(error) && [401, 403, 404].includes(error.response?.status ?? 0);
 const hourLabel = (hour: number) =>
@@ -79,9 +80,9 @@ export function PeakHours({
       {report && (
         <>
           {report.completedOrders === 0 ? (
-            <InlineMessage tone="info">
-              No eligible completed orders in this period. No busiest hour yet.
-            </InlineMessage>
+            <ReportEmptyState title="No hourly activity yet."
+              description="No eligible completed orders in this period. No busiest hour yet."
+              label="hourly activity" pending={query.isFetching} onRefresh={() => void query.refetch()} />
           ) : (
             <p className="daily-analytics-summary" role="status">
               Busiest {report.peakHours.length === 1 ? "hour" : "hours"}:{" "}

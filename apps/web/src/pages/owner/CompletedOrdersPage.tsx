@@ -19,6 +19,7 @@ import { sumPrices } from "../../features/cart/cart";
 import "./active-orders.css";
 import { useOrderListSearch } from "../../features/orders/useOrderListSearch";
 import { OrderSearch } from "./OrderSearch";
+import { OrderEmptyActions } from "./OrderEmptyActions";
 import { OrderFilters } from "./OrderFilters";
 import {
   OrderPageHeader,
@@ -55,6 +56,8 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
     setCursors,
     applySearch,
     applyFilters,
+    clearAll,
+    resetVersion,
   } = useOrderListSearch();
   const cursor = cursors[cursors.length - 1];
   const query = useQuery({
@@ -98,8 +101,9 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
         Review fulfilled orders with their saved totals and payment records.
       </OrderPageHeader>
       <div className="owner-order-tools">
-        <OrderSearch search={search} onSearch={applySearch} />
+        <OrderSearch key={`search:${resetVersion}`} search={search} onSearch={applySearch} />
         <OrderFilters
+          key={`filters:${resetVersion}`}
           view="completed"
           filters={filters}
           onApply={applyFilters}
@@ -166,6 +170,8 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
                     ? "Go back or refresh to start again."
                     : "Orders appear here after your team confirms pickup or table service. Payment alone does not mark an order fulfilled."}
               </p>
+              <OrderEmptyActions filtered={Boolean(search || hasFilters)} paged={Boolean(cursor)}
+                pending={query.isFetching} onReset={clearAll} onRefresh={() => void query.refetch()} />
             </div>
           ) : (
             <ul

@@ -64,6 +64,14 @@ const menu: PublicMenuResponse = {
   featuredProducts: [coffee],
 };
 
+it("explains an unpublished menu and keeps preview guidance separate from customer actions", () => {
+  render(<PublicMenuView menu={{ ...menu, products: [], featuredProducts: [] }} preview />);
+  expect(screen.getByRole("heading", { name: "No items are available on this menu yet." })).toBeVisible();
+  expect(screen.getByText("Add a visible product to start building this menu.")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "Refresh menu" })).not.toBeInTheDocument();
+  expect(screen.queryByText("No matches. Try another craving.")).not.toBeInTheDocument();
+});
+
 it("makes menu text and actions usable before secondary images load", () => {
   const { container } = render(<PublicMenuView menu={{ ...menu, shop: { ...menu.shop, bannerUrl: "https://example.com/banner.webp" } }} />);
   expect(screen.getByRole("heading", { name: "Cafe" })).toBeVisible();

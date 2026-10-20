@@ -1,0 +1,50 @@
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: clamp(24px, 4vw, 44px) 16px;
+  color: var(--color-text);
+  text-align: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.empty-state .empty-state-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--color-secondary);
+  color: var(--color-text);
+}
+.empty-state-icon > svg { width: 24px; height: 24px; }
+.empty-state > h2, .empty-state > h3 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(21px, 2vw, 26px);
+  font-weight: 500;
+}
+.empty-state > .empty-state-description {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+.empty-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 100%;
+}
+.empty-state-actions > :is(button, a) {
+  min-height: 44px;
+  white-space: normal;
+}
+.empty-state-guidance {
+  flex-basis: 100%;
+  margin: 0 0 4px;
+  max-width: 48ch;
+  color: var(--color-muted);
+  line-height: 1.6;
+}

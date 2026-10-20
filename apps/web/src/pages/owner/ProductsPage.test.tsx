@@ -137,6 +137,32 @@ async function findProductAction(name: string) {
     await userEvent.click(disclosure.querySelector("summary")!);
   return screen.findByRole("button", { name });
 }
+it("opens product creation from the first-product empty state", async () => {
+  setup();
+  await userEvent.click(await screen.findByRole("button", { name: "Add your first product" }));
+  expect(screen.getByRole("dialog", { name: "Create product" })).toBeInTheDocument();
+  expect(createProduct).not.toHaveBeenCalled();
+});
+
+it("offers product creation in an empty category and preselects that category", async () => {
+  setup();
+  await userEvent.click(await screen.findByRole("button", { name: "Add product to Coffee" }));
+  const modal = within(screen.getByRole("dialog", { name: "Create product" }));
+  expect(modal.getByRole("combobox", { name: "Category" })).toHaveTextContent("Coffee (hidden) /coffee");
+  expect(screen.getByText(/category will stay hidden/)).toBeInTheDocument();
+});
+
+it("clears a no-match product search using its empty-state action", async () => {
+  vi.mocked(listProducts).mockResolvedValue({ products: [product] });
+  setup();
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: "Latte" });
+  await user.type(screen.getByRole("searchbox", { name: "Find a product" }), "missing");
+  await user.click(screen.getByRole("button", { name: "Reset product filters" }));
+  expect(screen.getByRole("heading", { name: "Latte" })).toBeInTheDocument();
+  expect(screen.getByRole("searchbox", { name: "Find a product" })).toHaveValue("");
+  await waitFor(() => expect(screen.getByRole("searchbox", { name: "Find a product" })).toHaveFocus());
+});
 it.each([
   ["Hide Latte", setProductHidden, "HIDDEN"],
   ["Mark Latte sold out", setProductSoldOut, "SOLD_OUT"],

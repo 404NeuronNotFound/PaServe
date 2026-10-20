@@ -227,6 +227,7 @@ export function AccountPage() {
                     started.
                   </p>
                   <span>Your shop memberships will appear here.</span>
+                  <Link className="primary-button" to="/app/onboarding/create-shop">Set up your first shop</Link>
                 </div>
               )}
             </section>

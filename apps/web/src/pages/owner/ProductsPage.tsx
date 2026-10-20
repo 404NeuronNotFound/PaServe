@@ -1,4 +1,5 @@
 import { PendingButton } from "../../components/feedback/PendingButton";
+import { EmptyState } from "../../components/feedback/EmptyState";
 import { ProductsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { SelectField } from "../../components/forms/SelectField";
 import { useNavigate } from "react-router-dom";
@@ -81,6 +82,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
   const membership = useActiveShop();
   const client = useQueryClient();
   const [creating, setCreating] = useState(false);
+  const [initialCategoryId, setInitialCategoryId] = useState("");
   const [ordering, setOrdering] = useState(false);
   const [featuredOrdering, setFeaturedOrdering] = useState(false);
   const [orderCategory, setOrderCategory] = useState("");
@@ -634,7 +636,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
             Boolean(availableBusy) ||
             denied
           }
-          onClick={() => setCreating(true)}
+          onClick={() => { setInitialCategoryId(""); setCreating(true); }}
         >
           <span className="product-create-icon" aria-hidden="true">
             <FiPlus />
@@ -1253,12 +1255,20 @@ function ProductWorkspace({ userId }: { userId: string }) {
               </section>
             ))}
           </div>
+        ) : showArchived ? (
+          <EmptyState title="Nothing archived." icon={<FiArchive />}
+            description="Archived products stay here until you restore them. Your active menu is in the other view.">
+            <button type="button" className="secondary-button" disabled={browsingLocked}
+              onClick={() => { setShowArchived(false); clearFilters(); }}>Back to active products</button>
+          </EmptyState>
         ) : (
-          <div className="categories-empty">
-            <FiCoffee aria-hidden="true" />
-            <h3>Start with a favorite.</h3>
-            <p>Create your first product to bring this menu to life.</p>
-          </div>
+          <EmptyState title="Start with a favorite." icon={<FiCoffee />}
+            description="Create your first product to bring this menu to life.">
+            <button type="button" className="primary-button" disabled={browsingLocked || denied}
+              onClick={() => { setInitialCategoryId(""); setCreating(true); }}>
+              Add your first product
+            </button>
+          </EmptyState>
         )}
       </section>
       {query.isSuccess && !denied && (
@@ -1310,13 +1320,29 @@ function ProductWorkspace({ userId }: { userId: string }) {
           )}
         </footer>
       )}
-      {query.isSuccess && !unverified && hasFilters && filteredProducts.length === 0 && (
-        <div className="categories-empty product-no-results">
-          <FiSearch aria-hidden="true" />
-          <h3>No products found.</h3>
-          <p>Try another name or clear the filters to browse your menu.</p>
-        </div>
+      {query.isSuccess && !denied && query.data.products.length > 0 && hasFilters && filteredProducts.length === 0 && (
+        <EmptyState title="No products found." icon={<FiSearch />}
+          description="Try another name or clear the filters to browse your menu.">
+          <button type="button" className="secondary-button" disabled={browsingLocked}
+            onClick={() => {
+              clearFilters();
+              requestAnimationFrame(() => document.getElementById("product-search")?.focus());
+            }}>Reset product filters</button>
+        </EmptyState>
       )}
+      {query.isSuccess && !denied && !showArchived && !hasFilters && categories.isSuccess &&
+        knownCategories.filter((category) => !visibleProducts.some((product) => product.categoryId === category.id))
+          .map((category) => (
+            <EmptyState key={category.id} title={`${category.name} has no products yet.`} icon={<FiLayers />}
+              description={category.isVisible
+                ? "Add a product to start filling this category. Empty categories stay out of the customer menu."
+                : "Add a product to this category. The category will stay hidden until you choose to show it."}>
+              <button type="button" className="secondary-button" disabled={browsingLocked}
+                onClick={() => { setInitialCategoryId(category.id); setCreating(true); }}>
+                Add product to {category.name}
+              </button>
+            </EmptyState>
+          ))}
       {query.isSuccess &&
         !unverified &&
         !hasFilters &&
@@ -1432,6 +1458,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
           shopId={membership.shopId}
           shopSlug={membership.shop.slug}
           product={editing ?? undefined}
+          initialCategoryId={initialCategoryId}
           onCreated={setCreatedProduct}
           onClose={() => {
             setCreating(false);

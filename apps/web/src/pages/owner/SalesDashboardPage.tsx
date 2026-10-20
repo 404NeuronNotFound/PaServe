@@ -808,6 +808,11 @@ function SalesWorkspace({ userId }: { userId: string }) {
                     No completed orders for this{" "}
                     {custom ? "date range" : "business day"}.
                   </p>
+                  <button type="button" className="secondary-button" onClick={() => {
+                    const control = document.getElementById(custom ? "custom-sales-start" : "sales-date");
+                    control?.scrollIntoView?.({ block: "center" });
+                    control?.focus();
+                  }}>Choose another reporting period</button>
                 </div>
               ) : (
                 <>

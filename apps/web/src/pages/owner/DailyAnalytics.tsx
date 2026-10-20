@@ -12,6 +12,7 @@ import { getDailyAnalytics } from "../../features/orders/daily-analytics";
 import { getWeeklyAnalytics } from "../../features/orders/weekly-analytics";
 import { getMonthlyAnalytics } from "../../features/orders/monthly-analytics";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
 import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 
 const accessUnavailable = (error: unknown) =>
@@ -168,10 +169,9 @@ export function DailyAnalytics({
             {report.itemsSold.toLocaleString("en-PH")} items sold
           </p>
           {report.completedOrders === 0 && (
-            <InlineMessage tone="info">
-              No completed sales in this range. All{" "}
-              {monthly ? "months" : weekly ? "weeks" : "days"} are shown below.
-            </InlineMessage>
+            <ReportEmptyState title="No completed sales in this range."
+              description={`All ${monthly ? "months" : weekly ? "weeks" : "days"} are shown below. Choose another reporting period above, or check again after paid orders are completed.`}
+              label="sales history" pending={query.isFetching} onRefresh={() => void query.refetch()} />
           )}
           <div
             className="daily-analytics-table"

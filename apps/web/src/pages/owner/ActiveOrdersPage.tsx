@@ -25,6 +25,7 @@ import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./active-orders.css";
 import { useOrderListSearch } from "../../features/orders/useOrderListSearch";
 import { OrderSearch } from "./OrderSearch";
+import { OrderEmptyActions } from "./OrderEmptyActions";
 import { OrderFilters } from "./OrderFilters";
 
 export function ActiveOrdersPage() {
@@ -70,6 +71,8 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
     setCursors,
     applySearch,
     applyFilters,
+    clearAll,
+    resetVersion,
   } = useOrderListSearch();
   const [now, setNow] = useState(Date.now);
   const cursor = cursors[cursors.length - 1];
@@ -121,8 +124,8 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
         <ActiveOrdersPulse orders={orders} />
       )}
       <div className="owner-order-tools">
-        <OrderSearch search={search} onSearch={applySearch} />
-        <OrderFilters view="active" filters={filters} onApply={applyFilters} />
+        <OrderSearch key={`search:${resetVersion}`} search={search} onSearch={applySearch} />
+        <OrderFilters key={`filters:${resetVersion}`} view="active" filters={filters} onApply={applyFilters} />
       </div>
       <div className="active-orders-toolbar">
         <span>
@@ -174,6 +177,8 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
                     ? "Orders may have been fulfilled. Go back or refresh to start again."
                     : "New orders will appear here while they await confirmation, payment, preparation, or fulfillment."}
               </p>
+              <OrderEmptyActions filtered={Boolean(search || hasFilters)} paged={Boolean(cursor)}
+                pending={query.isFetching} onReset={clearAll} onRefresh={() => void query.refetch()} />
             </div>
           ) : (
             <ul

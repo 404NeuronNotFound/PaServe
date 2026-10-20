@@ -225,6 +225,7 @@ export function ShopSelectionPage() {
               <FiCoffee aria-hidden="true" />
               <h3>A fresh start for your next place.</h3>
               <p>No available shops yet. Create a shop to get started.</p>
+              <Link className="primary-button" to="/app/onboarding/create-shop">Set up your first shop</Link>
             </div>
           )}
         </section>

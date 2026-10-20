@@ -40,6 +40,7 @@ export function ProductEditor({
   onClose,
   product,
   onCreated,
+  initialCategoryId = "",
 }: {
   userId: string;
   shopId: string;
@@ -47,6 +48,7 @@ export function ProductEditor({
   onClose: () => void;
   product?: MenuProduct;
   onCreated?: (product: MenuProduct) => void;
+  initialCategoryId?: string;
 }) {
   const client = useQueryClient();
   const [imageSaved, setImageSaved] = useState(product?.imageUrl ?? "");
@@ -58,7 +60,7 @@ export function ProductEditor({
   const [progress, setProgress] = useState(0);
   const [name, setName] = useState(product?.name ?? ""),
     [price, setPrice] = useState(product?.price ?? ""),
-    [categoryId, setCategoryId] = useState(product?.categoryId ?? ""),
+    [categoryId, setCategoryId] = useState(product ? product.categoryId ?? "" : initialCategoryId),
     [description, setDescription] = useState(product?.description ?? ""),
     [imageUrl, setImageUrl] = useState(product?.imageUrl ?? ""),
     [sortOrder, setSortOrder] = useState(String(product?.sortOrder ?? 0));

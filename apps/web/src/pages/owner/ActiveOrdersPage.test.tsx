@@ -74,6 +74,22 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+it("clears an empty search and resets its visible input and server query", async () => {
+  vi.mocked(getActiveOrders).mockImplementation(async (_shop, _cursor, _signal, search) =>
+    search ? { orders: [], nextCursor: null } : summary(),
+  );
+  setup();
+  await screen.findByText("ORD-000042");
+  fireEvent.change(screen.getByRole("searchbox", { name: "Search orders" }), { target: { value: "missing" } });
+  fireEvent.submit(screen.getByRole("search", { name: "Search orders in this view" }));
+  const reset = await screen.findByRole("button", { name: "Clear search and filters" });
+  fireEvent.click(reset);
+  await screen.findByText("ORD-000042");
+  expect(screen.getByRole("searchbox", { name: "Search orders" })).toHaveValue("");
+  await waitFor(() => expect(screen.getByRole("searchbox", { name: "Search orders" })).toHaveFocus());
+  expect(getActiveOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {});
+});
+
 it("shows approval/payment, placed and updated Manila times, order age, type/table and exact total", async () => {
   setup();
   expect(await screen.findByText("ORD-000042")).toBeVisible();

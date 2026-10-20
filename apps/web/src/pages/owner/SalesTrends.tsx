@@ -8,6 +8,7 @@ import {
   trendPercentage,
 } from "../../features/orders/sales-trends";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
 import { formatCartPrice } from "../../lib/money";
 import { SalesTrendChart } from "./SalesTrendChart";
 
@@ -112,9 +113,9 @@ export function SalesTrends({
             </InlineMessage>
           )}
           {current.completedOrders === 0 && previous.completedOrders === 0 && (
-            <InlineMessage tone="info">
-              No completed sales in either period.
-            </InlineMessage>
+            <ReportEmptyState title="No completed sales in either period."
+              description="There is no sales activity to compare yet. Choose another reporting period, or check again after paid orders are completed."
+              label="sales trends" pending={query.isFetching} onRefresh={() => void query.refetch()} />
           )}
           <dl className="sales-trend-summary">
             <div

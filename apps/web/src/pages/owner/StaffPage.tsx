@@ -1,5 +1,6 @@
 import { StaffSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { EmptyState } from "../../components/feedback/EmptyState";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
@@ -476,13 +477,8 @@ function StaffWorkspace({ userId }: { userId: string }) {
               ))}
             </ul>
             {!members.length && (
-              <div className="staff-empty">
-                <FiUsers aria-hidden="true" />
-                <p>
-                  {search
-                    ? "No members match your search."
-                    : "No shop members to show."}
-                </p>
+              <EmptyState icon={<FiUsers />} title={search ? "No members match your search." : "No shop members to show."}
+                description={search ? "Try another name or email, or show the full team." : "Invite a teammate and choose the access they need for this shop."}>
                 {search && (
                   <button
                     className="secondary-button"
@@ -494,7 +490,16 @@ function StaffWorkspace({ userId }: { userId: string }) {
                     Show all members
                   </button>
                 )}
-              </div>
+                {!search && <button type="button" className="primary-button" disabled={busy}
+                  onClick={() => document.getElementById("staff-email")?.focus()}>Invite your first teammate</button>}
+              </EmptyState>
+            )}
+            {!search && query.data.members.length > 0 && query.data.members.every((member) => member.role === "OWNER") && (
+              <EmptyState icon={<FiUsers />} title="Your team starts with you."
+                description="No staff have joined this shop yet. Invite a teammate and choose the access they need.">
+                <button type="button" className="primary-button" disabled={busy}
+                  onClick={() => document.getElementById("staff-email")?.focus()}>Invite your first teammate</button>
+              </EmptyState>
             )}
           </section>
           <section className="staff-panel" aria-labelledby="invitations-title">
@@ -508,11 +513,11 @@ function StaffWorkspace({ userId }: { userId: string }) {
               </span>
             </header>
             {!query.data.invitations.length ? (
-              <div className="staff-empty">
-                <FiMail aria-hidden="true" />
-                <p>No invitations yet.</p>
-                <span>Your first invitation will appear here.</span>
-              </div>
+              <EmptyState icon={<FiMail />} title="No invitations yet."
+                description="Your first invitation will appear here. Create a link and share it with your teammate.">
+                <button type="button" className="secondary-button" disabled={busy}
+                  onClick={() => document.getElementById("staff-email")?.focus()}>Start an invitation</button>
+              </EmptyState>
             ) : (
               <ul className="staff-list">
                 {query.data.invitations.map((invitation) => (

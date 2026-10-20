@@ -7,6 +7,7 @@ import {
   formatPreparationDuration,
 } from "../../features/orders/average-prep-time";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
 const denied = (error: unknown) =>
   isAxiosError(error) && [401, 403, 404].includes(error.response?.status ?? 0);
 export function AveragePrepTime({
@@ -73,10 +74,10 @@ export function AveragePrepTime({
       {report && (
         <>
           {report.averageDurationMs === null ? (
-            <InlineMessage tone="info">
-              No preparation data. No eligible orders have a valid Preparing →
-              Ready timestamp pair in this period.
-            </InlineMessage>
+            <ReportEmptyState title="No timing sample yet."
+              description="No preparation data. No eligible orders have a valid Preparing → Ready timestamp pair in this period."
+              guidance="Choose another period or check after the team finishes preparing orders."
+              label="preparation data" pending={query.isFetching} onRefresh={() => void query.refetch()} />
           ) : (
             <p className="prep-time-average" role="status">
               {formatPreparationDuration(report.averageDurationMs)}

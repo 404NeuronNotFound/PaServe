@@ -132,4 +132,8 @@ it("shows an empty state without inventing products", async () => {
     await screen.findByText("No eligible item snapshots in this period."),
   ).toBeVisible();
   expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  vi.mocked(getTopProducts).mockResolvedValue(data);
+  fireEvent.click(screen.getByRole("button", { name: "Check for new product sales" }));
+  expect(await screen.findByRole("table")).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "No product sales to rank." })).not.toBeInTheDocument();
 });

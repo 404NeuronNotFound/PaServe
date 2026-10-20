@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Link, Navigate, useLocation } from "react-router-dom";
+import "../../components/feedback/empty-state.css";
 import {
   FiArrowDown,
   FiArchive,
@@ -347,6 +348,18 @@ function NewOrders() {
               ? "Try another order number or clear the date filters."
               : view.empty}
           </p>
+          <div className="empty-state-actions">
+            {state === "COMPLETED" && (history.search || history.from || history.to || historyCursor) ? (
+              <button type="button" className="secondary-button" onClick={() => {
+                setHistory({ limit: 12 }); setCursors([null]);
+              }}>Reset history filters</button>
+            ) : state !== "QUEUED" ? (
+              <button type="button" className="secondary-button" onClick={() => setState("QUEUED")}>View queued orders</button>
+            ) : (
+              <button type="button" className="secondary-button" disabled={queue.isFetching}
+                onClick={() => void queue.refetch()}>{queue.isFetching ? "Refreshing queue…" : "Check for new orders"}</button>
+            )}
+          </div>
         </div>
       )}
       {state === "COMPLETED" ? (

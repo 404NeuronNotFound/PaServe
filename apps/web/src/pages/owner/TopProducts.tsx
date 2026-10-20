@@ -5,6 +5,7 @@ import type { TopProductMetric } from "@paserve/contracts";
 import { getTopProducts } from "../../features/orders/top-products";
 import { formatCartPrice } from "../../lib/money";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
 
 const denied = (error: unknown) =>
   isAxiosError(error) && [401, 403, 404].includes(error.response?.status ?? 0);
@@ -89,9 +90,9 @@ export function TopProducts({
       )}
       {report &&
         (report.productCount === 0 ? (
-          <InlineMessage tone="info">
-            No eligible item snapshots in this period.
-          </InlineMessage>
+          <ReportEmptyState title="No product sales to rank."
+            description="No eligible item snapshots in this period."
+            label="product sales" pending={query.isFetching} onRefresh={() => void query.refetch()} />
         ) : (
           <>
             <p className="daily-analytics-summary">

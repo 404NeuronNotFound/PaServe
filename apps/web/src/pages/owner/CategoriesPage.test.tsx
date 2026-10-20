@@ -54,6 +54,13 @@ const meals = {
   isVisible: false,
   sortOrder: 7,
 };
+it("moves focus to the category form from its first-category empty state", async () => {
+  vi.mocked(listCategories).mockResolvedValue({ categories: [] });
+  setup();
+  await userEvent.click(await screen.findByRole("button", { name: "Name your first category" }));
+  expect(screen.getByRole("textbox", { name: "Category name" })).toHaveFocus();
+  expect(createCategory).not.toHaveBeenCalled();
+});
 it("previews visibility immediately, rolls back rejection and reconciles a retry", async () => {
   vi.mocked(listCategories).mockResolvedValue({ categories: [category] });
   let reject!: (reason: unknown) => void;
