@@ -34,7 +34,7 @@ export function CashierPage() {
             Cashier workspace
           </h1>
           <p className="cashier-workspace-intro">
-            Scan, review and confirm customer orders.
+            Find an order, check the details, then confirm and collect payment.
           </p>
         </div>
         <div
@@ -65,7 +65,7 @@ export function CashierPage() {
           <span>02</span> Review the details
         </li>
         <li>
-          <span>03</span> Confirm or reject
+          <span>03</span> Confirm and pay
         </li>
       </ol>
       <OrderQrScanner key={`${membership.shopId}:${initialOrderNumber}`} shopId={membership.shopId} initialOrderNumber={initialOrderNumber} />

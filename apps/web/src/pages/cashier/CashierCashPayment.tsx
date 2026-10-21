@@ -94,6 +94,7 @@ export function CashierCashPayment({
   const controller = useRef<AbortController | null>(null);
   const attempt = useRef<string | null>(null);
   const resultHeading = useRef<HTMLHeadingElement>(null);
+  const amountInput = useRef<HTMLInputElement>(null);
   useDraftGuard(!review?.payment && Boolean(amount || reference || description || receivedConfirmed), busy && pendingAction === "record");
   const normalized = normalizeCashAmount(amount);
   const change =
@@ -572,6 +573,7 @@ export function CashierCashPayment({
                 </span>
                 <Input
                   id="cash-amount"
+                  ref={amountInput}
                   inputMode="decimal"
                   autoComplete="off"
                   placeholder="0.00"
@@ -591,6 +593,26 @@ export function CashierCashPayment({
                 />
               </div>
               </FormField>
+              <div className="cashier-tender-shortcuts" role="group" aria-label="Cash amount shortcuts">
+                <p>Choose the cash actually handed over. You can edit the amount.</p>
+                {[review.order.totalPrice, ...["100.00", "200.00", "500.00", "1000.00"].filter((value) => {
+                  const difference = cashChange(value, review.order.totalPrice);
+                  return difference !== null && difference !== "0.00";
+                })].map((value, index) => (
+                  <Button
+                    key={value}
+                    variant="outline"
+                    disabled={busy || blocked || confirm}
+                    onClick={() => {
+                      setAmount(value);
+                      attempt.current = null;
+                      amountInput.current?.focus();
+                    }}
+                  >
+                    {index === 0 ? `Exact ${formatCartPrice(value)}` : formatCartPrice(value)}
+                  </Button>
+                ))}
+              </div>
               <div className="cashier-cash-change" role="status">
                 <span>Change due</span>
                 <strong>

@@ -261,17 +261,17 @@ export function CashierOrderDecision({
           >
             Confirm and pay
           </PendingButton>
-          <PendingButton
-            pending={busy && pendingAction === "reject"}
-            pendingLabel="Checking order..."
-            className="secondary-button"
+          <Button
+            variant="destructive"
+            size="lg"
+            aria-busy={busy && pendingAction === "reject"}
             disabled={busy || blocked || Boolean(action)}
             onClick={() => {
               void refresh("reject");
             }}
           >
-            Reject order
-          </PendingButton>
+            {busy && pendingAction === "reject" ? "Checking order..." : "Reject order"}
+          </Button>
         </div>
         {busy && (
           <p role="status">Checking or saving the order. Please wait…</p>

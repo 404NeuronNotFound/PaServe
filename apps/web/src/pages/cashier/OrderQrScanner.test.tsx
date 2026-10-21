@@ -86,6 +86,15 @@ function setup(initialOrderNumber = "") {
   );
   return { ...view, user: userEvent.setup() };
 }
+it("offers manual lookup immediately and stops the camera before focusing entry", async () => {
+  cameraUnavailable = "";
+  const { user } = setup();
+  await user.click(screen.getByRole("button", { name: "Use manual order lookup" }));
+  expect(stop).toHaveBeenCalledOnce();
+  expect(screen.getByLabelText("Find by order number")).toHaveFocus();
+  expect(lookupOrderNumber).not.toHaveBeenCalled();
+  expect(verifyScannedOrder).not.toHaveBeenCalled();
+});
 it("prefills an owner handoff without looking up or processing the order automatically", async () => {
   const { user } = setup("ORD-000042");
   expect(screen.getByLabelText("Find by order number")).toHaveValue("ORD-000042");

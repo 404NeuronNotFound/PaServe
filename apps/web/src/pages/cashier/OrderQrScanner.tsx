@@ -341,6 +341,12 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
           >
             <FiPause aria-hidden="true" /> Stop camera
           </Button>
+          <Button variant="outline" size="inherit" disabled={busy || lostAccess} onClick={() => {
+            stopCamera();
+            document.getElementById("scanner-order-number")?.focus();
+          }}>
+            <FiHash aria-hidden="true" /> Use manual order lookup
+          </Button>
         </div>
         {cameras.length > 1 && (
           <SelectField
@@ -370,11 +376,6 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
                 : "Start the camera when you are ready, or use another scanning option."}
         </p>
         {error && <InlineMessage>{error}</InlineMessage>}
-        {error && !lostAccess && !busy && (
-          <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => {
-            document.getElementById("scanner-order-number")?.focus();
-          }}>Use manual order lookup</Button>
-        )}
         {lostAccess && (
           <Link
             className="secondary-button"
@@ -410,6 +411,9 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
                 placeholder="ORD-000006"
                 maxLength={23}
                 autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                enterKeyHint="search"
                 disabled={busy || lostAccess}
                 aria-describedby="scanner-number-hint"
               />

@@ -862,6 +862,8 @@ export interface PublicTableContext {
 }
 /** Selection data; order submission resolves/revalidates the table and items. */
 export interface CustomerCheckoutRequest {
+  /** Customer-reviewed amount; a comparison guard, never the source of saved prices. */
+  reviewedTotal?: string;
   mode?: "DINE_IN" | "TAKEOUT";
   tableCode?: string;
   tableToken?: string;
@@ -874,6 +876,7 @@ export interface CreateDineInOrderRequest extends CustomerCheckoutRequest {
   tableToken: string;
 }
 export interface CreateTakeoutOrderRequest {
+  reviewedTotal?: string;
   requestId: string;
   mode: "TAKEOUT";
   tableCode?: never;
@@ -881,6 +884,11 @@ export interface CreateTakeoutOrderRequest {
   items: CustomerCheckoutRequest["items"];
 }
 export type CreateCustomerOrderRequest = CreateDineInOrderRequest | CreateTakeoutOrderRequest;
+export interface OrderPriceChange {
+  currency: "PHP";
+  totalPrice: string;
+  items: ProductSelectionQuoteResponse[];
+}
 /** Public shop identity captured at checkout, independent of later settings edits. */
 /** Owner-only saved order projection; never includes customer bearer credentials. */
 export type OwnerOrderAction = "CASHIER" | "START_PREPARING" | "MARK_READY" | "COMPLETE" | "RECEIPT";

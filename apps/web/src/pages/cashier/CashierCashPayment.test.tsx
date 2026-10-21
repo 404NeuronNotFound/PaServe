@@ -248,6 +248,44 @@ async function setup() {
   await screen.findByLabelText("Amount received (PHP)");
   return { user, next };
 }
+it("fills exact tender without recording payment and keeps the amount editable", async () => {
+  const { user } = await setup();
+  const shortcuts = screen.getByRole("group", { name: "Cash amount shortcuts" });
+  await user.click(within(shortcuts).getByRole("button", { name: /^Exact/ }));
+  const input = screen.getByLabelText("Amount received (PHP)");
+  expect(input).toHaveValue("135.50");
+  expect(input).toHaveFocus();
+  expect(screen.getByText("Change due").parentElement).toHaveTextContent("0.00");
+  expect(collectCashPayment).not.toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await user.clear(input);
+  await user.type(input, "150");
+  expect(input).toHaveValue("150");
+  expect(screen.getByText("Change due").parentElement).toHaveTextContent("14.50");
+});
+it("offers only sufficient bills and still requires explicit payment confirmation", async () => {
+  const { user } = await setup();
+  const shortcuts = screen.getByRole("group", { name: "Cash amount shortcuts" });
+  expect(within(shortcuts).getAllByRole("button")).toHaveLength(4);
+  expect(within(shortcuts).queryByRole("button", { name: /^₱100\.00$/ })).not.toBeInTheDocument();
+  await user.click(within(shortcuts).getByRole("button", { name: /^₱200\.00$/ }));
+  expect(screen.getByLabelText("Amount received (PHP)")).toHaveValue("200.00");
+  expect(collectCashPayment).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Record cash payment" }));
+  const dialog = await screen.findByRole("dialog");
+  expect(dialog).toHaveTextContent("64.50");
+  expect(within(shortcuts).getAllByRole("button").every((button) => button.hasAttribute("disabled"))).toBe(true);
+  expect(collectCashPayment).not.toHaveBeenCalled();
+  await user.click(within(dialog).getByRole("button", { name: "Record cash payment" }));
+  await waitFor(() => expect(collectCashPayment).toHaveBeenCalledOnce());
+});
+it("does not duplicate exact tender when the total is a suggested bill", async () => {
+  vi.mocked(reviewCashPayment).mockResolvedValue({ ...review, order: { ...order, totalPrice: "500.00" } });
+  await setup();
+  const shortcuts = screen.getByRole("group", { name: "Cash amount shortcuts" });
+  expect(within(shortcuts).getAllByRole("button")).toHaveLength(2);
+  expect(within(shortcuts).getByRole("button", { name: /^Exact/ })).toHaveTextContent("500.00");
+});
 const otherPaid = {
   ...paid,
   payment: {

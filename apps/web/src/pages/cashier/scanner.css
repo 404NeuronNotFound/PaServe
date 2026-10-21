@@ -733,7 +733,8 @@
 }
 .phase-two .cashier-decision-controls .scanner-controls {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-4);
 }
 .phase-two .cashier-review-summary > button {
   width: 100%;
@@ -812,6 +813,39 @@
   .phase-two .scanner-more summary svg {
     transition: none;
   }
+}
+
+/* Counter controls stay comfortable for repeated touch and keyboard entry. */
+.phase-two .cashier-workspace :is(button, select, input:not([type="checkbox"]), .cashier-switch) {
+  min-height: var(--spacing-12);
+}
+.phase-two .cashier-workspace :is(input:not([type="checkbox"]), select) {
+  font-size: var(--text-md);
+}
+.phase-two .cashier-tender-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+.phase-two .cashier-tender-shortcuts > p {
+  flex-basis: 100%;
+  font-size: var(--text-sm);
+}
+.phase-two .cashier-tender-shortcuts > button {
+  flex: 1 1 100px;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.phase-two .cashier-cash-input input,
+.phase-two .cashier-cash-change strong {
+  font-size: var(--text-2xl);
+  font-variant-numeric: tabular-nums;
+}
+.phase-two .cashier-review-total strong {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Saved payment: one calm confirmation, with the receipt details close at hand. */
