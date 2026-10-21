@@ -1,4 +1,5 @@
 import { Button } from "../../components/ui/button";
+import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { useEffect, useRef, type ReactNode } from "react";
 import { FiCheckCircle, FiArrowLeft } from "react-icons/fi";
 import type { VerifyOrderQrResponse } from "@paserve/contracts";
@@ -163,11 +164,11 @@ export function CashierOrderReview({
             </div>
             <div>
               <dt>Order status</dt>
-              <dd>{order.status.toLowerCase().replaceAll("_", " ")}</dd>
+              <dd><StatusBadge state={order.status} /></dd>
             </div>
             <div>
               <dt>Payment status</dt>
-              <dd>{order.paymentStatus.toLowerCase().replaceAll("_", " ")}</dd>
+              <dd><StatusBadge state={order.paymentStatus} /></dd>
             </div>
           </dl>
           <div className="cashier-review-total">

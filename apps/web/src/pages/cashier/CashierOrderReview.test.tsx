@@ -38,8 +38,8 @@ it("displays saved items, modifiers, notes, type/table, total and statuses", () 
   expect(screen.getByText("Large")).toBeInTheDocument();
   expect(screen.getByText("Oat milk")).toBeInTheDocument();
   expect(screen.getByText("Less ice. No lid.")).toBeInTheDocument();
-  expect(screen.getByText("pending confirmation")).toBeInTheDocument();
-  expect(screen.getByText("unpaid")).toBeInTheDocument();
+  expect(screen.getByText("Pending confirmation")).toBeInTheDocument();
+  expect(screen.getByText("Unpaid")).toBeInTheDocument();
   expect(screen.getAllByText("₱135.50")).toHaveLength(2);
   expect(screen.getByRole("heading", { name: "Order items (2 items)" })).toBeInTheDocument();
   expect(screen.getByText(/Check the items, options, customer notes and total/)).toBeInTheDocument();

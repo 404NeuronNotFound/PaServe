@@ -1,10 +1,10 @@
 import { ReceiptSkeleton } from "../../components/feedback/LoadingSkeleton";
+import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { useEffect, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   FiArrowLeft,
   FiCheck,
-  FiClock,
   FiCoffee,
   FiSmartphone,
   FiArrowUpRight,
@@ -171,13 +171,10 @@ export function CustomerOrderPage() {
                 <span className="order-receipt-next-icon" aria-hidden="true">
                   {ready || completed ? <FiCheckCircle /> : <FiSmartphone />}
                 </span>
-                <span className="order-receipt-status-label">
-                  {ready || completed ? (
-                    <FiCheckCircle aria-hidden="true" />
-                  ) : (
-                    <FiClock aria-hidden="true" />
-                  )} {statusLabel}
-                </span>
+                <StatusBadge className="order-receipt-status-label"
+                  state={(preparationCopy ? preparation : null) ?? savedStatus?.status ?? "PENDING_CONFIRMATION"}>
+                  {statusLabel}
+                </StatusBadge>
               </div>
               <p className="section-label">
                 {completed

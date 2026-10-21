@@ -1,13 +1,13 @@
 import type { ComponentProps } from "react";
 import { Badge } from "../ui/badge";
-const labels = {
-  PENDING_CONFIRMATION: "Pending confirmation", CONFIRMED: "Confirmed", REJECTED: "Rejected",
-  CANCELLED: "Cancelled", QUEUED: "Queued", PREPARING: "Preparing", READY: "Ready", COMPLETED: "Completed",
-  AVAILABLE: "Available", SOLD_OUT: "Sold out", HIDDEN: "Hidden", ARCHIVED: "Archived",
-  ENABLED: "Enabled", DISABLED: "Disabled", INACTIVE: "Account inactive",
-  PENDING: "Pending", ACCEPTED: "Accepted", EXPIRED: "Expired", REVOKED: "Revoked",
-};
-export function StatusBadge({ state, children, ...props }: Omit<ComponentProps<typeof Badge>, "variant"> & { state: keyof typeof labels }) {
-  return <Badge variant={state === "REJECTED" || state === "CANCELLED" ? "destructive" : "default"}
-    data-state={state} {...props}>{children ?? labels[state]}</Badge>;
+import { statusPresentation } from "./status-presentation";
+import { cn } from "../../lib/utils";
+import "./status.css";
+
+export function StatusBadge({ state, children, className, ...props }: Omit<ComponentProps<typeof Badge>, "variant"> & { state: string }) {
+  const { label, tone, Icon } = statusPresentation(state);
+  return <Badge {...props} variant="outline" className={cn("paserve-status", className)}
+    data-state={state} data-tone={tone}>
+    <Icon aria-hidden="true" focusable="false" />{children ?? label}
+  </Badge>;
 }

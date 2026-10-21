@@ -63,6 +63,12 @@
   --color-lime: #c9ef83;
   --color-error: #a32f27;
   --color-error-surface: #fff2ef;
+  --status-success-text: #215c38;
+  --status-success-surface: #e5f3e8;
+  --status-warning-text: #744609;
+  --status-warning-surface: #fff1d6;
+  --status-info-text: #234f86;
+  --status-info-surface: #e9f1ff;
   /* Role aliases separate interaction colors from the fixed brand anchor. */
   --color-action: var(--color-primary);
   --color-action-hover: var(--color-primary-hover);
@@ -1282,6 +1288,12 @@
   --color-border: #3e503c;
   --color-error: #ffb3a4;
   --color-error-surface: #3e2725;
+  --status-success-text: #b4ebc3;
+  --status-success-surface: #203c2b;
+  --status-warning-text: #ffda94;
+  --status-warning-surface: #40331e;
+  --status-info-text: #b8d7ff;
+  --status-info-surface: #24364f;
   --color-action: var(--color-lime);
   --color-action-hover: #d7f5a1;
   --color-on-action: #203027;

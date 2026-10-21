@@ -1,0 +1,37 @@
+.paserve-status.paserve-status {
+  gap: var(--spacing-2);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+.paserve-status > svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex-shrink: 0;
+}
+.paserve-status.paserve-status.paserve-status::before { content: none; }
+:is(.paserve-status.paserve-status, .kitchen-ticket .kitchen-ticket-ribbon)[data-tone="warning"] {
+  color: var(--status-warning-text);
+  background: var(--status-warning-surface);
+  border-color: currentColor;
+}
+:is(.paserve-status.paserve-status, .kitchen-ticket .kitchen-ticket-ribbon)[data-tone="info"] {
+  color: var(--status-info-text);
+  background: var(--status-info-surface);
+  border-color: currentColor;
+}
+:is(.paserve-status.paserve-status, .kitchen-ticket .kitchen-ticket-ribbon)[data-tone="success"] {
+  color: var(--status-success-text);
+  background: var(--status-success-surface);
+  border-color: currentColor;
+}
+:is(.paserve-status.paserve-status, .kitchen-ticket .kitchen-ticket-ribbon)[data-tone="neutral"] {
+  color: var(--color-text);
+  background: var(--color-secondary);
+  border-color: var(--color-control-border);
+}
+:is(.paserve-status.paserve-status, .kitchen-ticket .kitchen-ticket-ribbon)[data-tone="danger"] {
+  color: var(--color-error);
+  background: var(--color-error-surface);
+  border-color: currentColor;
+}

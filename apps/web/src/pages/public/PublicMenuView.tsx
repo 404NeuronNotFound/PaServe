@@ -25,6 +25,7 @@ import "./public-menu.css";
 import { CurrentTable } from "./CurrentTable";
 import { YourActiveOrders } from "./YourActiveOrders";
 import { Badge } from "../../components/ui/badge";
+import { StatusBadge } from "../../components/paserve/StatusBadge";
 
 export function PublicMenuView({
   menu,
@@ -311,12 +312,13 @@ const MenuSection = memo(function MenuSection({
                     </Badge>
                   )}
                   {(product.status === "SOLD_OUT" || !product.isOrderable) && (
-                    <Badge
+                    <StatusBadge
+                      state={product.status === "SOLD_OUT" ? "SOLD_OUT" : "UNAVAILABLE"}
                       className="menu-sold-out-badge"
                       id={`${statusPrefix}-${product.id}-sold-out`}
                     >
                       {product.status === "SOLD_OUT" ? "Sold out" : "Unavailable"}
-                    </Badge>
+                    </StatusBadge>
                   )}
                 </div>
               )}

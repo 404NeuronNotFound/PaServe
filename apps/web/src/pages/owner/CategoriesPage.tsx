@@ -1,4 +1,5 @@
 import { Input } from "../../components/ui/input";
+import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { Button } from "../../components/ui/button";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { PageHeader } from "../../components/paserve/PageHeader";
@@ -600,16 +601,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                   <div className="category-details">
                     <div className="category-row-heading">
                       <strong>{category.name}</strong>
-                      <span
-                        className={`category-visibility${category.isVisible ? " is-visible" : ""}`}
-                      >
-                        {category.isVisible ? (
-                          <FiEye aria-hidden="true" />
-                        ) : (
-                          <FiEyeOff aria-hidden="true" />
-                        )}
-                        {category.isVisible ? "Visible" : "Hidden"}
-                      </span>
+                      <StatusBadge state={category.isVisible ? "VISIBLE" : "HIDDEN"} />
                     </div>
                     <small>
                       {visibilityPreview?.id === category.id ? (

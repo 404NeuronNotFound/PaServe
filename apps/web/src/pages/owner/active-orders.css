@@ -476,32 +476,6 @@
   line-height: 1.4;
   background: var(--color-secondary);
 }
-.active-order-badge::before {
-  content: "";
-  width: 5px;
-  height: 5px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.65;
-}
-.active-order-badge[data-state="READY"] {
-  background: var(--color-lime);
-  border-color: transparent;
-  color: #243329;
-}
-.active-order-badge[data-state="PREPARING"] {
-  background: color-mix(in srgb, var(--color-lime) 20%, var(--color-surface));
-}
-.active-order-badge[data-state="PENDING_CONFIRMATION"],
-.active-order-badge[data-payment="UNPAID"] {
-  background: color-mix(in srgb, #d9ac5b 14%, var(--color-surface));
-  border-color: color-mix(in srgb, #d9ac5b 35%, var(--color-border));
-}
-.active-order-badge[data-state="REJECTED"] {
-  background: color-mix(in srgb, #c57165 12%, var(--color-surface));
-  border-color: color-mix(in srgb, #c57165 35%, var(--color-border));
-}
 .active-order-payment {
   color: var(--color-muted);
   font-size: 12px;

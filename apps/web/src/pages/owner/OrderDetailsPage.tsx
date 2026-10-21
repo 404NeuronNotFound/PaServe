@@ -1,4 +1,5 @@
 import { Button } from "../../components/ui/button";
+import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { useEffect, useRef, useState } from "react";
 import { OrderDetailsSkeleton } from "../../components/feedback/LoadingSkeleton";
@@ -258,21 +259,15 @@ function OrderDetailsWorkspace({
               <dl>
                 <div>
                   <dt>Approval</dt>
-                  <dd data-state={order.status}>{label(order.status)}</dd>
+                  <dd><StatusBadge state={order.status} /></dd>
                 </div>
                 <div>
                   <dt>Payment</dt>
-                  <dd data-state={order.paymentStatus}>
-                    {label(order.paymentStatus)}
-                  </dd>
+                  <dd><StatusBadge state={order.paymentStatus} /></dd>
                 </div>
                 <div>
                   <dt>Preparation</dt>
-                  <dd data-state={order.preparationStatus ?? "NOT_STARTED"}>
-                    {order.preparationStatus
-                      ? label(order.preparationStatus)
-                      : "Not started"}
-                  </dd>
+                  <dd><StatusBadge state={order.preparationStatus ?? "NOT_STARTED"} /></dd>
                 </div>
                 <div>
                   <dt>Placed</dt>

@@ -1,4 +1,6 @@
 import { Input } from "../../components/ui/input";
+import { statusPresentation } from "../../components/paserve/status-presentation";
+import "../../components/paserve/status.css";
 import { Button } from "../../components/ui/button";
 import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
@@ -706,6 +708,7 @@ function Ticket({
       <article aria-label={`Order ${order.orderNumber}`}>
         <div
           className={`kitchen-ticket-ribbon${completed ? " kitchen-ribbon-completed" : preparing ? " kitchen-ribbon-preparing" : ready ? " kitchen-ribbon-ready" : ""}`}
+          data-tone={statusPresentation(order.preparationStatus).tone}
         >
           <span>
             <span className="kitchen-status-dot" />

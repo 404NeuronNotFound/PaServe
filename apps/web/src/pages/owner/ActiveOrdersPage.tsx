@@ -185,7 +185,9 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
                   <div className="active-order-state">
                     <StatusBadge
                       className="active-order-badge"
-                      state={order.preparationStatus ?? order.status}
+                      state={order.status === "PENDING_CONFIRMATION" ? order.status
+                        : order.paymentStatus === "UNPAID" ? "UNPAID"
+                        : order.preparationStatus ?? "NOT_STARTED"}
                       data-payment={order.paymentStatus}
                     >
                       {statusLabel(order)}

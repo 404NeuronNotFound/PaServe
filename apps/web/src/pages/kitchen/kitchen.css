@@ -101,10 +101,6 @@
   font-weight: 700;
   letter-spacing: 1.2px;
 }
-.kitchen-ticket-first .kitchen-ticket-ribbon {
-  background: var(--color-lime);
-  color: #243329;
-}
 .kitchen-ticket-ribbon > span:first-child {
   display: flex;
   align-items: center;
@@ -328,18 +324,6 @@
 .kitchen-state-switch button:focus-visible {
   outline: 2px solid var(--color-muted);
   outline-offset: 2px;
-}
-.kitchen-ticket .kitchen-ribbon-preparing {
-  color: var(--color-canvas);
-  background: var(--color-text);
-}
-.kitchen-ticket .kitchen-ribbon-ready {
-  color: #243329;
-  background: var(--color-lime);
-}
-.kitchen-ticket .kitchen-ribbon-completed {
-  background: var(--color-secondary);
-  color: var(--color-text);
 }
 .kitchen-completed-time {
   display: flex;

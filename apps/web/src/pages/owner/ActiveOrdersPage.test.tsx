@@ -158,6 +158,9 @@ it.each([
       await screen.findByText(label, { selector: ".active-order-badge" }),
     ).toBeVisible();
     expect(screen.getByText(paymentLabel)).toBeVisible();
+    expect(screen.getByText(label, { selector: ".active-order-badge" })).toHaveAttribute(
+      "data-tone", paymentStatus === "UNPAID" ? "warning" : "neutral",
+    );
   },
 );
 
