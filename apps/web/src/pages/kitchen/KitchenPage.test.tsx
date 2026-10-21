@@ -143,6 +143,30 @@ it.each(["ORD-000042", "ORD-1000000", "ORD-9223372036854775807"])(
     expect(await screen.findByRole("heading", { name: orderNumber })).toBeVisible();
   },
 );
+it("switches distance presentation by keyboard while preserving FIFO, modifiers and notes without writes", async () => {
+  setup("KITCHEN", [
+    ticket("later", "ORD-000002", "2026-10-15T02:00:00.000Z"),
+    ticket(),
+  ]);
+  await screen.findByRole("article", { name: "Order ORD-000001" });
+  const toggle = screen.getByRole("button", { name: "Distance view" });
+  expect(toggle).toHaveAttribute("aria-pressed", "false");
+  toggle.focus();
+  await userEvent.keyboard(" ");
+  expect(toggle).toHaveAttribute("aria-pressed", "true");
+  const orders = screen.getAllByRole("article");
+  expect(orders[0]).toHaveAccessibleName("Order ORD-000001");
+  expect(orders[1]).toHaveAccessibleName("Order ORD-000002");
+  for (const order of orders) {
+    for (const text of ["Table Patio 2", "Iced latte", "Large", "+ Oat milk", "No ice, please"])
+      expect(within(order).getByText(text)).toBeVisible();
+    expect(within(order).getByLabelText("Quantity 2")).toBeVisible();
+  }
+  expect(api.post).not.toHaveBeenCalled();
+  await userEvent.keyboard(" ");
+  expect(toggle).toHaveAttribute("aria-pressed", "false");
+  expect(toggle).toHaveFocus();
+});
 it("refreshes queued orders when the shop's New Order subscription signals entry or reconnect", async () => {
   setup("KITCHEN");
   await screen.findByRole("article", { name: "Order ORD-000001" });

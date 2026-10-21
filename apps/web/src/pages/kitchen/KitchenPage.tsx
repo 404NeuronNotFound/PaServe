@@ -135,6 +135,7 @@ function NewOrders() {
   const location = useLocation();
   const heading = useRef<HTMLHeadingElement>(null);
   const [state, setState] = useState<PreparationStatus>("QUEUED");
+  const [distanceView, setDistanceView] = useState(false);
   const view = views[state];
   const [history, setHistory] = useState<HistoryFilters>({ limit: 12 });
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
@@ -212,7 +213,7 @@ function NewOrders() {
         a.id.localeCompare(b.id),
   );
   return (
-    <section className="kitchen-workspace">
+    <section className="kitchen-workspace" data-distance-view={distanceView && state !== "COMPLETED"}>
       {(liveStatus === "delayed" || liveStatus === "denied") && (
         <InlineMessage tone="warning" className="">
           {liveStatus === "denied"
@@ -222,7 +223,7 @@ function NewOrders() {
       )}
       <header className="kitchen-heading">
         <div>
-          <p className="section-label">KITCHEN / BARISTA</p>
+          <p className="section-label">KITCHEN / BARISTA · {shop.name}</p>
           <h1 ref={heading} tabIndex={-1}>
             {view.title}
             <span>.</span>
@@ -281,6 +282,16 @@ function NewOrders() {
           Completed
         </Button>
       </div>
+      {state !== "COMPLETED" && (
+        <div className="kitchen-display-options">
+          <Button variant="outline" aria-pressed={distanceView}
+            aria-describedby="kitchen-distance-hint"
+            onClick={() => setDistanceView((value) => !value)}>
+            Distance view
+          </Button>
+          <p id="kitchen-distance-hint">Larger tickets and text for reading across the counter.</p>
+        </div>
+      )}
       <div hidden={state !== "COMPLETED"}>
         <HistorySearch
           onApply={(filters) => {
