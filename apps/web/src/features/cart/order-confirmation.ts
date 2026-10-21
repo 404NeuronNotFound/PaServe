@@ -31,6 +31,7 @@ export function isCreatedOrderResponse(
     order.mode !== (request.mode ?? "DINE_IN") ||
     order.currency !== "PHP" ||
     !isOrderTotal(order.totalPrice) ||
+    (request.reviewedTotal !== undefined && order.totalPrice !== request.reviewedTotal) ||
     (order.shopDetails != null && !parseReceiptShopDetails(order.shopDetails)) ||
     typeof order.createdAt !== "string" ||
     !Number.isFinite(Date.parse(order.createdAt)) ||

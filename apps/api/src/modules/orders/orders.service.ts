@@ -1,3 +1,4 @@
+import { OrderPriceChangedException } from '../../common/http/order-price-changed.exception.js';
 import { createHash } from 'node:crypto';
 import {
   BadRequestException,
@@ -43,6 +44,9 @@ export class OrdersService {
       !dto.items.length ||
       dto.items.length > ORDER_INPUT_LIMITS.linesMax ||
       !Array.from(dto.items).every(isValidProductSelection) ||
+      (dto.reviewedTotal !== undefined &&
+        (typeof dto.reviewedTotal !== 'string' ||
+          !/^(?:0|[1-9]\d{0,9})\.\d{2}$(?![\s\S])/.test(dto.reviewedTotal))) ||
       (dto.mode !== undefined &&
         dto.mode !== 'DINE_IN' &&
         dto.mode !== 'TAKEOUT')
@@ -81,6 +85,9 @@ export class OrdersService {
       .update(
         JSON.stringify({
           mode,
+          ...(dto.reviewedTotal !== undefined
+            ? { reviewedTotal: dto.reviewedTotal }
+            : {}),
           ...(mode === 'DINE_IN' ? { tableCode: dto.tableCode } : {}),
           items: dto.items.map((item) => ({
             productId: item.productId,
@@ -258,6 +265,17 @@ export class OrdersService {
               code: 'ORDER_TOTAL_TOO_LARGE',
               message:
                 'This order total is too large. Reduce the quantities and try again.',
+            });
+          // Compare within the same transaction that prices and creates the order.
+          // Never trust the browser's amount as a price source or silently change it.
+          if (
+            dto.reviewedTotal !== undefined &&
+            !total.equals(dto.reviewedTotal)
+          )
+            throw new OrderPriceChangedException({
+              currency: PRODUCT_CURRENCY,
+              totalPrice: total.toFixed(2),
+              items,
             });
           const numbering = await tx.shop.update({
             where: { id: shop.id, isActive: true, acceptingOrders: true },

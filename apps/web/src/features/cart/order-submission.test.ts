@@ -14,6 +14,13 @@ const line = {
   variants: [{ id: "large", priceAdjustment: "0.00" }],
   addOns: [{ id: "milk", priceAdjustment: "0.00" }],
 };
+it("retains the reviewed amount as a comparison guard while dropping injected price authority", () => {
+  const request = { requestId: "request-a", mode: "TAKEOUT" as const, reviewedTotal: "44.00", totalPrice: "0.01", items: [line] };
+  const result = orderSubmissionRequest(request);
+  expect(result.reviewedTotal).toBe("44.00");
+  expect(result).not.toHaveProperty("totalPrice");
+  expect(result.items[0]).not.toHaveProperty("unitPrice");
+});
 it("projects only identifiers, quantities and notes for pickup, including restored requests", () => {
   const request = {
     requestId: "request-a",

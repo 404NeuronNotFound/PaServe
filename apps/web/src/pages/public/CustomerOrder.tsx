@@ -10,6 +10,7 @@ import type {
 } from "@paserve/contracts";
 import {
   cartCheckoutRequest,
+  cartEstimatedSubtotal,
   cartCheckoutLines,
   cartItemsForShop,
   cartSelectionRequest,
@@ -26,6 +27,7 @@ import { formatCartPrice } from "../../lib/money";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { isPublicTableContext } from "../../features/shops/customer-table";
 import { FiArrowRight } from "react-icons/fi";
+import { reviewPriceChange } from "../../features/cart/review-price-change";
 
 type Attempt = {
   request: CreateCustomerOrderRequest;
@@ -231,6 +233,7 @@ export function CustomerOrder({
           mode === "TAKEOUT"
             ? {
                 requestId: crypto.randomUUID(),
+                reviewedTotal: cartEstimatedSubtotal(review.items),
                 mode: "TAKEOUT",
                 items: cartCheckoutLines(
                   { [shopSlug]: review.items },
@@ -254,6 +257,7 @@ export function CustomerOrder({
                     shopSlug,
                   ),
                   mode: "DINE_IN",
+                  reviewedTotal: cartEstimatedSubtotal(review.items),
                   requestId: crypto.randomUUID(),
                   tableCode: table.code,
                   tableToken: table.checkoutToken,
@@ -321,6 +325,16 @@ export function CustomerOrder({
         setError(
           "This order has already been processed at the counter. Ask the staff for its current status. Unchanged submitted items were removed from your cart; any new or edited items are kept for your next order.",
         );
+      } else if (sent && status === 409 && isAxiosError(cause) && cause.response?.data?.code === "ORDER_PRICE_CHANGED") {
+        // This explicit server rejection occurs before any order is created.
+        // Retire the request ID and require a separate customer confirmation.
+        const updated = sent.review ? reviewPriceChange(sent.review, cause.response.data) : null;
+        setAttempt(null);
+        pendingOrders.remove(key);
+        setReview(updated);
+        setError(updated
+          ? "Prices changed. No order was placed. Review the updated total, then place your order again."
+          : "Prices changed. No order was placed. Review your cart again before submitting.");
       } else if (invalidContext) {
         setError(
           "Scan the original table QR again, then confirm this same order. Your cart is saved.",

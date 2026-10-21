@@ -13,6 +13,7 @@ import {
   cartEstimatedSubtotal,
   PRICE_PREVIEW_NOTICE,
   useCart,
+  type CartItem,
 } from "../../features/cart/cart";
 import { formatCartPrice } from "../../lib/money";
 import { CustomerDialog } from "./CustomerDialog";
@@ -23,6 +24,7 @@ import { CustomerOrder } from "./CustomerOrder";
 import { CurrentTable } from "./CurrentTable";
 import { CartReview, type CartReviewSnapshot } from "./CartReview";
 import { useChangeMotion } from "../../components/feedback/useChangeMotion";
+import { CartItemConfiguration } from "./CartItemConfiguration";
 
 export function CustomerCart({
   shop,
@@ -38,6 +40,15 @@ export function CustomerCart({
   const [discardEdits, setDiscardEdits] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [review, setReview] = useState<CartReviewSnapshot | null>(null);
+  const [removed, setRemoved] = useState<{ item: CartItem; index: number }[]>([]);
+  const onReviewChange = useCallback((next: CartReviewSnapshot | null) => {
+    setReview(next);
+    if (next) setRemoved([]);
+  }, []);
+  const onPendingChange = useCallback((pending: boolean) => {
+    setSubmitting(pending);
+    if (pending) setRemoved([]);
+  }, []);
   const [edits, setEdits] = useState<Record<string, boolean>>({});
   const onEditingChange = useCallback((id: string, editing: boolean) => {
     setEdits((previous) =>
@@ -47,7 +58,7 @@ export function CustomerCart({
   function closeCart() {
     if (submitting) return;
     if (Object.values(edits).some(Boolean)) { setDiscardEdits(true); return; }
-    setReview(null); setOpen(false);
+    setReview(null); setRemoved([]); setOpen(false);
   }
   const [mode, setMode] = useState<"DINE_IN" | "TAKEOUT">(
     table ? "DINE_IN" : "TAKEOUT",
@@ -99,6 +110,10 @@ export function CustomerCart({
           pending={submitting}
           onClose={closeCart}
         >
+          <ol className="customer-checkout-steps" aria-label="Checkout progress">
+            <li aria-current={!review ? "step" : undefined}>1. Cart</li>
+            <li aria-current={review ? "step" : undefined}>2. Review</li>
+          </ol>
           <div className="customer-dialog-body">
             {review ? (
               <CartReview review={review} />
@@ -135,7 +150,7 @@ export function CustomerCart({
                     {count} {count === 1 ? "item" : "items"} from {shop.name}
                   </p>
                 )}
-                <ul ref={list} className="customer-cart-items">
+                <ul ref={list} className="customer-cart-items" aria-label="Cart items">
                   {items.map((item, index) => (
                     <li key={item.lineId}>
                       <div className="customer-cart-line-heading">
@@ -148,13 +163,7 @@ export function CustomerCart({
                       <p className="customer-cart-line-quantity">
                         {item.quantity} × {formatCartPrice(item.unitPrice)}
                       </p>
-                      {!!(item.variants.length + item.addOns.length) && (
-                        <p className="customer-cart-line-choices">
-                          {[...item.variants, ...item.addOns]
-                            .map((option) => option.name)
-                            .join(", ")}
-                        </p>
-                      )}
+                      <CartItemConfiguration item={item} groupClassName="customer-cart-line-choices" />
                       <div className="customer-cart-line-actions">
                         <CartQuantityControl
                           item={item}
@@ -169,15 +178,18 @@ export function CustomerCart({
                         <Button variant="outline" size="inherit"
                           type="button"
                           data-cart-remove
+                          disabled={Object.values(edits).some(Boolean)}
                           className="secondary-button customer-cart-remove"
                           aria-label={`Remove ${item.productName}`}
                           title={`Remove ${item.productName}`}
                           onClick={() => {
                             removedIndex.current = index;
+                            setRemoved((previous) => [...previous, { item, index }]);
                             useCart.getState().remove(shop.slug, item.lineId);
                           }}
                         >
                           <FiTrash2 aria-hidden="true" />
+                          <span>Remove</span>
                         </Button>
                       </div>
                     </li>
@@ -187,25 +199,36 @@ export function CustomerCart({
             )}
           </div>
           <footer className="customer-dialog-footer">
-            {!review && (
-              <div className="customer-cart-summary">
-                <p role="status" className="customer-cart-total">
-                  <span>Estimated subtotal</span>
-                  <strong>{formatCartPrice(subtotal)}</strong>
-                </p>
-                <p className="field-hint customer-cart-price-notice">
-                  {PRICE_PREVIEW_NOTICE}
-                </p>
+            {!review && removed.length > 0 && (
+              <div className="customer-cart-undo" role="status">
+                <span>Removed {removed[removed.length - 1].item.productName}.</span>
+                <Button variant="outline" disabled={submitting} onClick={() => {
+                  if (review || submitting) return;
+                  const last = removed[removed.length - 1];
+                  if (useCart.getState().restoreRemoved(shop.slug, last.item, last.index)) {
+                    removedIndex.current = last.index;
+                  }
+                  setRemoved((previous) => previous.slice(0, -1));
+                }} aria-label={`Undo removal of ${removed[removed.length - 1].item.productName}`}>Undo</Button>
               </div>
             )}
+            <div className="customer-cart-summary">
+              <p role="status" aria-label="Cart total" className="customer-cart-total">
+                <span>{review ? "Total to confirm" : "Estimated subtotal"}</span>
+                <strong>{formatCartPrice(review ? cartEstimatedSubtotal(review.items) : subtotal)}</strong>
+              </p>
+              <p className="field-hint customer-cart-price-notice">
+                {review ? "We check this total before saving. Price changes require another review. The cashier will confirm your order and collect payment." : PRICE_PREVIEW_NOTICE}
+              </p>
+            </div>
             <CustomerOrder
               key={shop.slug}
               shopSlug={shop.slug}
               table={table}
               initialMode={mode}
               onModeChange={setMode}
-              onReviewChange={setReview}
-              onPendingChange={setSubmitting}
+              onReviewChange={onReviewChange}
+              onPendingChange={onPendingChange}
               editing={Object.values(edits).some(Boolean)}
               onOrderPlaced={onOrderPlaced}
             />
@@ -228,7 +251,7 @@ export function CustomerCart({
       <ConfirmDialog open={discardEdits} title="Discard unsaved cart edits?"
         description="Unsaved quantity or note edits will be discarded. Your saved cart items will remain."
         confirmLabel="Discard edits" cancelLabel="Keep editing" destructive
-        onConfirm={() => { setReview(null); setOpen(false); }} onClose={() => setDiscardEdits(false)} />
+        onConfirm={() => { setReview(null); setRemoved([]); setOpen(false); }} onClose={() => setDiscardEdits(false)} />
     </>
   );
 }

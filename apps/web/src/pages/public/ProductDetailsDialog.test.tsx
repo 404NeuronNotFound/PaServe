@@ -298,12 +298,13 @@ it("adds a server-quoted customized item and allows cart review/removal", async 
     await screen.findByRole("button", { name: "View cart (2)" }),
   );
   const cart = screen.getByRole("dialog", { name: "Cafe cart" });
-  expect(within(cart).getByRole("status")).toHaveTextContent("₱350.64");
-  expect(within(cart).getByRole("status")).toHaveTextContent("Estimated subtotal");
+  expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent("₱350.64");
+  expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent("Estimated subtotal");
   expect(within(cart).getByText("Prices are estimates. Final prices will be recalculated when you submit your order.")).toBeInTheDocument();
   expect(within(cart).getByText("<b>No sugar</b>")).toBeInTheDocument();
   expect(cart.querySelector("b")).toBeNull();
-  expect(within(cart).getByText("Large, Oat milk")).toBeInTheDocument();
+  expect(within(cart).getByText("Variants: Large")).toBeInTheDocument();
+  expect(within(cart).getByText("Add-ons: Oat milk")).toBeInTheDocument();
   await user.click(within(cart).getByRole("button", { name: "Remove Coffee" }));
   expect(within(cart).getByText("Your cart is empty.")).toBeInTheDocument();
 });
@@ -345,19 +346,21 @@ it.each([false, true])(
       name: `View cart (${differentConfiguration ? 3 : 4})`,
     }));
     const cart = screen.getByRole("dialog", { name: "Cafe cart" });
-    const lines = within(cart).getAllByRole("listitem");
+    const lines = within(within(cart).getByRole("list", { name: "Cart items" })).getAllByRole("listitem");
     expect(lines).toHaveLength(2);
-    expect(within(lines[0]).getByText("Large, Oat milk")).toBeInTheDocument();
+    expect(lines[0]).toHaveTextContent("Variants: Large");
+    expect(lines[0]).toHaveTextContent("Add-ons: Oat milk");
     expect(within(lines[0]).getByText("Less ice")).toBeInTheDocument();
-    expect(within(lines[1]).getByText(differentConfiguration ? "Regular" : "Large, Oat milk")).toBeInTheDocument();
+    expect(lines[1]).toHaveTextContent(differentConfiguration ? "Variants: Regular" : "Variants: Large");
+    if (!differentConfiguration) expect(lines[1]).toHaveTextContent("Add-ons: Oat milk");
     expect(within(lines[1]).getByText(differentConfiguration ? "Hot" : "Less ice")).toBeInTheDocument();
-    expect(within(cart).getByRole("status")).toHaveTextContent(
+    expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent(
       differentConfiguration ? "₱470.63" : "₱701.24",
     );
     await user.click(within(lines[0]).getByRole("button", { name: "Remove Coffee" }));
     expect(useCart.getState().shops.cafe).toEqual([items[1]]);
-    expect(within(cart).getAllByRole("listitem")).toHaveLength(1);
-    expect(within(cart).getByRole("status")).toHaveTextContent(
+    expect(within(within(cart).getByRole("list", { name: "Cart items" })).getAllByRole("listitem")).toHaveLength(1);
+    expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent(
       differentConfiguration ? "₱120.01" : "₱350.62",
     );
     expect(api.post).toHaveBeenCalledTimes(2);
@@ -640,13 +643,13 @@ it("retains selected paid/free add-ons in the cart with the expected preview tot
   });
   const cart = screen.getByRole("dialog", { name: "Cafe cart" });
   expect(
-    within(cart).getByText("Large, Oat milk, No sugar"),
+    within(cart).getByText("Add-ons: Oat milk, No sugar"),
   ).toBeInTheDocument();
   expect(cartCheckoutLines(useCart.getState().shops, "cafe")).toEqual([
     { productId: product.id, variantIds: ["large"], addOnIds: ["milk", "no-sugar"], quantity: 3 },
   ]);
   expect(within(cart).queryByText(/Extra shot/)).not.toBeInTheDocument();
-  expect(within(cart).getByRole("status")).toHaveTextContent("₱525.93");
+  expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent("₱525.93");
 });
 it("caps add-on selections while keeping selected choices removable", async () => {
   vi.mocked(api.get).mockResolvedValue({
@@ -919,7 +922,7 @@ it("returns from the empty cart to the menu and restores its trigger focus", asy
   expect(
     within(cart).getByRole("heading", { name: "Your cart is empty." }),
   ).toBeInTheDocument();
-  expect(within(cart).getByRole("status")).toHaveTextContent("₱0.00");
+  expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent("₱0.00");
   await user.click(within(cart).getByRole("button", { name: "Browse menu" }));
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   await waitFor(() => expect(trigger).toHaveFocus());
@@ -951,10 +954,10 @@ it("removes only this shop's lines, updates the total and keeps focus in the car
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "View cart (3)" }));
   const cart = screen.getByRole("dialog", { name: "Cafe cart" });
-  expect(within(cart).getByRole("status")).toHaveTextContent("₱360.03");
+  expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent("₱360.03");
   expect(within(cart).queryByText("Other shop item")).not.toBeInTheDocument();
   await user.click(within(cart).getByRole("button", { name: "Remove Coffee" }));
-  expect(within(cart).getByRole("status")).toHaveTextContent("₱120.01");
+  expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent("₱120.01");
   expect(
     within(cart).getByRole("button", { name: "Remove Tea" }),
   ).toHaveFocus();
@@ -962,7 +965,7 @@ it("removes only this shop's lines, updates the total and keeps focus in the car
   expect(
     within(cart).getByRole("button", { name: "Browse menu" }),
   ).toHaveFocus();
-  expect(within(cart).getByRole("status")).toHaveTextContent("₱0.00");
+  expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent("₱0.00");
   expect(useCart.getState().shops.other).toHaveLength(1);
   expect(api.post).not.toHaveBeenCalled();
 });
@@ -981,14 +984,14 @@ it("updates only one duplicate line's quantity and immediately reflects its new 
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "View cart (2)" }));
   const cart = screen.getByRole("dialog", { name: "Cafe cart" });
-  await user.click(within(within(cart).getAllByRole("listitem")[0]).getByRole("button", { name: "Increase quantity for Coffee" }));
-  await waitFor(() => expect(within(cart).getByRole("status")).toHaveTextContent("₱360.03"));
+  await user.click(within(within(within(cart).getByRole("list", { name: "Cart items" })).getAllByRole("listitem")[0]).getByRole("button", { name: "Increase quantity for Coffee" }));
+  await waitFor(() => expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent("₱360.03"));
   expect(screen.getByRole("button", { name: "View cart (3)" })).toBeInTheDocument();
   expect(useCart.getState().shops.cafe[0]).toMatchObject({ lineId: first.lineId, quantity: 2 });
   expect(useCart.getState().shops.cafe[1]).toBe(second);
   vi.mocked(api.post).mockResolvedValueOnce({ data: quote });
-  await user.click(within(within(cart).getAllByRole("listitem")[0]).getByRole("button", { name: "Decrease quantity for Coffee" }));
-  await waitFor(() => expect(within(cart).getByRole("status")).toHaveTextContent("₱240.02"));
+  await user.click(within(within(within(cart).getByRole("list", { name: "Cart items" })).getAllByRole("listitem")[0]).getByRole("button", { name: "Decrease quantity for Coffee" }));
+  await waitFor(() => expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent("₱240.02"));
   expect(screen.getByRole("button", { name: "View cart (2)" })).toBeInTheDocument();
 });
 
@@ -1005,21 +1008,21 @@ it("saves notes on one cart line, retains them after reopening, and submits them
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "View cart (2)" }));
   let cart = screen.getByRole("dialog", { name: "Cafe cart" });
-  const firstRow = within(cart).getAllByRole("listitem")[0];
+  const firstRow = within(within(cart).getByRole("list", { name: "Cart items" })).getAllByRole("listitem")[0];
   await user.click(within(firstRow).getByRole("button", { name: "Edit notes for Coffee" }));
   await user.clear(within(firstRow).getByRole("textbox"));
   await user.type(within(firstRow).getByRole("textbox"), "No sugar");
   await user.click(within(firstRow).getByRole("button", { name: "Save notes" }));
   expect(within(firstRow).getByText("No sugar")).toBeInTheDocument();
-  expect(within(cart).getByRole("status")).toHaveTextContent("₱240.02");
+  expect(within(cart).getByRole("status", { name: "Cart total" })).toHaveTextContent("₱240.02");
   expect(useCart.getState().shops.cafe[1]).toBe(second);
   expect(api.post).not.toHaveBeenCalled();
   await user.click(within(cart).getByRole("button", { name: "Close" }));
   await user.click(screen.getByRole("button", { name: "View cart (2)" }));
   cart = screen.getByRole("dialog", { name: "Cafe cart" });
-  expect(within(within(cart).getAllByRole("listitem")[0]).getByText("No sugar")).toBeInTheDocument();
+  expect(within(within(within(cart).getByRole("list", { name: "Cart items" })).getAllByRole("listitem")[0]).getByText("No sugar")).toBeInTheDocument();
   vi.mocked(api.post).mockResolvedValueOnce({ data: { ...quote, notes: "No sugar", quantity: 2, totalPrice: "240.02" } });
-  await user.click(within(within(cart).getAllByRole("listitem")[0]).getByRole("button", { name: "Increase quantity for Coffee" }));
+  await user.click(within(within(within(cart).getByRole("list", { name: "Cart items" })).getAllByRole("listitem")[0]).getByRole("button", { name: "Increase quantity for Coffee" }));
   await waitFor(() => expect(useCart.getState().shops.cafe[0].quantity).toBe(2));
   expect(api.post).toHaveBeenCalledWith("/menu/cafe/products/product/quote", {
     variantIds: ["regular"], addOnIds: [], quantity: 2, notes: "No sugar",

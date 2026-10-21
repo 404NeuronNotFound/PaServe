@@ -3,12 +3,12 @@ import type { PublicTableContext } from "@paserve/contracts";
 import {
   cartEstimatedSubtotal,
   cartItemCount,
-  PRICE_PREVIEW_NOTICE,
   type CartItem,
 } from "../../features/cart/cart";
 import { formatCartPrice } from "../../lib/money";
 import { FiShoppingBag, FiMapPin, FiEdit3, FiInfo } from "react-icons/fi";
 import "./cart-review.css";
+import { CartItemConfiguration } from "./CartItemConfiguration";
 
 export interface CartReviewSnapshot {
   items: CartItem[];
@@ -21,7 +21,7 @@ export function CartReview({ review }: { review: CartReviewSnapshot }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     heading.current?.focus();
-  }, []);
+  }, [review.items]);
   return (
     <section className="cart-review" aria-labelledby={id}>
       <h2 id={id} tabIndex={-1} ref={heading}>
@@ -75,17 +75,7 @@ export function CartReview({ review }: { review: CartReviewSnapshot }) {
             <p className="cart-review-unit-price">
               Quantity: {item.quantity} · {formatCartPrice(item.unitPrice)} each
             </p>
-            {!!item.variants.length && (
-              <p className="cart-review-options">
-                Variants:{" "}
-                {item.variants.map((option) => option.name).join(", ")}
-              </p>
-            )}
-            {!!item.addOns.length && (
-              <p className="cart-review-options">
-                Add-ons: {item.addOns.map((option) => option.name).join(", ")}
-              </p>
-            )}
+            <CartItemConfiguration item={item} groupClassName="cart-review-options" />
             {item.notes && (
               <p className="cart-review-notes">
                 <FiEdit3 aria-hidden="true" /> Notes: {item.notes}
@@ -102,7 +92,8 @@ export function CartReview({ review }: { review: CartReviewSnapshot }) {
           </strong>
         </p>
         <p className="field-hint">
-          <FiInfo aria-hidden="true" /> {PRICE_PREVIEW_NOTICE}
+          <FiInfo aria-hidden="true" /> We verify the total before saving your order.
+          Any price change requires your confirmation.
         </p>
       </div>
     </section>

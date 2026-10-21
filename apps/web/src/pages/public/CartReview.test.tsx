@@ -1,3 +1,4 @@
+import { AxiosError, AxiosHeaders } from "axios";
 import {
   act,
   cleanup,
@@ -112,6 +113,73 @@ async function openCart() {
   );
   await userEvent.click(screen.getByRole("button", { name: "View cart (3)" }));
 }
+it("undoes removals in reverse order with the original configured lines and shop isolation", async () => {
+  const original = useCart.getState().shops.cafe;
+  const other = useCart.getState().shops.other;
+  await openCart();
+  await userEvent.click(screen.getAllByRole("button", { name: "Remove Coffee" })[0]);
+  await userEvent.click(screen.getByRole("button", { name: "Remove Coffee" }));
+  expect(useCart.getState().shops.cafe).toEqual([]);
+  await userEvent.click(screen.getByRole("button", { name: "Undo removal of Coffee" }));
+  expect(useCart.getState().shops.cafe).toEqual([original[1]]);
+  await userEvent.click(screen.getByRole("button", { name: "Undo removal of Coffee" }));
+  expect(useCart.getState().shops.cafe).toEqual(original);
+  expect(useCart.getState().shops.other).toBe(other);
+  expect(screen.getByRole("status", { name: "Cart total" })).toHaveTextContent("44.00");
+  expect(api.post).not.toHaveBeenCalled();
+});
+
+it("retires removal undo before review and protects unsaved item edits", async () => {
+  await openCart();
+  await userEvent.click(screen.getByRole("button", { name: "Edit notes for Coffee" }));
+  for (const button of screen.getAllByRole("button", { name: "Remove Coffee" })) expect(button).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  await userEvent.click(screen.getAllByRole("button", { name: "Remove Coffee" })[1]);
+  await userEvent.click(screen.getByRole("button", { name: "Review order" }));
+  expect(screen.queryByRole("button", { name: /Undo removal/ })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Edit cart" }));
+  expect(screen.queryByRole("button", { name: /Undo removal/ })).not.toBeInTheDocument();
+});
+it("explains per-item charges and keeps the reviewed total with the final action", async () => {
+  await openCart();
+  const progress = within(screen.getByRole("list", { name: "Checkout progress" }));
+  expect(progress.getByText("1. Cart")).toHaveAttribute("aria-current", "step");
+  const lines = within(screen.getByRole("list", { name: "Cart items" })).getAllByRole("listitem");
+  const configuredLine = within(lines[0]);
+  expect(configuredLine.getByText("Variants: Large")).toBeVisible();
+  expect(configuredLine.getByText("Add-ons: Oat milk")).toBeVisible();
+  await userEvent.click(configuredLine.getByText("Price breakdown"));
+  expect(configuredLine.getByText("Base price").parentElement).toHaveTextContent("₱10.00");
+  expect(configuredLine.getByText("+₱5.00")).toBeVisible();
+  expect(configuredLine.getByText("+₱2.00")).toBeVisible();
+  expect(configuredLine.getByText("Configured unit price").parentElement).toHaveTextContent("₱17.00");
+  expect(lines[0]).toHaveTextContent("₱34.00");
+  expect(api.post).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "Review order" }));
+  expect(progress.getByText("2. Review")).toHaveAttribute("aria-current", "step");
+  const footer = within(screen.getByRole("dialog").querySelector("footer")!);
+  expect(footer.getByText("Total to confirm").parentElement).toHaveTextContent("₱44.00");
+  expect(footer.getByRole("button", { name: "Place pickup order" })).toBeEnabled();
+  expect(footer.getByText(/cashier will confirm/)).toBeVisible();
+  await userEvent.click(footer.getByRole("button", { name: "Edit cart" }));
+  expect(progress.getByText("1. Cart")).toHaveAttribute("aria-current", "step");
+  expect(screen.getByRole("list", { name: "Cart items" })).toBeVisible();
+});
+
+it("labels zero-cost options without adding charges to the total", async () => {
+  const line = useCart.getState().shops.cafe[0];
+  useCart.setState({ shops: { ...useCart.getState().shops, cafe: [{ ...line,
+    variants: [...line.variants, { id: "hot", name: "Hot", optionGroupId: "temperature", priceAdjustment: "0.00", isDefault: true }],
+    addOns: [...line.addOns, { id: "cinnamon", name: "Cinnamon", priceAdjustment: "0.00" }],
+  }, useCart.getState().shops.cafe[1]] } });
+  await openCart();
+  const row = within(within(screen.getByRole("list", { name: "Cart items" })).getAllByRole("listitem")[0]);
+  await userEvent.click(row.getByText("Price breakdown"));
+  expect(row.getByText("Included")).toBeVisible();
+  expect(row.getByText("Free")).toBeVisible();
+  expect(screen.getByRole("status")).toHaveTextContent("₱44.00");
+  expect(api.post).not.toHaveBeenCalled();
+});
 it("keeps the cart dialog open and blocks duplicate submission until the order response settles", async () => {
   let reject!: (error: Error) => void;
   vi.mocked(api.post).mockReturnValueOnce(new Promise((_resolve, fail) => { reject = fail; }));
@@ -158,6 +226,7 @@ it("shows separate configured lines, quantities, notes, subtotal and pickup type
   );
   expect(api.post).toHaveBeenCalledWith("/menu/cafe/orders", {
     mode: "TAKEOUT",
+    reviewedTotal: "44.00",
     requestId: expect.any(String),
     items: [
       {
@@ -172,69 +241,36 @@ it("shows separate configured lines, quantities, notes, subtotal and pickup type
   });
   expect(useCart.getState().shops.other).toHaveLength(1);
 });
-it("never submits saved frontend price snapshots and displays the server's recalculated total", async () => {
+it("requires a separate confirmation for updated server prices without sending client pricing as authority", async () => {
   useCart.setState({ shops: {} });
-  useCart.getState().add("cafe", {
-    ...configured,
-    basePrice: "0.01",
-    unitPrice: "0.01",
-    totalPrice: "0.02",
-    variants: configured.variants.map((option) => ({
-      ...option,
-      priceAdjustment: "0.00",
-    })),
-    addOns: configured.addOns.map((option) => ({
-      ...option,
-      priceAdjustment: "0.00",
-    })),
-  });
-  vi.mocked(api.post).mockResolvedValue({
-    data: {
-      order: {
-        ...receipt.data.order,
-        totalPrice: "56.50",
-        items: [
-          {
-            ...configured,
-            basePrice: "20.03",
-            unitPrice: "28.25",
-            totalPrice: "56.50",
-            variants: configured.variants.map((option) => ({
-              ...option,
-              priceAdjustment: "6.07",
-            })),
-            addOns: configured.addOns.map((option) => ({
-              ...option,
-              priceAdjustment: "2.15",
-            })),
-          },
-        ],
-      },
-    },
-  });
-  render(<CustomerOrder shopSlug="cafe" />);
+  useCart.getState().add("cafe", { ...configured, basePrice: "0.01", unitPrice: "0.01", totalPrice: "0.02" });
+  const updated = { ...configured, basePrice: "21.25", unitPrice: "28.25", totalPrice: "56.50" };
+  vi.mocked(api.post).mockRejectedValueOnce(new AxiosError("Prices changed", undefined, undefined, undefined, {
+    status: 409, statusText: "Conflict", headers: {}, config: { headers: new AxiosHeaders() },
+    data: { code: "ORDER_PRICE_CHANGED", currency: "PHP", totalPrice: "56.50", items: [updated] },
+  })).mockResolvedValueOnce({ data: { order: { ...receipt.data.order, totalPrice: "56.50", items: [updated] } } });
+  const placed = vi.fn();
+  render(<CustomerOrder shopSlug="cafe" onOrderPlaced={placed} />);
   await userEvent.click(screen.getByRole("button", { name: "Review order" }));
-  expect(
-    screen.getByRole("region", { name: "Review your order" }),
-  ).toHaveTextContent("Estimated subtotal₱0.02");
-  await userEvent.click(
-    screen.getByRole("button", { name: "Place pickup order" }),
-  );
-  expect(api.post).toHaveBeenCalledWith("/menu/cafe/orders", {
-    mode: "TAKEOUT",
-    requestId: expect.any(String),
-    items: [
-      {
-        productId: "coffee",
-        quantity: 2,
-        variantIds: ["large"],
-        addOnIds: ["milk"],
-        notes: "Less ice\nNo sugar",
-      },
-    ],
-  });
-  expect(await screen.findByRole("status")).toHaveTextContent("Total ₱56.50");
+  await userEvent.click(screen.getByRole("button", { name: "Place pickup order" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("No order was placed");
+  expect(screen.getByRole("heading", { name: "Review your order" })).toHaveFocus();
+  expect(screen.getByRole("region", { name: "Review your order" })).toHaveTextContent("56.50");
+  expect(api.post).toHaveBeenCalledTimes(1);
+  expect(placed).not.toHaveBeenCalled();
+  expect(useCart.getState().shops.cafe).toHaveLength(1);
+  expect(sessionStorage.getItem("paserve-pending-order:v1:cafe")).toBeNull();
+  const original = vi.mocked(api.post).mock.calls[0][1] as { requestId: string; reviewedTotal: string };
+  expect(original.reviewedTotal).toBe("0.02");
+  await userEvent.click(screen.getByRole("button", { name: "Place pickup order" }));
+  const confirmed = vi.mocked(api.post).mock.calls[1][1] as { requestId: string; reviewedTotal: string; items: Record<string, unknown>[] };
+  expect(confirmed.reviewedTotal).toBe("56.50");
+  expect(confirmed.requestId).not.toBe(original.requestId);
+  expect(confirmed.items[0]).not.toHaveProperty("unitPrice");
+  expect(placed).toHaveBeenCalledOnce();
+  expect(useCart.getState().shops.cafe).toEqual([]);
 });
+
 it("lets the customer return to editing without submitting", async () => {
   await openCart();
   await userEvent.click(screen.getByRole("button", { name: "Review order" }));
@@ -308,11 +344,10 @@ it("preserves every selected modifier through review, Edit cart and a fresh revi
   expect(review).toHaveTextContent("Estimated subtotal₱50.00");
   await userEvent.click(screen.getByRole("button", { name: "Edit cart" }));
   const cart = screen.getByRole("dialog", { name: "Cafe cart" });
-  const lines = within(cart).getAllByRole("listitem");
+  const lines = within(within(cart).getByRole("list", { name: "Cart items" })).getAllByRole("listitem");
   expect(lines).toHaveLength(2);
-  expect(lines[0]).toHaveTextContent(
-    "Large, Hot, Oat milk, Extra shot, Cinnamon",
-  );
+  expect(lines[0]).toHaveTextContent("Variants: Large, Hot");
+  expect(lines[0]).toHaveTextContent("Add-ons: Oat milk, Extra shot, Cinnamon");
   expect(lines[0]).toHaveTextContent("Less ice No sugar");
   expect(within(lines[0]).getByRole("spinbutton")).toHaveValue(2);
   expect(within(lines[1]).getByRole("spinbutton")).toHaveValue(1);

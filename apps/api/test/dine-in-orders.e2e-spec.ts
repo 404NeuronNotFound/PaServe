@@ -131,13 +131,63 @@ describe('dine-in order submission', () => {
   });
   const post = (body: unknown = payload()) =>
     request(app.getHttpServer()).post('/api/v1/menu/cafe/orders').send(body);
+  it.each(['DINE_IN', 'TAKEOUT'] as const)(
+    'rejects changed %s prices before any write and returns current line prices',
+    async (mode) => {
+      const base = payload();
+      const body =
+        mode === 'TAKEOUT'
+          ? { requestId: id, mode, items: base.items }
+          : { ...base, mode };
+      const result = await post({ ...body, reviewedTotal: '0.01' }).expect(409);
+      expect(result.body).toMatchObject({
+        code: 'ORDER_PRICE_CHANGED',
+        currency: 'PHP',
+        totalPrice: '20.02',
+        items: [{ productId: id, unitPrice: '10.01', totalPrice: '20.02' }],
+      });
+      expect(tx.shop.update).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+      expect(createItems).not.toHaveBeenCalled();
+    },
+  );
+  it('accepts the reviewed amount only as a guard and preserves idempotent recovery after prices change', async () => {
+    const body = { ...payload(), reviewedTotal: '20.02' };
+    const first = await post(body).expect(201);
+    expect(first.body.order.totalPrice).toBe('20.02');
+    const stored = create.mock.results[0].value;
+    saved.mockResolvedValue(stored);
+    raw
+      .mockReset()
+      .mockResolvedValue([
+        { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
+      ]);
+    product.mockClear();
+    const replay = await post(body).expect(201);
+    expect(replay.body.order.totalPrice).toBe('20.02');
+    expect(product).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalledOnce();
+  });
+  it.each([12, 'NaN', '-1.00', '1e3', '1.00\n', '10000000000.00'])(
+    'rejects invalid reviewed amount %j before a transaction',
+    async (reviewedTotal) => {
+      await post({ ...payload(), reviewedTotal }).expect(400);
+      expect(transaction).not.toHaveBeenCalled();
+    },
+  );
   it('returns nested field errors and blocks injected pricing before opening a transaction', async () => {
     const body = payload();
-    const result = await post({ ...body, items: [{ ...body.items[0], quantity: '2', price: 'private-input' }] }).expect(400);
-    expect(result.body).toMatchObject({ code: 'VALIDATION_ERROR', fieldErrors: {
-      'items.0.quantity': expect.arrayContaining([expect.any(String)]),
-      'items.0.price': expect.arrayContaining([expect.any(String)]),
-    } });
+    const result = await post({
+      ...body,
+      items: [{ ...body.items[0], quantity: '2', price: 'private-input' }],
+    }).expect(400);
+    expect(result.body).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      fieldErrors: {
+        'items.0.quantity': expect.arrayContaining([expect.any(String)]),
+        'items.0.price': expect.arrayContaining([expect.any(String)]),
+      },
+    });
     expect(JSON.stringify(result.body)).not.toContain('private-input');
     expect(transaction).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
@@ -145,7 +195,10 @@ describe('dine-in order submission', () => {
   it('preserves 300 Unicode characters in notes through pricing and persisted snapshots', async () => {
     const body = payload();
     const notes = '\u{1f600}'.repeat(300);
-    const result = await post({ ...body, items: [{ ...body.items[0], notes }] }).expect(201);
+    const result = await post({
+      ...body,
+      items: [{ ...body.items[0], notes }],
+    }).expect(201);
     expect(result.body.order.items[0].notes).toBe(notes);
     expect(createItems.mock.calls[0][0].data[0].notes).toBe(notes);
   });
@@ -153,23 +206,38 @@ describe('dine-in order submission', () => {
     'captures shop display details for %s and preserves them across settings edits and retries',
     async (mode) => {
       const originalShop = {
-        id: 'shop-a', isActive: true, acceptingOrders: true,
-        name: 'Internal Cafe', displayName: 'Receipt Cafe', address: '12 Old Street',
-        phone: '09171234567', contactEmail: 'hello@example.com', website: 'https://example.com',
+        id: 'shop-a',
+        isActive: true,
+        acceptingOrders: true,
+        name: 'Internal Cafe',
+        displayName: 'Receipt Cafe',
+        address: '12 Old Street',
+        phone: '09171234567',
+        contactEmail: 'hello@example.com',
+        website: 'https://example.com',
       };
-      raw.mockReset().mockResolvedValueOnce([originalShop])
+      raw
+        .mockReset()
+        .mockResolvedValueOnce([originalShop])
         .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
       const body = mode === 'DINE_IN' ? payload() : takeout();
       const created = await post(body).expect(201);
       const details = {
-        name: 'Receipt Cafe', address: '12 Old Street', phone: '09171234567',
-        contactEmail: 'hello@example.com', website: 'https://example.com',
+        name: 'Receipt Cafe',
+        address: '12 Old Street',
+        phone: '09171234567',
+        contactEmail: 'hello@example.com',
+        website: 'https://example.com',
       };
       expect(created.body.order.shopDetails).toEqual(details);
       const persisted = create.mock.calls[0][0].data;
       expect(persisted.shopDetailsSnapshot).toEqual(details);
       saved.mockResolvedValue({ ...persisted, id: 'order-a' });
-      raw.mockReset().mockResolvedValue([{ ...originalShop, displayName: 'Renamed', address: 'New address' }]);
+      raw
+        .mockReset()
+        .mockResolvedValue([
+          { ...originalShop, displayName: 'Renamed', address: 'New address' },
+        ]);
       const replay = await post(body).expect(201);
       expect(replay.body.order.shopDetails).toEqual(details);
       expect(create).toHaveBeenCalledTimes(1);
@@ -178,7 +246,11 @@ describe('dine-in order submission', () => {
   it('uses the shop name when no display name or contact fields are configured', async () => {
     const result = await post(takeout()).expect(201);
     expect(result.body.order.shopDetails).toEqual({
-      name: 'Cafe', address: null, phone: null, contactEmail: null, website: null,
+      name: 'Cafe',
+      address: null,
+      phone: null,
+      contactEmail: null,
+      website: null,
     });
   });
   it.each(['DINE_IN', 'TAKEOUT'] as const)(
@@ -192,11 +264,15 @@ describe('dine-in order submission', () => {
           { ...body.items[0], quantity: 1, notes: 'Separate cup' },
         ],
       }).expect(201);
-      const trackingCookies = result.headers['set-cookie'] as unknown as string[];
+      const trackingCookies = result.headers[
+        'set-cookie'
+      ] as unknown as string[];
       expect(trackingCookies[0]).toContain('paserve_tracking=');
       expect(trackingCookies[0]).toContain('HttpOnly');
       expect(trackingCookies[0]).toContain('SameSite=Strict');
-      expect(trackingCookies[0]).toContain('Path=/api/v1/menu/cafe/orders/order-a');
+      expect(trackingCookies[0]).toContain(
+        'Path=/api/v1/menu/cafe/orders/order-a',
+      );
       expect(result.body.order).not.toHaveProperty('trackingToken');
       expect(transaction).toHaveBeenCalledTimes(1);
       expect(createItems).toHaveBeenCalledTimes(1);
@@ -451,7 +527,12 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValue([
-          { id: 'shop-a', name: 'Cafe', isActive: false, acceptingOrders: true },
+          {
+            id: 'shop-a',
+            name: 'Cafe',
+            isActive: false,
+            acceptingOrders: true,
+          },
         ]);
       await post(mode === 'DINE_IN' ? payload() : takeout()).expect(404);
       expect(raw).toHaveBeenCalledTimes(1);
@@ -466,7 +547,12 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValue([
-          { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: false },
+          {
+            id: 'shop-a',
+            name: 'Cafe',
+            isActive: true,
+            acceptingOrders: false,
+          },
         ]);
       const result = await post(body).expect(409);
       expect(result.body.code).toBe('SHOP_NOT_ACCEPTING_ORDERS');
@@ -496,7 +582,12 @@ describe('dine-in order submission', () => {
       raw
         .mockReset()
         .mockResolvedValue([
-          { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: false },
+          {
+            id: 'shop-a',
+            name: 'Cafe',
+            isActive: true,
+            acceptingOrders: false,
+          },
         ]);
       const replay = await post(body).expect(201);
       expect(replay.body.order.id).toBe('order-a');
@@ -616,7 +707,12 @@ describe('dine-in order submission', () => {
           raw
             .mockReset()
             .mockResolvedValueOnce([
-              { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
+              {
+                id: 'shop-a',
+                name: 'Cafe',
+                isActive: true,
+                acceptingOrders: true,
+              },
             ])
             .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
           const result = await post({ ...body, items: lines }).expect(404);
@@ -641,7 +737,12 @@ describe('dine-in order submission', () => {
         raw
           .mockReset()
           .mockResolvedValue([
-            { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
+            {
+              id: 'shop-a',
+              name: 'Cafe',
+              isActive: true,
+              acceptingOrders: true,
+            },
           ]);
         const result = await post(body).expect(201);
         expect(result.body.order.id).toBe('order-a');
@@ -682,7 +783,12 @@ describe('dine-in order submission', () => {
           raw
             .mockReset()
             .mockResolvedValueOnce([
-              { id: 'shop-a', name: 'Cafe', isActive: true, acceptingOrders: true },
+              {
+                id: 'shop-a',
+                name: 'Cafe',
+                isActive: true,
+                acceptingOrders: true,
+              },
             ])
             .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
           await post(body).expect(201);

@@ -237,6 +237,7 @@ interface CartState {
     pricePreview?: CartPricePreview,
   ) => boolean;
   remove: (slug: string, lineId: string) => void;
+  restoreRemoved: (slug: string, item: CartItem, index: number) => boolean;
   updateNotes: (slug: string, expected: CartItem, notes: string) => boolean;
   updateQuantity: (
     slug: string,
@@ -273,6 +274,20 @@ export function createCartStore(
           },
         };
       }),
+    restoreRemoved: (slug, item, index) => {
+      const restored = parseCartLine(item);
+      if (!restored) return false;
+      let changed = false;
+      set((state) => {
+        const items = cartItemsForShop(state.shops, slug);
+        if (items.some((line) => line.lineId === restored.lineId)) return state;
+        const next = [...items];
+        next.splice(Math.max(0, Math.min(index, next.length)), 0, restored);
+        changed = true;
+        return { shops: { ...state.shops, [slug]: next } };
+      });
+      return changed;
+    },
     updateNotes: (slug, expected, draft) => {
       if (!isValidCustomerNote(draft)) {
         return false;

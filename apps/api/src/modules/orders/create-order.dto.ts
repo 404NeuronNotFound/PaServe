@@ -23,6 +23,11 @@ export class OrderLineDto extends ProductSelectionDto {
   productId!: string;
 }
 export class CreateOrderDto {
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsString()
+  @Matches(/^(?:0|[1-9]\d{0,9})\.\d{2}$(?![\s\S])/)
+  reviewedTotal?: string;
+
   @IsUUID('4')
   requestId!: string;
 

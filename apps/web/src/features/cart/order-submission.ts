@@ -12,12 +12,14 @@ export function orderSubmissionRequest(
     ...(item.notes !== undefined ? { notes: item.notes } : {}),
   }));
   return request.mode === "TAKEOUT"
-    ? { requestId: request.requestId, mode: "TAKEOUT", items }
+    ? { requestId: request.requestId, mode: "TAKEOUT", items,
+        ...(request.reviewedTotal !== undefined ? { reviewedTotal: request.reviewedTotal } : {}) }
     : {
         requestId: request.requestId,
         mode: "DINE_IN",
         tableCode: request.tableCode,
         tableToken: request.tableToken,
+        ...(request.reviewedTotal !== undefined ? { reviewedTotal: request.reviewedTotal } : {}),
         items,
       };
 }

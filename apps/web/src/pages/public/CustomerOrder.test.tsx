@@ -31,14 +31,14 @@ const response = {
       mode: "TAKEOUT",
       status: "PENDING_CONFIRMATION",
       table: null,
-      totalPrice: "12.00",
+      totalPrice: "10.00",
       currency: "PHP",
       items: [
         {
           ...quote,
-          basePrice: "12.00",
-          unitPrice: "12.00",
-          totalPrice: "12.00",
+          basePrice: "10.00",
+          unitPrice: "10.00",
+          totalPrice: "10.00",
         },
       ],
       createdAt: "2026-10-12",
@@ -87,6 +87,7 @@ it("defaults a tableless cart to pickup and submits without table fields", async
   await placeOrder("Place pickup order");
   expect(api.post).toHaveBeenCalledWith("/menu/cafe/orders", {
     requestId: expect.any(String),
+    reviewedTotal: quote.totalPrice,
     mode: "TAKEOUT",
     items: [{ productId: "coffee", quantity: 1, variantIds: [], addOnIds: [] }],
   });
