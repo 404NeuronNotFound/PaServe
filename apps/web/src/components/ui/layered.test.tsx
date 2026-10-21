@@ -1,11 +1,28 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, it } from "vitest";
+import { expect, it, describe, beforeEach, afterEach } from "vitest";
 import { Button } from "./button";
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "./dialog";
 import { Sheet, SheetTrigger, SheetContent, SheetTitle, SheetDescription } from "./sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "./dropdown-menu";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "./tooltip";
+
+describe.each(["day", "night"] as const)("%s appearance", (appearance) => {
+
+it("keeps a named dialog keyboard accessible and returns focus after dismissal", async () => {
+  render(<Dialog><DialogTrigger asChild><Button>Review changes</Button></DialogTrigger>
+    <DialogContent><DialogTitle>Review settings</DialogTitle><DialogDescription>Check the changes before saving.</DialogDescription>
+      <Button>Save settings</Button></DialogContent></Dialog>);
+  const user = userEvent.setup();
+  const trigger = screen.getByRole("button", { name: "Review changes" });
+  trigger.focus();
+  await user.keyboard("{Enter}");
+  expect(await screen.findByRole("dialog", { name: "Review settings" })).toHaveAccessibleDescription("Check the changes before saving.");
+  expect(screen.getByRole("button", { name: "Save settings" })).toHaveFocus();
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(trigger).toHaveFocus());
+});
 
 it("opens a named sheet by keyboard and restores trigger focus after Escape", async () => {
   render(<Sheet><SheetTrigger asChild><Button>Filters</Button></SheetTrigger>
@@ -56,4 +73,8 @@ it("can keep a floating command menu inside a supplied modal container", async (
     expect(portal).toContainElement(await screen.findByRole("menu"));
     await userEvent.setup().keyboard("{Escape}");
   } finally { portal.remove(); }
+});
+
+  beforeEach(() => { document.documentElement.dataset.appearance = appearance; });
+  afterEach(() => { delete document.documentElement.dataset.appearance; });
 });

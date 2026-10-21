@@ -1,7 +1,9 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi, describe, beforeEach } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ErrorState } from "./ErrorState";
+
+describe.each(["day", "night"] as const)("%s appearance", (appearance) => {
 
 afterEach(cleanup);
 const failure = (status: number) => ({ isAxiosError: true, response: { status } });
@@ -36,4 +38,8 @@ it("keeps public recovery in the customer context", () => {
   </ErrorState>);
   expect(screen.getByRole("button", { name: "Back to menu" })).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Choose another shop" })).not.toBeInTheDocument();
+});
+
+  beforeEach(() => { document.documentElement.dataset.appearance = appearance; });
+  afterEach(() => { delete document.documentElement.dataset.appearance; });
 });

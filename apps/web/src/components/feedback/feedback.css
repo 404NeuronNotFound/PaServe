@@ -221,7 +221,7 @@
 }
 .feedback-dialog-actions .feedback-destructive {
   background: var(--color-error);
-  color: var(--color-surface);
+  color: var(--color-error-surface);
 }
 .feedback-dialog-actions .feedback-destructive:hover {
   background: var(--color-error);

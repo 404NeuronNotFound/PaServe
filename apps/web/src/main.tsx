@@ -1,4 +1,5 @@
 import { StrictMode } from "react";
+import "./app/stores/appearance";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import "./theme.css";

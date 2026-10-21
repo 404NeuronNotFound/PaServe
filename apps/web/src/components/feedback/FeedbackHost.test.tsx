@@ -5,11 +5,13 @@ import {
   render,
   screen,
 } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi, describe } from "vitest";
 import { FeedbackHost } from "./FeedbackHost";
 import { feedback, useFeedbackStore } from "../../app/stores/feedback";
 import { AppearanceToggle } from "../layout/AppearanceToggle";
 import { useAppearanceStore } from "../../app/stores/appearance";
+
+describe.each(["day", "night"] as const)("%s appearance", (appearance) => {
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -257,4 +259,8 @@ it("replaces an appearance snackbar and undoes the most recent change", async ()
   );
   expect(screen.getByRole("switch")).toBeChecked();
   expect(localStorage.getItem("paserve-appearance")).toBe("night");
+});
+
+  beforeEach(() => { document.documentElement.dataset.appearance = appearance; });
+  afterEach(() => { delete document.documentElement.dataset.appearance; });
 });

@@ -1,7 +1,9 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi, describe, beforeEach } from "vitest";
 import { PendingButton } from "./PendingButton";
 import { pendingActionLabel } from "./pending-action-label";
+
+describe.each(["day", "night"] as const)("%s appearance", (appearance) => {
 
 afterEach(cleanup);
 
@@ -63,4 +65,8 @@ it.each([
   ["Undo", "Undoing…"],
 ])("keeps the action context of %s", (label, expected) => {
   expect(pendingActionLabel(label)).toBe(expected);
+});
+
+  beforeEach(() => { document.documentElement.dataset.appearance = appearance; });
+  afterEach(() => { delete document.documentElement.dataset.appearance; });
 });

@@ -9,9 +9,13 @@ function initialAppearance(): Appearance {
   } catch {
     // Appearance remains usable when the browser blocks storage.
   }
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
-    ? "night"
-    : "day";
+  try {
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+      ? "night"
+      : "day";
+  } catch {
+    return "day";
+  }
 }
 
 export const useAppearanceStore = create<{
@@ -28,3 +32,14 @@ export const useAppearanceStore = create<{
     }
   },
 }));
+
+function applyAppearance(appearance: Appearance) {
+  document.documentElement.dataset.appearance = appearance;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute(
+    "content", appearance === "night" ? "#151e18" : "#f5f3ec",
+  );
+}
+
+// Apply globally, including routes without a mounted appearance switch.
+applyAppearance(useAppearanceStore.getState().appearance);
+useAppearanceStore.subscribe(({ appearance }) => applyAppearance(appearance));

@@ -1,5 +1,5 @@
 import { createRef } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi, describe, beforeEach } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Button } from "./button";
@@ -10,6 +10,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "./card";
 import { Table, TableCaption, TableBody, TableRow, TableHead, TableCell } from "./table";
 import { Alert, AlertTitle, AlertDescription } from "./alert";
 import { PendingButton } from "../feedback/PendingButton";
+
+describe.each(["day", "night"] as const)("%s appearance", (appearance) => {
 
 afterEach(cleanup);
 
@@ -73,4 +75,8 @@ it("allows feedback to choose polite status without forcing an alert announcemen
   render(<Alert role="status"><AlertTitle>Saved</AlertTitle><AlertDescription>Your settings are saved.</AlertDescription></Alert>);
   expect(screen.getByRole("status")).toHaveTextContent("Your settings are saved.");
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+  beforeEach(() => { document.documentElement.dataset.appearance = appearance; });
+  afterEach(() => { delete document.documentElement.dataset.appearance; });
 });

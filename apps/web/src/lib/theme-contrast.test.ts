@@ -29,4 +29,35 @@ it.each(["day", "night"])("keeps %s theme text, focus and control boundaries rea
       expect(contrast(palette[`--color-${control}`], background), `${control} on ${surface}`).toBeGreaterThanOrEqual(3);
   }
   expect(contrast(palette["--color-error"], palette["--color-error-surface"])).toBeGreaterThanOrEqual(4.5);
+  const resolve = (name: string): string => {
+    if (palette[name]) return palette[name];
+    const css = mode === "night"
+      ? themeCss.slice(themeCss.indexOf(':root[data-appearance="night"] {')).split("}")[0]
+      : themeCss.slice(themeCss.indexOf(":root {")).split("}")[0];
+    const value = css.match(new RegExp(`${name}:\\s*var\\((--[\\w-]+)\\)`))?.[1];
+    if (value) return resolve(value);
+    throw new Error(`Missing theme token ${name}`);
+  };
+  for (const background of ["--color-action", "--color-action-hover"])
+    expect(contrast(resolve("--color-on-action"), resolve(background)), `primary label on ${background}`).toBeGreaterThanOrEqual(4.5);
+});
+
+it.each(["day", "night"])("keeps %s sales chart lines distinguishable from chart surfaces", (mode) => {
+  const dashboardCss = readFileSync(new URL("../pages/owner/sales-dashboard.css", import.meta.url), "utf8");
+  const workspaceCss = readFileSync(new URL("../pages/owner/sales-workspace.css", import.meta.url), "utf8");
+  const palette = {
+    ...tokens(":root {", themeCss),
+    ...(mode === "night" ? tokens(':root[data-appearance="night"] {', themeCss) : {}),
+  };
+  const chart = {
+    ...tokens(".sales-dashboard {", dashboardCss),
+    ...tokens(".sales-dashboard {", workspaceCss),
+    ...(mode === "night" ? {
+      ...tokens(':root[data-appearance="night"] .sales-dashboard {', dashboardCss),
+      ...tokens(':root[data-appearance="night"] .sales-dashboard {', workspaceCss),
+    } : {}),
+  };
+  for (const line of [chart["--sales-cash"], chart["--sales-chart-previous"]])
+    for (const surface of [palette["--color-surface"], palette["--color-canvas"]])
+      expect(contrast(line, surface)).toBeGreaterThanOrEqual(3);
 });

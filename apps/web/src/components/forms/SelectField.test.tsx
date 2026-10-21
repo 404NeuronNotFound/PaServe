@@ -1,7 +1,9 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi, describe, beforeEach } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SelectField } from "./SelectField";
+
+describe.each(["day", "night"] as const)("%s appearance", (appearance) => {
 
 afterEach(() => {
   cleanup();
@@ -72,4 +74,8 @@ it("fits the layout viewport without VisualViewport and lets Escape return to th
   expect(trigger).toHaveFocus();
   expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   expect(onChange).not.toHaveBeenCalled();
+});
+
+  beforeEach(() => { document.documentElement.dataset.appearance = appearance; });
+  afterEach(() => { delete document.documentElement.dataset.appearance; });
 });

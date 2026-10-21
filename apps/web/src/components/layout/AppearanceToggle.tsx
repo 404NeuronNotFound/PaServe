@@ -1,14 +1,9 @@
-import { useEffect } from "react";
 import { FiMoon, FiSun } from "react-icons/fi";
 import { useAppearanceStore } from "../../app/stores/appearance";
 import { feedback } from "../../app/stores/feedback";
 
 export function AppearanceToggle() {
   const { appearance, setAppearance } = useAppearanceStore();
-  useEffect(() => {
-    document.documentElement.dataset.appearance = appearance;
-  }, [appearance]);
-
   return (
     <button
       className="appearance-toggle"

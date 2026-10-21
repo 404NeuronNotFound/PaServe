@@ -41,3 +41,19 @@ it("can change appearance when saving preferences is blocked", async () => {
   expect(screen.getByRole("switch")).toBeChecked();
   expect(document.documentElement.dataset.appearance).toBe("night");
 });
+
+it("applies appearance and browser chrome without a mounted toggle", () => {
+  const meta = document.createElement("meta");
+  meta.name = "theme-color";
+  document.head.append(meta);
+  try {
+    useAppearanceStore.getState().setAppearance("night");
+    expect(document.documentElement.dataset.appearance).toBe("night");
+    expect(meta.content).toBe("#151e18");
+    useAppearanceStore.getState().setAppearance("day");
+    expect(document.documentElement.dataset.appearance).toBe("day");
+    expect(meta.content).toBe("#f5f3ec");
+  } finally {
+    meta.remove();
+  }
+});

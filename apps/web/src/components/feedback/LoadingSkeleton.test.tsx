@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, describe, beforeEach } from "vitest";
 import {
   AccessSkeleton,
   MenuSkeleton,
@@ -16,6 +16,8 @@ import {
   StaffSkeleton,
   FormSkeleton,
 } from "./LoadingSkeleton";
+
+describe.each(["day", "night"] as const)("%s appearance", (appearance) => {
 
 afterEach(cleanup);
 
@@ -103,3 +105,7 @@ it.each(["grid", "list", "compact"] as const)(
     expect(container.querySelector(".menu-shop-hero .shop-banner")).toBeNull();
   },
 );
+
+  beforeEach(() => { document.documentElement.dataset.appearance = appearance; });
+  afterEach(() => { delete document.documentElement.dataset.appearance; });
+});

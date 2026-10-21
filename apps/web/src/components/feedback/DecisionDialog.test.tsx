@@ -7,8 +7,10 @@ import {
   screen,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi, describe } from "vitest";
 import { DecisionDialog } from "./DecisionDialog";
+
+describe.each(["day", "night"] as const)("%s appearance", (appearance) => {
 
 const modalDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
@@ -189,4 +191,8 @@ it("keeps an animated dismissal blocked until it finishes and then restores focu
   } finally {
     vi.useRealTimers();
   }
+});
+
+  beforeEach(() => { document.documentElement.dataset.appearance = appearance; });
+  afterEach(() => { delete document.documentElement.dataset.appearance; });
 });
