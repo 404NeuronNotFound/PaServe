@@ -3,7 +3,7 @@
 .welcome-panel {
   --color-focus: var(--color-lime);
 }
-:root :is(a, button, input, textarea, select, summary, [tabindex="0"]):focus-visible {
+:root :is(a, button, input, textarea, select, summary, [tabindex="0"], [tabindex="-1"]):focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 3px;
 }
@@ -18,10 +18,20 @@
   border-color: var(--color-error);
 }
 @media (forced-colors: active) {
-  :root :is(a, button, input, textarea, select, summary, [tabindex="0"]):focus-visible {
+  :root :is(a, button, input, textarea, select, summary, [tabindex="0"], [tabindex="-1"]):focus-visible {
     outline-color: Highlight;
     box-shadow: none;
   }
+}
+.skip-link {
+  z-index: 220;
+  min-height: var(--control-target-min);
+}
+[tabindex="-1"] {
+  scroll-margin-block: var(--spacing-6);
+}
+.public-menu .menu-sections {
+  scroll-margin-block-start: var(--menu-scroll-offset, var(--spacing-6));
 }
 /* Preserve state text and native scrolling; remove decorative movement. */
 @media (prefers-reduced-motion: reduce) {

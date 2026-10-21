@@ -1,4 +1,5 @@
 import { ShopLogo } from "../shops/ShopLogo";
+import { SkipLink } from "./SkipLink";
 import {
   useEffect,
   useRef,
@@ -149,9 +150,9 @@ export function DashboardFrame({
   }
   return (
     <div className="dashboard-shell phase-two" data-sidebar-collapsed={rail}>
-      <a className="skip-link" href="#dashboard-content">
+      <SkipLink targetId="dashboard-content">
         Skip to page content
-      </a>
+      </SkipLink>
       <header className="workspace-header dashboard-header dashboard-header-compact">
         <Link className="wordmark" to="/app">
           <span className="brand-symbol">

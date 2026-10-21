@@ -91,6 +91,9 @@ it("preserves a settings draft when returning to the browser window", async () =
   const name = await screen.findByLabelText("Business name (required)");
   await user.clear(name);
   await user.type(name, "Unsaved cafe name");
+  await user.click(screen.getByRole("link", { name: "Skip to page content" }));
+  expect(screen.getByRole("main")).toHaveFocus();
+  expect(name).toHaveValue("Unsaved cafe name");
   const sessionCalls = vi.mocked(getCurrentUser).mock.calls.length;
   const membershipCalls = vi.mocked(getShopMembership).mock.calls.length;
   await act(async () => {

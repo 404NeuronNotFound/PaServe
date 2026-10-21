@@ -1,4 +1,5 @@
 import { Button } from "../../components/ui/button";
+import { SkipLink } from "../../components/layout/SkipLink";
 import { MediaImage } from "../../components/media/MediaImage";
 import { Input } from "../../components/ui/input";
 import { ProductCard } from "../../components/paserve/ProductCard";
@@ -111,6 +112,7 @@ export function PublicMenuView({
       }
       style={menuTheme(shop.primaryColor, shop.accentColor)}
     >
+      {!preview && <SkipLink targetId={`${prefix}-items`}>Skip to menu items</SkipLink>}
       <div className="menu-topline">
         <span>
           <FiCoffee aria-hidden="true" /> A little something good.
@@ -231,7 +233,8 @@ export function PublicMenuView({
           </Button>
         </div>
       )}
-      <div className="menu-sections" id={`${prefix}-items`} ref={sectionContainer} aria-busy={searchPending}>
+      <div className="menu-sections" id={`${prefix}-items`} ref={sectionContainer} tabIndex={-1}
+        role="region" aria-label="Menu items" aria-busy={searchPending}>
         {sections.map((section, index) => (
           <MenuSection
             key={section.id}

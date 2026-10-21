@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SkipLink } from "./SkipLink";
 import { Link, NavLink } from "react-router-dom";
 import { FiArrowUpRight, FiCoffee, FiLock } from "react-icons/fi";
 import { AppearanceToggle } from "./AppearanceToggle";
@@ -14,9 +15,9 @@ export function AuthLayout({
 }) {
   return (
     <>
-      <a className="skip-link" href="#auth-content">
+      <SkipLink targetId="auth-content">
         {skipLabel}
-      </a>
+      </SkipLink>
       <main className="auth-page">
         <aside className="welcome-panel" aria-label="About PaServe">
           <Link className="wordmark" to="/" aria-label="PaServe home">

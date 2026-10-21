@@ -65,6 +65,17 @@ const menu: PublicMenuResponse = {
   featuredProducts: [coffee],
 };
 
+it("lets keyboard users skip the header and filters to menu actions", async () => {
+  render(<PublicMenuView menu={menu} />);
+  const user = userEvent.setup();
+  await user.tab();
+  const skip = screen.getByRole("link", { name: "Skip to menu items" });
+  expect(skip).toHaveFocus();
+  await user.keyboard("{Enter}");
+  expect(document.getElementById(skip.getAttribute("href")!.slice(1))).toHaveFocus();
+  await user.tab();
+  expect(screen.getAllByRole("button", { name: "View details for Coffee" })[0]).toHaveFocus();
+});
 it("combines availability with search and recovers without losing cart access", async () => {
   const user = userEvent.setup();
   render(<PublicMenuView menu={{ ...menu, products: [coffee,
