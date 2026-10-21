@@ -177,6 +177,62 @@ const customReport = (startDate = "2026-10-15", endDate = "2026-10-17") => ({
     }),
   ],
 });
+it.each(["OWNER", "ADMIN", "MANAGER"] as const)("keeps %s management shortcuts scoped to the active shop and permitted roles", async (role) => {
+  setup(role);
+  const navigation = screen.getByRole("navigation", { name: "Management shortcuts" });
+  expect(within(navigation).getByRole("link", { name: "Kitchen / Barista" })).toHaveAttribute("href", "/app/shops/a/kitchen");
+  expect(within(navigation).getByRole("link", { name: "Products" })).toHaveAttribute("href", "/app/shops/a/products");
+  if (role === "OWNER") {
+    expect(within(navigation).getByRole("link", { name: "Orders" })).toHaveAttribute("href", "/app/shops/a/orders");
+    expect(within(navigation).getByRole("link", { name: "Staff & invitations" })).toHaveAttribute("href", "/app/shops/a/staff");
+  } else {
+    expect(within(navigation).queryByRole("link", { name: "Orders" })).not.toBeInTheDocument();
+    expect(within(navigation).queryByRole("link", { name: "Staff & invitations" })).not.toBeInTheDocument();
+  }
+  await screen.findByRole("region", { name: "Business overview" });
+});
+it("shows applied-period key figures before detailed report navigation", async () => {
+  setup();
+  const overview = await screen.findByRole("region", { name: "Business overview" });
+  expect(overview).toHaveTextContent("October 16, 2026");
+  for (const title of ["Number of Orders", "Average Order Value", "Items Sold"])
+    expect(within(overview).getByRole("heading", { name: title })).toBeVisible();
+  const reportNavigation = screen.getByRole("navigation", { name: "Sales dashboard sections" });
+  expect(overview.compareDocumentPosition(reportNavigation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(DailyAnalytics).not.toHaveBeenCalled();
+});
+it("puts a bounded recent-activity preview in the overview and expands it without another request", async () => {
+  const orders = Array.from({ length: 6 }, (_, index) => recentOrder({
+    id: `order-${index}`,
+    orderNumber: `ORD-00000${6 - index}`,
+  }));
+  vi.mocked(getDailySales).mockImplementation(async (shopId, businessDate) => ({
+    shopId, businessDate, ...salesBusinessDayBounds(businessDate)!,
+    timezone: "Asia/Manila", currency: "PHP", totalSales: "1.20",
+    completedOrders: 6, itemsSold: 6,
+    paymentBreakdown: breakdown("1.20", 6), recentOrders: orders,
+  }));
+  setup();
+  const overview = await screen.findByRole("region", { name: "Business overview" });
+  const activity = within(overview).getByRole("region", { name: "Recent Orders" });
+  const list = within(activity).getByRole("list", { name: "Recent completed orders, newest first" });
+  expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+  expect(list).toHaveTextContent("ORD-000006");
+  expect(list).not.toHaveTextContent("ORD-000003");
+  expect(activity.compareDocumentPosition(document.getElementById("sales-trends-section")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const requests = vi.mocked(getDailySales).mock.calls.length;
+  const expand = within(activity).getByRole("button", { name: "Show all 6 recent orders" });
+  expect(expand).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(expand);
+  expect(within(list).getAllByRole("listitem")).toHaveLength(6);
+  expect(activity).toHaveTextContent("6 of 6 recent orders shown");
+  expect(getDailySales).toHaveBeenCalledTimes(requests);
+  fireEvent.click(within(activity).getByRole("button", { name: "Show fewer recent orders" }));
+  expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+  fireEvent.click(within(activity).getByRole("button", { name: "Show all 6 recent orders" }));
+  fireEvent.change(screen.getByLabelText("Business date"), { target: { value: "2026-10-15" } });
+  await waitFor(() => expect(screen.getByRole("button", { name: "Show all 6 recent orders" })).toHaveAttribute("aria-expanded", "false"));
+});
 it("starts with the overview and loads shared-period history only when opened", async () => {
   setup();
   await screen.findByText("₱0.30", { selector: ".sales-amount" });

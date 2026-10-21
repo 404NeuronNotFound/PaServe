@@ -2,6 +2,7 @@ import { Table } from "../../components/ui/table";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { PageHeader } from "../../components/paserve/PageHeader";
+import { navigationForRole } from "../../components/layout/workspace-navigation";
 import { MetricCard as Metric } from "../../components/paserve/MetricCard";
 import {
   MetricsSkeleton,
@@ -105,6 +106,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
   const [paymentBasis, setPaymentBasis] = useState<PaymentMixBasis>("SALES");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [recentExpandedFor, setRecentExpandedFor] = useState<string | null>(null);
   const { shopId, role, shop } = useActiveShop();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [custom, setCustom] = useState(false);
@@ -127,6 +129,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
   const reportStartDate = custom ? (customRange?.start ?? "") : date;
   const reportEndDate = custom ? (customRange?.end ?? "") : date;
   const allowed = hasShopPermission(role, "shop.reports.read");
+  const shortcuts = navigationForRole(role).flatMap((group) => group.items)
+    .filter((item) => ["orders", "kitchen", "products", "staff"].includes(item.path));
   const validDraft = !!salesDailyRange(customDraft.start, customDraft.end);
   const valid = custom
     ? !!customRange && !!salesDailyRange(customRange.start, customRange.end)
@@ -163,6 +167,9 @@ function SalesWorkspace({ userId }: { userId: string }) {
     );
   const denied = reportAccessUnavailable(query.error);
   const report = query.isSuccess && valid ? query.data : null;
+  const reportPeriodKey = `${reportStartDate}:${reportEndDate}`;
+  const recentExpanded = recentExpandedFor === reportPeriodKey;
+  const visibleRecentOrders = report?.recentOrders.slice(0, recentExpanded ? 10 : 3) ?? [];
   const mix = report
     ? calculatePaymentMix(
         report.paymentBreakdown,
@@ -397,32 +404,6 @@ function SalesWorkspace({ userId }: { userId: string }) {
           </p>
         )}
       </div>
-      <nav className="sales-section-nav" aria-label="Sales dashboard sections">
-        <a href="#sales-overview">
-          <FiGrid aria-hidden="true" />
-          Overview
-        </a>
-        <a href="#sales-trends-section">
-          <FiTrendingUp aria-hidden="true" />
-          Trends
-        </a>
-        <a href="#sales-payment-section">
-          <FiPieChart aria-hidden="true" />
-          Payments & orders
-        </a>
-        <a href="#sales-products-section">
-          <FiLayers aria-hidden="true" />
-          Products
-        </a>
-        <a href="#sales-operations-section">
-          <FiActivity aria-hidden="true" />
-          Operations
-        </a>
-        <a href="#sales-history-section" onClick={() => setHistoryOpen(true)}>
-          <FiBarChart2 aria-hidden="true" />
-          History
-        </a>
-      </nav>
       {!valid &&
         (custom ? (
           <InlineMessage tone="info">
@@ -439,68 +420,216 @@ function SalesWorkspace({ userId }: { userId: string }) {
           pending={query.isFetching} onRetry={refreshSales} />
       )}
       {report && (
-        <div className="sales-summary" aria-busy={query.isFetching}>
-          <article className="sales-hero" aria-labelledby="sales-total-label">
-            <div className="sales-hero-top">
-              <h2 id="sales-total-label">
-                {!custom && date === today ? "Today’s Sales" : "Gross Sales"}
-              </h2>
-              <span className="sales-hero-icon">
-                <FiTrendingUp aria-hidden="true" />
-              </span>
+        <section className="sales-overview-metrics" aria-labelledby="sales-overview-title">
+          <header className="sales-overview-heading">
+            <div>
+              <h2 id="sales-overview-title">Business overview</h2>
+              <p>{prettyDate} · Completed and paid orders · PHP</p>
             </div>
-            <p className="sales-hero-date">{prettyDate}</p>
-            <strong className="sales-amount">
-              {formatCartPrice(report.totalSales)}
-            </strong>
-            <div className="sales-hero-footer">
+          </header>
+          <div className="sales-summary" aria-busy={query.isFetching}>
+            <article className="sales-hero" aria-labelledby="sales-total-label">
+              <div className="sales-hero-top">
+                <h2 id="sales-total-label">
+                  {!custom && date === today ? "Today’s Sales" : "Gross Sales"}
+                </h2>
+                <span className="sales-hero-icon">
+                  <FiTrendingUp aria-hidden="true" />
+                </span>
+              </div>
+              <p className="sales-hero-date">{prettyDate}</p>
+              <strong className="sales-amount">
+                {formatCartPrice(report.totalSales)}
+              </strong>
+              <div className="sales-hero-footer">
+                <span>
+                  <FiCheck aria-hidden="true" /> Completed & paid
+                </span>
+                <span>PHP</span>
+              </div>
+              {report.completedOrders === 0 && (
+                <p className="sales-hero-empty">
+                  No eligible completed orders for this{" "}
+                  {custom ? "date range" : "business day"}.
+                </p>
+              )}
+            </article>
+            <Metric
+              id="sales-orders-label"
+              title="Number of Orders"
+              value={countFormat.format(report.completedOrders)}
+              note="Paid & completed orders."
+              Icon={FiClipboard}
+              number="01"
+            />
+            <Metric
+              id="sales-average-label"
+              title="Average Order Value"
+              value={formatCartPrice(
+                calculateAverageOrderValue(
+                  report.totalSales,
+                  report.completedOrders,
+                ),
+              )}
+              note={
+                report.completedOrders === 0
+                  ? "No eligible orders; average is ₱0.00."
+                  : "Per completed order."
+              }
+              Icon={FiBarChart2}
+              number="02"
+            />
+            <Metric
+              id="sales-items-label"
+              title="Items Sold"
+              value={countFormat.format(report.itemsSold)}
+              note="Total units sold."
+              Icon={FiShoppingBag}
+              number="03"
+            />
+          </div>
+          <section
+            className="sales-recent-orders"
+            aria-labelledby="sales-recent-title"
+          >
+            <header className="sales-panel-heading">
+              <div>
+                <p className="sales-kicker">FRESH FROM THE COUNTER</p>
+                <h2 id="sales-recent-title">Recent Orders</h2>
+              </div>
+              {role === "OWNER" && (
+                <Link
+                  className="sales-history-link"
+                  to={`${shopPath(shopId)}/orders/completed`}
+                >
+                  View completed orders <FiArrowUpRight aria-hidden="true" />
+                </Link>
+              )}
+            </header>
+            <p className="sales-recent-caption">
+              Latest 10 completions <span>· Times in Manila</span>
+            </p>
+            {report.recentOrders.length === 0 ? (
+              <div className="sales-feed-empty">
+                <FiClipboard aria-hidden="true" />
+                <h3>A quiet moment.</h3>
+                <p>
+                  No completed orders for this{" "}
+                  {custom ? "date range" : "business day"}.
+                </p>
+                <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => {
+                  const control = document.getElementById(custom ? "custom-sales-start" : "sales-date");
+                  control?.scrollIntoView?.({ block: "center" });
+                  control?.focus();
+                }}>Choose another reporting period</Button>
+              </div>
+            ) : (
+              <>
+                <div className="sales-feed-columns" aria-hidden="true">
+                  <span>Order</span>
+                  <span>Amount</span>
+                  <span>Completed</span>
+                </div>
+                <ol
+                  className="sales-recent-list"
+                    id="sales-recent-list"
+                  aria-label="Recent completed orders, newest first"
+                >
+                  {visibleRecentOrders.map((order) => (
+                    <li key={order.id}>
+                      <div className="sales-recent-identity">
+                        <span
+                          className="sales-receipt-icon"
+                          aria-hidden="true"
+                        >
+                          <FiClipboard />
+                        </span>
+                        <div>
+                          {role === "OWNER" ? (
+                            <Link
+                              to={`${shopPath(shopId)}/orders/${encodeURIComponent(order.id)}`}
+                            >
+                              {order.orderNumber}
+                              <FiArrowUpRight aria-hidden="true" />
+                            </Link>
+                          ) : (
+                            <strong>{order.orderNumber}</strong>
+                          )}
+                          <span className="sales-recent-status">
+                            <FiCheck aria-hidden="true" />
+                            Completed · Paid
+                          </span>
+                        </div>
+                      </div>
+                      <strong className="sales-order-amount">
+                        {formatCartPrice(order.totalPrice)}
+                      </strong>
+                      <time dateTime={order.completedAt}>
+                        {formatReceiptDateTime(order.completedAt)}
+                      </time>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            )}
+            <div className="sales-feed-footer">
               <span>
-                <FiCheck aria-hidden="true" /> Completed & paid
+                <FiCheck aria-hidden="true" /> Saved, paid & completed
               </span>
-              <span>PHP</span>
+              <span>{visibleRecentOrders.length} of {report.recentOrders.length} recent orders shown</span>
             </div>
-            {report.completedOrders === 0 && (
-              <p className="sales-hero-empty">
-                No eligible completed orders for this{" "}
-                {custom ? "date range" : "business day"}.
-              </p>
+            {report.recentOrders.length > 3 && (
+              <Button variant="outline" aria-expanded={recentExpanded}
+                aria-controls="sales-recent-list"
+                onClick={() => setRecentExpandedFor(recentExpanded ? null : reportPeriodKey)}>
+                {recentExpanded ? "Show fewer recent orders" : `Show all ${report.recentOrders.length} recent orders`}
+              </Button>
             )}
-          </article>
-          <Metric
-            id="sales-orders-label"
-            title="Number of Orders"
-            value={countFormat.format(report.completedOrders)}
-            note="Paid & completed orders."
-            Icon={FiClipboard}
-            number="01"
-          />
-          <Metric
-            id="sales-average-label"
-            title="Average Order Value"
-            value={formatCartPrice(
-              calculateAverageOrderValue(
-                report.totalSales,
-                report.completedOrders,
-              ),
-            )}
-            note={
-              report.completedOrders === 0
-                ? "No eligible orders; average is ₱0.00."
-                : "Per completed order."
-            }
-            Icon={FiBarChart2}
-            number="02"
-          />
-          <Metric
-            id="sales-items-label"
-            title="Items Sold"
-            value={countFormat.format(report.itemsSold)}
-            note="Total units sold."
-            Icon={FiShoppingBag}
-            number="03"
-          />
-        </div>
+          </section>
+        </section>
       )}
+      {!denied && shortcuts.length > 0 && (
+        <nav className="sales-management-shortcuts" aria-label="Management shortcuts">
+          <span>Manage your shop</span>
+          {shortcuts.map(({ path, label, icon: Icon }) => (
+            <Link key={path} to={`${shopPath(shopId)}/${path}`}>
+              <Icon aria-hidden="true" />
+              {label}
+              <FiArrowUpRight aria-hidden="true" />
+            </Link>
+          ))}
+        </nav>
+      )}
+      <div className="sales-explore-heading">
+        <h2>Explore reports</h2>
+        <p>Trends, payments and operations for the selected reporting period.</p>
+      </div>
+      <nav className="sales-section-nav" aria-label="Sales dashboard sections">
+        <a href="#sales-overview">
+          <FiGrid aria-hidden="true" />
+          Overview
+        </a>
+        <a href="#sales-trends-section">
+          <FiTrendingUp aria-hidden="true" />
+          Trends
+        </a>
+        <a href="#sales-payment-section">
+          <FiPieChart aria-hidden="true" />
+          Payments
+        </a>
+        <a href="#sales-products-section">
+          <FiLayers aria-hidden="true" />
+          Products
+        </a>
+        <a href="#sales-operations-section">
+          <FiActivity aria-hidden="true" />
+          Operations
+        </a>
+        <a href="#sales-history-section" onClick={() => setHistoryOpen(true)}>
+          <FiBarChart2 aria-hidden="true" />
+          History
+        </a>
+      </nav>
       {valid && !denied && (
         <div id="sales-trends-section" className="sales-section-anchor">
           <DeferredSection
@@ -527,7 +656,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
       {report && (
         <>
           <div
-            className="sales-detail-grid sales-section-anchor"
+            className="sales-payment-detail sales-section-anchor"
             id="sales-payment-section"
             aria-busy={query.isFetching}
           >
@@ -735,96 +864,6 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 Shares are rounded to 0.01% and adjusted to total 100% when the
                 basis is nonzero.
               </p>
-            </section>
-            <section
-              className="sales-recent-orders"
-              aria-labelledby="sales-recent-title"
-            >
-              <header className="sales-panel-heading">
-                <div>
-                  <p className="sales-kicker">FRESH FROM THE COUNTER</p>
-                  <h2 id="sales-recent-title">Recent Orders</h2>
-                </div>
-                {role === "OWNER" && (
-                  <Link
-                    className="sales-history-link"
-                    to={`${shopPath(shopId)}/orders/completed`}
-                  >
-                    View completed orders <FiArrowUpRight aria-hidden="true" />
-                  </Link>
-                )}
-              </header>
-              <p className="sales-recent-caption">
-                Latest 10 completions <span>· Times in Manila</span>
-              </p>
-              {report.recentOrders.length === 0 ? (
-                <div className="sales-feed-empty">
-                  <FiClipboard aria-hidden="true" />
-                  <h3>A quiet moment.</h3>
-                  <p>
-                    No completed orders for this{" "}
-                    {custom ? "date range" : "business day"}.
-                  </p>
-                  <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => {
-                    const control = document.getElementById(custom ? "custom-sales-start" : "sales-date");
-                    control?.scrollIntoView?.({ block: "center" });
-                    control?.focus();
-                  }}>Choose another reporting period</Button>
-                </div>
-              ) : (
-                <>
-                  <div className="sales-feed-columns" aria-hidden="true">
-                    <span>Order</span>
-                    <span>Amount</span>
-                    <span>Completed</span>
-                  </div>
-                  <ol
-                    className="sales-recent-list"
-                    aria-label="Recent completed orders, newest first"
-                  >
-                    {report.recentOrders.map((order) => (
-                      <li key={order.id}>
-                        <div className="sales-recent-identity">
-                          <span
-                            className="sales-receipt-icon"
-                            aria-hidden="true"
-                          >
-                            <FiClipboard />
-                          </span>
-                          <div>
-                            {role === "OWNER" ? (
-                              <Link
-                                to={`${shopPath(shopId)}/orders/${encodeURIComponent(order.id)}`}
-                              >
-                                {order.orderNumber}
-                                <FiArrowUpRight aria-hidden="true" />
-                              </Link>
-                            ) : (
-                              <strong>{order.orderNumber}</strong>
-                            )}
-                            <span className="sales-recent-status">
-                              <FiCheck aria-hidden="true" />
-                              Completed · Paid
-                            </span>
-                          </div>
-                        </div>
-                        <strong className="sales-order-amount">
-                          {formatCartPrice(order.totalPrice)}
-                        </strong>
-                        <time dateTime={order.completedAt}>
-                          {formatReceiptDateTime(order.completedAt)}
-                        </time>
-                      </li>
-                    ))}
-                  </ol>
-                </>
-              )}
-              <div className="sales-feed-footer">
-                <span>
-                  <FiCheck aria-hidden="true" /> Saved, paid & completed
-                </span>
-                <span>{report.recentOrders.length} shown</span>
-              </div>
             </section>
           </div>
         </>
