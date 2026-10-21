@@ -1,0 +1,7 @@
+.paserve-media-image {
+  display: block;
+  max-width: 100%;
+  object-position: center;
+}
+.paserve-media-image.paserve-media-image[data-fit="contain"] { object-fit: contain; }
+.paserve-media-image.paserve-media-image[data-fit="cover"] { object-fit: cover; }

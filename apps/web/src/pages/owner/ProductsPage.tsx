@@ -1,4 +1,5 @@
 import { StatusBadge } from "../../components/paserve/StatusBadge";
+import { MediaImage } from "../../components/media/MediaImage";
 import { RowActions } from "../../components/paserve/RowActions";
 import { ProductCard } from "../../components/paserve/ProductCard";
 import { Input } from "../../components/ui/input";
@@ -920,22 +921,13 @@ function ProductWorkspace({ userId }: { userId: string }) {
                       }
                     >
                       <span className="product-emblem">
-                        <FiCoffee aria-hidden="true" />
-                        {product.imageUrl && (
-                          <img
-                            src={product.imageUrl}
-                            width={160}
-                            height={160}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            fetchPriority="low"
-                            referrerPolicy="no-referrer"
-                            onError={(event) => {
-                              event.currentTarget.hidden = true;
-                            }}
-                          />
-                        )}
+                        <MediaImage
+                          src={product.imageUrl}
+                          width={160}
+                          height={160}
+                          alt=""
+                          fallback={<FiCoffee aria-hidden="true" />}
+                        />
                       </span>
                       <div className="product-card-details">
                         <div className="product-card-title">

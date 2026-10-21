@@ -1,4 +1,5 @@
 import { Button } from "../../components/ui/button";
+import { MediaImage } from "../../components/media/MediaImage";
 import { Input } from "../../components/ui/input";
 import { ProductCard } from "../../components/paserve/ProductCard";
 import type { PublicMenuResponse } from "@paserve/contracts";
@@ -360,26 +361,20 @@ function ProductMedia({
 }: {
   product: PublicMenuResponse["products"][number];
 }) {
-  const [failed, setFailed] = useState<string | null>(null);
   return (
     <div className="menu-product-media">
-      {product.imageUrl && failed !== product.imageUrl ? (
-        <img
-          src={product.imageUrl}
-          width={400}
-          height={300}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          fetchPriority="low"
-          onError={() => setFailed(product.imageUrl)}
-        />
-      ) : (
-        <div className="menu-product-placeholder" aria-hidden="true">
-          <FiCoffee />
-          <span>{product.name.slice(0, 1)}</span>
-        </div>
-      )}
+      <MediaImage
+        src={product.imageUrl}
+        width={400}
+        height={300}
+        alt=""
+        fallback={
+          <div className="menu-product-placeholder" aria-hidden="true">
+            <FiCoffee />
+            <span>{product.name.slice(0, 1)}</span>
+          </div>
+        }
+      />
     </div>
   );
 }

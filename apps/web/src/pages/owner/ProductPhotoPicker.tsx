@@ -1,4 +1,5 @@
 import { Button } from "../../components/ui/button";
+import { MediaImage } from "../../components/media/MediaImage";
 import { Input } from "../../components/ui/input";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FiImage, FiUploadCloud, FiRefreshCw, FiX } from "react-icons/fi";
@@ -33,7 +34,6 @@ export function ProductPhotoPicker({
   const input = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState("");
   const [dragging, setDragging] = useState(false);
-  const [failedImage, setFailedImage] = useState("");
   useEffect(
     () => () => {
       if (preview) URL.revokeObjectURL?.(preview);
@@ -53,7 +53,6 @@ export function ProductPhotoPicker({
       : !selected.size || selected.size > PRODUCT_IMAGE_LIMITS.maxBytes
         ? "Choose an image between 1 byte and 5 MB."
         : "";
-    setFailedImage("");
     setPreview(
       !message && URL.createObjectURL ? URL.createObjectURL(selected) : "",
     );
@@ -116,19 +115,15 @@ export function ProductPhotoPicker({
         }}
       >
         <span className="product-photo-art">
-          {source && source !== failedImage ? (
-            <img
-              src={source}
-              alt={
-                file
-                  ? `Selected ${kind} photo preview`
-                  : `Current ${kind} photo`
-              }
-              onError={() => setFailedImage(source)}
-            />
-          ) : (
-            <FiImage aria-hidden="true" />
-          )}
+          <MediaImage
+            src={source}
+            width={kind === "banner" ? 1200 : 400}
+            height={400}
+            fit={kind === "logo" ? "contain" : "cover"}
+            loading="eager"
+            alt={file ? `Selected ${kind} photo preview` : `Current ${kind} photo`}
+            fallback={<FiImage aria-hidden="true" />}
+          />
         </span>
         <span className="product-photo-prompt">
           <span className="product-photo-eyebrow">

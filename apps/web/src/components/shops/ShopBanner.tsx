@@ -5,7 +5,7 @@ import "./shop-banner.css";
 export function ShopBanner({
   url,
   name,
-  preserveSpace = false,
+  preserveSpace = true,
 }: {
   url?: string | null;
   name: string;
@@ -25,6 +25,7 @@ export function ShopBanner({
         decoding="async"
         loading="lazy"
         fetchPriority="low"
+        referrerPolicy="no-referrer"
         onError={() => setFailed(url)}
       />
     </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { MediaImage } from "../media/MediaImage";
 import { SHOP_LOGO_LIMITS } from "@paserve/contracts";
 import { FiCoffee } from "react-icons/fi";
 import "./shop-logo.css";
@@ -12,14 +12,11 @@ export function ShopLogo({
   name: string;
   className?: string;
 }) {
-  const [failed, setFailed] = useState<string | null>(null);
   return (
     <span className={`shop-logo ${className}`}>
-      {url && failed !== url ? (
-        <img src={url} alt={`${name} logo`} width={SHOP_LOGO_LIMITS.outputDimension} height={SHOP_LOGO_LIMITS.outputDimension} loading="lazy" decoding="async" fetchPriority="low" onError={() => setFailed(url)} />
-      ) : (
-        <FiCoffee aria-hidden="true" />
-      )}
+      <MediaImage src={url} alt={`${name} logo`} fit="contain"
+        width={SHOP_LOGO_LIMITS.outputDimension} height={SHOP_LOGO_LIMITS.outputDimension}
+        fallback={<FiCoffee aria-hidden="true" />} />
     </span>
   );
 }

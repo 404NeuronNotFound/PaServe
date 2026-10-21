@@ -1,4 +1,5 @@
 import { Textarea } from "../../components/ui/textarea";
+import { MediaImage } from "../../components/media/MediaImage";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
@@ -170,7 +171,6 @@ function ProductDetailsForm({
   const [pending, setPending] = useState(false);
   const [initialChoices] = useState(() => JSON.stringify(choices));
   useDraftGuard(notes !== "" || quantity !== "1" || selectedAddOns.length > 0 || JSON.stringify(choices) !== initialChoices, pending);
-  const [failedImage, setFailedImage] = useState(false);
   const mounted = useRef(false);
   const submitting = useRef(false);
   const prefix = useId();
@@ -286,22 +286,20 @@ function ProductDetailsForm({
     >
       <div className="customer-dialog-body">
         <div className="product-details-summary">
-          {product.imageUrl && !failedImage ? (
-            <img
-              className="product-details-image"
-              width={160}
-              height={160}
-              src={product.imageUrl}
-              alt={product.name}
-              decoding="async"
-              fetchPriority="low"
-              onError={() => setFailedImage(true)}
-            />
-          ) : (
-            <div className="product-details-placeholder" aria-hidden="true">
-              <FiCoffee />
-            </div>
-          )}
+          <MediaImage
+            className="product-details-image"
+            width={160}
+            height={160}
+            src={product.imageUrl}
+            alt={product.name}
+            fit="contain"
+            loading="eager"
+            fallback={
+              <div className="product-details-placeholder" aria-hidden="true">
+                <FiCoffee />
+              </div>
+            }
+          />
           <div className="product-details-intro">
             <p className="product-details-price">
               <span>Starting price</span>{" "}
