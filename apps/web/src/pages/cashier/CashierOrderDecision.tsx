@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Textarea } from "../../components/ui/textarea";
 import { Button } from "../../components/ui/button";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
@@ -222,17 +223,14 @@ export function CashierOrderDecision({
     >
       <div className="cashier-decision-controls">
         <p>Confirmation and payment must succeed together.</p>
-        <PendingButton
+        <RefreshButton label="Refresh order"
           pending={busy && pendingAction === "refresh"}
           pendingLabel="Refreshing order..."
-          className="secondary-button"
           disabled={busy || Boolean(action)}
           onClick={() => {
             void refresh();
           }}
-        >
-          Refresh order
-        </PendingButton>
+        />
         <div className="field">
           <label htmlFor="cashier-rejection-reason">
             Rejection reason (optional)

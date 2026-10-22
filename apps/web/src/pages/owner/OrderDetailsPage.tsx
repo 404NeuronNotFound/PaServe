@@ -1,6 +1,6 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Button } from "../../components/ui/button";
 import { StatusBadge } from "../../components/paserve/StatusBadge";
-import { PendingButton } from "../../components/feedback/PendingButton";
 import { useEffect, useRef, useState } from "react";
 import { OrderDetailsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { Link, useParams } from "react-router-dom";
@@ -155,22 +155,20 @@ function OrderDetailsWorkspace({
             <p>The original order. Every detail, preserved.</p>
           </div>
         </div>
-        <PendingButton
+        <RefreshButton label="Refresh"
           pending={query.isFetching}
           pendingLabel="Refreshing order..."
-          className="secondary-button"
           disabled={query.isFetching || mutation.isPending}
           onClick={() => void query.refetch()}
-        >
-          Refresh
-        </PendingButton>
+        />
       </header>
       <OrderViewsNavigation />
       {query.isPending && <OrderDetailsSkeleton />}
       {query.isError && (
         <ErrorState error={query.error} resource="this order"
           permissionMessage="This order is unavailable or your access has changed." unavailableMessage="This order is unavailable or your access has changed."
-          pending={query.isFetching} onRetry={() => query.refetch()} />
+          pending={query.isFetching} onRetry={() => query.refetch()}
+          />
       )}
       {order && (
         <>

@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { MediaImage } from "../../components/media/MediaImage";
 import { RowActions } from "../../components/paserve/RowActions";
@@ -5,7 +6,6 @@ import { ProductCard } from "../../components/paserve/ProductCard";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { PageHeader } from "../../components/paserve/PageHeader";
-import { PendingButton } from "../../components/feedback/PendingButton";
 import { EmptyState } from "../../components/feedback/EmptyState";
 import { ErrorState } from "../../components/feedback/ErrorState";
 import { ProductsSkeleton } from "../../components/feedback/LoadingSkeleton";
@@ -19,7 +19,6 @@ import {
   FiPlus,
   FiStar,
   FiImage,
-  FiRefreshCw,
   FiEdit2,
   FiArchive,
   FiRotateCcw,
@@ -700,13 +699,10 @@ function ProductWorkspace({ userId }: { userId: string }) {
               </p>
             )}
           </div>
-          <PendingButton
+          <RefreshButton label="Refresh products"
             pending={query.isFetching}
             pendingLabel="Refreshing products"
-            iconOnly
-            className="secondary-button product-refresh-button"
             title="Refresh products"
-            type="button"
             disabled={
               query.isFetching ||
               (denied && !unverified) ||
@@ -718,12 +714,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
               Boolean(availableBusy)
             }
             onClick={() => void refreshProducts()}
-          >
-            <FiRefreshCw aria-hidden="true" />
-            <span className="sr-only">
-              {query.isFetching ? "Refreshing products" : "Refresh products"}
-            </span>
-          </PendingButton>
+          />
         </div>
         {query.isSuccess &&
           !denied &&
@@ -856,7 +847,8 @@ function ProductWorkspace({ userId }: { userId: string }) {
           <ErrorState error={query.error} resource="your products" action="load"
             permissionMessage="Your product access is unavailable. Choose another shop or sign in again."
             unavailableMessage="Your product access is unavailable. Choose another shop or sign in again."
-            pending={query.isFetching} onRetry={refreshProducts} />
+            pending={query.isFetching} onRetry={refreshProducts}
+            />
         ) : query.data.products.length ? (
           <div className="product-groups">
             {groups.map((group) => (

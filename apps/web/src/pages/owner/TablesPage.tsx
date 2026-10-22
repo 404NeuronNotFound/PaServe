@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
@@ -208,13 +209,11 @@ function TableWorkspace({ userId }: { userId: string }) {
               unavailableMessage="Your access changed. Refresh the shop workspace to continue." />
           )}
           {(query.isError || uncertain) && !denied && !lostAccess && (
-            <Button variant="outline" size="inherit" type="submit"
-              className="secondary-button"
+            <RefreshButton label="Refresh tables"
               disabled={query.isFetching || mutation.isPending}
               onClick={() => void refresh()}
-            >
-              {query.isFetching ? "Refreshing…" : "Refresh tables"}
-            </Button>
+              pending={query.isFetching}
+            />
           )}
           {query.isSuccess &&
             !lostAccess &&

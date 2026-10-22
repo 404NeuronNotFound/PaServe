@@ -1,4 +1,4 @@
-import { Button } from "../../components/ui/button";
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { PageHeader } from "../../components/paserve/PageHeader";
 import type { ReactNode } from "react";
 import type { ActiveOrderSummary } from "@paserve/contracts";
@@ -8,7 +8,6 @@ import {
   FiCheckCircle,
   FiClock,
   FiGrid,
-  FiRefreshCw,
   FiShoppingBag,
   FiSlash,
 } from "react-icons/fi";
@@ -48,17 +47,12 @@ export function OrderPageHeader({
             <p>{children}</p>
           </div>
         </div>
-        <Button variant="outline" size="inherit" type="submit"
-          className="secondary-button owner-orders-refresh"
+        <RefreshButton label="Refresh" className="owner-orders-refresh"
+          title={fetching ? "Refreshing orders" : "Refresh orders"}
           disabled={fetching}
           onClick={onRefresh}
-        >
-          <FiRefreshCw
-            aria-hidden="true"
-            className={fetching ? "is-refreshing" : undefined}
-          />
-          {fetching ? "Refreshing…" : "Refresh"}
-        </Button>
+          pending={fetching}
+        />
       </PageHeader>
       <OrderViewsNavigation />
     </>

@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Input } from "../../components/ui/input";
 import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { Button } from "../../components/ui/button";
@@ -521,31 +522,59 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                 <span>{query.data.categories.length}</span>
               )}
             </div>
-            {query.isSuccess &&
-              !query.isError &&
-              query.data.categories.length > 1 &&
-              !reordering && (
-                <Button variant="outline" size="inherit"
-                  id="category-reorder-button"
-                  type="button"
-                  className="secondary-button categories-reorder"
+            <div className="categories-toolbar-actions">
+              {query.isSuccess &&
+                !query.isError &&
+                query.data.categories.length > 1 &&
+                !reordering && (
+                  <Button variant="outline" size="inherit"
+                    id="category-reorder-button"
+                    type="button"
+                    className="secondary-button categories-reorder"
+                    disabled={
+                      Boolean(editing) ||
+                      Boolean(deleting) ||
+                      mutation.isPending ||
+                      visibility.isPending ||
+                      order.isPending ||
+                      query.isFetching ||
+                      lostAccess ||
+                      unverified ||
+                      query.data.categories.length > CATEGORY_REORDER_MAX
+                    }
+                    onClick={() => setReordering(true)}
+                  >
+                    <FiShuffle aria-hidden="true" />
+                    Reorder categories
+                  </Button>
+                )}
+              {(!requestDenied || unverified) && !query.isPending && (
+                <RefreshButton label="Refresh categories"
+                  title={query.isFetching ? "Refreshing categories" : "Refresh categories"}
                   disabled={
-                    Boolean(editing) ||
-                    Boolean(deleting) ||
-                    mutation.isPending ||
+                    query.isFetching ||
                     visibility.isPending ||
                     order.isPending ||
-                    query.isFetching ||
-                    lostAccess ||
-                    unverified ||
-                    query.data.categories.length > CATEGORY_REORDER_MAX
+                    reordering
                   }
-                  onClick={() => setReordering(true)}
-                >
-                  <FiShuffle aria-hidden="true" />
-                  Reorder categories
-                </Button>
+                  onClick={() => {
+                    setVisibilityError(null);
+                    void refreshCategories().then((success) => {
+                      if (
+                        mounted.current &&
+                        client.getQueryData<CurrentUserResponse>(currentUserKey)
+                          ?.user.id === userId &&
+                        success
+                      ) {
+                        setCreationUncertain(false);
+                        setError("");
+                      }
+                    });
+                  }}
+                  pending={query.isFetching}
+                />
               )}
+            </div>
           </div>
           {visibilityError && (unverified || !displayedCategories.some((category) => category.id === visibilityError.id)) && (
             <InlineMessage>{visibilityError.message}</InlineMessage>
@@ -580,7 +609,8 @@ function CategoryWorkspace({ userId }: { userId: string }) {
             <ErrorState error={query.error} resource="your categories" action="load"
               permissionMessage="Your category access is unavailable. Choose another shop or sign in again."
               unavailableMessage="Your category access is unavailable. Choose another shop or sign in again."
-              pending={query.isFetching} onRetry={refreshCategories} />
+              pending={query.isFetching} onRetry={refreshCategories}
+              />
           ) : query.data.categories.length ? (
             <ul className="categories-list">
               {displayedCategories.map((category, index) => (
@@ -702,34 +732,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
               </Button>
             </EmptyState>
           )}
-          {(!requestDenied || unverified) && !query.isPending && (
-            <Button variant="outline" size="inherit"
-              type="button"
-              className="secondary-button categories-refresh"
-              disabled={
-                query.isFetching ||
-                visibility.isPending ||
-                order.isPending ||
-                reordering
-              }
-              onClick={() => {
-                setVisibilityError(null);
-                void refreshCategories().then((success) => {
-                  if (
-                    mounted.current &&
-                    client.getQueryData<CurrentUserResponse>(currentUserKey)
-                      ?.user.id === userId &&
-                    success
-                  ) {
-                    setCreationUncertain(false);
-                    setError("");
-                  }
-                });
-              }}
-            >
-              {query.isFetching ? "Refreshing…" : "Refresh categories"}
-            </Button>
-          )}
+
           {editing && (
             <CategoryEditor
               key={editing.id}

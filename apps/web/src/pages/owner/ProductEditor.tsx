@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { FormField } from "../../components/forms/FormField";
 import { Textarea } from "../../components/ui/textarea";
 import { Input } from "../../components/ui/input";
@@ -559,14 +560,11 @@ export function ProductEditor({
                     ? "Categories couldn’t be loaded. Keep the current category or choose Uncategorized."
                     : "Categories couldn’t be loaded. You can create in Uncategorized."}
                 </InlineMessage>
-                <Button variant="outline" size="inherit"
-                  className="secondary-button"
-                  type="button"
+                <RefreshButton label="Refresh categories"
                   disabled={categories.isFetching || disabled}
                   onClick={() => void categories.refetch()}
-                >
-                  Refresh categories
-                </Button>
+                  pending={categories.isFetching}
+                />
               </div>
             )}
             {product ? (

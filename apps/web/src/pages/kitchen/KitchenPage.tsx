@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Input } from "../../components/ui/input";
 import { statusPresentation } from "../../components/paserve/status-presentation";
 import "../../components/paserve/status.css";
@@ -24,7 +25,6 @@ import {
   FiCoffee,
   FiFileText,
   FiPlay,
-  FiRefreshCw,
   FiShoppingBag,
   FiSearch,
   FiX,
@@ -233,14 +233,12 @@ function NewOrders() {
           </p>
         </div>
         <div className="kitchen-refresh">
-          <Button variant="outline" size="inherit" type="submit"
-            className="secondary-button"
+          <RefreshButton label="Refresh orders"
+            title={queue.isFetching ? "Refreshing orders" : "Refresh orders"}
             disabled={queue.isFetching}
             onClick={() => void queue.refetch()}
-          >
-            <FiRefreshCw aria-hidden="true" />
-            {queue.isFetching ? "Refreshing…" : "Refresh orders"}
-          </Button>
+            pending={queue.isFetching}
+          />
           <span role="status">
             {queue.dataUpdatedAt
               ? `Last checked ${time(new Date(queue.dataUpdatedAt).toISOString())} · checks every 15s`
@@ -361,8 +359,8 @@ function NewOrders() {
             ) : state !== "QUEUED" ? (
               <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => setState("QUEUED")}>View queued orders</Button>
             ) : (
-              <Button variant="outline" size="inherit" type="button" className="secondary-button" disabled={queue.isFetching}
-                onClick={() => void queue.refetch()}>{queue.isFetching ? "Refreshing queue…" : "Check for new orders"}</Button>
+              <RefreshButton label="Check for new orders" disabled={queue.isFetching}
+                onClick={() => void queue.refetch()} pending={queue.isFetching} />
             )}
           </div>
         </div>
@@ -431,7 +429,7 @@ function NewOrders() {
               first={index === 0}
               now={now}
               onStarted={focusHeading}
-            />
+              />
           ))}
         </ol>
       )}

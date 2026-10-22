@@ -1,6 +1,6 @@
+import { RefreshButton } from "./RefreshButton";
 import { FiBarChart2 } from "react-icons/fi";
 import { EmptyState } from "./EmptyState";
-import { PendingButton } from "./PendingButton";
 
 export function ReportEmptyState({
   title,
@@ -20,15 +20,11 @@ export function ReportEmptyState({
   return (
     <EmptyState title={title} description={description} icon={<FiBarChart2 />}>
       <p className="empty-state-guidance">{guidance}</p>
-      <PendingButton
-        type="button"
-        className="secondary-button"
+      <RefreshButton label={`Check for new ${label}`}
         pending={pending}
         pendingLabel={`Checking ${label}…`}
         onClick={onRefresh}
-      >
-        Check for new {label}
-      </PendingButton>
+      />
     </EmptyState>
   );
 }

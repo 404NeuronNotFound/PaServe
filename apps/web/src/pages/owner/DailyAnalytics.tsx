@@ -1,8 +1,8 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { ListPagination } from "../../components/paserve/ListPagination";
 import { listPage } from "../../lib/list-page";
 import { Table } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
-import { PendingButton } from "../../components/feedback/PendingButton";
 import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -105,15 +105,12 @@ export function DailyAnalytics({
             paid, completed orders by completion date.
           </p>
         </div>
-        <PendingButton
+        <RefreshButton label={`Refresh ${period} analytics`}
           pending={query.isFetching}
           pendingLabel="Refreshing analytics..."
-          className="secondary-button"
           disabled={!enabled || !valid || query.isFetching}
           onClick={() => void query.refetch()}
-        >
-          Refresh {period} analytics
-        </PendingButton>
+        />
       </div>
       <div className="daily-analytics-controls">
         <div
@@ -165,7 +162,8 @@ export function DailyAnalytics({
         <ErrorState error={query.error} resource={`${period} analytics`}
           permissionMessage="Your access to this shop’s analytics is unavailable."
           unavailableMessage="Your access to this shop’s analytics is unavailable."
-          pending={query.isFetching} onRetry={() => query.refetch()} />
+          pending={query.isFetching} onRetry={() => query.refetch()}
+          />
       )}
       {report && (
         <>

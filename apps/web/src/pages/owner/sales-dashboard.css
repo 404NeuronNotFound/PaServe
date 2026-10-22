@@ -358,13 +358,6 @@
   font-weight: 550;
   color: var(--color-text);
 }
-.sales-dashboard .sales-refresh {
-
-  padding-inline: 16px;
-  min-height: 44px;
-
-  gap: 9px;
-}
 .sales-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -1067,14 +1060,6 @@
 :root[data-appearance="night"] .sales-period input {
   color-scheme: dark;
 }
-@keyframes sales-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-.sales-refreshing {
-  animation: sales-spin 1s linear infinite;
-}
 @container sales (max-width: 1080px) {
   .sales-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1259,9 +1244,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sales-refreshing {
-    animation: none;
-  }
   .sales-recent-list li {
     transition: none;
   }

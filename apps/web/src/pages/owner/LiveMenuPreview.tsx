@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Button } from "../../components/ui/button";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -10,7 +11,7 @@ import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { IPhone17ProMax } from "../../components/preview/IPhone17ProMax";
 import { AppleProDisplayXDR } from "../../components/preview/AppleProDisplayXDR";
 import { DevicePreviewViewport } from "../../components/preview/DevicePreviewViewport";
-import { FiSmartphone, FiMonitor, FiRefreshCw } from "react-icons/fi";
+import { FiSmartphone, FiMonitor } from "react-icons/fi";
 import "./menu-preview.css";
 
 export function LiveMenuPreview({
@@ -65,15 +66,11 @@ export function LiveMenuPreview({
             Desktop
           </Button>
         </div>
-        <Button variant="outline" size="inherit"
-          className="secondary-button"
-          type="button"
+        <RefreshButton label="Refresh menu"
           disabled={menu.isFetching}
           onClick={() => void menu.refetch()}
-        >
-          <FiRefreshCw aria-hidden="true" />
-          {menu.isFetching ? "Refreshing…" : "Refresh menu"}
-        </Button>
+          pending={menu.isFetching}
+        />
       </div>
       <p className="field-hint" role="status">
         {unsaved

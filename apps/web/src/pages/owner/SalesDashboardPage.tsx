@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Table } from "../../components/ui/table";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
@@ -30,7 +31,6 @@ import {
   FiClipboard,
   FiClock,
   FiCreditCard,
-  FiRefreshCw,
   FiShoppingBag,
   FiTrendingUp,
   FiGrid,
@@ -250,17 +250,11 @@ function SalesWorkspace({ userId }: { userId: string }) {
             <strong>{shop.name}</strong>
           </p>
         </div>
-        <Button variant="outline" size="inherit" type="submit"
-          className="secondary-button sales-refresh"
+        <RefreshButton label="Refresh sales"
           disabled={!valid || query.isFetching}
           onClick={refreshSales}
-        >
-          <FiRefreshCw
-            aria-hidden="true"
-            className={query.isFetching ? "sales-refreshing" : undefined}
-          />{" "}
-          Refresh sales
-        </Button>
+          pending={query.isFetching}
+        />
       </PageHeader>
       <div className="sales-period-panel" id="sales-overview">
         <div className="sales-period-panel-heading">
@@ -417,7 +411,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
         <ErrorState error={query.error} resource="sales reports"
           permissionMessage="Your access to this shop’s sales reports is unavailable."
           unavailableMessage="Your access to this shop’s sales reports is unavailable."
-          pending={query.isFetching} onRetry={refreshSales} />
+          pending={query.isFetching} onRetry={refreshSales}
+          />
       )}
       {report && (
         <section className="sales-overview-metrics" aria-labelledby="sales-overview-title">

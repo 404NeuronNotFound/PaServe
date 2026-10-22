@@ -1,5 +1,5 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Table } from "../../components/ui/table";
-import { PendingButton } from "../../components/feedback/PendingButton";
 import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -74,15 +74,12 @@ export function SalesTrends({
             immediately preceding equal-length period.
           </p>
         </div>
-        <PendingButton
+        <RefreshButton label="Refresh sales trends"
           pending={query.isFetching}
           pendingLabel="Refreshing sales trends..."
-          className="secondary-button"
           disabled={!valid || query.isFetching}
           onClick={() => void query.refetch()}
-        >
-          Refresh sales trends
-        </PendingButton>
+        />
       </div>
       {!valid && (
         <InlineMessage>
@@ -96,7 +93,8 @@ export function SalesTrends({
       {valid && query.isError && (
         <ErrorState error={query.error} resource="sales trends"
           permissionMessage="Sales trends access is unavailable."
-          pending={query.isFetching} onRetry={() => query.refetch()} />
+          pending={query.isFetching} onRetry={() => query.refetch()}
+          />
       )}
       {current && previous && (
         <>

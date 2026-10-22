@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Button } from "../../components/ui/button";
 import { ReceiptSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -98,13 +99,9 @@ function ReceiptRead({
           <footer>
             <p>Keep this receipt for your records.</p>
             <div className="order-receipt-footer-actions">
-              <Button variant="outline" size="inherit"
-                type="button"
-                className="secondary-button"
+              <RefreshButton label="Refresh receipt"
                 onClick={retry}
-              >
-                Refresh receipt
-              </Button>
+              />
               <Link
                 className="primary-button"
                 to={trackingPath(shopSlug, orderId)}

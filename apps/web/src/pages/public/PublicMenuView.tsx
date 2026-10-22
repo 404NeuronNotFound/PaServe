@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Button } from "../../components/ui/button";
 import { SkipLink } from "../../components/layout/SkipLink";
 import { MediaImage } from "../../components/media/MediaImage";
@@ -208,7 +209,7 @@ export function PublicMenuView({
       {!products.length && (
         <EmptyState title="No items are available on this menu yet." icon={<FiCoffee />}
           description={preview ? "Add a visible product to start building this menu." : "The shop has no items to show right now. Ask the staff about availability or check again shortly."}>
-          {!preview && <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => window.location.reload()}>Refresh menu</Button>}
+          {!preview && <RefreshButton label="Refresh menu" onClick={() => window.location.reload()} />}
         </EmptyState>
       )}
       <div className="menu-search-status-slot">

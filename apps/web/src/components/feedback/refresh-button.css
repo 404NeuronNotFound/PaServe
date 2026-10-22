@@ -1,0 +1,11 @@
+.ui-button.pending-button.paserve-refresh-button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  align-self: start;
+  width: var(--control-target-min);
+  height: var(--control-target-min);
+  min-width: var(--control-target-min);
+  min-height: var(--control-target-min);
+  padding: var(--spacing-3);
+}

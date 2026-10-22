@@ -1,4 +1,4 @@
-import { Button } from "../../components/ui/button";
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -49,13 +49,11 @@ export function TopProducts({
             Confirmed, paid, completed orders only.
           </p>
         </div>
-        <Button variant="outline" size="inherit" type="submit"
-          className="secondary-button"
+        <RefreshButton label="Refresh top products"
           disabled={query.isFetching}
           onClick={() => void query.refetch()}
-        >
-          Refresh top products
-        </Button>
+          pending={query.isFetching}
+        />
       </div>
       <div className="daily-analytics-controls">
         <label htmlFor="top-products-metric">
@@ -86,7 +84,8 @@ export function TopProducts({
       {query.isError && (
         <ErrorState error={query.error} resource="top products"
           permissionMessage="Top products access is unavailable. Automatic refresh is paused; use Refresh top products to check access again."
-          pending={query.isFetching} onRetry={() => query.refetch()} />
+          pending={query.isFetching} onRetry={() => query.refetch()}
+          />
       )}
       {report &&
         (report.productCount === 0 ? (

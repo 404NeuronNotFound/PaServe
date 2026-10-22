@@ -1,5 +1,5 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Button } from "../../components/ui/button";
-import { PendingButton } from "../../components/feedback/PendingButton";
 import "../../components/feedback/empty-state.css";
 
 export function OrderEmptyActions({ filtered, paged, pending, onReset, onRefresh }: {
@@ -19,10 +19,8 @@ export function OrderEmptyActions({ filtered, paged, pending, onReset, onRefresh
           {filtered ? "Clear search and filters" : "Back to first page"}
         </Button>
       ) : (
-        <PendingButton type="button" className="secondary-button" pending={pending}
-          pendingLabel="Refreshing orders…" onClick={onRefresh}>
-          Refresh orders
-        </PendingButton>
+        <RefreshButton label="Refresh orders" pending={pending}
+          pendingLabel="Refreshing orders…" onClick={onRefresh} />
       )}
     </div>
   );

@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Textarea } from "../../components/ui/textarea";
 import { MediaImage } from "../../components/media/MediaImage";
 import { Input } from "../../components/ui/input";
@@ -509,13 +510,9 @@ function ProductDetailsForm({
         {error && (
           <div>
             <p role="alert">{error}</p>
-            <Button variant="outline" size="inherit"
-              type="button"
-              className="secondary-button"
+            <RefreshButton label="Refresh details"
               onClick={onRefresh}
-            >
-              Refresh details
-            </Button>
+            />
           </div>
         )}
         {preview && (

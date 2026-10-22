@@ -123,13 +123,6 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
-.product-refresh-button {
-  display: grid;
-  place-items: center;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 12px;
-}
 .products-panel .categories-panel-heading {
   display: block;
   min-width: 0;

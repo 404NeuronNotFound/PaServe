@@ -1,6 +1,6 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
-import { PendingButton } from "../../components/feedback/PendingButton";
 import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -10,7 +10,6 @@ import {
   FiArrowRight,
   FiPlus,
   FiEdit2,
-  FiRefreshCw,
 } from "react-icons/fi";
 import type {
   AddOn,
@@ -183,12 +182,9 @@ function ProductCustomization({ productId }: { productId: string }) {
             </p>
           )}
         </div>
-        <PendingButton
-            pending={refreshing || data.isFetching || products.isFetching}
-            pendingLabel="Refreshing customization..."
-            iconOnly
-          className="secondary-button customization-refresh"
-          aria-label="Refresh customization"
+        <RefreshButton label="Refresh customization"
+          pending={refreshing || data.isFetching || products.isFetching}
+          pendingLabel="Refreshing customization..."
           title="Refresh customization"
           disabled={
             busy ||
@@ -198,9 +194,7 @@ function ProductCustomization({ productId }: { productId: string }) {
             Boolean(editor)
           }
           onClick={() => void refresh()}
-        >
-          <FiRefreshCw aria-hidden="true" />
-        </PendingButton>
+        />
       </header>
       {(products.isPending || (product && data.isPending)) && (
         <ListSkeleton label="Loading customization..." />

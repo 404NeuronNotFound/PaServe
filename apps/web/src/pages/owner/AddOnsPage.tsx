@@ -1,12 +1,12 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
-import { PendingButton } from "../../components/feedback/PendingButton";
 import { ListSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { shopPath } from "../../features/shops/active-shop";
-import { FiPlus, FiEdit2, FiRefreshCw, FiArrowRight } from "react-icons/fi";
+import { FiPlus, FiEdit2, FiArrowRight } from "react-icons/fi";
 import type { AddOn } from "@paserve/contracts";
 import {
   customizationKey,
@@ -84,18 +84,13 @@ function AddOnLibrary() {
           <p>Create once. Offer on any product.</p>
         </div>
         <div className="customization-actions">
-          <PendingButton
+          <RefreshButton label="Refresh add-ons"
             pending={refreshing || query.isFetching}
             pendingLabel="Refreshing add-ons..."
-            iconOnly
-            className="secondary-button customization-refresh"
-            aria-label="Refresh add-ons"
             title="Refresh add-ons"
             disabled={busy || refreshing || query.isFetching || Boolean(editor)}
             onClick={() => void refresh()}
-          >
-            <FiRefreshCw aria-hidden="true" />
-          </PendingButton>
+          />
           <Button variant="default" size="inherit" type="submit"
             className="primary-button addon-create-fab"
             ref={createAddOn}

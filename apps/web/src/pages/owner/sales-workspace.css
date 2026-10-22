@@ -29,10 +29,6 @@
   margin-top: 10px;
   font-size: 14px;
 }
-.sales-dashboard .sales-refresh {
-
-  box-shadow: 0 2px 3px #15251b04;
-}
 .sales-period-panel {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -872,10 +868,6 @@
   }
 }
 @container sales (max-width: 420px) {
-  .sales-header .sales-refresh {
-    padding-inline: 12px;
-
-  }
   .sales-header h1 {
     font-size: 34px;
   }

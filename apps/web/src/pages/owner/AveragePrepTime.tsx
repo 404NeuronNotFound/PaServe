@@ -1,4 +1,4 @@
-import { PendingButton } from "../../components/feedback/PendingButton";
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { useQuery } from "@tanstack/react-query";
 import { PreparationMetricSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { isAxiosError } from "axios";
@@ -47,15 +47,12 @@ export function AveragePrepTime({
             Confirmed, paid, completed orders only.
           </p>
         </div>
-        <PendingButton
+        <RefreshButton label="Refresh prep time"
           pending={query.isFetching}
           pendingLabel="Refreshing preparation time..."
-          className="secondary-button"
           disabled={query.isFetching}
           onClick={() => void query.refetch()}
-        >
-          Refresh prep time
-        </PendingButton>
+        />
       </div>
       <p className="sales-range-help sales-prep-pair">
         Preparing → Ready. Only complete, valid timestamp pairs contribute to
@@ -67,7 +64,8 @@ export function AveragePrepTime({
       {query.isError && (
         <ErrorState error={query.error} resource="average preparation time"
           permissionMessage="Preparation report access is unavailable. Automatic refresh is paused; use Refresh prep time to check access again."
-          pending={query.isFetching} onRetry={() => query.refetch()} />
+          pending={query.isFetching} onRetry={() => query.refetch()}
+          />
       )}
       {report && (
         <>

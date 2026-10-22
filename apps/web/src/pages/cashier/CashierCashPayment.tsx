@@ -1,3 +1,4 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { FormField } from "../../components/forms/FormField";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { Input } from "../../components/ui/input";
@@ -428,16 +429,12 @@ export function CashierCashPayment({
           {error && <InlineMessage>{error}</InlineMessage>}
           <div className="cashier-paid-actions">
             {blocked && (
-              <PendingButton
+              <RefreshButton label="Refresh payment"
                 pending={busy && pendingAction === "refresh"}
                 pendingLabel="Refreshing payment..."
-                type="button"
-                className="secondary-button"
                 disabled={busy}
                 onClick={() => void refresh()}
-              >
-                Refresh payment
-              </PendingButton>
+              />
             )}
             {!blocked &&
               review.order.status === "CONFIRMED" &&
@@ -632,15 +629,12 @@ export function CashierCashPayment({
           </PendingButton>
         </>
       )}
-      <PendingButton
+      <RefreshButton label="Refresh payment"
         pending={busy && pendingAction === "refresh"}
         pendingLabel="Refreshing payment..."
-        className="secondary-button"
         disabled={busy || confirm}
         onClick={() => void refresh()}
-      >
-        Refresh payment
-      </PendingButton>
+      />
       {busy && <p role="status">Checking or recording payment…</p>}
       {error && <InlineMessage>{error}</InlineMessage>}
       <DecisionDialog

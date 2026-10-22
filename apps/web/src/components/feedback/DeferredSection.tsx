@@ -1,3 +1,4 @@
+import { RefreshButton } from "./RefreshButton";
 import {
   Component,
   Suspense,
@@ -24,13 +25,9 @@ class SectionBoundary extends Component<
             We couldn’t load {this.props.label}. Other sections remain
             available.
           </InlineMessage>
-          <button
-            type="button"
-            className="secondary-button"
+          <RefreshButton label="Reload page"
             onClick={() => window.location.reload()}
-          >
-            Reload page
-          </button>
+          />
         </section>
       );
     return this.props.children;
