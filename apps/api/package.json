@@ -21,7 +21,13 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "pnpm --filter @paserve/contracts build && vitest run --config ./vitest.config.e2e.ts",
     "test:realtime": "vitest run --config ./vitest.config.realtime.ts",
-    "postinstall": "prisma skills sync || exit 0"
+    "postinstall": "prisma skills sync || exit 0",
+    "seed:build": "pnpm --filter @paserve/contracts build && tsc -p tsconfig.seed.json",
+    "seed": "pnpm seed:build && node .seed-build/prisma/seed.js",
+    "seed:dry-run": "pnpm seed --dry-run",
+    "seed:reset": "pnpm seed --reset-demo",
+    "seed:verify": "pnpm seed --verify",
+    "seed:images": "pnpm seed --upload-images"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

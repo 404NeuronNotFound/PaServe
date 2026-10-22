@@ -140,3 +140,10 @@ HSTS for the API host only; local development does not. TLS/redirects remain the
 reverse proxy's responsibility. No additional Helmet dependency is required.
 The separately hosted SPA needs its own generated header configuration; see
 [secure headers and CSP](../../docs/security.md#phase-24-secure-headers-and-csp-2026-10-19).
+
+# Development/demo database
+
+Run `pnpm seed:dry-run` to preview the five-business demo dataset, or `pnpm seed`
+with the required development safety variables to populate it. See
+[demo seed documentation](../../docs/demo-seed.md) for commands, image manifests,
+reset behavior, and development logins.
