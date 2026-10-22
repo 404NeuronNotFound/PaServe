@@ -2,6 +2,8 @@
    Load after shared controls and accessibility so Day/Night hover rules cannot
    replace one half of a shop's contrast-tested foreground/background pair. */
 :root :is(.public-menu, .customer-dialog, .customer-order-page) .primary-button,
+:root .customer-cart-dock .primary-button,
+:root .customer-cart-dock .primary-button:hover:not(:disabled),
 :root :is(.public-menu, .customer-dialog, .customer-order-page) .primary-button:hover:not(:disabled) {
   background: var(--menu-primary);
   color: var(--menu-on-primary);
@@ -40,14 +42,14 @@
 }
 /* Two opaque rings remain visible on arbitrary brand colors and page surfaces.
    Keep the full pair even when primary and accent are identical. */
-:root :is(.public-menu, .customer-dialog, .customer-order-page)
+:root :is(.public-menu, .customer-dialog, .customer-order-page, .customer-cart-dock, .menu-category-sheet)
   :is(a, button, input, textarea, select, summary, [tabindex="0"]):focus-visible {
   outline: 3px solid #000000;
   outline-offset: 3px;
   box-shadow: 0 0 0 3px #ffffff;
 }
 @media (forced-colors: active) {
-  :root :is(.public-menu, .customer-dialog, .customer-order-page)
+  :root :is(.public-menu, .customer-dialog, .customer-order-page, .customer-cart-dock, .menu-category-sheet)
     :is(a, button, input, textarea, select, summary, [tabindex="0"]):focus-visible {
     outline-color: Highlight;
     box-shadow: none;

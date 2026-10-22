@@ -200,7 +200,7 @@ it("keeps table context while browsing product details, adding to cart, and prep
   });
   setup();
   fireEvent.click(
-    await screen.findByRole("button", { name: "View details for Coffee" }),
+    await screen.findByRole("button", { name: "Add Coffee" }),
   );
   const details = screen.getByRole("dialog", { name: "Coffee" });
   const add = await within(details).findByRole("button", {

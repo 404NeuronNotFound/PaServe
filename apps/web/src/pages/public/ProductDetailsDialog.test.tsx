@@ -119,7 +119,7 @@ function setup(data = menu, preview = false) {
 async function openDetails() {
   const user = userEvent.setup();
   const trigger = screen.getByRole("button", {
-    name: "View details for Coffee",
+    name: /^(Add Coffee|View details for Coffee)$/,
   });
   await user.click(trigger);
   const dialog = screen.getByRole("dialog", { name: "Coffee" });
@@ -129,7 +129,7 @@ async function openDetails() {
 it("keeps an unavailable product separate from a retryable connection failure", async () => {
   vi.mocked(api.get).mockRejectedValueOnce({ isAxiosError: true, response: { status: 404 } });
   setup();
-  await userEvent.click(screen.getByRole("button", { name: "View details for Coffee" }));
+  await userEvent.click(screen.getByRole("button", { name: "Add Coffee" }));
   const dialog = within(screen.getByRole("dialog", { name: "Coffee" }));
   expect(await dialog.findByRole("alert")).toHaveTextContent("no longer available");
   expect(dialog.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
@@ -141,7 +141,7 @@ it("retains selection context after network failure and retries the read success
   vi.mocked(api.get).mockRejectedValueOnce({ isAxiosError: true });
   setup();
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "View details for Coffee" }));
+  await user.click(screen.getByRole("button", { name: "Add Coffee" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Check your connection");
   await user.click(screen.getByRole("button", { name: "Try again" }));
   expect(await screen.findByRole("button", { name: "Add to cart" })).toBeEnabled();
@@ -202,7 +202,7 @@ it("renders updated backend details instead of the menu card snapshot", async ()
   setup();
   await userEvent
     .setup()
-    .click(screen.getByRole("button", { name: "View details for Coffee" }));
+    .click(screen.getByRole("button", { name: "Add Coffee" }));
   const dialog = await screen.findByRole("dialog", { name: "Updated coffee" });
   expect(within(dialog).getByText("New roast description")).toBeInTheDocument();
   expect(
@@ -832,7 +832,7 @@ it("supports unavailable details recovery and Escape dismissal", async () => {
   setup();
   const user = userEvent.setup();
   await user.click(
-    screen.getByRole("button", { name: "View details for Coffee" }),
+    screen.getByRole("button", { name: "Add Coffee" }),
   );
   const dialog = screen.getByRole("dialog");
   await within(dialog).findByRole("alert");

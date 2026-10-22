@@ -518,7 +518,7 @@ it.each(["grid", "list", "compact"])("updates sold-out featured and ordinary car
   vi.mocked(api.get).mockResolvedValue({data: available});
   for(let i=0;i<3;i++) notify("product_available", {shopSlug: "cafe"});
   await vi.waitFor(() => expect(screen.queryByText("Sold out")).not.toBeInTheDocument());
-  expect(screen.getAllByRole("button", {name: "View details for Coffee"})).toHaveLength(2);
+  expect(screen.getAllByRole("button", {name: "Add Coffee"})).toHaveLength(2);
   expect(search).toHaveValue("Coffee");
 
 });
@@ -552,7 +552,7 @@ it("keeps public navigation and search mounted while an availability read is slo
   expect(screen.getByRole("searchbox")).toBe(search);
   expect(search).toHaveValue("Coffee");
   expect(screen.getByRole("button", { name: "View cart (0)" })).toBeEnabled();
-  expect(screen.getByRole("button", { name: "View details for Coffee" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Add Coffee" })).toBeEnabled();
   await act(async () => { finish({ data: response }); await refresh; });
   expect(screen.getByRole("searchbox")).toBe(search);
 });

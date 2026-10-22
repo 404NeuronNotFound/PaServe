@@ -152,6 +152,7 @@
 .ui-dialog-content > h2, .ui-sheet-content > h2 { margin-top: 0; padding-right: 44px; font-family: var(--font-display); }
 .ui-sheet-content { top: var(--app-viewport-top, 0px); bottom: auto; height: var(--app-viewport-height, 100dvh); max-height: var(--app-viewport-height, 100dvh); width: min(420px, 100vw); border-radius: 0; }
 .ui-sheet-left { left: 0; } .ui-sheet-right { right: 0; }
+.ui-sheet-bottom { top: auto; bottom: 0; left: 50%; transform: translateX(-50%); width: min(640px, 100%); height: auto; max-height: min(80dvh, var(--app-viewport-height, 100dvh)); border-radius: 24px 24px 0 0; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
 .ui-modal-close { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 44px; min-height: 44px; border: 1px solid var(--color-control-border); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
 .ui-tabs-list { display: flex; flex-wrap: wrap; gap: var(--spacing-1); padding: var(--spacing-1); border-radius: var(--radius-panel); background: var(--color-secondary); }
 .ui-tabs-trigger { min-height: 44px; padding: var(--spacing-2) var(--spacing-4); border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; color: var(--color-text); font: inherit; cursor: pointer; }

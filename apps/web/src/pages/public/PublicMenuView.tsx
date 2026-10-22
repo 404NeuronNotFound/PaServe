@@ -7,6 +7,7 @@ import { ProductCard } from "../../components/paserve/ProductCard";
 import type { PublicMenuResponse } from "@paserve/contracts";
 import { memo, useDeferredValue, useId, useMemo, useRef, useState } from "react";
 import { useMenuSections } from "./useMenuSections";
+import { MenuCategoryPicker } from "./MenuCategoryPicker";
 import { EmptyState } from "../../components/feedback/EmptyState";
 import type { CustomerOrderResponse } from "@paserve/contracts";
 import {
@@ -14,6 +15,7 @@ import {
   FiCoffee,
   FiSearch,
   FiStar,
+  FiPlus,
   FiX,
 } from "react-icons/fi";
 import { ProductDetailsDialog } from "./ProductDetailsDialog";
@@ -155,7 +157,7 @@ export function PublicMenuView({
                   autoComplete="off"
                   enterKeyHint="search"
                   aria-controls={`${prefix}-items`}
-                  placeholder="Find your next favorite…"
+                  placeholder="Search the menu"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                 />
@@ -179,17 +181,15 @@ export function PublicMenuView({
               />
             )}
           </div>
-          {!!products.length && (
-            <div className="menu-browse-options">
-              <Button variant="outline" type="button" aria-pressed={availableOnly} aria-controls={`${prefix}-items`}
-                onClick={() => setAvailableOnly((value) => !value)}>
-                Available now
-              </Button>
-              <span>Browse categories or search by item name.</span>
-            </div>
-          )}
           {!!sections.length && (
             <nav className="menu-category-nav" aria-label="Menu categories">
+              <MenuCategoryPicker
+                sections={sections.map((section) => ({ id: `${prefix}-${section.id}`, name: section.name, count: section.items.length }))}
+                activeId={navigation.active}
+                onSelect={navigation.select}
+                shop={shop}
+              />
+              <div className="menu-category-links">
               {sections.map((section) => (
                 <a key={section.id} href={`#${prefix}-${section.id}`}
                   aria-current={navigation.active === `${prefix}-${section.id}` ? "location" : undefined}
@@ -202,8 +202,18 @@ export function PublicMenuView({
                   <span>{section.items.length}</span>
                 </a>
               ))}
+              </div>
             </nav>
           )}
+        </div>
+      )}
+      {!!products.length && (
+        <div className="menu-browse-options">
+          <Button variant="outline" type="button" aria-pressed={availableOnly} aria-controls={`${prefix}-items`}
+            onClick={() => setAvailableOnly((value) => !value)}>
+            Available now
+          </Button>
+          <span>{shown.length} {shown.length === 1 ? "item" : "items"} to explore</span>
         </div>
       )}
       {!products.length && (
@@ -340,7 +350,7 @@ const MenuSection = memo(function MenuSection({
                 <Button variant="ghost" size="inherit"
                   type="button"
                   className="menu-product-details-button"
-                  aria-label={`View details for ${product.name}`}
+                  aria-label={product.isOrderable && product.status === "AVAILABLE" ? `Add ${product.name}` : `View details for ${product.name}`}
                   aria-describedby={
                     product.status === "SOLD_OUT" || !product.isOrderable
                       ? `${statusPrefix}-${product.id}-sold-out`
@@ -348,8 +358,8 @@ const MenuSection = memo(function MenuSection({
                   }
                   onClick={() => onSelect(product.id)}
                 >
-                  <span>View details</span>
-                  <FiArrowUpRight aria-hidden="true" />
+                  <span>{product.isOrderable && product.status === "AVAILABLE" ? "Add" : "View details"}</span>
+                  {product.isOrderable && product.status === "AVAILABLE" ? <FiPlus aria-hidden="true" /> : <FiArrowUpRight aria-hidden="true" />}
                 </Button>
               </div>
             </div>

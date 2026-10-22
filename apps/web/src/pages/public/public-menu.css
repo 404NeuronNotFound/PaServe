@@ -99,7 +99,7 @@
   position: sticky;
   top: 12px;
   z-index: 5;
-  margin: 24px 0 32px;
+  margin: 20px 0 12px;
   padding: 12px;
   border: 1px solid var(--color-border);
   border-radius: 22px;
@@ -192,10 +192,72 @@
 }
 .menu-category-nav {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 10px;
+}
+.menu-category-links {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
-  padding: 12px 2px 2px;
-  scrollbar-width: thin;
+}
+.menu-category-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.menu-current-category {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 8px;
+  text-align: left;
+}
+.menu-current-category > span { min-width: 0; }
+.menu-current-category small {
+  display: block;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+.menu-current-category strong {
+  display: block;
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.menu-current-category > svg { flex: 0 0 auto; }
+.menu-all-categories { flex: 0 0 auto; min-height: 44px; gap: 8px; }
+.menu-category-sheet h2 { margin-bottom: 8px; }
+.menu-category-sheet > p { margin: 0 0 20px; color: var(--color-muted); line-height: var(--line-body); }
+.menu-category-sheet-handle { width: 36px; height: 4px; border-radius: 4px; background: var(--color-border); margin: -8px auto 20px; }
+.menu-category-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.menu-category-grid a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 76px;
+  padding: 14px;
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: var(--color-canvas);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.menu-category-grid a small { display: block; margin-top: 6px; font-size: var(--text-xs); }
+.menu-category-grid a svg { flex: 0 0 auto; }
+.menu-category-grid a[aria-current="location"] { background: var(--menu-accent); color: var(--menu-on-accent); }
+.menu-category-grid a:focus-visible { outline: 3px solid var(--color-text); outline-offset: 3px; }
+@media (max-width: 360px) {
+  .menu-category-grid { gap: 8px; }
+  .menu-category-grid a { padding: 10px; }
 }
 .menu-category-nav a {
   display: inline-flex;
@@ -256,7 +318,7 @@
   .public-menu:not([data-layout="grid"]) .menu-product-media { width: 64px; }
 }
 .public-menu-section {
-  margin-top: 40px;
+  margin-top: 28px;
 }
 .menu-section-heading {
   display: flex;
@@ -576,6 +638,7 @@
 .menu-search-status-slot {
   min-height: 24px;
 }
+.menu-search-status-slot:empty { display: none; }
 .menu-page-footer {
   display: flex;
   align-items: center;
@@ -934,3 +997,59 @@ html:has(main.public-menu) {
 }
 .guest-active-orders { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); }
 .guest-active-orders p { flex-basis: 100%; margin: 0; color: var(--color-muted); font-size: 0.8125rem; }
+
+/* Compact browsing controls are shared; product presentation follows the owner's saved Grid, List or Compact layout at every width. */
+@container customer-menu (max-width: 640px) {
+  .menu-topline { margin-bottom: 12px; }
+  .menu-shop-hero { border-radius: 20px; }
+  .public-menu .menu-shop-hero .shop-banner { height: 64px; aspect-ratio: auto; }
+  .public-menu-header { gap: 12px; padding: 14px 16px; align-items: flex-start; }
+  .public-menu-header .shop-logo { width: 52px; height: 52px; border-radius: 14px; }
+  .menu-shop-hero:has(.shop-banner) .public-menu-header .shop-logo { margin-top: -26px; border-width: 3px; }
+  .public-menu-header .section-label { display: none; }
+  .public-menu-header h1 { font-size: clamp(1.4rem, 6cqi, 1.85rem); }
+  .menu-shop-description {
+    margin-top: 6px;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .menu-item-count { display: none; }
+  .menu-category-links { display: none; }
+  .menu-browse-bar { margin-top: 14px; top: 8px; }
+  .menu-category-nav { gap: 0; }
+  .menu-all-categories { padding-inline: 10px; }
+  .menu-current-category { flex: 1; }
+  .menu-browse-options { margin-top: 0; margin-bottom: 12px; }
+  .public-menu-section { margin-top: 22px; }
+  .menu-section-description { margin-bottom: 12px; font-size: 0.875rem; }
+  .menu-section-number { display: none; }
+  .menu-products { margin-top: 12px; }
+  .public-menu[data-layout="list"] .menu-products { gap: 10px; }
+  .public-menu[data-layout="list"] .menu-product-card { flex-direction: row; gap: 12px; padding: 12px; }
+  .public-menu[data-layout="list"] .menu-product-media { width: 88px; aspect-ratio: 1; border-radius: 12px; align-self: flex-start; }
+  .public-menu[data-layout="list"] .menu-product-body { display: flex; padding: 0; justify-content: flex-start; }
+  .public-menu[data-layout="list"] .menu-product-body h3 { font-family: var(--font-ui); font-size: 1rem; font-weight: 600; line-height: 1.35; }
+  .public-menu[data-layout="list"] .menu-product-description {
+    margin: 4px 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .public-menu[data-layout="list"] .menu-product-badges { margin-bottom: 6px; }
+  .public-menu[data-layout="list"] .menu-product-footer { flex-direction: row; align-items: center; gap: 8px; margin-top: 8px; padding-top: 0; border: 0; }
+  .public-menu[data-layout="list"] .menu-product-price { font-size: 1rem; }
+  .public-menu[data-layout="list"] .menu-product-details-button { min-height: 44px; padding: 8px 10px; gap: 6px; }
+  .public-menu[data-layout="list"] .menu-product-details-button > span { display: inline; }
+  .public-menu[data-layout="list"] .menu-product-placeholder > svg { width: 28px; height: 28px; }
+  .loading-skeleton .skeleton-menu-hero { height: 148px; }
+}
+@container customer-menu (max-width: 360px) {
+  .public-menu[data-layout="list"] .menu-product-media { width: 68px; }
+}

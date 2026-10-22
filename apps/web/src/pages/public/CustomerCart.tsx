@@ -1,4 +1,6 @@
 import { ConfirmDialog } from "../../components/paserve/ConfirmDialog";
+import { createPortal } from "react-dom";
+import { menuTheme } from "../../lib/menu-theme";
 import { Button } from "../../components/ui/button";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FiArrowRight, FiShoppingBag, FiTrash2 } from "react-icons/fi";
@@ -101,6 +103,17 @@ export function CustomerCart({
           </strong>
         )}
       </Button>
+      {!!count && createPortal(
+        <div className="customer-cart-dock" style={menuTheme(shop.primaryColor, shop.accentColor)}>
+          <Button variant="default" type="button" className="customer-cart-dock-button"
+            onClick={() => setOpen(true)} aria-label={`View order, ${count} ${count === 1 ? "item" : "items"}, estimated subtotal ${formatCartPrice(subtotal)}`}>
+            <span className="customer-cart-dock-count" aria-hidden="true">{count}</span>
+            <span>View order <small>Estimated subtotal</small></span>
+            <strong>{formatCartPrice(subtotal)}</strong>
+            <FiArrowRight aria-hidden="true" />
+          </Button>
+        </div>, document.body,
+      )}
       {open && (
         <CustomerDialog
           title={`${shop.name} ${review ? "order review" : "cart"}`}

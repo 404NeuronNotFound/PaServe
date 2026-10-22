@@ -6,12 +6,23 @@ import {
   render,
   screen,
   within,
+  waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PublicMenuView } from "./PublicMenuView";
 import type { PublicMenuResponse } from "@paserve/contracts";
+import { useCart } from "../../features/cart/cart";
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+const originalShowModal = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "showModal");
+const originalClose = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "close");
+
+afterEach(() => {
+  cleanup(); vi.unstubAllGlobals(); useCart.setState({ shops: {} });
+  for (const [key, descriptor] of [["showModal", originalShowModal], ["close", originalClose]] as const) {
+    if (descriptor) Object.defineProperty(HTMLDialogElement.prototype, key, descriptor);
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, key);
+  }
+});
 const coffee: PublicMenuResponse["products"][number] = {
   id: "coffee",
   categoryId: "drinks",
@@ -65,6 +76,52 @@ const menu: PublicMenuResponse = {
   featuredProducts: [coffee],
 };
 
+it("reaches the last of many categories from the picker and focuses its heading", async () => {
+  const categories = Array.from({ length: 14 }, (_, n) => ({ id: `cat-${n}`, name: `Category ${n + 1}`, slug: `cat-${n}`, description: null, sortOrder: n }));
+  render(<PublicMenuView menu={{ ...menu, featuredProducts: [], categories, products: categories.map((category, n) => ({ ...coffee, id: `product-${n}`, categoryId: category.id, name: `Drink ${n + 1}`, isFeatured: false })) }} />);
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "All categories" }));
+  const picker = screen.getByRole("dialog", { name: "Explore the menu" });
+  expect(within(picker).getAllByRole("link")).toHaveLength(14);
+  expect(within(picker).getByRole("link", { name: "Category 1, 1 item" })).toHaveAttribute("aria-current", "location");
+  await user.click(within(picker).getByRole("link", { name: "Category 14, 1 item" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  expect(screen.getByRole("heading", { name: "Category 14" })).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Choose category, currently Category 14" })).toBeEnabled();
+  expect(screen.getByRole("heading", { name: "Category 1" })).toBeInTheDocument();
+});
+
+it("returns focus to either picker trigger on Escape and preserves the menu search", async () => {
+  render(<PublicMenuView menu={menu} />);
+  const user = userEvent.setup();
+  const search = screen.getByRole("searchbox");
+  await user.type(search, "savory");
+  for (const trigger of [screen.getByRole("button", { name: "Choose category, currently Meals" }), screen.getByRole("button", { name: "All categories" })]) {
+    await user.click(trigger);
+    expect(screen.getByRole("dialog", { name: "Explore the menu" })).toBeVisible();
+    expect(within(screen.getByRole("navigation", { name: "All menu categories" })).getAllByRole("link")).toHaveLength(1);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  }
+  expect(search).toHaveValue("savory");
+});
+
+it("shows a cart shortcut only for this shop's items and opens the existing cart", async () => {
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: function(this: HTMLDialogElement) { this.setAttribute("open", ""); } });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value: function(this: HTMLDialogElement) { this.removeAttribute("open"); } });
+  const quote = { productId: "coffee", productName: "Coffee", currency: "PHP" as const, basePrice: "120.01", unitPrice: "120.01", totalPrice: "240.02", quantity: 2, variants: [], addOns: [] };
+  useCart.getState().add("other-shop", quote);
+  render(<PublicMenuView menu={menu} />);
+  expect(screen.queryByRole("button", { name: /View order, / })).not.toBeInTheDocument();
+  act(() => { useCart.getState().add("cafe", quote); });
+  const shortcut = screen.getByRole("button", { name: /View order, 2 items, estimated subtotal/ });
+  expect(shortcut).toHaveTextContent("240.02");
+  await userEvent.click(shortcut);
+  expect(screen.getByRole("dialog", { name: "Cafe cart" })).toBeVisible();
+  expect(within(screen.getByRole("dialog")).getByRole("heading", { name: "Coffee" })).toBeVisible();
+});
+
 it("lets keyboard users skip the header and filters to menu actions", async () => {
   render(<PublicMenuView menu={menu} />);
   const user = userEvent.setup();
@@ -74,7 +131,7 @@ it("lets keyboard users skip the header and filters to menu actions", async () =
   await user.keyboard("{Enter}");
   expect(document.getElementById(skip.getAttribute("href")!.slice(1))).toHaveFocus();
   await user.tab();
-  expect(screen.getAllByRole("button", { name: "View details for Coffee" })[0]).toHaveFocus();
+  expect(screen.getAllByRole("button", { name: "Add Coffee" })[0]).toHaveFocus();
 });
 it("combines availability with search and recovers without losing cart access", async () => {
   const user = userEvent.setup();
@@ -150,7 +207,7 @@ it("makes menu text and actions usable before secondary images load", () => {
   const { container } = render(<PublicMenuView menu={{ ...menu, shop: { ...menu.shop, bannerUrl: "https://example.com/banner.webp", logoUrl: "https://example.com/logo.webp" } }} />);
   expect(screen.getByRole("heading", { name: "Cafe" })).toBeVisible();
   expect(screen.getByRole("searchbox")).toBeEnabled();
-  for (const button of screen.getAllByRole("button", { name: "View details for Coffee" }))
+  for (const button of screen.getAllByRole("button", { name: "Add Coffee" }))
     expect(button).toBeEnabled();
   for (const image of container.querySelectorAll(".shop-banner img, .shop-logo img, .menu-product-media img")) {
     expect(Number(image.getAttribute("width"))).toBeGreaterThan(0);
@@ -230,7 +287,7 @@ it("replaces broken product images without losing the product action", () => {
     within(section).getByRole("heading", { name: "Coffee" }),
   ).toBeInTheDocument();
   expect(
-    within(section).getByRole("button", { name: "View details for Coffee" }),
+    within(section).getByRole("button", { name: "Add Coffee" }),
   ).toBeEnabled();
 });
 
