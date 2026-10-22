@@ -3,7 +3,8 @@ import { statusPresentation } from "../../components/paserve/status-presentation
 import "../../components/paserve/status.css";
 import { Button } from "../../components/ui/button";
 import { OrderListSkeleton } from "../../components/feedback/LoadingSkeleton";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useVisibleNow } from "../../lib/useVisibleNow";
 import {
   useInfiniteQuery,
   useMutation,
@@ -147,12 +148,11 @@ function NewOrders() {
   >(null);
   const detailTrigger = useRef<HTMLButtonElement | null>(null);
   const historyHeading = useRef<HTMLHeadingElement>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const now = useVisibleNow(state !== "COMPLETED");
+  const focusHeading = useCallback(() => heading.current?.focus(), []);
   useEffect(() => {
     document.title = `${view.title} · ${shop.name} · PaServe`;
     heading.current?.focus();
-    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(timer);
   }, [shop.name, view.title]);
   const queue = useInfiniteQuery({
     queryKey: [
@@ -184,6 +184,17 @@ function NewOrders() {
   const status = isAxiosError(queue.error)
     ? queue.error.response?.status
     : undefined;
+  const orders = useMemo(() => [
+    ...new Map(
+      queue.data?.pages
+        .flatMap((page) => page.orders)
+        .map((order) => [order.id, order]),
+    ).values(),
+  ].sort((a, b) =>
+    state === "COMPLETED"
+      ? Date.parse(b.completedAt!) - Date.parse(a.completedAt!) || b.id.localeCompare(a.id)
+      : Date.parse(a.queuedAt) - Date.parse(b.queuedAt) || a.id.localeCompare(b.id),
+  ), [queue.data, state]);
   if (status === 401)
     return (
       <Navigate to="/login" replace state={{ returnTo: location.pathname }} />
@@ -201,19 +212,6 @@ function NewOrders() {
         </Link>
       </section>
     );
-  const orders = [
-    ...new Map(
-      queue.data?.pages
-        .flatMap((page) => page.orders)
-        .map((order) => [order.id, order]),
-    ).values(),
-  ].sort((a, b) =>
-    state === "COMPLETED"
-      ? Date.parse(b.completedAt!) - Date.parse(a.completedAt!) ||
-        b.id.localeCompare(a.id)
-      : Date.parse(a.queuedAt) - Date.parse(b.queuedAt) ||
-        a.id.localeCompare(b.id),
-  );
   return (
     <section className="kitchen-workspace" data-distance-view={distanceView && state !== "COMPLETED"}>
       {(liveStatus === "delayed" || liveStatus === "denied") && (
@@ -432,7 +430,7 @@ function NewOrders() {
               order={order}
               first={index === 0}
               now={now}
-              onStarted={() => heading.current?.focus()}
+              onStarted={focusHeading}
             />
           ))}
         </ol>
@@ -605,7 +603,7 @@ function TicketDetails({
   );
 }
 
-function Ticket({
+const Ticket = memo(function Ticket({
   order,
   first,
   now,
@@ -833,40 +831,7 @@ function Ticket({
             </div>
           </div>
         )}
-        <ul className="kitchen-items">
-          {order.items.map((item, index) => (
-            <li key={index}>
-              <span
-                className="kitchen-quantity"
-                aria-label={`Quantity ${item.quantity}`}
-              >
-                {item.quantity}×
-              </span>
-              <div className="kitchen-item-detail">
-                <h4>{item.productName}</h4>
-                {(item.variants.length > 0 || item.addOns.length > 0) && (
-                  <ul className="kitchen-modifiers">
-                    {item.variants.map((variant) => (
-                      <li key={`v-${variant.id}`}>{variant.name}</li>
-                    ))}
-                    {item.addOns.map((addOn) => (
-                      <li key={`a-${addOn.id}`}>+ {addOn.name}</li>
-                    ))}
-                  </ul>
-                )}
-                {item.notes && (
-                  <div className="kitchen-note">
-                    <FiFileText aria-hidden="true" />
-                    <div>
-                      <span>ITEM NOTE</span>
-                      <p>{item.notes}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <TicketItems items={order.items} />
         <footer className="kitchen-ticket-footer">
           <span>
             {count} {count === 1 ? "item" : "items"}
@@ -952,4 +917,45 @@ function Ticket({
       </article>
     </li>
   );
-}
+});
+
+const TicketItems = memo(function TicketItems({ items }: {
+  items: PreparationQueueResponse["orders"][number]["items"];
+}) {
+  return (
+    <ul className="kitchen-items">
+      {items.map((item, index) => (
+        <li key={index}>
+          <span
+            className="kitchen-quantity"
+            aria-label={`Quantity ${item.quantity}`}
+          >
+            {item.quantity}×
+          </span>
+          <div className="kitchen-item-detail">
+            <h4>{item.productName}</h4>
+            {(item.variants.length > 0 || item.addOns.length > 0) && (
+              <ul className="kitchen-modifiers">
+                {item.variants.map((variant) => (
+                  <li key={`v-${variant.id}`}>{variant.name}</li>
+                ))}
+                {item.addOns.map((addOn) => (
+                  <li key={`a-${addOn.id}`}>+ {addOn.name}</li>
+                ))}
+              </ul>
+            )}
+            {item.notes && (
+              <div className="kitchen-note">
+                <FiFileText aria-hidden="true" />
+                <div>
+                  <span>ITEM NOTE</span>
+                  <p>{item.notes}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+});
