@@ -111,10 +111,19 @@ export async function uploadImages(
             shopId: entry.shopId,
             name: entry.productName,
           },
-          select: { id: true },
+          select: { id: true, imageUrl: true },
         });
         if (!product)
           throw new Error('Manifest product does not match the demo tenant.');
+        if (
+          generated &&
+          entry.status === 'uploaded' &&
+          entry.imageUrl === product.imageUrl &&
+          product.imageUrl?.startsWith(
+            `${process.env.SUPABASE_URL}/storage/v1/object/public/paserve-assets/shops/${entry.shopId}/products/${entry.productId}/`,
+          )
+        )
+          continue;
         const path = generated
           ? resolve(
               assetsDir,
@@ -128,12 +137,15 @@ export async function uploadImages(
         try {
           source = await readFile(path);
         } catch {
-          if (generated && entry.productName === 'Iced Spanish Latte')
-            source = await readFile(
-              resolve('prisma/demo/assets/iced-spanish-latte.webp'),
-            );
-          else if (generated) continue;
-          else throw new Error('Missing checked-in category fallback.');
+          if (generated) {
+            try {
+              source = await readFile(
+                resolve('prisma/demo/assets', entry.filename),
+              );
+            } catch {
+              continue;
+            }
+          } else throw new Error('Missing checked-in category fallback.');
         }
         if (
           !process.env.SUPABASE_URL ||
