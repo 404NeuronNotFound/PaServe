@@ -47,13 +47,14 @@ const data: TopProductsResponse = {
     },
   ],
 };
-function setup() {
+function setup(compact = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <TopProducts
+        compact={compact}
         userId="user"
         shopId="shop"
         startDate="2026-10-15"
@@ -62,6 +63,32 @@ function setup() {
     </QueryClientProvider>,
   );
 }
+it("shows five ranked bars and expands the complete table in compact mode", async () => {
+  vi.mocked(getTopProducts).mockResolvedValue({
+    ...data,
+    productCount: 6,
+    products: Array.from({ length: 6 }, (_, i) => ({
+      productSnapshotId: `saved-${i}`,
+      productName: `Product ${i + 1}`,
+      quantity: 6 - i,
+      revenue: `${6 - i}.00`,
+    })),
+  });
+  setup(true);
+  const chart = await screen.findByRole("list", { name: "Top five products" });
+  expect(chart.querySelectorAll("li")).toHaveLength(5);
+  expect(chart).toHaveTextContent("Product 1");
+  expect(chart).not.toHaveTextContent("Product 6");
+  expect(chart.querySelector(".sales-product-bar > span")).toHaveStyle({
+    width: "100%",
+  });
+  expect(
+    screen.getByText("View product details").closest("details"),
+  ).not.toHaveAttribute("open");
+  fireEvent.click(screen.getByText("View product details"));
+  expect(screen.getByRole("table")).toBeVisible();
+  expect(screen.getByRole("table")).toHaveTextContent("Product 6");
+});
 it("shows saved names, references for duplicates and switches ranking metric", async () => {
   vi.mocked(getTopProducts).mockResolvedValue(data);
   setup();
@@ -133,7 +160,11 @@ it("shows an empty state without inventing products", async () => {
   ).toBeVisible();
   expect(screen.queryByRole("table")).not.toBeInTheDocument();
   vi.mocked(getTopProducts).mockResolvedValue(data);
-  fireEvent.click(screen.getByRole("button", { name: "Check for new product sales" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Check for new product sales" }),
+  );
   expect(await screen.findByRole("table")).toBeVisible();
-  expect(screen.queryByRole("heading", { name: "No product sales to rank." })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "No product sales to rank." }),
+  ).not.toBeInTheDocument();
 });

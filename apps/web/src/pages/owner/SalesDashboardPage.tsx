@@ -3,7 +3,6 @@ import { Table } from "../../components/ui/table";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { PageHeader } from "../../components/paserve/PageHeader";
-import { navigationForRole } from "../../components/layout/workspace-navigation";
 import { MetricCard as Metric } from "../../components/paserve/MetricCard";
 import {
   MetricsSkeleton,
@@ -33,10 +32,6 @@ import {
   FiCreditCard,
   FiShoppingBag,
   FiTrendingUp,
-  FiGrid,
-  FiPieChart,
-  FiLayers,
-  FiActivity,
 } from "react-icons/fi";
 import { shopPath, useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
@@ -52,6 +47,7 @@ import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 import { formatReceiptDateTime } from "../../lib/receipt-date-time";
 import "./sales-dashboard.css";
 import "./sales-workspace.css";
+import "./sales-minimal.css";
 import { DailyAnalytics } from "./DailyAnalytics";
 const TopProducts = lazy(() =>
   import("./TopProducts").then((module) => ({ default: module.TopProducts })),
@@ -94,7 +90,6 @@ function reportAccessUnavailable(error: unknown) {
   );
 }
 
-
 export function SalesDashboardPage() {
   const { shopId, role } = useActiveShop();
   const userId =
@@ -106,7 +101,9 @@ function SalesWorkspace({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
   const [paymentBasis, setPaymentBasis] = useState<PaymentMixBasis>("SALES");
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [recentExpandedFor, setRecentExpandedFor] = useState<string | null>(null);
+  const [recentExpandedFor, setRecentExpandedFor] = useState<string | null>(
+    null,
+  );
   const { shopId, role, shop } = useActiveShop();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [custom, setCustom] = useState(false);
@@ -129,8 +126,6 @@ function SalesWorkspace({ userId }: { userId: string }) {
   const reportStartDate = custom ? (customRange?.start ?? "") : date;
   const reportEndDate = custom ? (customRange?.end ?? "") : date;
   const allowed = hasShopPermission(role, "shop.reports.read");
-  const shortcuts = navigationForRole(role).flatMap((group) => group.items)
-    .filter((item) => ["orders", "kitchen", "products", "staff"].includes(item.path));
   const validDraft = !!salesDailyRange(customDraft.start, customDraft.end);
   const valid = custom
     ? !!customRange && !!salesDailyRange(customRange.start, customRange.end)
@@ -169,7 +164,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
   const report = query.isSuccess && valid ? query.data : null;
   const reportPeriodKey = `${reportStartDate}:${reportEndDate}`;
   const recentExpanded = recentExpandedFor === reportPeriodKey;
-  const visibleRecentOrders = report?.recentOrders.slice(0, recentExpanded ? 10 : 3) ?? [];
+  const visibleRecentOrders =
+    report?.recentOrders.slice(0, recentExpanded ? 10 : 3) ?? [];
   const mix = report
     ? calculatePaymentMix(
         report.paymentBreakdown,
@@ -236,44 +232,42 @@ function SalesWorkspace({ userId }: { userId: string }) {
   };
 
   return (
-    <section className="sales-dashboard" aria-labelledby="sales-title">
+    <section
+      className="sales-dashboard sales-minimal"
+      aria-labelledby="sales-title"
+    >
       <PageHeader className="sales-header">
         <div>
-          <p className="sales-eyebrow">
-            <span aria-hidden="true" /> YOUR BUSINESS, AT A GLANCE
-          </p>
-          <h1 id="sales-title">
-            Sales dashboard<span aria-hidden="true">.</span>
-          </h1>
-          <p className="sales-intro">
-            Good decisions start with a clear picture.{" "}
-            <strong>{shop.name}</strong>
-          </p>
+          <h1 id="sales-title">Sales dashboard</h1>
+          <p className="sales-intro">{shop.name} · Completed sales · PHP</p>
         </div>
-        <RefreshButton label="Refresh sales"
+        <RefreshButton
+          label="Refresh sales"
           disabled={!valid || query.isFetching}
           onClick={refreshSales}
           pending={query.isFetching}
         />
       </PageHeader>
       <div className="sales-period-panel" id="sales-overview">
-        <div className="sales-period-panel-heading">
-          <span className="sales-kicker">REPORTING PERIOD</span>
-          <span>Completed sales · PHP</span>
-        </div>
         <div
           className="analytics-period-toggle sales-report-mode"
           role="group"
           aria-label="Sales report period"
         >
-          <Button variant="outline" size="inherit" type="submit"
+          <Button
+            variant="outline"
+            size="inherit"
+            type="submit"
             className="secondary-button"
             aria-pressed={!custom}
             onClick={() => setCustom(false)}
           >
             Single day
           </Button>
-          <Button variant="outline" size="inherit" type="submit"
+          <Button
+            variant="outline"
+            size="inherit"
+            type="submit"
             className="secondary-button"
             aria-pressed={custom}
             onClick={() => {
@@ -320,7 +314,9 @@ function SalesWorkspace({ userId }: { userId: string }) {
                   }
                 />
               </label>
-              <Button variant="outline" size="inherit"
+              <Button
+                variant="outline"
+                size="inherit"
                 className="secondary-button"
                 type="submit"
                 disabled={!validDraft}
@@ -345,7 +341,10 @@ function SalesWorkspace({ userId }: { userId: string }) {
                   }
                 />
               </label>
-              <Button variant="ghost" size="inherit" type="submit"
+              <Button
+                variant="ghost"
+                size="inherit"
+                type="submit"
                 className="sales-today"
                 aria-pressed={date === today}
                 onClick={() => {
@@ -377,12 +376,6 @@ function SalesWorkspace({ userId }: { userId: string }) {
             the range to every card, chart and history view.
           </p>
         )}
-        {!custom && (
-          <p className="sales-range-help">
-            One reporting date for every card, chart and history view. Times use
-            Manila (UTC+8).
-          </p>
-        )}
         {custom && !validDraft && (
           <InlineMessage>
             Choose valid start/end dates in order, spanning at most 366 days.
@@ -408,14 +401,20 @@ function SalesWorkspace({ userId }: { userId: string }) {
         ))}
       {valid && query.isPending && <MetricsSkeleton />}
       {valid && query.isError && (
-        <ErrorState error={query.error} resource="sales reports"
+        <ErrorState
+          error={query.error}
+          resource="sales reports"
           permissionMessage="Your access to this shop’s sales reports is unavailable."
           unavailableMessage="Your access to this shop’s sales reports is unavailable."
-          pending={query.isFetching} onRetry={refreshSales}
-          />
+          pending={query.isFetching}
+          onRetry={refreshSales}
+        />
       )}
       {report && (
-        <section className="sales-overview-metrics" aria-labelledby="sales-overview-title">
+        <section
+          className="sales-overview-metrics"
+          aria-labelledby="sales-overview-title"
+        >
           <header className="sales-overview-heading">
             <div>
               <h2 id="sales-overview-title">Business overview</h2>
@@ -432,7 +431,6 @@ function SalesWorkspace({ userId }: { userId: string }) {
                   <FiTrendingUp aria-hidden="true" />
                 </span>
               </div>
-              <p className="sales-hero-date">{prettyDate}</p>
               <strong className="sales-amount">
                 {formatCartPrice(report.totalSales)}
               </strong>
@@ -483,13 +481,362 @@ function SalesWorkspace({ userId }: { userId: string }) {
               number="03"
             />
           </div>
+        </section>
+      )}
+      <div
+        className="sales-chart-grid"
+        role="group"
+        aria-label="Sales charts and activity"
+      >
+        {valid && !denied && (
+          <div id="sales-trends-section" className="sales-section-anchor">
+            <DeferredSection
+              label="sales trends"
+              placeholder={
+                <section className="daily-analytics">
+                  <h2>Sales Trends</h2>
+                  <ReportSkeleton label="Loading sales trends…" chart />
+                </section>
+              }
+            >
+              <SalesTrends
+                compact
+                userId={userId}
+                shopId={shopId}
+                startDate={reportStartDate}
+                endDate={reportEndDate}
+              />
+            </DeferredSection>
+          </div>
+        )}
+        {report && (
+          <>
+            <div
+              className="sales-payment-detail sales-section-anchor"
+              id="sales-payment-section"
+              aria-busy={query.isFetching}
+            >
+              <section
+                className="sales-payments"
+                aria-labelledby="sales-payments-title"
+              >
+                <header className="sales-panel-heading">
+                  <div>
+                    <h2 id="sales-payments-title">Payment Breakdown</h2>
+                  </div>
+                  <span className="sales-panel-emblem">
+                    <FiCreditCard aria-hidden="true" />
+                  </span>
+                </header>
+
+                <div
+                  className="analytics-period-toggle sales-payment-basis"
+                  role="group"
+                  aria-label="Payment mix basis"
+                >
+                  <Button
+                    variant="outline"
+                    size="inherit"
+                    type="submit"
+                    className="secondary-button"
+                    aria-pressed={paymentBasis === "SALES"}
+                    onClick={() => setPaymentBasis("SALES")}
+                  >
+                    Sales share
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="inherit"
+                    type="submit"
+                    className="secondary-button"
+                    aria-pressed={paymentBasis === "ORDERS"}
+                    onClick={() => setPaymentBasis("ORDERS")}
+                  >
+                    Order share
+                  </Button>
+                </div>
+                <div className="sales-payment-visual">
+                  <div className="sales-payment-ring" aria-hidden="true">
+                    <svg viewBox="0 0 160 160">
+                      <circle
+                        className="sales-ring-track"
+                        cx="80"
+                        cy="80"
+                        r="64"
+                        fill="none"
+                        strokeWidth="13"
+                      />
+                      {segments.map((segment, index) => (
+                        <circle
+                          key={segment.paymentMethod}
+                          className={`sales-method-${index}`}
+                          cx="80"
+                          cy="80"
+                          r="64"
+                          fill="none"
+                          strokeWidth="13"
+                          pathLength="100"
+                          strokeDasharray={`${segment.share} ${100 - segment.share}`}
+                          strokeDashoffset={-segment.offset}
+                          transform="rotate(-90 80 80)"
+                        />
+                      ))}
+                    </svg>
+                    <div>
+                      <strong>
+                        {countFormat.format(report.completedOrders)}
+                      </strong>
+                      <span>completed orders</span>
+                    </div>
+                  </div>
+                  <div className="sales-payment-context">
+                    <span className="sales-kicker">GROSS SALES</span>
+                    <strong>{formatCartPrice(report.totalSales)}</strong>
+                    <p>
+                      {countFormat.format(report.completedOrders)} eligible
+                      orders.
+                      <br />
+                      The ring and bars show{" "}
+                      {paymentBasis === "SALES" ? "sales share" : "order share"}
+                      .
+                    </p>
+                  </div>
+                </div>
+                {leadingMethods.length > 0 && (
+                  <p className="sales-payment-insight" role="status">
+                    {paymentBasis === "SALES"
+                      ? "Largest sales total"
+                      : "Most used"}
+                    :{" "}
+                    {leadingMethods
+                      .map((entry) => paymentLabels[entry.paymentMethod])
+                      .join(", ")}{" "}
+                    ·{" "}
+                    {paymentBasis === "SALES"
+                      ? formatCartPrice(leadingMethods[0].totalSales)
+                      : `${countFormat.format(leadingMethods[0].orders)} ${leadingMethods[0].orders === 1 ? "order" : "orders"}`}
+                    {leadingMethods.length > 1 ? " each" : ""}.
+                  </p>
+                )}
+                {report.completedOrders > 0 &&
+                  report.totalSales === "0.00" &&
+                  paymentBasis === "SALES" && (
+                    <InlineMessage tone="info">
+                      Sales total is ₱0.00, so sales shares are zero. Switch to
+                      Order share to see the payment mix by order count.
+                    </InlineMessage>
+                  )}
+                {report.completedOrders === 0 && (
+                  <p className="sales-empty-note">
+                    No eligible payments for this{" "}
+                    {custom ? "date range" : "business day"}.
+                  </p>
+                )}
+                <ul
+                  className="sales-payment-legend"
+                  aria-label="Payment method shares"
+                >
+                  {segments.map((entry, index) => (
+                    <li key={entry.paymentMethod}>
+                      <span>
+                        <i
+                          className={`sales-method-dot sales-method-${index}`}
+                          aria-hidden="true"
+                        />
+                        {paymentLabels[entry.paymentMethod]}
+                      </span>
+                      <strong>
+                        {paymentBasis === "SALES"
+                          ? entry.salesShare
+                          : entry.orderShare}
+                      </strong>
+                      <small>
+                        {paymentBasis === "SALES"
+                          ? formatCartPrice(entry.totalSales)
+                          : `${countFormat.format(entry.orders)} orders`}
+                      </small>
+                    </li>
+                  ))}
+                </ul>
+                <details className="sales-data-details">
+                  <summary>View payment details</summary>
+                  <Table
+                    containerClassName="sales-payment-table-scroll"
+                    scrollLabel="Payment method shares table"
+                    className="sales-payment-table"
+                  >
+                    <caption className="sr-only">
+                      Sales and order counts by payment method
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Method</th>
+                        <th scope="col">Orders</th>
+                        <th
+                          scope="col"
+                          className={
+                            paymentBasis === "ORDERS"
+                              ? "is-selected"
+                              : undefined
+                          }
+                        >
+                          Order share
+                        </th>
+                        <th scope="col">Sales</th>
+                        <th
+                          scope="col"
+                          className={
+                            paymentBasis === "SALES" ? "is-selected" : undefined
+                          }
+                        >
+                          Sales share
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {segments.map((entry, index) => (
+                        <tr key={entry.paymentMethod}>
+                          <th scope="row">
+                            <span
+                              className={`sales-method-dot sales-method-${index}`}
+                              aria-hidden="true"
+                            />
+                            {paymentLabels[entry.paymentMethod]}
+                            <span
+                              className="sales-method-track"
+                              aria-hidden="true"
+                            >
+                              <span
+                                className={`sales-method-${index}`}
+                                style={
+                                  {
+                                    "--share": `${entry.share}%`,
+                                  } as CSSProperties
+                                }
+                              />
+                            </span>
+                          </th>
+                          <td>{countFormat.format(entry.orders)}</td>
+                          <td
+                            className={
+                              paymentBasis === "ORDERS"
+                                ? "is-selected"
+                                : undefined
+                            }
+                          >
+                            {entry.orderShare}
+                          </td>
+                          <td>{formatCartPrice(entry.totalSales)}</td>
+                          <td
+                            className={
+                              paymentBasis === "SALES"
+                                ? "is-selected"
+                                : undefined
+                            }
+                          >
+                            {entry.salesShare}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <th scope="row">All methods</th>
+                        <td>{countFormat.format(report.completedOrders)}</td>
+                        <td>
+                          {report.completedOrders > 0 ? "100.00%" : "0.00%"}
+                        </td>
+                        <td>{formatCartPrice(report.totalSales)}</td>
+                        <td>
+                          {report.totalSales === "0.00" ? "0.00%" : "100.00%"}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </Table>
+                  <p className="sales-panel-footnote">
+                    Confirmed, paid, completed order totals only; cash
+                    tender/change are excluded. Zero-value paid orders count
+                    toward order share. Shares are rounded to 0.01% and adjusted
+                    to total 100% when the basis is nonzero.
+                  </p>
+                </details>
+              </section>
+            </div>
+          </>
+        )}
+        {valid && !denied && (
+          <div className="sales-section-anchor" id="sales-products-section">
+            <DeferredSection
+              label="top products"
+              placeholder={
+                <section className="daily-analytics">
+                  <h2>Top Products</h2>
+                  <ReportSkeleton label="Loading top products…" />
+                </section>
+              }
+            >
+              <TopProducts
+                compact
+                userId={userId}
+                shopId={shopId}
+                startDate={reportStartDate}
+                endDate={reportEndDate}
+              />
+            </DeferredSection>
+          </div>
+        )}
+        {valid && !denied && (
+          <div
+            className="sales-operations-grid sales-section-anchor"
+            id="sales-operations-section"
+          >
+            <div className="sales-hour-card">
+              <DeferredSection
+                label="peak hours"
+                placeholder={
+                  <section className="daily-analytics">
+                    <h2>Peak Hours</h2>
+                    <ReportSkeleton label="Loading peak hours…" chart />
+                  </section>
+                }
+              >
+                <PeakHours
+                  compact
+                  userId={userId}
+                  shopId={shopId}
+                  startDate={reportStartDate}
+                  endDate={reportEndDate}
+                />
+              </DeferredSection>
+            </div>
+            <div className="sales-prep-card">
+              <DeferredSection
+                label="average preparation time"
+                placeholder={
+                  <section className="daily-analytics">
+                    <h2>Average Prep Time</h2>
+                    <PreparationMetricSkeleton />
+                  </section>
+                }
+              >
+                <AveragePrepTime
+                  compact
+                  userId={userId}
+                  shopId={shopId}
+                  startDate={reportStartDate}
+                  endDate={reportEndDate}
+                />
+              </DeferredSection>
+            </div>
+          </div>
+        )}
+        {report && (
           <section
             className="sales-recent-orders"
             aria-labelledby="sales-recent-title"
           >
             <header className="sales-panel-heading">
               <div>
-                <p className="sales-kicker">FRESH FROM THE COUNTER</p>
                 <h2 id="sales-recent-title">Recent Orders</h2>
               </div>
               {role === "OWNER" && (
@@ -512,11 +859,21 @@ function SalesWorkspace({ userId }: { userId: string }) {
                   No completed orders for this{" "}
                   {custom ? "date range" : "business day"}.
                 </p>
-                <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => {
-                  const control = document.getElementById(custom ? "custom-sales-start" : "sales-date");
-                  control?.scrollIntoView?.({ block: "center" });
-                  control?.focus();
-                }}>Choose another reporting period</Button>
+                <Button
+                  variant="outline"
+                  size="inherit"
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => {
+                    const control = document.getElementById(
+                      custom ? "custom-sales-start" : "sales-date",
+                    );
+                    control?.scrollIntoView?.({ block: "center" });
+                    control?.focus();
+                  }}
+                >
+                  Choose another reporting period
+                </Button>
               </div>
             ) : (
               <>
@@ -527,16 +884,13 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 </div>
                 <ol
                   className="sales-recent-list"
-                    id="sales-recent-list"
+                  id="sales-recent-list"
                   aria-label="Recent completed orders, newest first"
                 >
                   {visibleRecentOrders.map((order) => (
                     <li key={order.id}>
                       <div className="sales-recent-identity">
-                        <span
-                          className="sales-receipt-icon"
-                          aria-hidden="true"
-                        >
+                        <span className="sales-receipt-icon" aria-hidden="true">
                           <FiClipboard />
                         </span>
                         <div>
@@ -571,360 +925,28 @@ function SalesWorkspace({ userId }: { userId: string }) {
               <span>
                 <FiCheck aria-hidden="true" /> Saved, paid & completed
               </span>
-              <span>{visibleRecentOrders.length} of {report.recentOrders.length} recent orders shown</span>
+              <span>
+                {visibleRecentOrders.length} of {report.recentOrders.length}{" "}
+                recent orders shown
+              </span>
             </div>
             {report.recentOrders.length > 3 && (
-              <Button variant="outline" aria-expanded={recentExpanded}
+              <Button
+                variant="outline"
+                aria-expanded={recentExpanded}
                 aria-controls="sales-recent-list"
-                onClick={() => setRecentExpandedFor(recentExpanded ? null : reportPeriodKey)}>
-                {recentExpanded ? "Show fewer recent orders" : `Show all ${report.recentOrders.length} recent orders`}
+                onClick={() =>
+                  setRecentExpandedFor(recentExpanded ? null : reportPeriodKey)
+                }
+              >
+                {recentExpanded
+                  ? "Show fewer recent orders"
+                  : `Show all ${report.recentOrders.length} recent orders`}
               </Button>
             )}
           </section>
-        </section>
-      )}
-      {!denied && shortcuts.length > 0 && (
-        <nav className="sales-management-shortcuts" aria-label="Management shortcuts">
-          <span>Manage your shop</span>
-          {shortcuts.map(({ path, label, icon: Icon }) => (
-            <Link key={path} to={`${shopPath(shopId)}/${path}`}>
-              <Icon aria-hidden="true" />
-              {label}
-              <FiArrowUpRight aria-hidden="true" />
-            </Link>
-          ))}
-        </nav>
-      )}
-      <div className="sales-explore-heading">
-        <h2>Explore reports</h2>
-        <p>Trends, payments and operations for the selected reporting period.</p>
+        )}
       </div>
-      <nav className="sales-section-nav" aria-label="Sales dashboard sections">
-        <a href="#sales-overview">
-          <FiGrid aria-hidden="true" />
-          Overview
-        </a>
-        <a href="#sales-trends-section">
-          <FiTrendingUp aria-hidden="true" />
-          Trends
-        </a>
-        <a href="#sales-payment-section">
-          <FiPieChart aria-hidden="true" />
-          Payments
-        </a>
-        <a href="#sales-products-section">
-          <FiLayers aria-hidden="true" />
-          Products
-        </a>
-        <a href="#sales-operations-section">
-          <FiActivity aria-hidden="true" />
-          Operations
-        </a>
-        <a href="#sales-history-section" onClick={() => setHistoryOpen(true)}>
-          <FiBarChart2 aria-hidden="true" />
-          History
-        </a>
-      </nav>
-      {valid && !denied && (
-        <div id="sales-trends-section" className="sales-section-anchor">
-          <DeferredSection
-            label="sales trends"
-            placeholder={
-              <section className="daily-analytics">
-                <h2>Sales Trends</h2>
-                <ReportSkeleton
-                  label="Loading sales trends…"
-                  chart
-                />
-              </section>
-            }
-          >
-            <SalesTrends
-              userId={userId}
-              shopId={shopId}
-              startDate={reportStartDate}
-              endDate={reportEndDate}
-            />
-          </DeferredSection>
-        </div>
-      )}
-      {report && (
-        <>
-          <div
-            className="sales-payment-detail sales-section-anchor"
-            id="sales-payment-section"
-            aria-busy={query.isFetching}
-          >
-            <section
-              className="sales-payments"
-              aria-labelledby="sales-payments-title"
-            >
-              <header className="sales-panel-heading">
-                <div>
-                  <p className="sales-kicker">THE PAYMENT MIX</p>
-                  <h2 id="sales-payments-title">Payment Breakdown</h2>
-                </div>
-                <span className="sales-panel-emblem">
-                  <FiCreditCard aria-hidden="true" />
-                </span>
-              </header>
-              <p className="sales-range-help">
-                {prettyDate} · Manila (UTC+8). Payment methods for the selected
-                report period.
-              </p>
-              <div
-                className="analytics-period-toggle sales-payment-basis"
-                role="group"
-                aria-label="Payment mix basis"
-              >
-                <Button variant="outline" size="inherit" type="submit"
-                  className="secondary-button"
-                  aria-pressed={paymentBasis === "SALES"}
-                  onClick={() => setPaymentBasis("SALES")}
-                >
-                  Sales share
-                </Button>
-                <Button variant="outline" size="inherit" type="submit"
-                  className="secondary-button"
-                  aria-pressed={paymentBasis === "ORDERS"}
-                  onClick={() => setPaymentBasis("ORDERS")}
-                >
-                  Order share
-                </Button>
-              </div>
-              <div className="sales-payment-visual">
-                <div className="sales-payment-ring" aria-hidden="true">
-                  <svg viewBox="0 0 160 160">
-                    <circle
-                      className="sales-ring-track"
-                      cx="80"
-                      cy="80"
-                      r="64"
-                      fill="none"
-                      strokeWidth="13"
-                    />
-                    {segments.map((segment, index) => (
-                      <circle
-                        key={segment.paymentMethod}
-                        className={`sales-method-${index}`}
-                        cx="80"
-                        cy="80"
-                        r="64"
-                        fill="none"
-                        strokeWidth="13"
-                        pathLength="100"
-                        strokeDasharray={`${segment.share} ${100 - segment.share}`}
-                        strokeDashoffset={-segment.offset}
-                        transform="rotate(-90 80 80)"
-                      />
-                    ))}
-                  </svg>
-                  <div>
-                    <strong>{largestMix > 0n ? "100%" : "0%"}</strong>
-                    <span>
-                      {paymentBasis === "SALES" ? "sales mix" : "order mix"}
-                    </span>
-                  </div>
-                </div>
-                <div className="sales-payment-context">
-                  <span className="sales-kicker">GROSS SALES</span>
-                  <strong>{formatCartPrice(report.totalSales)}</strong>
-                  <p>
-                    {countFormat.format(report.completedOrders)} eligible
-                    orders.
-                    <br />
-                    The ring and bars show{" "}
-                    {paymentBasis === "SALES" ? "sales share" : "order share"}.
-                  </p>
-                </div>
-              </div>
-              {leadingMethods.length > 0 && (
-                <p className="sales-payment-insight" role="status">
-                  {paymentBasis === "SALES"
-                    ? "Largest sales total"
-                    : "Most used"}
-                  :{" "}
-                  {leadingMethods
-                    .map((entry) => paymentLabels[entry.paymentMethod])
-                    .join(", ")}{" "}
-                  ·{" "}
-                  {paymentBasis === "SALES"
-                    ? formatCartPrice(leadingMethods[0].totalSales)
-                    : `${countFormat.format(leadingMethods[0].orders)} ${leadingMethods[0].orders === 1 ? "order" : "orders"}`}
-                  {leadingMethods.length > 1 ? " each" : ""}.
-                </p>
-              )}
-              {report.completedOrders > 0 &&
-                report.totalSales === "0.00" &&
-                paymentBasis === "SALES" && (
-                  <InlineMessage tone="info">
-                    Sales total is ₱0.00, so sales shares are zero. Switch to
-                    Order share to see the payment mix by order count.
-                  </InlineMessage>
-                )}
-              {report.completedOrders === 0 && (
-                <p className="sales-empty-note">
-                  No eligible payments for this{" "}
-                  {custom ? "date range" : "business day"}.
-                </p>
-              )}
-              <Table containerClassName="sales-payment-table-scroll" scrollLabel="Payment method shares table" className="sales-payment-table">
-                  <caption className="sr-only">
-                    Sales and order counts by payment method
-                  </caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Method</th>
-                      <th scope="col">Orders</th>
-                      <th
-                        scope="col"
-                        className={
-                          paymentBasis === "ORDERS" ? "is-selected" : undefined
-                        }
-                      >
-                        Order share
-                      </th>
-                      <th scope="col">Sales</th>
-                      <th
-                        scope="col"
-                        className={
-                          paymentBasis === "SALES" ? "is-selected" : undefined
-                        }
-                      >
-                        Sales share
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {segments.map((entry, index) => (
-                      <tr key={entry.paymentMethod}>
-                        <th scope="row">
-                          <span
-                            className={`sales-method-dot sales-method-${index}`}
-                            aria-hidden="true"
-                          />
-                          {paymentLabels[entry.paymentMethod]}
-                          <span
-                            className="sales-method-track"
-                            aria-hidden="true"
-                          >
-                            <span
-                              className={`sales-method-${index}`}
-                              style={
-                                {
-                                  "--share": `${entry.share}%`,
-                                } as CSSProperties
-                              }
-                            />
-                          </span>
-                        </th>
-                        <td>{countFormat.format(entry.orders)}</td>
-                        <td
-                          className={
-                            paymentBasis === "ORDERS"
-                              ? "is-selected"
-                              : undefined
-                          }
-                        >
-                          {entry.orderShare}
-                        </td>
-                        <td>{formatCartPrice(entry.totalSales)}</td>
-                        <td
-                          className={
-                            paymentBasis === "SALES" ? "is-selected" : undefined
-                          }
-                        >
-                          {entry.salesShare}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <th scope="row">All methods</th>
-                      <td>{countFormat.format(report.completedOrders)}</td>
-                      <td>
-                        {report.completedOrders > 0 ? "100.00%" : "0.00%"}
-                      </td>
-                      <td>{formatCartPrice(report.totalSales)}</td>
-                      <td>
-                        {report.totalSales === "0.00" ? "0.00%" : "100.00%"}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </Table>
-              <p className="sales-panel-footnote">
-                Confirmed, paid, completed order totals only; cash tender/change
-                are excluded. Zero-value paid orders count toward order share.
-                Shares are rounded to 0.01% and adjusted to total 100% when the
-                basis is nonzero.
-              </p>
-            </section>
-          </div>
-        </>
-      )}
-      {valid && !denied && (
-        <div className="sales-section-anchor" id="sales-products-section">
-          <DeferredSection
-            label="top products"
-            placeholder={
-              <section className="daily-analytics">
-                <h2>Top Products</h2>
-                <ReportSkeleton label="Loading top products…" />
-              </section>
-            }
-          >
-            <TopProducts
-              userId={userId}
-              shopId={shopId}
-              startDate={reportStartDate}
-              endDate={reportEndDate}
-            />
-          </DeferredSection>
-        </div>
-      )}
-      {valid && !denied && (
-        <div
-          className="sales-operations-grid sales-section-anchor"
-          id="sales-operations-section"
-        >
-          <DeferredSection
-            label="average preparation time"
-            placeholder={
-              <section className="daily-analytics">
-                <h2>Average Prep Time</h2>
-                <PreparationMetricSkeleton />
-              </section>
-            }
-          >
-            <AveragePrepTime
-              userId={userId}
-              shopId={shopId}
-              startDate={reportStartDate}
-              endDate={reportEndDate}
-            />
-          </DeferredSection>
-          <DeferredSection
-            label="peak hours"
-            placeholder={
-              <section className="daily-analytics">
-                <h2>Peak Hours</h2>
-                <ReportSkeleton
-                  label="Loading peak hours…"
-                  chart
-                />
-              </section>
-            }
-          >
-            <PeakHours
-              userId={userId}
-              shopId={shopId}
-              startDate={reportStartDate}
-              endDate={reportEndDate}
-            />
-          </DeferredSection>
-        </div>
-      )}
       <details
         className="sales-history sales-section-anchor"
         id="sales-history-section"
@@ -936,7 +958,6 @@ function SalesWorkspace({ userId }: { userId: string }) {
             <FiBarChart2 aria-hidden="true" />
           </span>
           <span>
-            <span className="sales-kicker">EXPLORE YOUR PERFORMANCE</span>
             <strong>Daily, weekly & monthly history</strong>
             <span>
               Explore the selected reporting period by day, week or month.

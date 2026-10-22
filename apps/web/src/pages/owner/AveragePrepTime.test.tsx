@@ -60,6 +60,7 @@ it("shows the defined pair, measured average, sample coverage and exclusions", a
   expect(screen.getByText("Excluded orders").parentElement).toHaveTextContent(
     "3",
   );
+  fireEvent.click(screen.getByText("How preparation time is measured"));
   expect(
     screen.getByText(
       "Excluded: 2 with missing timestamps; 1 with invalid timestamp order.",

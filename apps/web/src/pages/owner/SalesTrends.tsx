@@ -28,11 +28,13 @@ export function SalesTrends({
   shopId,
   startDate,
   endDate,
+  compact = false,
 }: {
   userId: string;
   shopId: string;
   startDate: string;
   endDate: string;
+  compact?: boolean;
 }) {
   const valid = !!salesTrendRanges(startDate, endDate);
   const query = useQuery({
@@ -67,14 +69,17 @@ export function SalesTrends({
     >
       <div className="daily-analytics-heading">
         <div>
-          <p className="sales-eyebrow">ANALYTICS / COMPARISON</p>
+          {!compact && <p className="sales-eyebrow">ANALYTICS / COMPARISON</p>}
           <h2 id="sales-trends-title">Sales Trends</h2>
-          <p>
-            {startDate} – {endDate} · Manila (UTC+8). Compared with the
-            immediately preceding equal-length period.
-          </p>
+          {!compact && (
+            <p>
+              {startDate} – {endDate} · Manila (UTC+8). Compared with the
+              immediately preceding equal-length period.
+            </p>
+          )}
         </div>
-        <RefreshButton label="Refresh sales trends"
+        <RefreshButton
+          label="Refresh sales trends"
           pending={query.isFetching}
           pendingLabel="Refreshing sales trends..."
           disabled={!valid || query.isFetching}
@@ -91,18 +96,31 @@ export function SalesTrends({
         <ReportSkeleton label="Loading sales trends…" chart />
       )}
       {valid && query.isError && (
-        <ErrorState error={query.error} resource="sales trends"
+        <ErrorState
+          error={query.error}
+          resource="sales trends"
           permissionMessage="Sales trends access is unavailable."
-          pending={query.isFetching} onRetry={() => query.refetch()}
-          />
+          pending={query.isFetching}
+          onRetry={() => query.refetch()}
+        />
       )}
       {current && previous && (
         <>
-          <p className="sales-range-help sales-comparison-periods">
-            Selected: {current.startDate} – {current.endDate}. Previous:{" "}
-            {previous.startDate} – {previous.endDate}. Both periods contain{" "}
-            {current.days.length} day(s).
-          </p>
+          {compact ? (
+            <p className="sales-range-help">
+              Compared with {previous.startDate}
+              {previous.endDate !== previous.startDate
+                ? ` – ${previous.endDate}`
+                : ""}
+              .
+            </p>
+          ) : (
+            <p className="sales-range-help sales-comparison-periods">
+              Selected: {current.startDate} – {current.endDate}. Previous:{" "}
+              {previous.startDate} – {previous.endDate}. Both periods contain{" "}
+              {current.days.length} day(s).
+            </p>
+          )}
           {endDate >= salesBusinessDate() && (
             <InlineMessage tone="info">
               The selected period includes today or future dates and is not
@@ -111,9 +129,13 @@ export function SalesTrends({
             </InlineMessage>
           )}
           {current.completedOrders === 0 && previous.completedOrders === 0 && (
-            <ReportEmptyState title="No completed sales in either period."
+            <ReportEmptyState
+              title="No completed sales in either period."
               description="There is no sales activity to compare yet. Choose another reporting period, or check again after paid orders are completed."
-              label="sales trends" pending={query.isFetching} onRefresh={() => void query.refetch()} />
+              label="sales trends"
+              pending={query.isFetching}
+              onRefresh={() => void query.refetch()}
+            />
           )}
           <dl className="sales-trend-summary">
             <div
@@ -190,49 +212,52 @@ export function SalesTrends({
           </details>
           <details className="sales-comparison-details">
             <summary>View daily comparison data</summary>
-            <Table containerClassName="daily-analytics-table" scrollLabel="Sales trends daily comparison">
-                <caption>
-                  Daily gross sales on a shared scale. Solid bars: selected
-                  period; outlined bars: previous period. Zero-sale days are
-                  included.
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Selected date</th>
-                    <th scope="col">Sales / orders</th>
-                    <th scope="col">Previous date</th>
-                    <th scope="col">Sales / orders</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {current.days.map((day, i) => {
-                    const prior = previous.days[i];
-                    return (
-                      <tr key={day.businessDate}>
-                        <th scope="row">{day.businessDate}</th>
-                        <td>
-                          <span className="sales-trend-bar" aria-hidden="true">
-                            <span style={{ width: width(day.totalSales) }} />
-                          </span>
-                          {formatCartPrice(day.totalSales)} /{" "}
-                          {day.completedOrders.toLocaleString("en-PH")}
-                        </td>
-                        <td>{prior.businessDate}</td>
-                        <td>
-                          <span
-                            className="sales-trend-bar previous"
-                            aria-hidden="true"
-                          >
-                            <span style={{ width: width(prior.totalSales) }} />
-                          </span>
-                          {formatCartPrice(prior.totalSales)} /{" "}
-                          {prior.completedOrders.toLocaleString("en-PH")}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
+            <Table
+              containerClassName="daily-analytics-table"
+              scrollLabel="Sales trends daily comparison"
+            >
+              <caption>
+                Daily gross sales on a shared scale. Solid bars: selected
+                period; outlined bars: previous period. Zero-sale days are
+                included.
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Selected date</th>
+                  <th scope="col">Sales / orders</th>
+                  <th scope="col">Previous date</th>
+                  <th scope="col">Sales / orders</th>
+                </tr>
+              </thead>
+              <tbody>
+                {current.days.map((day, i) => {
+                  const prior = previous.days[i];
+                  return (
+                    <tr key={day.businessDate}>
+                      <th scope="row">{day.businessDate}</th>
+                      <td>
+                        <span className="sales-trend-bar" aria-hidden="true">
+                          <span style={{ width: width(day.totalSales) }} />
+                        </span>
+                        {formatCartPrice(day.totalSales)} /{" "}
+                        {day.completedOrders.toLocaleString("en-PH")}
+                      </td>
+                      <td>{prior.businessDate}</td>
+                      <td>
+                        <span
+                          className="sales-trend-bar previous"
+                          aria-hidden="true"
+                        >
+                          <span style={{ width: width(prior.totalSales) }} />
+                        </span>
+                        {formatCartPrice(prior.totalSales)} /{" "}
+                        {prior.completedOrders.toLocaleString("en-PH")}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
           </details>
         </>
       )}

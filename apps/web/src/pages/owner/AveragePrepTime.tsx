@@ -15,11 +15,13 @@ export function AveragePrepTime({
   shopId,
   startDate,
   endDate,
+  compact = false,
 }: {
   userId: string;
   shopId: string;
   startDate: string;
   endDate: string;
+  compact?: boolean;
 }) {
   const query = useQuery({
     queryKey: ["average-prep-time", userId, shopId, startDate, endDate],
@@ -40,14 +42,17 @@ export function AveragePrepTime({
     >
       <div className="daily-analytics-heading">
         <div>
-          <p className="sales-eyebrow">ANALYTICS / PREPARATION</p>
+          {!compact && <p className="sales-eyebrow">ANALYTICS / PREPARATION</p>}
           <h2 id="average-prep-time-title">Average Prep Time</h2>
-          <p className="sales-panel-period">
-            {startDate} – {endDate} · Manila (UTC+8), both dates included.
-            Confirmed, paid, completed orders only.
-          </p>
+          {!compact && (
+            <p className="sales-panel-period">
+              {startDate} – {endDate} · Manila (UTC+8), both dates included.
+              Confirmed, paid, completed orders only.
+            </p>
+          )}
         </div>
-        <RefreshButton label="Refresh prep time"
+        <RefreshButton
+          label="Refresh prep time"
           pending={query.isFetching}
           pendingLabel="Refreshing preparation time..."
           disabled={query.isFetching}
@@ -55,25 +60,31 @@ export function AveragePrepTime({
         />
       </div>
       <p className="sales-range-help sales-prep-pair">
-        Preparing → Ready. Only complete, valid timestamp pairs contribute to
-        your average.
+        {compact
+          ? "Preparing → Ready"
+          : "Preparing → Ready. Only complete, valid timestamp pairs contribute to your average."}
       </p>
-      {query.isPending && (
-        <PreparationMetricSkeleton />
-      )}
+      {query.isPending && <PreparationMetricSkeleton />}
       {query.isError && (
-        <ErrorState error={query.error} resource="average preparation time"
+        <ErrorState
+          error={query.error}
+          resource="average preparation time"
           permissionMessage="Preparation report access is unavailable. Automatic refresh is paused; use Refresh prep time to check access again."
-          pending={query.isFetching} onRetry={() => query.refetch()}
-          />
+          pending={query.isFetching}
+          onRetry={() => query.refetch()}
+        />
       )}
       {report && (
         <>
           {report.averageDurationMs === null ? (
-            <ReportEmptyState title="No timing sample yet."
+            <ReportEmptyState
+              title="No timing sample yet."
               description="No preparation data. No eligible orders have a valid Preparing → Ready timestamp pair in this period."
               guidance="Choose another period or check after the team finishes preparing orders."
-              label="preparation data" pending={query.isFetching} onRefresh={() => void query.refetch()} />
+              label="preparation data"
+              pending={query.isFetching}
+              onRefresh={() => void query.refetch()}
+            />
           ) : (
             <p className="prep-time-average" role="status">
               {formatPreparationDuration(report.averageDurationMs)}
@@ -83,30 +94,30 @@ export function AveragePrepTime({
               </span>
             </p>
           )}
-          <dl className="prep-time-coverage">
-            <div>
-              <dt>Eligible orders</dt>
-              <dd>{report.eligibleOrders.toLocaleString("en-PH")}</dd>
-            </div>
-            <div>
-              <dt>Measured orders</dt>
-              <dd>{report.measuredOrders.toLocaleString("en-PH")}</dd>
-            </div>
-            <div>
-              <dt>Excluded orders</dt>
-              <dd>{report.excludedOrders.toLocaleString("en-PH")}</dd>
-            </div>
-          </dl>
-          {report.excludedOrders > 0 && (
-            <p className="sales-range-help">
-              Excluded: {report.missingTimestamps.toLocaleString("en-PH")} with
-              missing timestamps;{" "}
-              {report.invalidTimestamps.toLocaleString("en-PH")} with invalid
-              timestamp order.
-            </p>
-          )}
           <details className="prep-time-definition">
             <summary>How preparation time is measured</summary>
+            <dl className="prep-time-coverage">
+              <div>
+                <dt>Eligible orders</dt>
+                <dd>{report.eligibleOrders.toLocaleString("en-PH")}</dd>
+              </div>
+              <div>
+                <dt>Measured orders</dt>
+                <dd>{report.measuredOrders.toLocaleString("en-PH")}</dd>
+              </div>
+              <div>
+                <dt>Excluded orders</dt>
+                <dd>{report.excludedOrders.toLocaleString("en-PH")}</dd>
+              </div>
+            </dl>
+            {report.excludedOrders > 0 && (
+              <p className="sales-range-help">
+                Excluded: {report.missingTimestamps.toLocaleString("en-PH")}{" "}
+                with missing timestamps;{" "}
+                {report.invalidTimestamps.toLocaleString("en-PH")} with invalid
+                timestamp order.
+              </p>
+            )}
             <p className="sales-range-help">
               Ready time minus Preparing start, averaged once per measured order
               and rounded to the nearest millisecond. Ready must be at or after

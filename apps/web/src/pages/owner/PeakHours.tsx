@@ -15,11 +15,13 @@ export function PeakHours({
   shopId,
   startDate,
   endDate,
+  compact = false,
 }: {
   userId: string;
   shopId: string;
   startDate: string;
   endDate: string;
+  compact?: boolean;
 }) {
   const query = useQuery({
     queryKey: ["peak-hours", userId, shopId, startDate, endDate],
@@ -42,43 +44,43 @@ export function PeakHours({
     >
       <div className="daily-analytics-heading">
         <div>
-          <p className="sales-eyebrow">ANALYTICS / HOURS</p>
+          {!compact && <p className="sales-eyebrow">ANALYTICS / HOURS</p>}
           <h2 id="peak-hours-title">Peak Hours</h2>
-          <p className="sales-panel-period">
-            {startDate} – {endDate} · Manila (UTC+8), both dates included.
-            Confirmed, paid, completed orders only.
-          </p>
+          {!compact && (
+            <p className="sales-panel-period">
+              {startDate} – {endDate} · Manila (UTC+8), both dates included.
+              Confirmed, paid, completed orders only.
+            </p>
+          )}
         </div>
-        <RefreshButton label="Refresh peak hours"
+        <RefreshButton
+          label="Refresh peak hours"
           pending={query.isFetching}
           pendingLabel="Refreshing peak hours..."
           disabled={query.isFetching}
           onClick={() => void query.refetch()}
         />
       </div>
-      <details className="sales-calculation-notes">
-        <summary>How hourly activity is counted</summary>
-        <p className="sales-range-help">
-          Completion activity by local hour. Orders count when completed, rather
-          than when placed or paid. Counts are pooled across all selected dates;
-          24:00 is midnight at the end of the day.
-        </p>
-      </details>
-      {query.isPending && (
-        <ReportSkeleton label="Loading peak hours…" chart />
-      )}
+      {query.isPending && <ReportSkeleton label="Loading peak hours…" chart />}
       {query.isError && (
-        <ErrorState error={query.error} resource="peak hours"
+        <ErrorState
+          error={query.error}
+          resource="peak hours"
           permissionMessage="Peak hours access is unavailable. Automatic refresh is paused; use Refresh peak hours to check access again."
-          pending={query.isFetching} onRetry={() => query.refetch()}
-          />
+          pending={query.isFetching}
+          onRetry={() => query.refetch()}
+        />
       )}
       {report && (
         <>
           {report.completedOrders === 0 ? (
-            <ReportEmptyState title="No hourly activity yet."
+            <ReportEmptyState
+              title="No hourly activity yet."
               description="No eligible completed orders in this period. No busiest hour yet."
-              label="hourly activity" pending={query.isFetching} onRefresh={() => void query.refetch()} />
+              label="hourly activity"
+              pending={query.isFetching}
+              onRefresh={() => void query.refetch()}
+            />
           ) : (
             <p className="daily-analytics-summary" role="status">
               Busiest {report.peakHours.length === 1 ? "hour" : "hours"}:{" "}
@@ -174,6 +176,14 @@ export function PeakHours({
           </details>
         </>
       )}
+      <details className="sales-calculation-notes">
+        <summary>How hourly activity is counted</summary>
+        <p className="sales-range-help">
+          Completion activity by local hour. Orders count when completed, rather
+          than when placed or paid. Counts are pooled across all selected dates;
+          24:00 is midnight at the end of the day.
+        </p>
+      </details>
     </section>
   );
 }

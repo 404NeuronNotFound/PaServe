@@ -177,73 +177,105 @@ const customReport = (startDate = "2026-10-15", endDate = "2026-10-17") => ({
     }),
   ],
 });
-it.each(["OWNER", "ADMIN", "MANAGER"] as const)("keeps %s management shortcuts scoped to the active shop and permitted roles", async (role) => {
-  setup(role);
-  const navigation = screen.getByRole("navigation", { name: "Management shortcuts" });
-  expect(within(navigation).getByRole("link", { name: "Kitchen / Barista" })).toHaveAttribute("href", "/app/shops/a/kitchen");
-  expect(within(navigation).getByRole("link", { name: "Products" })).toHaveAttribute("href", "/app/shops/a/products");
-  if (role === "OWNER") {
-    expect(within(navigation).getByRole("link", { name: "Orders" })).toHaveAttribute("href", "/app/shops/a/orders");
-    expect(within(navigation).getByRole("link", { name: "Staff & invitations" })).toHaveAttribute("href", "/app/shops/a/staff");
-  } else {
-    expect(within(navigation).queryByRole("link", { name: "Orders" })).not.toBeInTheDocument();
-    expect(within(navigation).queryByRole("link", { name: "Staff & invitations" })).not.toBeInTheDocument();
-  }
-  await screen.findByRole("region", { name: "Business overview" });
-});
-it("shows applied-period key figures before detailed report navigation", async () => {
+it("keeps charts ahead of recent activity and removes duplicate navigation", async () => {
   setup();
-  const overview = await screen.findByRole("region", { name: "Business overview" });
+  await screen.findByRole("region", { name: "Business overview" });
+  expect(
+    screen.queryByRole("navigation", { name: "Management shortcuts" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("navigation", { name: "Sales dashboard sections" }),
+  ).not.toBeInTheDocument();
+  const activity = screen.getByRole("region", { name: "Recent Orders" });
+  expect(
+    document
+      .getElementById("sales-trends-section")!
+      .compareDocumentPosition(activity) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    screen.getByText("View payment details").closest("details"),
+  ).not.toHaveAttribute("open");
+});
+it("shows applied-period key figures before charts", async () => {
+  setup();
+  const overview = await screen.findByRole("region", {
+    name: "Business overview",
+  });
   expect(overview).toHaveTextContent("October 16, 2026");
   for (const title of ["Number of Orders", "Average Order Value", "Items Sold"])
-    expect(within(overview).getByRole("heading", { name: title })).toBeVisible();
-  const reportNavigation = screen.getByRole("navigation", { name: "Sales dashboard sections" });
-  expect(overview.compareDocumentPosition(reportNavigation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      within(overview).getByRole("heading", { name: title }),
+    ).toBeVisible();
+  expect(
+    overview.compareDocumentPosition(
+      document.getElementById("sales-trends-section")!,
+    ) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
   expect(DailyAnalytics).not.toHaveBeenCalled();
 });
-it("puts a bounded recent-activity preview in the overview and expands it without another request", async () => {
-  const orders = Array.from({ length: 6 }, (_, index) => recentOrder({
-    id: `order-${index}`,
-    orderNumber: `ORD-00000${6 - index}`,
-  }));
+it("puts a bounded recent-activity preview after the graphs and expands it without another request", async () => {
+  const orders = Array.from({ length: 6 }, (_, index) =>
+    recentOrder({
+      id: `order-${index}`,
+      orderNumber: `ORD-00000${6 - index}`,
+    }),
+  );
   vi.mocked(getDailySales).mockImplementation(async (shopId, businessDate) => ({
-    shopId, businessDate, ...salesBusinessDayBounds(businessDate)!,
-    timezone: "Asia/Manila", currency: "PHP", totalSales: "1.20",
-    completedOrders: 6, itemsSold: 6,
-    paymentBreakdown: breakdown("1.20", 6), recentOrders: orders,
+    shopId,
+    businessDate,
+    ...salesBusinessDayBounds(businessDate)!,
+    timezone: "Asia/Manila",
+    currency: "PHP",
+    totalSales: "1.20",
+    completedOrders: 6,
+    itemsSold: 6,
+    paymentBreakdown: breakdown("1.20", 6),
+    recentOrders: orders,
   }));
   setup();
-  const overview = await screen.findByRole("region", { name: "Business overview" });
-  const activity = within(overview).getByRole("region", { name: "Recent Orders" });
-  const list = within(activity).getByRole("list", { name: "Recent completed orders, newest first" });
+  await screen.findByRole("region", { name: "Business overview" });
+  const activity = screen.getByRole("region", { name: "Recent Orders" });
+  const list = within(activity).getByRole("list", {
+    name: "Recent completed orders, newest first",
+  });
   expect(within(list).getAllByRole("listitem")).toHaveLength(3);
   expect(list).toHaveTextContent("ORD-000006");
   expect(list).not.toHaveTextContent("ORD-000003");
-  expect(activity.compareDocumentPosition(document.getElementById("sales-trends-section")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(
+    document
+      .getElementById("sales-trends-section")!
+      .compareDocumentPosition(activity) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
   const requests = vi.mocked(getDailySales).mock.calls.length;
-  const expand = within(activity).getByRole("button", { name: "Show all 6 recent orders" });
+  const expand = within(activity).getByRole("button", {
+    name: "Show all 6 recent orders",
+  });
   expect(expand).toHaveAttribute("aria-expanded", "false");
   fireEvent.click(expand);
   expect(within(list).getAllByRole("listitem")).toHaveLength(6);
   expect(activity).toHaveTextContent("6 of 6 recent orders shown");
   expect(getDailySales).toHaveBeenCalledTimes(requests);
-  fireEvent.click(within(activity).getByRole("button", { name: "Show fewer recent orders" }));
+  fireEvent.click(
+    within(activity).getByRole("button", { name: "Show fewer recent orders" }),
+  );
   expect(within(list).getAllByRole("listitem")).toHaveLength(3);
-  fireEvent.click(within(activity).getByRole("button", { name: "Show all 6 recent orders" }));
-  fireEvent.change(screen.getByLabelText("Business date"), { target: { value: "2026-10-15" } });
-  await waitFor(() => expect(screen.getByRole("button", { name: "Show all 6 recent orders" })).toHaveAttribute("aria-expanded", "false"));
+  fireEvent.click(
+    within(activity).getByRole("button", { name: "Show all 6 recent orders" }),
+  );
+  fireEvent.change(screen.getByLabelText("Business date"), {
+    target: { value: "2026-10-15" },
+  });
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Show all 6 recent orders" }),
+    ).toHaveAttribute("aria-expanded", "false"),
+  );
 });
 it("starts with the overview and loads shared-period history only when opened", async () => {
   setup();
   await screen.findByText("₱0.30", { selector: ".sales-amount" });
   expect(DailyAnalytics).not.toHaveBeenCalled();
-  const navigation = screen.getByRole("navigation", {
-    name: "Sales dashboard sections",
-  });
-  expect(
-    within(navigation).getByRole("link", { name: "Trends" }),
-  ).toHaveAttribute("href", "#sales-trends-section");
-  fireEvent.click(within(navigation).getByRole("link", { name: "History" }));
+  await openHistory();
   expect(document.getElementById("sales-history-section")).toHaveAttribute(
     "open",
   );
@@ -258,7 +290,7 @@ it("uses the one central picker for history, single-day cards and applied custom
   vi.mocked(getCustomSales).mockResolvedValue(customReport());
   setup();
   await screen.findByText("₱0.30", { selector: ".sales-amount" });
-  fireEvent.click(screen.getByRole("link", { name: "History" }));
+  await openHistory();
   fireEvent.change(screen.getByLabelText("Business date"), {
     target: { value: "2026-10-14" },
   });
@@ -284,7 +316,7 @@ it("uses the one central picker for history, single-day cards and applied custom
     endDate: "2026-10-17",
     enabled: true,
   });
-  expect(screen.getByRole("link", { name: "History" })).toBeVisible();
+  expect(screen.getByText("Daily, weekly & monthly history")).toBeVisible();
   fireEvent.change(screen.getByLabelText("Start date"), {
     target: { value: "2026-10-13" },
   });
@@ -377,6 +409,7 @@ it("applies one custom range to cards, payments and recent orders only after App
       screen.getByRole("article", { name: "Average Order Value" }),
     ).getByText("₱6.18"),
   ).toBeVisible();
+  fireEvent.click(screen.getByText("View payment details"));
   expect(
     within(screen.getByRole("region", { name: "Payment Breakdown" })).getByRole(
       "row",
@@ -476,18 +509,28 @@ it("hides failed summary values on refresh failure and retries the applied range
 
 it("lets independent reports render while the primary summary is still pending", async () => {
   vi.mocked(getDailySales).mockImplementationOnce(() => new Promise(() => {}));
-  vi.mocked(TopProducts).mockImplementation(() => <p>Independent top products</p>);
+  vi.mocked(TopProducts).mockImplementation(() => (
+    <p>Independent top products</p>
+  ));
   setup();
-  expect(screen.getByRole("heading", { name: "Sales dashboard" })).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "Sales dashboard" }),
+  ).toBeVisible();
   expect(await screen.findByText("Independent top products")).toBeVisible();
   expect(screen.getByText("Loading sales…")).toBeInTheDocument();
 });
 
 it("keeps independent reports available when the summary has a network error", async () => {
-  vi.mocked(getDailySales).mockRejectedValueOnce(new Error("Summary unavailable"));
-  vi.mocked(TopProducts).mockImplementation(() => <p>Independent top products</p>);
+  vi.mocked(getDailySales).mockRejectedValueOnce(
+    new Error("Summary unavailable"),
+  );
+  vi.mocked(TopProducts).mockImplementation(() => (
+    <p>Independent top products</p>
+  ));
   setup();
-  expect(await screen.findByRole("alert")).toHaveTextContent("couldn’t refresh sales");
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "couldn’t refresh sales",
+  );
   expect(await screen.findByText("Independent top products")).toBeVisible();
 });
 it("cancels the old range and hides old metrics while another range loads", async () => {
@@ -556,6 +599,7 @@ it("analyzes the applied custom period by sales or order mix without another req
   expect(
     within(region).getByText("Largest sales total: GCash (manual) · ₱60.00."),
   ).toBeVisible();
+  fireEvent.click(within(region).getByText("View payment details"));
   expect(
     within(region).getByRole("row", { name: "Other 1 14.28% ₱0.00 0.00%" }),
   ).toBeVisible();
@@ -584,9 +628,7 @@ it("analyzes the applied custom period by sales or order mix without another req
   fireEvent.change(screen.getByLabelText("Start date"), {
     target: { value: "2026-10-14" },
   });
-  expect(
-    within(region).getByText(/October 15, 2026.*October 17, 2026/),
-  ).toBeVisible();
+  expect(screen.getByText(/October 15, 2026.*October 17, 2026/)).toBeVisible();
   expect(getCustomSales).toHaveBeenCalledTimes(1);
 });
 it("supports order mix when all eligible paid orders have zero sales", async () => {
@@ -610,6 +652,7 @@ it("supports order mix when all eligible paid orders have zero sales", async () 
   const region = await screen.findByRole("region", {
     name: "Payment Breakdown",
   });
+  fireEvent.click(within(region).getByText("View payment details"));
   expect(within(region).getByText(/Sales total is ₱0.00/)).toBeVisible();
   expect(
     within(region).getByRole("row", {
@@ -892,8 +935,12 @@ it("stops automatic polling after access denial and keeps manual retry available
     await vi.advanceTimersByTimeAsync(45000);
   });
   expect(getDailySales).toHaveBeenCalledTimes(calls);
-  expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Choose another shop" })).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Retry" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Choose another shop" }),
+  ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Refresh sales" }));
   await act(async () => {
     await vi.advanceTimersByTimeAsync(25);
@@ -1072,6 +1119,7 @@ it("shows totals and order counts for all four methods, including zero-value pay
   const region = await screen.findByRole("region", {
     name: "Payment Breakdown",
   });
+  fireEvent.click(within(region).getByText("View payment details"));
   const table = within(region).getByRole("table", {
     name: "Sales and order counts by payment method",
   });
@@ -1141,3 +1189,8 @@ it("displays the full eligible order count and refreshes it with the sales total
     screen.getByText("₱1.00", { selector: ".sales-amount" }),
   ).toBeVisible();
 });
+
+async function openHistory() {
+  fireEvent.click(screen.getByText("Daily, weekly & monthly history"));
+  await waitFor(() => expect(DailyAnalytics).toHaveBeenCalled());
+}
