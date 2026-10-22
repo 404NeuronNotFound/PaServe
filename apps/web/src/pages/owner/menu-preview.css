@@ -8,7 +8,6 @@
   flex-direction: column;
 }
 .phase-two .dashboard-content:has(> .menu-preview-page) {
-  padding-block: 16px;
   display: flex;
   flex-direction: column;
 }

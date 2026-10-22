@@ -8,12 +8,25 @@
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  /* Keep existing page width caps; only gutters are shared across screens. */
+  /* Public pages keep their own reading widths; the staff shell owns its gutter. */
   .public-menu.public-menu,
-  .customer-order-page.customer-order-page,
-  .phase-two .dashboard-content {
+  .customer-order-page.customer-order-page {
     padding-inline: max(var(--layout-gutter), env(safe-area-inset-left, 0px))
       max(var(--layout-gutter), env(safe-area-inset-right, 0px));
+  }
+  .phase-two .dashboard-content {
+    padding: var(--workspace-gutter);
+    padding-inline: max(var(--workspace-gutter), env(safe-area-inset-left, 0px))
+      max(var(--workspace-gutter), env(safe-area-inset-right, 0px));
+  }
+  /* A single left edge across every sidebar destination, including nested
+     order views. Internal cards/dialogs retain their own padding and widths. */
+  .phase-two .dashboard-content > :not(.workspace-breadcrumbs) {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-inline: 0;
+    margin-block-start: 0;
   }
   :is(.tables-page, .categories-page, .staff-workspace, .shop-settings-card,
     .cashier-workspace, .kitchen-workspace) {
