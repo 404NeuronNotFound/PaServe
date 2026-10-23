@@ -1,6 +1,6 @@
 import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Table } from "../../components/ui/table";
-import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
+import { ReportSkeleton, SalesReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { salesBusinessDate, salesTrendRanges } from "@paserve/contracts";
@@ -93,7 +93,7 @@ export function SalesTrends({
         </InlineMessage>
       )}
       {valid && query.isPending && (
-        <ReportSkeleton label="Loading sales trends…" chart />
+        compact ? <SalesReportSkeleton kind="trends" label="Loading sales trends…" /> : <ReportSkeleton label="Loading sales trends…" chart />
       )}
       {valid && query.isError && (
         <ErrorState
@@ -137,7 +137,7 @@ export function SalesTrends({
               onRefresh={() => void query.refetch()}
             />
           )}
-          <dl className="sales-trend-summary">
+          {!compact && <dl className="sales-trend-summary">
             <div
               data-direction={change(
                 cents(current.totalSales) - cents(previous.totalSales),
@@ -196,7 +196,7 @@ export function SalesTrends({
                 </p>
               </dd>
             </div>
-          </dl>
+          </dl>}
           <SalesTrendChart
             key={`${current.startDate}:${current.endDate}`}
             current={current}

@@ -5,9 +5,10 @@ import { isAxiosError } from "axios";
 import type { TopProductMetric } from "@paserve/contracts";
 import { getTopProducts } from "../../features/orders/top-products";
 import { formatCartPrice } from "../../lib/money";
-import { InlineMessage } from "../../components/feedback/InlineMessage";
+import { SalesReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { ErrorState } from "../../components/feedback/ErrorState";
 import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
+import { SelectField } from "../../components/forms/SelectField";
 
 const denied = (error: unknown) =>
   isAxiosError(error) && [401, 403, 404].includes(error.response?.status ?? 0);
@@ -61,20 +62,22 @@ export function TopProducts({
         />
       </div>
       <div className="daily-analytics-controls">
-        <label htmlFor="top-products-metric">
-          Rank by
-          <select
+        <div className="top-products-metric">
+          <label htmlFor="top-products-metric">Rank by</label>
+          <SelectField
             id="top-products-metric"
+            label="Rank by"
             value={metric}
-            onChange={(e) => setMetric(e.target.value as TopProductMetric)}
-          >
-            <option value="QUANTITY">Quantity sold</option>
-            <option value="REVENUE">Item revenue</option>
-          </select>
-        </label>
+            onChange={(value) => setMetric(value as TopProductMetric)}
+            options={[
+              { value: "QUANTITY", label: "Quantity sold" },
+              { value: "REVENUE", label: "Item revenue" },
+            ]}
+          />
+        </div>
       </div>
       {query.isPending && (
-        <InlineMessage tone="info">Loading top products…</InlineMessage>
+        <SalesReportSkeleton kind="products" label="Loading top products…" controls={false} />
       )}
       {query.isError && (
         <ErrorState

@@ -49,27 +49,26 @@ export function SalesTrendChart({
         <small>Gross sales · PHP</small>
       </figcaption>
       {current.days.length === 1 ? (
-        <div className="sales-single-comparison">
+        <div className="sales-period-columns">
           {[
             { row: day, label: "Selected period" },
             { row: prior, label: "Previous period" },
           ].map(({ row, label }, i) => (
-            <div className={i === 1 ? "is-previous" : ""} key={label}>
-              <span>
-                {label}
-                <strong>{formatCartPrice(row.totalSales)}</strong>
-              </span>
-              <div className="sales-single-track" aria-hidden="true">
+            <div className={`sales-period-column${i === 1 ? " is-previous" : ""}`} key={label}>
+              <strong>{formatCartPrice(row.totalSales)}</strong>
+              <div className="sales-period-column-plot" aria-hidden="true">
                 <span
-                  style={{ width: `${proportion(row.totalSales) * 100}%` }}
+                  style={{ height: `${proportion(row.totalSales) * 100}%` }}
                 />
               </div>
+              <span className="sales-period-column-label">{label}</span>
               <small>
-                {row.businessDate} ·{" "}
+                {row.businessDate}<br />
                 {row.completedOrders.toLocaleString("en-PH")} orders
               </small>
             </div>
           ))}
+          <p className="sales-period-column-scale">Shared scale · starts at ₱0</p>
         </div>
       ) : (
         <>

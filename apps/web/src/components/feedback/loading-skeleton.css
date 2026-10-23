@@ -16,6 +16,67 @@
   background: color-mix(in srgb, var(--color-muted) 14%, var(--color-surface));
   animation: skeleton-pulse 1.8s ease-in-out infinite;
 }
+.skeleton-sales,
+.skeleton-sales > div[aria-busy="true"] {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.skeleton-sales > div[aria-busy="true"] {
+  gap: 16px;
+  padding-top: 16px;
+}
+.skeleton-sales .skeleton-sales-ring {
+  border-radius: 50%;
+}
+.skeleton-sales-chart {
+  min-height: 360px;
+  gap: 24px;
+}
+.skeleton-sales-columns {
+  display: flex;
+  justify-content: space-evenly;
+  height: clamp(180px, 20vw, 280px);
+  margin-top: auto;
+}
+.skeleton-sales-columns > span {
+  width: 28%;
+  max-width: 130px;
+}
+.skeleton-sales-hours {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  gap: 4px;
+  height: 160px;
+  margin-block: 16px;
+}
+.skeleton-sales-row {
+  display: grid;
+  gap: 12px;
+  padding-block: 14px;
+}
+.skeleton-sales-row-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.skeleton-sales-recent .skeleton-sales-row {
+  min-height: 84px;
+  border-bottom: 1px solid var(--color-border);
+}
+.skeleton-sales-footer {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  margin-top: auto;
+  border-top: 1px solid var(--color-border);
+}
+.skeleton-prep-value {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+}
 .skeleton-session-page {
   max-width: 1400px;
   margin: 0 auto;

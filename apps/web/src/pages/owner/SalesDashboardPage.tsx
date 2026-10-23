@@ -6,7 +6,8 @@ import { PageHeader } from "../../components/paserve/PageHeader";
 import { MetricCard as Metric } from "../../components/paserve/MetricCard";
 import {
   MetricsSkeleton,
-  ReportSkeleton,
+  SalesReportSkeleton,
+  SkeletonBlock,
   PreparationMetricSkeleton,
 } from "../../components/feedback/LoadingSkeleton";
 import { DeferredSection } from "../../components/feedback/DeferredSection";
@@ -493,9 +494,9 @@ function SalesWorkspace({ userId }: { userId: string }) {
             <DeferredSection
               label="sales trends"
               placeholder={
-                <section className="daily-analytics">
-                  <h2>Sales Trends</h2>
-                  <ReportSkeleton label="Loading sales trends…" chart />
+                <section className="daily-analytics sales-trends">
+                  <div className="daily-analytics-heading"><h2>Sales Trends</h2><SkeletonBlock width={44} height={44} /></div>
+                  <SalesReportSkeleton kind="trends" label="Loading sales trends…" />
                 </section>
               }
             >
@@ -507,6 +508,14 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 endDate={reportEndDate}
               />
             </DeferredSection>
+          </div>
+        )}
+        {valid && query.isPending && (
+          <div className="sales-payment-detail sales-section-anchor" id="sales-payment-section">
+            <section className="sales-payments">
+              <header className="sales-panel-heading"><h2>Payment Breakdown</h2></header>
+              <SalesReportSkeleton kind="payments" label="Loading payment breakdown…" />
+            </section>
           </div>
         )}
         {report && (
@@ -530,25 +539,23 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 </header>
 
                 <div
-                  className="analytics-period-toggle sales-payment-basis"
+                  className="sales-payment-basis"
                   role="group"
                   aria-label="Payment mix basis"
                 >
                   <Button
-                    variant="outline"
-                    size="inherit"
-                    type="submit"
-                    className="secondary-button"
+                    variant="segment"
+                    size="sm"
+                    type="button"
                     aria-pressed={paymentBasis === "SALES"}
                     onClick={() => setPaymentBasis("SALES")}
                   >
                     Sales share
                   </Button>
                   <Button
-                    variant="outline"
-                    size="inherit"
-                    type="submit"
-                    className="secondary-button"
+                    variant="segment"
+                    size="sm"
+                    type="button"
                     aria-pressed={paymentBasis === "ORDERS"}
                     onClick={() => setPaymentBasis("ORDERS")}
                   >
@@ -582,23 +589,16 @@ function SalesWorkspace({ userId }: { userId: string }) {
                         />
                       ))}
                     </svg>
-                    <div>
-                      <strong>
-                        {countFormat.format(report.completedOrders)}
-                      </strong>
-                      <span>completed orders</span>
+                    <div className="sales-payment-ring-center">
+                      <FiCreditCard />
                     </div>
                   </div>
                   <div className="sales-payment-context">
                     <span className="sales-kicker">GROSS SALES</span>
                     <strong>{formatCartPrice(report.totalSales)}</strong>
-                    <p>
-                      {countFormat.format(report.completedOrders)} eligible
-                      orders.
-                      <br />
-                      The ring and bars show{" "}
-                      {paymentBasis === "SALES" ? "sales share" : "order share"}
-                      .
+                    <p className="sales-payment-order-count">
+                      <b>{countFormat.format(report.completedOrders)}</b>{" "}
+                      completed {report.completedOrders === 1 ? "order" : "orders"}
                     </p>
                   </div>
                 </div>
@@ -655,6 +655,12 @@ function SalesWorkspace({ userId }: { userId: string }) {
                           ? formatCartPrice(entry.totalSales)
                           : `${countFormat.format(entry.orders)} orders`}
                       </small>
+                      <div className="sales-payment-share-track" aria-hidden="true">
+                        <span
+                          className={`sales-method-${index}`}
+                          style={{ width: `${entry.share}%` }}
+                        />
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -770,8 +776,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
               label="top products"
               placeholder={
                 <section className="daily-analytics">
-                  <h2>Top Products</h2>
-                  <ReportSkeleton label="Loading top products…" />
+                  <div className="daily-analytics-heading"><h2>Top Products</h2><SkeletonBlock width={44} height={44} /></div>
+                  <SalesReportSkeleton kind="products" label="Loading top products…" />
                 </section>
               }
             >
@@ -795,8 +801,8 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 label="peak hours"
                 placeholder={
                   <section className="daily-analytics">
-                    <h2>Peak Hours</h2>
-                    <ReportSkeleton label="Loading peak hours…" chart />
+                    <div className="daily-analytics-heading"><h2>Peak Hours</h2><SkeletonBlock width={44} height={44} /></div>
+                    <SalesReportSkeleton kind="hours" label="Loading peak hours…" />
                   </section>
                 }
               >
@@ -813,8 +819,9 @@ function SalesWorkspace({ userId }: { userId: string }) {
               <DeferredSection
                 label="average preparation time"
                 placeholder={
-                  <section className="daily-analytics">
-                    <h2>Average Prep Time</h2>
+                  <section className="daily-analytics average-prep-time">
+                    <div className="daily-analytics-heading"><h2>Average Prep Time</h2><SkeletonBlock width={44} height={44} /></div>
+                    <p className="sales-range-help sales-prep-pair">Preparing → Ready</p>
                     <PreparationMetricSkeleton />
                   </section>
                 }
@@ -829,6 +836,12 @@ function SalesWorkspace({ userId }: { userId: string }) {
               </DeferredSection>
             </div>
           </div>
+        )}
+        {valid && query.isPending && (
+          <section className="sales-recent-orders">
+            <header className="sales-panel-heading"><h2>Recent Orders</h2></header>
+            <SalesReportSkeleton kind="recent" label="Loading recent orders…" />
+          </section>
         )}
         {report && (
           <section

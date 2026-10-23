@@ -518,6 +518,8 @@ it("lets independent reports render while the primary summary is still pending",
   ).toBeVisible();
   expect(await screen.findByText("Independent top products")).toBeVisible();
   expect(screen.getByText("Loading sales…")).toBeInTheDocument();
+  expect(screen.getByText("Loading payment breakdown…")).toBeInTheDocument();
+  expect(screen.getByText("Loading recent orders…")).toBeInTheDocument();
 });
 
 it("keeps independent reports available when the summary has a network error", async () => {
@@ -596,6 +598,12 @@ it("analyzes the applied custom period by sales or order mix without another req
   fireEvent.click(screen.getByRole("button", { name: "Apply date range" }));
   await screen.findByText("₱100.00", { selector: ".sales-amount" });
   const region = screen.getByRole("region", { name: "Payment Breakdown" });
+  expect(region.querySelector(".sales-payment-order-count")).toHaveTextContent(
+    "7 completed orders",
+  );
+  expect(region.querySelectorAll(".sales-payment-share-track > span")[1]).toHaveStyle({
+    width: "60%",
+  });
   expect(
     within(region).getByText("Largest sales total: GCash (manual) · ₱60.00."),
   ).toBeVisible();
@@ -610,6 +618,9 @@ it("analyzes the applied custom period by sales or order mix without another req
       ?.split(" ")[0],
   ).toBe("60");
   fireEvent.click(within(region).getByRole("button", { name: "Order share" }));
+  expect(region.querySelectorAll(".sales-payment-share-track > span")[2]).toHaveStyle({
+    width: "42.86%",
+  });
   expect(
     within(region).getByText("Most used: Card (manual) · 3 orders."),
   ).toBeVisible();

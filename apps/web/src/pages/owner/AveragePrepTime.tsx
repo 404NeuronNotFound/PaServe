@@ -8,6 +8,7 @@ import {
 } from "../../features/orders/average-prep-time";
 import { ErrorState } from "../../components/feedback/ErrorState";
 import { ReportEmptyState } from "../../components/feedback/ReportEmptyState";
+import { FiClock } from "react-icons/fi";
 const denied = (error: unknown) =>
   isAxiosError(error) && [401, 403, 404].includes(error.response?.status ?? 0);
 export function AveragePrepTime({
@@ -86,13 +87,37 @@ export function AveragePrepTime({
               onRefresh={() => void query.refetch()}
             />
           ) : (
-            <p className="prep-time-average" role="status">
-              {formatPreparationDuration(report.averageDurationMs)}
-              <span>
-                Average from {report.measuredOrders.toLocaleString("en-PH")}{" "}
-                measured {report.measuredOrders === 1 ? "order" : "orders"}
-              </span>
-            </p>
+            <div className="prep-time-display">
+              <div className="prep-time-clock" aria-hidden="true">
+                <FiClock />
+              </div>
+              <p className="prep-time-average" role="status">
+                {formatPreparationDuration(report.averageDurationMs)}
+                <span>
+                  Average from {report.measuredOrders.toLocaleString("en-PH")}{" "}
+                  measured {report.measuredOrders === 1 ? "order" : "orders"}
+                </span>
+              </p>
+              <div className="prep-time-sample">
+                <div>
+                  <span>Timing coverage</span>
+                  <strong>
+                    {report.measuredOrders.toLocaleString("en-PH")} /{" "}
+                    {report.eligibleOrders.toLocaleString("en-PH")} orders
+                  </strong>
+                </div>
+                <div className="prep-time-sample-track" aria-hidden="true">
+                  <span
+                    style={{
+                      width: `${report.eligibleOrders > 0
+                        ? Math.min(100, report.measuredOrders / report.eligibleOrders * 100)
+                        : 0}%`,
+                    }}
+                  />
+                </div>
+                <small>Eligible orders with valid preparation timestamps</small>
+              </div>
+            </div>
           )}
           <details className="prep-time-definition">
             <summary>How preparation time is measured</summary>

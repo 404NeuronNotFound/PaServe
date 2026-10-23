@@ -97,9 +97,12 @@ it("shows saved names, references for duplicates and switches ranking metric", a
   expect(table).toHaveTextContent("Product reference: saved-b");
   expect(table).toHaveTextContent("All products");
   expect(table).toHaveTextContent("₱11.00");
-  fireEvent.change(screen.getByLabelText("Rank by"), {
-    target: { value: "REVENUE" },
-  });
+  const ranking = screen.getByRole("combobox", { name: "Rank by" });
+  expect(ranking).toHaveTextContent("Quantity sold");
+  fireEvent.click(ranking);
+  fireEvent.click(screen.getByRole("option", { name: "Item revenue" }));
+  expect(ranking).toHaveTextContent("Item revenue");
+  expect(ranking).toHaveAttribute("aria-expanded", "false");
   await waitFor(() =>
     expect(getTopProducts).toHaveBeenLastCalledWith(
       "shop",

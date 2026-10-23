@@ -1,5 +1,5 @@
 import { RefreshButton } from "../../components/feedback/RefreshButton";
-import { ReportSkeleton } from "../../components/feedback/LoadingSkeleton";
+import { ReportSkeleton, SalesReportSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { getPeakHours } from "../../features/orders/peak-hours";
@@ -61,7 +61,7 @@ export function PeakHours({
           onClick={() => void query.refetch()}
         />
       </div>
-      {query.isPending && <ReportSkeleton label="Loading peak hours…" chart />}
+      {query.isPending && (compact ? <SalesReportSkeleton kind="hours" label="Loading peak hours…" /> : <ReportSkeleton label="Loading peak hours…" chart />)}
       {query.isError && (
         <ErrorState
           error={query.error}

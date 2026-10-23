@@ -488,46 +488,6 @@
 .sales-chart-readout small {
   font-size: 10px;
 }
-.sales-single-comparison {
-  display: grid;
-  gap: 26px;
-  padding-block: 32px 10px;
-}
-.sales-single-comparison > div > span {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--color-muted);
-  font-size: 11px;
-}
-.sales-single-comparison strong {
-  font-size: clamp(22px, 2.4vw, 30px);
-  color: var(--color-text);
-  font-weight: 500;
-  letter-spacing: -1px;
-}
-.sales-single-comparison small {
-  font-size: 10px;
-  color: var(--color-muted);
-}
-.sales-single-track {
-  height: 14px;
-  margin-block: 12px 8px;
-  background: var(--color-border);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.sales-single-track > span {
-  display: block;
-  height: 100%;
-  background: var(--sales-chart-current);
-  border-radius: 4px;
-}
-.is-previous .sales-single-track > span {
-  background: var(--sales-chart-previous);
-}
 .sales-detail-grid {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
   gap: 24px;
@@ -664,7 +624,10 @@
   justify-content: flex-end;
   margin: 16px 0 0;
 }
-.top-products .daily-analytics-controls label {
+.top-products-metric {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
   flex: 0 1 240px;
 }
 .top-products .daily-analytics-summary {

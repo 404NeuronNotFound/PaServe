@@ -11,6 +11,7 @@ const buttonVariants = cva("ui-button", {
       secondary: "secondary-button ui-button-secondary",
       outline: "secondary-button ui-button-outline",
       ghost: "ui-button-ghost",
+      segment: "ui-button-segment",
       destructive: "ui-button-destructive",
       link: "ui-button-link",
       unstyled: "ui-button-unstyled",

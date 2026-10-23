@@ -51,6 +51,10 @@ it("shows the defined pair, measured average, sample coverage and exclusions", a
   setup();
   expect(await screen.findByText("45.001s")).toBeVisible();
   expect(screen.getByText("Average from 2 measured orders")).toBeVisible();
+  expect(screen.getByText("2 / 5 orders")).toBeVisible();
+  expect(document.querySelector(".prep-time-sample-track > span")).toHaveStyle({
+    width: "40%",
+  });
   expect(screen.getByText("Eligible orders").parentElement).toHaveTextContent(
     "5",
   );

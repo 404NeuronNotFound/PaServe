@@ -44,6 +44,22 @@
   text-decoration: underline;
   text-underline-offset: 4px;
 }
+.ui-button.ui-button-segment {
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-muted);
+  box-shadow: none;
+}
+.ui-button.ui-button-segment:hover:not(:disabled) {
+  color: var(--color-text);
+}
+.ui-button.ui-button-segment[aria-pressed="true"] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+  box-shadow: 0 2px 4px color-mix(in srgb, var(--color-text) 6%, transparent);
+}
 .ui-button:is(.ui-button-secondary, .ui-button-outline, .ui-button-ghost):hover:not(:disabled) {
   background: var(--color-secondary);
 }

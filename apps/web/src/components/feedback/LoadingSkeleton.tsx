@@ -463,21 +463,80 @@ export function OrderDetailsSkeleton() {
   );
 }
 
-export function PreparationMetricSkeleton() {
+export function SalesReportSkeleton({
+  kind,
+  label,
+  controls = true,
+}: {
+  kind: "trends" | "products" | "hours" | "payments" | "recent";
+  label: string;
+  controls?: boolean;
+}) {
   return (
-    <LoadingRegion label="Loading average preparation time…">
-      <div className="skeleton-form-fields">
-        <SkeletonBlock width="55%" height={48} />
-        <SkeletonBlock width="65%" />
-        <div className="skeleton-coverage">
-          {Array.from({ length: 3 }, (_, i) => (
-            <div className="skeleton-lines" key={i}>
-              <SkeletonBlock width="80%" />
-              <SkeletonBlock width="45%" height={28} />
+    <LoadingRegion label={label} className={`skeleton-sales skeleton-sales-${kind}`}>
+      <SkeletonBlock width={kind === "payments" ? "100%" : "55%"} height={controls && (kind === "payments" || kind === "products") ? 50 : 14} />
+      {kind === "trends" && (
+        <div className="sales-trend-chart skeleton-sales-chart">
+          <SkeletonBlock width="55%" />
+          <div className="skeleton-sales-columns">
+            <SkeletonBlock height="100%" />
+            <SkeletonBlock height="100%" />
+          </div>
+          <SkeletonBlock width="65%" />
+        </div>
+      )}
+      {kind === "hours" && (
+        <div className="skeleton-sales-hours">
+          {Array.from({ length: 24 }, (_, i) => <SkeletonBlock key={i} height="100%" />)}
+        </div>
+      )}
+      {kind === "payments" && (
+        <>
+          <div className="sales-payment-visual">
+            <SkeletonBlock className="skeleton-sales-ring" width={132} height={132} />
+            <div className="sales-payment-context skeleton-lines">
+              <SkeletonBlock width="45%" />
+              <SkeletonBlock width="90%" height={36} />
+              <SkeletonBlock width="70%" />
+            </div>
+          </div>
+          <SkeletonBlock height={40} />
+        </>
+      )}
+      {(kind === "products" || kind === "payments" || kind === "recent") && (
+        <div className="skeleton-sales-rows">
+          {Array.from({ length: kind === "products" ? 5 : kind === "payments" ? 4 : 3 }, (_, i) => (
+            <div className="skeleton-sales-row" key={i}>
+              <div className="skeleton-sales-row-heading">
+                <SkeletonBlock width={kind === "recent" ? "45%" : "35%"} />
+                <SkeletonBlock width="20%" />
+              </div>
+              <SkeletonBlock width={kind === "recent" ? "60%" : "100%"} height={kind === "recent" ? 14 : 6} />
             </div>
           ))}
         </div>
+      )}
+      <div className="skeleton-sales-footer"><SkeletonBlock width="55%" height={20} /></div>
+    </LoadingRegion>
+  );
+}
+
+export function PreparationMetricSkeleton() {
+  return (
+    <LoadingRegion label="Loading average preparation time…" className="skeleton-sales skeleton-sales-preparation">
+      <div className="prep-time-display">
+        <SkeletonBlock className="skeleton-sales-ring" width={72} height={72} />
+        <div className="prep-time-average skeleton-prep-value">
+          <SkeletonBlock width="85%" height={42} />
+          <SkeletonBlock width="75%" />
+        </div>
+        <div className="prep-time-sample skeleton-lines">
+          <SkeletonBlock width="75%" />
+          <SkeletonBlock height={6} />
+          <SkeletonBlock width="90%" />
+        </div>
       </div>
+      <div className="skeleton-sales-footer"><SkeletonBlock width="80%" height={20} /></div>
     </LoadingRegion>
   );
 }

@@ -13,6 +13,7 @@ import {
   ReceiptSkeleton,
   OrderDetailsSkeleton,
   PreparationMetricSkeleton,
+  SalesReportSkeleton,
   StaffSkeleton,
   FormSkeleton,
 } from "./LoadingSkeleton";
@@ -51,6 +52,11 @@ it.each([
   ["tracking", <ReceiptSkeleton tracking />],
   ["order details", <OrderDetailsSkeleton />],
   ["preparation metric", <PreparationMetricSkeleton />],
+  ["sales trends", <SalesReportSkeleton kind="trends" label="Loading trends" />],
+  ["top products", <SalesReportSkeleton kind="products" label="Loading products" />],
+  ["peak hours", <SalesReportSkeleton kind="hours" label="Loading hours" />],
+  ["payments", <SalesReportSkeleton kind="payments" label="Loading payments" />],
+  ["recent orders", <SalesReportSkeleton kind="recent" label="Loading recent orders" />],
   ["staff", <StaffSkeleton />],
   ["forms", <FormSkeleton label="Loading settings" />],
 ])(
