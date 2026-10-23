@@ -18,6 +18,7 @@ import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
 import { feedback } from "../../app/stores/feedback";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { rememberShop, shopPath } from "../../features/shops/active-shop";
+import "../../components/layout/dashboard-sidebar.css";
 
 export function AccountPage() {
   const client = useQueryClient();
@@ -28,10 +29,17 @@ export function AccountPage() {
   )?.createdShopName;
   const user = client.getQueryData<CurrentUserResponse>(currentUserKey)?.user;
   const heading = useRef<HTMLHeadingElement>(null);
+  const activeSection = ["#profile-heading", "#shops-heading"].includes(location.hash)
+    ? location.hash.slice(1)
+    : "overview";
   useEffect(() => {
     document.title = "Your account · PaServe";
-    heading.current?.focus();
-  }, []);
+    const target = activeSection === "overview"
+      ? heading.current
+      : document.getElementById(activeSection);
+    target?.focus({ preventScroll: true });
+    if (location.hash) target?.scrollIntoView?.({ block: "start" });
+  }, [activeSection, location.hash]);
   const logout = useMutation({
     mutationFn: logoutAccount,
     retry: false,
@@ -57,7 +65,7 @@ export function AccountPage() {
         </span>
         <div className="header-actions">
           <AppearanceToggle />
-          <Button variant="outline" size="inherit" type="submit"
+          <Button variant="outline" size="inherit" type="button"
             className="secondary-button"
             disabled={logout.isPending}
             onClick={() => logout.mutate()}
@@ -68,31 +76,36 @@ export function AccountPage() {
         </div>
       </header>
       <div className="workspace-body">
-        <aside className="workspace-sidebar" aria-label="Workspace navigation">
-          <p className="section-label">YOUR SPACE</p>
-          <nav>
-            <a href="#overview">
-              <FiGrid aria-hidden="true" />
-              Overview
-              <FiArrowUpRight aria-hidden="true" />
-            </a>
-            <a href="#profile-heading">
-              <FiUser aria-hidden="true" />
-              Your profile
-            </a>
-            <a href="#shops-heading">
-              <FiCoffee aria-hidden="true" />
-              Your places
-            </a>
-          </nav>
-          <div className="sidebar-note">
-            <span aria-hidden="true">✳</span>
-            <p>
-              Good service starts
-              <br />
-              with good people.
-            </p>
+        <aside className="dashboard-sidebar dashboard-sidebar-premium" aria-label="Workspace navigation">
+          <div className="dashboard-sidebar-toolbar">
+            <span className="dashboard-sidebar-label">YOUR SPACE</span>
           </div>
+          <div className="dashboard-sidebar-identity">
+            <span className="dashboard-sidebar-emblem"><FiUser aria-hidden="true" /></span>
+            <div>
+              <strong>{[user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Your account"}</strong>
+              <p className="dashboard-shop-role">Personal account</p>
+            </div>
+          </div>
+          <nav aria-label="Account navigation">
+            <div className="dashboard-nav-group">
+              <p className="dashboard-nav-label">Personal</p>
+              <div className="dashboard-nav-links">
+                <Link to="#overview" aria-current={activeSection === "overview" ? "location" : undefined}>
+                  <FiGrid aria-hidden="true" />
+                  <span>Overview</span>
+                </Link>
+                <Link to="#profile-heading" aria-current={activeSection === "profile-heading" ? "location" : undefined}>
+                  <FiUser aria-hidden="true" />
+                  <span>Your profile</span>
+                </Link>
+                <Link to="#shops-heading" aria-current={activeSection === "shops-heading" ? "location" : undefined}>
+                  <FiCoffee aria-hidden="true" />
+                  <span>Your places</span>
+                </Link>
+              </div>
+            </div>
+          </nav>
         </aside>
         <div className="account-content" id="overview">
           <div className="account-hero">
@@ -156,7 +169,7 @@ export function AccountPage() {
                   "P"
                 ).toUpperCase()}
               </div>
-              <h2 id="profile-heading">
+              <h2 id="profile-heading" tabIndex={-1}>
                 {[user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
                   "Your account"}
               </h2>
@@ -174,16 +187,15 @@ export function AccountPage() {
             >
               <div className="card-heading">
                 <p className="section-label">02 / YOUR PEOPLE & PLACES</p>
-                <Link
-                  className="primary-button shop-create-link"
-                  to="/app/onboarding/create-shop"
-                >
-                  <FiCoffee aria-hidden="true" />
-                  Create shop
-                  <FiArrowUpRight aria-hidden="true" />
-                </Link>
+                <Button asChild className="shop-create-link">
+                  <Link to="/app/onboarding/create-shop">
+                    <FiCoffee aria-hidden="true" />
+                    Create shop
+                    <FiArrowUpRight aria-hidden="true" />
+                  </Link>
+                </Button>
               </div>
-              <h2 id="shops-heading">Your people. Your places.</h2>
+              <h2 id="shops-heading" tabIndex={-1}>Your people. Your places.</h2>
               {createdShopName && (
                 <InlineMessage tone="success" className="shop-created-status">
                   {createdShopName} is ready. You are its owner.

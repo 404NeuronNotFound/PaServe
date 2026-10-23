@@ -127,10 +127,10 @@
   height: var(--icon-md);
   opacity: 0.8;
 }
-.phase-two .dashboard-sidebar-premium nav a[aria-current="page"] {
+.phase-two .dashboard-sidebar-premium nav a:is([aria-current="page"], [aria-current="location"]) {
   box-shadow: 0 3px 10px #0000000d;
 }
-.dashboard-sidebar-premium nav a[aria-current="page"]::after {
+.dashboard-sidebar-premium nav a:is([aria-current="page"], [aria-current="location"])::after {
   content: "";
   width: 5px;
   height: 5px;
@@ -138,7 +138,7 @@
   background: currentColor;
   flex-shrink: 0;
 }
-.dashboard-sidebar-premium nav a[aria-current="page"] > svg {
+.dashboard-sidebar-premium nav a:is([aria-current="page"], [aria-current="location"]) > svg {
   opacity: 1;
 }
 .phase-two .dashboard-sidebar-premium nav a:focus-visible {
@@ -151,13 +151,13 @@
   border-top: 1px solid var(--color-border);
 }
 @media (hover: hover) and (pointer: fine) {
-  .phase-two .dashboard-sidebar-premium nav a:hover:not([aria-current="page"]) {
+  .phase-two .dashboard-sidebar-premium nav a:hover:not([aria-current]) {
     background: var(--color-secondary);
     border-color: var(--color-border);
   }
 }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .phase-two .dashboard-sidebar-premium nav a:hover:not([aria-current="page"]) {
+  .phase-two .dashboard-sidebar-premium nav a:hover:not([aria-current]) {
     transform: translateX(2px);
   }
 }
@@ -220,7 +220,7 @@
     clip-path: inset(50%);
     white-space: nowrap;
   }
-  [data-sidebar-collapsed="true"] .dashboard-sidebar-premium nav a[aria-current="page"]::after {
+  [data-sidebar-collapsed="true"] .dashboard-sidebar-premium nav a:is([aria-current="page"], [aria-current="location"])::after {
     position: absolute;
     right: 4px;
     width: 3px;

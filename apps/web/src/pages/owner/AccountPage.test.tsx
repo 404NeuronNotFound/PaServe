@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -82,7 +82,7 @@ it("finishes an in-flight refresh before logout and blocks further refresh attem
   expect(useSessionStore.getState().accessToken).toBeNull();
 });
 
-it("offers a single Create shop action in the account's shop section", () => {
+it("offers one Create shop action and tracks the selected account section", async () => {
   const client = new QueryClient();
   client.setQueryData(currentUserKey, {
     user: { id: "u", email: "owner@example.com", memberships: [] },
@@ -98,4 +98,18 @@ it("offers a single Create shop action in the account's shop section", () => {
   expect(
     screen.queryByRole("link", { name: /Add a new shop/i }),
   ).not.toBeInTheDocument();
+  const navigation = within(screen.getByRole("navigation", { name: "Account navigation" }));
+  const overview = navigation.getByRole("link", { name: "Overview" });
+  const profile = navigation.getByRole("link", { name: "Your profile" });
+  const places = navigation.getByRole("link", { name: "Your places" });
+  expect(overview).toHaveAttribute("aria-current", "location");
+  const user = userEvent.setup();
+  await user.click(profile);
+  expect(profile).toHaveAttribute("aria-current", "location");
+  expect(overview).not.toHaveAttribute("aria-current");
+  expect(screen.getByRole("heading", { name: "Your account" })).toHaveFocus();
+  await user.click(places);
+  expect(places).toHaveAttribute("aria-current", "location");
+  expect(profile).not.toHaveAttribute("aria-current");
+  expect(screen.getByRole("heading", { name: "Your people. Your places." })).toHaveFocus();
 });

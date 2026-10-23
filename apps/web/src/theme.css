@@ -476,7 +476,7 @@
   gap: var(--spacing-3);
   align-items: baseline;
 }
-.card-heading svg {
+.card-heading > svg {
   color: var(--color-muted);
   flex-shrink: 0;
 }
@@ -1647,12 +1647,7 @@
 }
 .shop-create-link {
   margin-top: var(--spacing-4);
-  color: var(--color-text);
-  border-color: var(--color-border);
   text-decoration: none;
-}
-.shop-create-link:hover {
-  background: var(--color-secondary);
 }
 .shop-context-page {
   overflow: auto;
@@ -1754,7 +1749,7 @@
 .dashboard-sidebar nav a:hover {
   background: #3b4e3b;
 }
-.dashboard-sidebar nav a[aria-current="page"] {
+.dashboard-sidebar nav a:is([aria-current="page"], [aria-current="location"]) {
   background: var(--color-lime);
   color: #243329;
   font-weight: var(--weight-semibold);
@@ -2107,11 +2102,11 @@
 .phase-two .dashboard-sidebar nav a:hover {
   background: var(--color-secondary);
 }
-.phase-two .dashboard-sidebar nav a[aria-current="page"] {
+.phase-two .dashboard-sidebar nav a:is([aria-current="page"], [aria-current="location"]) {
   background: var(--color-primary);
   color: #fffefa;
 }
-:root[data-appearance="night"] .phase-two .dashboard-sidebar nav a[aria-current="page"] {
+:root[data-appearance="night"] .phase-two .dashboard-sidebar nav a:is([aria-current="page"], [aria-current="location"]) {
   background: var(--color-lime);
   color: #243329;
 }
@@ -2502,12 +2497,6 @@
 .phase-two .account-grid .shop-create-link {
   width: auto;
   margin: 0;
-  color: #fffefa;
-  border-color: var(--color-primary);
-}
-:root[data-appearance="night"] .phase-two .account-grid .shop-create-link {
-  color: #243329;
-  border-color: var(--color-lime);
 }
 .phase-two .field-character-count {
   display: block;

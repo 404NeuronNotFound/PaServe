@@ -35,6 +35,15 @@
   color: var(--color-text);
   border-color: var(--color-control-border);
 }
+/* The workspace masthead stays dark in both appearances. */
+.workspace-header > .header-actions > .ui-button.ui-button-outline {
+  background: transparent;
+  color: #fffefa;
+  border-color: #718268;
+}
+.workspace-header > .header-actions > .ui-button.ui-button-outline:hover:not(:disabled) {
+  background: #3b4e3b;
+}
 .ui-button.ui-button-ghost:not([aria-pressed="true"]):not([aria-selected="true"]),
 .ui-button.ui-button-link {
   background: transparent;
