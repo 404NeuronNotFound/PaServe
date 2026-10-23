@@ -1,0 +1,116 @@
+.profile-settings-page {
+  container: profile / inline-size;
+}
+.profile-settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: var(--spacing-6);
+  align-items: start;
+}
+.profile-settings-card {
+  min-width: 0;
+  padding: clamp(20px, 2.5vw, 32px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.profile-settings-heading {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: start;
+  margin-bottom: var(--spacing-6);
+}
+.profile-settings-heading h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+.profile-settings-heading p {
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  line-height: var(--line-body);
+}
+.profile-settings-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  height: 44px;
+  border-radius: var(--radius-inset);
+  background: var(--color-secondary);
+  color: var(--color-text);
+}
+.profile-settings-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.profile-settings-card fieldset {
+  display: grid;
+  gap: var(--spacing-5);
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.profile-settings-card .pending-button {
+  justify-self: start;
+  width: auto;
+}
+.profile-security-stack {
+  display: grid;
+  gap: var(--spacing-6);
+  min-width: 0;
+}
+.profile-password-control {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+.profile-password-control .ui-input {
+  flex: 1;
+  min-width: 0;
+}
+.profile-password-control .ui-button {
+  flex-shrink: 0;
+}
+.profile-account-facts {
+  display: grid;
+  gap: var(--spacing-4);
+  margin: var(--spacing-6) 0 0;
+  padding-top: var(--spacing-6);
+  border-top: 1px solid var(--color-border);
+}
+.profile-account-facts dt {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+.profile-account-facts dd {
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.profile-form-hint,
+.profile-security-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  line-height: var(--line-body);
+}
+.profile-security-note {
+  display: flex;
+  gap: 10px;
+  margin-top: var(--spacing-6);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-panel);
+  background: var(--color-secondary);
+}
+.profile-security-note svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+@container profile (max-width: 780px) {
+  .profile-settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-4);
+  }
+}

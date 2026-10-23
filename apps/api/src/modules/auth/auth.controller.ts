@@ -3,6 +3,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   HttpCode,
   Req,
   Res,
@@ -15,6 +16,11 @@ import { AuthService } from './auth.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { EmptyDto } from './dto/empty.dto.js';
+import {
+  UpdateProfileDto,
+  ChangeEmailDto,
+  ChangePasswordDto,
+} from './dto/update-account.dto.js';
 import {
   JwtAuthGuard,
   type AuthenticatedRequest,
@@ -110,6 +116,55 @@ export class AuthController {
       sameSite: production ? 'none' : 'lax',
       path: '/api/v1/auth',
     };
+  }
+
+  @Patch('profile')
+  @RateLimit('accountUpdate')
+  @UseGuards(AuthOriginGuard, JwtAuthGuard)
+  updateProfile(
+    @Body() dto: UpdateProfileDto,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.auth.updateProfile(
+      request.headers.authorization!.slice(7),
+      dto,
+    );
+  }
+
+  @Post('email')
+  @HttpCode(204)
+  @RateLimit('accountUpdate')
+  @UseGuards(AuthOriginGuard, JwtAuthGuard)
+  async changeEmail(
+    @Body() dto: ChangeEmailDto,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    await this.auth.changeCredentials(
+      request.headers.authorization!.slice(7),
+      dto,
+    );
+    response.clearCookie(REFRESH_COOKIE, this.cookieOptions());
+    response.setHeader('Cache-Control', 'no-store');
+  }
+
+  @Post('password')
+  @HttpCode(204)
+  @RateLimit('accountUpdate')
+  @UseGuards(AuthOriginGuard, JwtAuthGuard)
+  async changePassword(
+    @Body() dto: ChangePasswordDto,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    await this.auth.changeCredentials(
+      request.headers.authorization!.slice(7),
+      dto,
+    );
+    response.clearCookie(REFRESH_COOKIE, this.cookieOptions());
+    response.setHeader('Cache-Control', 'no-store');
   }
 
   private setSessionCookie(response: Response, token: string, expiresAt: Date) {

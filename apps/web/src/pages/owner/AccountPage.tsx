@@ -1,258 +1,186 @@
 import { Button } from "../../components/ui/button";
 import { ShopLogo } from "../../components/shops/ShopLogo";
 import { useEffect, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link, useLocation, Navigate } from "react-router-dom";
 import {
   FiArrowUpRight,
   FiCoffee,
-  FiLogOut,
   FiMail,
   FiShield,
-  FiGrid,
   FiUser,
 } from "react-icons/fi";
 import type { CurrentUserResponse } from "@paserve/contracts";
-import { currentUserKey, logoutAccount } from "../../features/auth/api/session";
-import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
-import { feedback } from "../../app/stores/feedback";
+import { currentUserKey } from "../../features/auth/api/session";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
-import { rememberShop, shopPath } from "../../features/shops/active-shop";
-import "../../components/layout/dashboard-sidebar.css";
+import { shopPath } from "../../features/shops/active-shop";
+import { AccountFrame } from "../../components/layout/AccountFrame";
 
 export function AccountPage() {
   const client = useQueryClient();
-  const navigate = useNavigate();
   const location = useLocation();
   const createdShopName = (
     location.state as { createdShopName?: string } | null
   )?.createdShopName;
   const user = client.getQueryData<CurrentUserResponse>(currentUserKey)?.user;
   const heading = useRef<HTMLHeadingElement>(null);
-  const activeSection = ["#profile-heading", "#shops-heading"].includes(location.hash)
-    ? location.hash.slice(1)
-    : "overview";
   useEffect(() => {
     document.title = "Your account · PaServe";
-    const target = activeSection === "overview"
-      ? heading.current
-      : document.getElementById(activeSection);
+    const target =
+      location.hash === "#shops-heading"
+        ? document.getElementById("shops-heading")
+        : heading.current;
     target?.focus({ preventScroll: true });
     if (location.hash) target?.scrollIntoView?.({ block: "start" });
-  }, [activeSection, location.hash]);
-  const logout = useMutation({
-    mutationFn: logoutAccount,
-    retry: false,
-    onSuccess: () => {
-      if (user?.id) rememberShop(user.id, null);
-      feedback.clearTransient();
-      feedback.toast("You are signed out.");
-      client.clear();
-      void navigate("/login", { replace: true });
-    },
-  });
+  }, [location.hash]);
+  if (location.hash === "#profile-heading")
+    return <Navigate to="/app/account/profile" replace />;
   return (
-    <main className="account-page phase-two account-overview-page">
-      <header className="workspace-header">
-        <Link className="wordmark" to="/app/account">
-          <span className="brand-symbol">
-            <FiCoffee aria-hidden="true" />
+    <AccountFrame>
+      <div className="account-overview" id="overview">
+        <div className="account-hero">
+          <div className="account-greeting">
+            <p className="section-label">
+              <span className="status-dot" />{" "}
+              {user?.firstName
+                ? `WELCOME BACK, ${user.firstName.toUpperCase()}`
+                : "WELCOME TO YOUR NEXT CHAPTER"}
+            </p>
+            <h1 ref={heading} tabIndex={-1}>
+              Your space.
+              <br />
+              <em>
+                Your pace<span className="lime-period">.</span>
+              </em>
+            </h1>
+            <p>You’re signed in. Make yourself at home.</p>
+          </div>
+          <div className="account-hero-action">
+            <span className="hero-coffee-mark" aria-hidden="true">
+              <FiCoffee />
+            </span>
+            <p>
+              A little ambition.
+              <br />
+              <em>A place of your own.</em>
+            </p>
+          </div>
+        </div>
+        <div className="workspace-summary">
+          <span>
+            <FiUser aria-hidden="true" /> Your profile
           </span>
-          PaServe<span className="wordmark-period">.</span>
-        </Link>
-        <span className="workspace-label">
-          <span className="status-dot" /> YOUR EVERYDAY SPACE
-        </span>
-        <div className="header-actions">
-          <AppearanceToggle />
-          <Button variant="outline" size="inherit" type="button"
-            className="secondary-button"
-            disabled={logout.isPending}
-            onClick={() => logout.mutate()}
-          >
-            <FiLogOut aria-hidden="true" />
-            {logout.isPending ? "Signing out…" : "Sign out"}
-          </Button>
+          <span>
+            <FiCoffee aria-hidden="true" />
+            {user?.memberships?.length ?? 0}{" "}
+            {(user?.memberships?.length ?? 0) === 1
+              ? "shop membership"
+              : "shop memberships"}
+          </span>
+          <span>
+            <FiShield aria-hidden="true" /> Session active
+          </span>
         </div>
-      </header>
-      <div className="workspace-body">
-        <aside className="dashboard-sidebar dashboard-sidebar-premium" aria-label="Workspace navigation">
-          <div className="dashboard-sidebar-toolbar">
-            <span className="dashboard-sidebar-label">YOUR SPACE</span>
-          </div>
-          <div className="dashboard-sidebar-identity">
-            <span className="dashboard-sidebar-emblem"><FiUser aria-hidden="true" /></span>
-            <div>
-              <strong>{[user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Your account"}</strong>
-              <p className="dashboard-shop-role">Personal account</p>
+
+        <div className="account-grid">
+          <section className="profile-card" aria-labelledby="profile-heading">
+            <div className="card-heading">
+              <p className="section-label">01 / YOUR PROFILE</p>
+              <FiShield aria-hidden="true" />
             </div>
-          </div>
-          <nav aria-label="Account navigation">
-            <div className="dashboard-nav-group">
-              <p className="dashboard-nav-label">Personal</p>
-              <div className="dashboard-nav-links">
-                <Link to="#overview" aria-current={activeSection === "overview" ? "location" : undefined}>
-                  <FiGrid aria-hidden="true" />
-                  <span>Overview</span>
-                </Link>
-                <Link to="#profile-heading" aria-current={activeSection === "profile-heading" ? "location" : undefined}>
-                  <FiUser aria-hidden="true" />
-                  <span>Your profile</span>
-                </Link>
-                <Link to="#shops-heading" aria-current={activeSection === "shops-heading" ? "location" : undefined}>
+            <div className="profile-avatar" aria-hidden="true">
+              {(user?.firstName?.[0] ?? user?.email?.[0] ?? "P").toUpperCase()}
+            </div>
+            <h2 id="profile-heading" tabIndex={-1}>
+              {[user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+                "Your account"}
+            </h2>
+            <p className="profile-email">
+              <FiMail aria-hidden="true" />
+              {user?.email}
+            </p>
+            <div className="profile-status">
+              <span className="status-dot" /> Signed in and ready
+            </div>
+          </section>
+          <section className="membership-card" aria-labelledby="shops-heading">
+            <div className="card-heading">
+              <p className="section-label">02 / YOUR PEOPLE & PLACES</p>
+              <Button asChild className="shop-create-link">
+                <Link to="/app/onboarding/create-shop">
                   <FiCoffee aria-hidden="true" />
-                  <span>Your places</span>
+                  Create shop
+                  <FiArrowUpRight aria-hidden="true" />
+                </Link>
+              </Button>
+            </div>
+            <h2 id="shops-heading" tabIndex={-1}>
+              Your people. Your places.
+            </h2>
+            {createdShopName && (
+              <InlineMessage tone="success" className="shop-created-status">
+                {createdShopName} is ready. You are its owner.
+              </InlineMessage>
+            )}
+            {user?.memberships?.length ? (
+              <ul className="membership-list">
+                {user.memberships.map((membership) => (
+                  <li key={membership.id}>
+                    <ShopLogo
+                      url={membership.shop.logoUrl}
+                      name={membership.shop.name}
+                      className="shop-icon"
+                    />
+                    <div className="membership-details">
+                      <strong>{membership.shop.name}</strong>
+                      <span>
+                        {membership.role.charAt(0) +
+                          membership.role.slice(1).toLowerCase()}{" "}
+                        ·{" "}
+                        {membership.shop.isActive
+                          ? "Available shop"
+                          : "Inactive shop"}
+                      </span>
+                      <span className="membership-slug">
+                        /{membership.shop.slug}
+                      </span>
+                    </div>
+                    {membership.shop.isActive && (
+                      <Link
+                        className="secondary-button"
+                        to={shopPath(membership.shopId)}
+                        aria-label={`Manage ${membership.shop.name}`}
+                      >
+                        Manage shop <FiArrowUpRight aria-hidden="true" />
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="empty-workspace">
+                <FiCoffee aria-hidden="true" />
+                <p>
+                  Your account is ready. Create your first shop to get started.
+                </p>
+                <span>Your shop memberships will appear here.</span>
+                <Link
+                  className="primary-button"
+                  to="/app/onboarding/create-shop"
+                >
+                  Set up your first shop
                 </Link>
               </div>
-            </div>
-          </nav>
-        </aside>
-        <div className="account-content" id="overview">
-          <div className="account-hero">
-            <div className="account-greeting">
-              <p className="section-label">
-                <span className="status-dot" />{" "}
-                {user?.firstName
-                  ? `WELCOME BACK, ${user.firstName.toUpperCase()}`
-                  : "WELCOME TO YOUR NEXT CHAPTER"}
-              </p>
-              <h1 ref={heading} tabIndex={-1}>
-                Your space.
-                <br />
-                <em>
-                  Your pace<span className="lime-period">.</span>
-                </em>
-              </h1>
-              <p>You’re signed in. Make yourself at home.</p>
-            </div>
-            <div className="account-hero-action">
-              <span className="hero-coffee-mark" aria-hidden="true">
-                <FiCoffee />
-              </span>
-              <p>
-                A little ambition.
-                <br />
-                <em>A place of your own.</em>
-              </p>
-            </div>
-          </div>
-          <div className="workspace-summary">
-            <span>
-              <FiUser aria-hidden="true" /> Your profile
-            </span>
-            <span>
-              <FiCoffee aria-hidden="true" />
-              {user?.memberships?.length ?? 0}{" "}
-              {(user?.memberships?.length ?? 0) === 1
-                ? "shop membership"
-                : "shop memberships"}
-            </span>
-            <span>
-              <FiShield aria-hidden="true" /> Session active
-            </span>
-          </div>
-          {logout.isError && (
-            <InlineMessage>
-              We couldn’t sign you out. Please try again.
-            </InlineMessage>
-          )}
-          <div className="account-grid">
-            <section className="profile-card" aria-labelledby="profile-heading">
-              <div className="card-heading">
-                <p className="section-label">01 / YOUR PROFILE</p>
-                <FiShield aria-hidden="true" />
-              </div>
-              <div className="profile-avatar" aria-hidden="true">
-                {(
-                  user?.firstName?.[0] ??
-                  user?.email?.[0] ??
-                  "P"
-                ).toUpperCase()}
-              </div>
-              <h2 id="profile-heading" tabIndex={-1}>
-                {[user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
-                  "Your account"}
-              </h2>
-              <p className="profile-email">
-                <FiMail aria-hidden="true" />
-                {user?.email}
-              </p>
-              <div className="profile-status">
-                <span className="status-dot" /> Signed in and ready
-              </div>
-            </section>
-            <section
-              className="membership-card"
-              aria-labelledby="shops-heading"
-            >
-              <div className="card-heading">
-                <p className="section-label">02 / YOUR PEOPLE & PLACES</p>
-                <Button asChild className="shop-create-link">
-                  <Link to="/app/onboarding/create-shop">
-                    <FiCoffee aria-hidden="true" />
-                    Create shop
-                    <FiArrowUpRight aria-hidden="true" />
-                  </Link>
-                </Button>
-              </div>
-              <h2 id="shops-heading" tabIndex={-1}>Your people. Your places.</h2>
-              {createdShopName && (
-                <InlineMessage tone="success" className="shop-created-status">
-                  {createdShopName} is ready. You are its owner.
-                </InlineMessage>
-              )}
-              {user?.memberships?.length ? (
-                <ul className="membership-list">
-                  {user.memberships.map((membership) => (
-                    <li key={membership.id}>
-                      <ShopLogo url={membership.shop.logoUrl} name={membership.shop.name} className="shop-icon" />
-                      <div className="membership-details">
-                        <strong>{membership.shop.name}</strong>
-                        <span>
-                          {membership.role.charAt(0) +
-                            membership.role.slice(1).toLowerCase()}{" "}
-                          ·{" "}
-                          {membership.shop.isActive
-                            ? "Available shop"
-                            : "Inactive shop"}
-                        </span>
-                        <span className="membership-slug">
-                          /{membership.shop.slug}
-                        </span>
-                      </div>
-                      {membership.shop.isActive && (
-                        <Link
-                          className="secondary-button"
-                          to={shopPath(membership.shopId)}
-                          aria-label={`Manage ${membership.shop.name}`}
-                        >
-                          Manage shop <FiArrowUpRight aria-hidden="true" />
-                        </Link>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="empty-workspace">
-                  <FiCoffee aria-hidden="true" />
-                  <p>
-                    Your account is ready. Create your first shop to get
-                    started.
-                  </p>
-                  <span>Your shop memberships will appear here.</span>
-                  <Link className="primary-button" to="/app/onboarding/create-shop">Set up your first shop</Link>
-                </div>
-              )}
-            </section>
-          </div>
-          <footer className="workspace-footer">
-            <span>Small details. Better days.</span>
-            <span>
-              PASERVE <FiArrowUpRight aria-hidden="true" />
-            </span>
-          </footer>
+            )}
+          </section>
         </div>
+        <footer className="workspace-footer">
+          <span>Small details. Better days.</span>
+          <span>
+            PASERVE <FiArrowUpRight aria-hidden="true" />
+          </span>
+        </footer>
       </div>
-    </main>
+    </AccountFrame>
   );
 }

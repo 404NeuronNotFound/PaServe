@@ -2,6 +2,10 @@ import type {
   CurrentUserResponse,
   LoginRequest,
   LoginResponse,
+  UpdateProfileRequest,
+  UpdateProfileResponse,
+  ChangeEmailRequest,
+  ChangePasswordRequest,
 } from "@paserve/contracts";
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../../lib/api/client";
@@ -108,4 +112,29 @@ export function logoutAccount(): Promise<void> {
     });
   }
   return logoutPromise;
+}
+
+async function accountRequest() {
+  if (logoutPromise) throw new Error("Sign-out is in progress.");
+  if (refreshPromise) await refreshPromise;
+  if (!useSessionStore.getState().accessToken) await refreshSession();
+  return { ...cookieRequest, headers: {
+    ...cookieHeaders,
+    Authorization: `Bearer ${useSessionStore.getState().accessToken}`,
+  } };
+}
+
+export async function updateProfile(input: UpdateProfileRequest) {
+  const { data } = await api.patch<UpdateProfileResponse>("/auth/profile", input, await accountRequest());
+  return data;
+}
+
+export async function changeEmail(input: ChangeEmailRequest) {
+  await api.post("/auth/email", input, await accountRequest());
+  useSessionStore.getState().setAccessToken(null);
+}
+
+export async function changePassword(input: ChangePasswordRequest) {
+  await api.post("/auth/password", input, await accountRequest());
+  useSessionStore.getState().setAccessToken(null);
 }

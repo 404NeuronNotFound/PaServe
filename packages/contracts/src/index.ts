@@ -358,6 +358,12 @@ export interface CurrentUserResponse {
   user: CurrentUser;
 }
 
+export const ACCOUNT_LIMITS = { nameMax: 80 } as const;
+export interface UpdateProfileRequest { firstName: string; lastName: string }
+export interface UpdateProfileResponse { firstName: string | null; lastName: string | null }
+export interface ChangeEmailRequest { email: string; currentPassword: string }
+export interface ChangePasswordRequest { password: string; currentPassword: string }
+
 export interface ApiErrorResponse {
   statusCode: number;
   code: string;

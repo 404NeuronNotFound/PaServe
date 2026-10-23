@@ -11,10 +11,12 @@ import {
 } from "../../features/auth/api/session";
 import { useSessionStore } from "../../features/auth/stores/session";
 import { AccountPage } from "./AccountPage";
+import { ProfilePage } from "./ProfilePage";
 
 afterEach(() => {
   vi.restoreAllMocks();
   useSessionStore.getState().setAccessToken(null);
+  localStorage.removeItem("paserve.sidebar.collapsed");
 });
 
 it("clears the access token and private cache and navigates to login after logout", async () => {
@@ -85,12 +87,15 @@ it("finishes an in-flight refresh before logout and blocks further refresh attem
 it("offers one Create shop action and tracks the selected account section", async () => {
   const client = new QueryClient();
   client.setQueryData(currentUserKey, {
-    user: { id: "u", email: "owner@example.com", memberships: [] },
+    user: { id: "u", email: "owner@example.com", firstName: null, lastName: null, createdAt: "2026-10-08T00:00:00Z", memberships: [] },
   });
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <AccountPage />
+      <MemoryRouter initialEntries={["/app/account"]}>
+        <Routes>
+          <Route path="/app/account" element={<AccountPage />} />
+          <Route path="/app/account/profile" element={<ProfilePage />} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -102,14 +107,17 @@ it("offers one Create shop action and tracks the selected account section", asyn
   const overview = navigation.getByRole("link", { name: "Overview" });
   const profile = navigation.getByRole("link", { name: "Your profile" });
   const places = navigation.getByRole("link", { name: "Your places" });
-  expect(overview).toHaveAttribute("aria-current", "location");
+  expect(overview).toHaveAttribute("aria-current", "page");
   const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+  expect(localStorage.getItem("paserve.sidebar.collapsed")).toBe("true");
+  expect(screen.getByRole("button", { name: "Expand sidebar" })).toHaveAttribute("aria-expanded", "false");
+  await user.click(screen.getByRole("button", { name: "Expand sidebar" }));
   await user.click(profile);
-  expect(profile).toHaveAttribute("aria-current", "location");
-  expect(overview).not.toHaveAttribute("aria-current");
-  expect(screen.getByRole("heading", { name: "Your account" })).toHaveFocus();
-  await user.click(places);
-  expect(places).toHaveAttribute("aria-current", "location");
-  expect(profile).not.toHaveAttribute("aria-current");
+  expect(screen.getByRole("link", { name: "Your profile" })).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("heading", { name: "Your profile" })).toHaveFocus();
+  expect(places).not.toBeInTheDocument();
+  await user.click(screen.getByRole("link", { name: "Your places" }));
+  expect(screen.getByRole("link", { name: "Your places" })).toHaveAttribute("aria-current", "location");
   expect(screen.getByRole("heading", { name: "Your people. Your places." })).toHaveFocus();
 });

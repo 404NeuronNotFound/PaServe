@@ -75,6 +75,7 @@ function renderAt(path: string) {
 it.each([
   "/app",
   "/app/account",
+  "/app/account/profile",
   "/app/onboarding/create-shop",
   "/app/shops",
   "/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e",

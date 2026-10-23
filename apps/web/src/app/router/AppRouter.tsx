@@ -15,6 +15,7 @@ import { CustomerReceiptPage } from "../../pages/public/CustomerReceiptPage";
 import { ConnectionPage } from "../../pages/public/ConnectionPage";
 import { LoginPage } from "../../pages/public/LoginPage";
 import { AccountPage } from "../../pages/owner/AccountPage";
+import { ProfilePage } from "../../pages/owner/ProfilePage";
 import { CreateShopPage } from "../../pages/owner/CreateShopPage";
 import { ProtectedRoute } from "../../features/auth/components/ProtectedRoute";
 import { ActiveShopRoute } from "../../features/shops/ActiveShopRoute";
@@ -101,6 +102,7 @@ export function AppRouter() {
             </Route>
           </Route>
           <Route path="account" element={<AccountPage />} />
+          <Route path="account/profile" element={<ProfilePage />} />
           <Route path="onboarding/create-shop" element={<CreateShopPage />} />
         </Route>
         <Route path="/connection" element={<ConnectionPage />} />

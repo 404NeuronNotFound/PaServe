@@ -1,9 +1,72 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
+import { invalidSession } from './tokens.service.js';
+import type { UpdateProfileRequest } from '@paserve/contracts';
 
 @Injectable()
 export class AuthRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  private liveAccount(userId: string, sessionId: string) {
+    return {
+      id: userId,
+      isActive: true,
+      sessions: {
+        some: {
+          id: sessionId,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      },
+    };
+  }
+
+  findCredentialAccount(userId: string, sessionId: string) {
+    return this.prisma.user.findFirst({
+      where: this.liveAccount(userId, sessionId),
+      select: { id: true, email: true, passwordHash: true },
+    });
+  }
+
+  async updateProfile(
+    userId: string,
+    sessionId: string,
+    input: UpdateProfileRequest,
+  ) {
+    const data = {
+      firstName: input.firstName || null,
+      lastName: input.lastName || null,
+    };
+    const result = await this.prisma.user.updateMany({
+      where: this.liveAccount(userId, sessionId),
+      data,
+    });
+    if (result.count !== 1) throw invalidSession();
+    return data;
+  }
+
+  async changeCredentials(
+    userId: string,
+    sessionId: string,
+    previousHash: string,
+    data: { email?: string; passwordHash?: string },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      // Compare the verified hash and live session again at the write boundary.
+      const result = await tx.user.updateMany({
+        where: {
+          ...this.liveAccount(userId, sessionId),
+          passwordHash: previousHash,
+        },
+        data,
+      });
+      if (result.count !== 1) throw invalidSession();
+      await tx.authSession.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    });
+  }
 
   findAccountByEmail(email: string) {
     return this.prisma.user.findFirst({
@@ -37,9 +100,17 @@ export class AuthRepository {
     userId: string,
     refreshTokenHash: string,
     expiresAt: Date,
+    verifiedPasswordHash: string,
   ) {
-    return this.prisma.authSession.create({
-      data: { id, userId, refreshTokenHash, expiresAt },
+    // Lock the account and recheck the verified credential before issuing a
+    // session, so an old-password login cannot race a credential change.
+    return this.prisma.user.update({
+      where: { id: userId, isActive: true, passwordHash: verifiedPasswordHash },
+      data: {
+        updatedAt: new Date(),
+        sessions: { create: { id, refreshTokenHash, expiresAt } },
+      },
+      select: { id: true },
     });
   }
 

@@ -9,6 +9,7 @@ export const RATE_LIMITS = {
   refresh: { limit: 30, aggregate: 30, shop: false },
   logout: { limit: 30, aggregate: 30, shop: false },
   session: { limit: 120, aggregate: 120, shop: false },
+  accountUpdate: { limit: 10, aggregate: 10, shop: false },
   orderCreate: { limit: 30, aggregate: 120, shop: true },
   quote: { limit: 120, aggregate: 360, shop: true },
   receiptProof: { limit: 30, aggregate: 120, shop: true },

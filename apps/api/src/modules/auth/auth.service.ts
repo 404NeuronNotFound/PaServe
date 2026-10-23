@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import type {
   RegisterResponse,
@@ -15,6 +16,11 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { AuthRepository } from './auth.repository.js';
 import type { RegisterDto } from './dto/register.dto.js';
 import type { LoginDto } from './dto/login.dto.js';
+import type {
+  UpdateProfileDto,
+  ChangeEmailDto,
+  ChangePasswordDto,
+} from './dto/update-account.dto.js';
 import {
   TokensService,
   ACCESS_TOKEN_SECONDS,
@@ -51,12 +57,22 @@ export class AuthService {
     const sessionId = randomUUID();
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_SECONDS * 1000);
     const pair = await this.tokens.issue(account.id, sessionId, expiresAt);
-    await this.repository.createSession(
-      sessionId,
-      account.id,
-      this.tokens.digest(pair.refreshToken),
-      expiresAt,
-    );
+    try {
+      await this.repository.createSession(
+        sessionId,
+        account.id,
+        this.tokens.digest(pair.refreshToken),
+        expiresAt,
+        account.passwordHash,
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      )
+        throw invalidSession();
+      throw error;
+    }
     return {
       response: this.loginResponse(account, pair.accessToken),
       refreshToken: pair.refreshToken,
@@ -129,6 +145,68 @@ export class AuthService {
       return;
     }
     await this.repository.revokeSession(claims.sid, claims.sub);
+  }
+
+  async updateProfile(accessToken: string, dto: UpdateProfileDto) {
+    const claims = await this.tokens.verify(accessToken, 'access');
+    return this.repository.updateProfile(claims.sub, claims.sid, {
+      firstName: dto.firstName.trim(),
+      lastName: dto.lastName.trim(),
+    });
+  }
+
+  async changeCredentials(
+    accessToken: string,
+    dto: ChangeEmailDto | ChangePasswordDto,
+  ) {
+    const claims = await this.tokens.verify(accessToken, 'access');
+    const account = await this.repository.findCredentialAccount(
+      claims.sub,
+      claims.sid,
+    );
+    if (!account) throw invalidSession();
+    if (!(await verify(account.passwordHash, dto.currentPassword))) {
+      throw new BadRequestException({
+        code: 'CURRENT_PASSWORD_INCORRECT',
+        message: 'Your current password is incorrect.',
+        fieldErrors: {
+          currentPassword: ['Your current password is incorrect.'],
+        },
+      });
+    }
+    let data: { email?: string; passwordHash?: string };
+    if ('email' in dto) {
+      const email = dto.email.trim().toLowerCase();
+      if (email === account.email.toLowerCase())
+        throw new BadRequestException('Enter a different email address.');
+      const existing = await this.repository.findAccountByEmail(email);
+      if (existing && existing.id !== account.id) throw this.emailConflict();
+      // Rehash even for an email change to invalidate a concurrently verified
+      // login using the previous address at the conditional session write.
+      data = {
+        email,
+        passwordHash: await hash(dto.currentPassword, { type: argon2id }),
+      };
+    } else {
+      if (await verify(account.passwordHash, dto.password))
+        throw new BadRequestException('Choose a different password.');
+      data = { passwordHash: await hash(dto.password, { type: argon2id }) };
+    }
+    try {
+      await this.repository.changeCredentials(
+        claims.sub,
+        claims.sid,
+        account.passwordHash,
+        data,
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )
+        throw this.emailConflict();
+      throw error;
+    }
   }
 
   private safeUser(user: {
