@@ -22,7 +22,13 @@ export interface RegisterResponse {
 export interface LoginRequest {
   email: string;
   password: string;
+  keepSignedIn?: boolean;
 }
+
+export const SESSION_LIMITS = {
+  sharedSeconds: 8 * 60 * 60,
+  personalSeconds: 7 * 24 * 60 * 60,
+} as const;
 
 export interface LoginResponse {
   user: RegisteredUser;

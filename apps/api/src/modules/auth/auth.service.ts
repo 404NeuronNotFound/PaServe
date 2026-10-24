@@ -12,6 +12,7 @@ import type {
 } from '@paserve/contracts';
 import { argon2id, hash, verify } from 'argon2';
 import { randomBytes, randomUUID } from 'node:crypto';
+import { SESSION_LIMITS } from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
 import { AuthRepository } from './auth.repository.js';
 import type { RegisterDto } from './dto/register.dto.js';
@@ -24,7 +25,6 @@ import type {
 import {
   TokensService,
   ACCESS_TOKEN_SECONDS,
-  REFRESH_TOKEN_SECONDS,
   invalidSession,
 } from './tokens.service.js';
 
@@ -55,8 +55,17 @@ export class AuthService {
       });
     }
     const sessionId = randomUUID();
-    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_SECONDS * 1000);
-    const pair = await this.tokens.issue(account.id, sessionId, expiresAt);
+    const keepSignedIn = dto.keepSignedIn === true;
+    const lifetime = keepSignedIn
+      ? SESSION_LIMITS.personalSeconds
+      : SESSION_LIMITS.sharedSeconds;
+    const expiresAt = new Date(Date.now() + lifetime * 1000);
+    const pair = await this.tokens.issue(
+      account.id,
+      sessionId,
+      expiresAt,
+      keepSignedIn,
+    );
     try {
       await this.repository.createSession(
         sessionId,
@@ -77,6 +86,7 @@ export class AuthService {
       response: this.loginResponse(account, pair.accessToken),
       refreshToken: pair.refreshToken,
       expiresAt,
+      keepSignedIn,
     };
   }
 
@@ -94,6 +104,7 @@ export class AuthService {
       claims.sub,
       claims.sid,
       session.expiresAt,
+      claims.keepSignedIn ?? true,
     );
     const updated = await this.repository.rotateSession(
       claims.sid,
@@ -110,6 +121,7 @@ export class AuthService {
       response: this.loginResponse(session.user, pair.accessToken),
       refreshToken: pair.refreshToken,
       expiresAt: session.expiresAt,
+      keepSignedIn: claims.keepSignedIn ?? true,
     };
   }
 

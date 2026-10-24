@@ -63,7 +63,12 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const result = await this.auth.login(dto);
-    this.setSessionCookie(response, result.refreshToken, result.expiresAt);
+    this.setSessionCookie(
+      response,
+      result.refreshToken,
+      result.expiresAt,
+      result.keepSignedIn,
+    );
     return result.response;
   }
 
@@ -79,7 +84,12 @@ export class AuthController {
     const token = refreshCookie(request);
     if (!token) throw invalidSession();
     const result = await this.auth.refresh(token);
-    this.setSessionCookie(response, result.refreshToken, result.expiresAt);
+    this.setSessionCookie(
+      response,
+      result.refreshToken,
+      result.expiresAt,
+      result.keepSignedIn,
+    );
     return result.response;
   }
 
@@ -167,10 +177,15 @@ export class AuthController {
     response.setHeader('Cache-Control', 'no-store');
   }
 
-  private setSessionCookie(response: Response, token: string, expiresAt: Date) {
+  private setSessionCookie(
+    response: Response,
+    token: string,
+    expiresAt: Date,
+    keepSignedIn: boolean,
+  ) {
     response.cookie(REFRESH_COOKIE, token, {
       ...this.cookieOptions(),
-      expires: expiresAt,
+      ...(keepSignedIn ? { expires: expiresAt } : {}),
     });
     response.setHeader('Cache-Control', 'no-store');
   }

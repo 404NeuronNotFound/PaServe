@@ -2,9 +2,10 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID, createHash } from 'node:crypto';
+import { SESSION_LIMITS } from '@paserve/contracts';
 
 export const ACCESS_TOKEN_SECONDS = 15 * 60;
-export const REFRESH_TOKEN_SECONDS = 7 * 24 * 60 * 60;
+export const REFRESH_TOKEN_SECONDS = SESSION_LIMITS.personalSeconds;
 export const REFRESH_COOKIE = 'paserve_refresh';
 export const invalidSession = () =>
   new UnauthorizedException({
@@ -16,6 +17,7 @@ interface Claims {
   sub: string;
   sid: string;
   type: 'access' | 'refresh';
+  keepSignedIn?: boolean;
 }
 
 @Injectable()
@@ -40,7 +42,12 @@ export class TokensService {
     }
   }
 
-  async issue(userId: string, sessionId: string, expiresAt: Date) {
+  async issue(
+    userId: string,
+    sessionId: string,
+    expiresAt: Date,
+    keepSignedIn = true,
+  ) {
     const payload = { sub: userId, sid: sessionId };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(
@@ -58,6 +65,7 @@ export class TokensService {
         {
           ...payload,
           type: 'refresh',
+          keepSignedIn,
           exp: Math.floor(expiresAt.getTime() / 1000),
         },
         {
@@ -90,7 +98,19 @@ export class TokensService {
         typeof claims.exp !== 'number'
       )
         throw invalidSession();
-      return { sub: claims.sub, sid: claims.sid, type };
+      if (
+        claims.keepSignedIn !== undefined &&
+        typeof claims.keepSignedIn !== 'boolean'
+      )
+        throw invalidSession();
+      return {
+        sub: claims.sub,
+        sid: claims.sid,
+        type,
+        ...(typeof claims.keepSignedIn === 'boolean'
+          ? { keepSignedIn: claims.keepSignedIn }
+          : {}),
+      };
     } catch {
       throw invalidSession();
     }

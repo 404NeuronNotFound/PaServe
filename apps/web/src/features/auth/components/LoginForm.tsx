@@ -20,6 +20,7 @@ export function LoginForm({
 }) {
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
+  const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [visible, setVisible] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {},
@@ -75,6 +76,7 @@ export function LoginForm({
       const result = await mutation.mutateAsync({
         email: email.trim().toLowerCase(),
         password,
+        keepSignedIn,
       });
       setPassword("");
       mutation.reset();
@@ -213,6 +215,13 @@ export function LoginForm({
             </Button>
           </div>
         </FormField>
+        <label className="login-session-choice">
+          <Input type="checkbox" name="keepSignedIn" checked={keepSignedIn} disabled={mutation.isPending} onChange={(event) => setKeepSignedIn(event.target.checked)} aria-describedby="login-session-hint" />
+          <span>Keep me signed in</span>
+        </label>
+        <p id="login-session-hint" className="login-session-hint">
+          {keepSignedIn ? "Personal device: stay signed in for up to 7 days. Turn this off on shared devices." : "Shared device: sign in for up to 8 hours. Leave this off on cashier and kitchen devices."}
+        </p>
         {formError && (
           <InlineMessage ref={errorRef} tabIndex={-1}>
             {formError}

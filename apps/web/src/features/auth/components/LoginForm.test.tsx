@@ -72,8 +72,22 @@ it("normalizes email, preserves password whitespace and clears password after su
   expect(login.mock.calls[0]?.[0]).toEqual({
     email: "owner@example.com",
     password: "  test passphrase  ",
+    keepSignedIn: false,
   });
   expect(screen.getByLabelText("Password")).toHaveValue("");
+});
+
+it("offers persistent sign-in only when the user selects a personal device", async () => {
+  login.mockResolvedValue(session);
+  const { user } = setup();
+  const preference = screen.getByRole("checkbox", { name: "Keep me signed in" });
+  expect(preference).not.toBeChecked();
+  expect(screen.getByText(/Shared device: sign in for up to 8 hours/)).toBeVisible();
+  await user.click(preference);
+  expect(screen.getByText(/Personal device: stay signed in for up to 7 days/)).toBeVisible();
+  await fill(user);
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  await waitFor(() => expect(login.mock.calls[0]?.[0]).toMatchObject({ keepSignedIn: true }));
 });
 
 it.each([401, 429, 500])(

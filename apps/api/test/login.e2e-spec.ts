@@ -157,11 +157,11 @@ describe('Login and session HTTP flow', () => {
     });
   });
 
-  const login = () =>
+  const login = (keepSignedIn = true) =>
     request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .set('X-PaServe-Client', 'web')
-      .send({ email: ' Owner@Example.com ', password });
+      .send({ email: ' Owner@Example.com ', password, keepSignedIn });
   function cookie(response: { headers: Record<string, unknown> }): string {
     return (response.headers['set-cookie'] as string[])[0].split(';')[0];
   }
@@ -287,6 +287,8 @@ describe('Login and session HTTP flow', () => {
     { email: account.email, password: '' },
     { email: account.email, password: 'x'.repeat(129) },
     { email: account.email, password, role: 'OWNER' },
+    { email: account.email, password, keepSignedIn: 'true' },
+    { email: account.email, password, keepSignedIn: null },
   ])('rejects invalid login DTO (%j)', async (input) => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
@@ -309,6 +311,101 @@ describe('Login and session HTTP flow', () => {
       .send({ email: account.email, password })
       .expect(403);
     expect(repository.findLoginAccount).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])(
+    'preserves the selected session policy through refresh (keepSignedIn=%s)',
+    async (keepSignedIn) => {
+      const started = Date.now();
+      const response = await login(keepSignedIn).expect(200);
+      const refresh = decodeURIComponent(cookie(response).split('=')[1]);
+      const claims = await app.get(TokensService).verify(refresh, 'refresh');
+      expect(claims.keepSignedIn).toBe(keepSignedIn);
+      const stored = sessions.get(claims.sid)!;
+      const expectedLifetime = (keepSignedIn ? 7 * 24 : 8) * 60 * 60 * 1000;
+      expect(stored.expiresAt.getTime() - started).toBeGreaterThanOrEqual(
+        expectedLifetime,
+      );
+      expect(stored.expiresAt.getTime() - started).toBeLessThan(
+        expectedLifetime + 10_000,
+      );
+      const header = (response.headers['set-cookie'] as unknown as string[])[0];
+      expect(header).toContain('HttpOnly');
+      expect(header.includes('Expires=')).toBe(keepSignedIn);
+      expect(header).not.toContain('Max-Age=');
+      const expiresAt = stored.expiresAt.getTime();
+      const rotated = await cookiePost('refresh', cookie(response)).expect(200);
+      const nextHeader = (
+        rotated.headers['set-cookie'] as unknown as string[]
+      )[0];
+      expect(nextHeader.includes('Expires=')).toBe(keepSignedIn);
+      expect(stored.expiresAt.getTime()).toBe(expiresAt);
+      const nextClaims = await app
+        .get(TokensService)
+        .verify(decodeURIComponent(cookie(rotated).split('=')[1]), 'refresh');
+      expect(nextClaims.keepSignedIn).toBe(keepSignedIn);
+      stored.expiresAt = new Date(Date.now() - 1);
+      await cookiePost('refresh', cookie(rotated)).expect(401);
+      await request(app.getHttpServer())
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${rotated.body.accessToken}`)
+        .expect(401);
+    },
+  );
+
+  it('defaults an omitted preference to a short, nonpersistent session', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .set('X-PaServe-Client', 'web')
+      .send({ email: account.email, password })
+      .expect(200);
+    expect(
+      (response.headers['set-cookie'] as unknown as string[])[0],
+    ).not.toContain('Expires=');
+    const claims = await app
+      .get(TokensService)
+      .verify(decodeURIComponent(cookie(response).split('=')[1]), 'refresh');
+    expect(claims.keepSignedIn).toBe(false);
+    expect(
+      sessions.get(claims.sid)!.expiresAt.getTime() - Date.now(),
+    ).toBeLessThanOrEqual(8 * 60 * 60 * 1000);
+  });
+
+  it('preserves the existing expiry and persistence of sessions issued before the preference was added', async () => {
+    const response = await login(true).expect(200);
+    const tokens = app.get(TokensService);
+    const claims = await tokens.verify(
+      response.body.accessToken as string,
+      'access',
+    );
+    const stored = sessions.get(claims.sid)!;
+    const jwt = app.get(JwtService);
+    const legacy = await jwt.signAsync(
+      {
+        sub: claims.sub,
+        sid: claims.sid,
+        type: 'refresh',
+        exp: Math.floor(stored.expiresAt.getTime() / 1000),
+      },
+      {
+        secret: 'test-refresh-secret-with-at-least-32-characters',
+        issuer: 'paserve-api',
+        audience: 'paserve:refresh',
+      },
+    );
+    stored.refreshTokenHash = tokens.digest(legacy);
+    const refreshed = await cookiePost(
+      'refresh',
+      `paserve_refresh=${encodeURIComponent(legacy)}`,
+    ).expect(200);
+    expect(
+      (refreshed.headers['set-cookie'] as unknown as string[])[0],
+    ).toContain(`Expires=${stored.expiresAt.toUTCString()}`);
+    const rotatedToken = decodeURIComponent(cookie(refreshed).split('=')[1]);
+    expect((await tokens.verify(rotatedToken, 'refresh')).keepSignedIn).toBe(
+      true,
+    );
+    expect(jwt.decode(rotatedToken).exp).toBe(jwt.decode(legacy).exp);
   });
 
   it('rotates refresh JWT and revokes the entire session on reuse', async () => {
