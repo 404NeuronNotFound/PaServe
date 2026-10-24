@@ -41,16 +41,11 @@ export function AveragePrepTime({
       className="daily-analytics average-prep-time"
       aria-labelledby="average-prep-time-title"
     >
-      <div className="daily-analytics-heading">
+      <div className="daily-analytics-heading refresh-heading">
         <div>
           {!compact && <p className="sales-eyebrow">ANALYTICS / PREPARATION</p>}
           <h2 id="average-prep-time-title">Average Prep Time</h2>
-          {!compact && (
-            <p className="sales-panel-period">
-              {startDate} – {endDate} · Manila (UTC+8), both dates included.
-              Confirmed, paid, completed orders only.
-            </p>
-          )}
+
         </div>
         <RefreshButton
           label="Refresh prep time"
@@ -59,6 +54,12 @@ export function AveragePrepTime({
           disabled={query.isFetching}
           onClick={() => void query.refetch()}
         />
+          {!compact && (
+            <p className="refresh-heading-description sales-panel-period">
+              {startDate} – {endDate} · Manila (UTC+8), both dates included.
+              Confirmed, paid, completed orders only.
+            </p>
+          )}
       </div>
       <p className="sales-range-help sales-prep-pair">
         {compact

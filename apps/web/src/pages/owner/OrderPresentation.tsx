@@ -36,7 +36,7 @@ export function OrderPageHeader({
   const Icon = viewIcons[view];
   return (
     <>
-      <PageHeader className="active-orders-header">
+      <PageHeader className="active-orders-header refresh-heading">
         <div className="owner-orders-heading">
           <span className="owner-orders-emblem">
             <Icon aria-hidden="true" />
@@ -44,7 +44,6 @@ export function OrderPageHeader({
           <div>
             <p className="section-label">ORDER MANAGEMENT</p>
             <h1 id={titleId}>{title}</h1>
-            <p>{children}</p>
           </div>
         </div>
         <RefreshButton label="Refresh" className="owner-orders-refresh"
@@ -53,6 +52,7 @@ export function OrderPageHeader({
           onClick={onRefresh}
           pending={fetching}
         />
+        <p className="refresh-heading-description">{children}</p>
       </PageHeader>
       <OrderViewsNavigation />
     </>

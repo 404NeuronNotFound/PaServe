@@ -554,7 +554,7 @@ export function ProductEditor({
               <InlineMessage tone="info">Loading categories…</InlineMessage>
             )}
             {categories.isError && (
-              <div>
+              <div className="refresh-recovery">
                 <InlineMessage>
                   {product
                     ? "Categories couldn’t be loaded. Keep the current category or choose Uncategorized."

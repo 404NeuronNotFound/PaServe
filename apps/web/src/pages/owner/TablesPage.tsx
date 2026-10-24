@@ -199,15 +199,10 @@ function TableWorkspace({ userId }: { userId: string }) {
       </PageHeader>
       <div className="tables-layout">
         <section className="tables-panel" aria-labelledby="saved-tables-title">
+          <div className="refresh-heading">
           <h2 id="saved-tables-title">
             <FiGrid aria-hidden="true" /> Saved tables
           </h2>
-          {query.isPending && <ListSkeleton label="Loading tables…" tables />}
-          {query.isError && (
-            <ErrorState error={query.error} resource="tables" action="load"
-              permissionMessage="Your access changed. Refresh the shop workspace to continue."
-              unavailableMessage="Your access changed. Refresh the shop workspace to continue." />
-          )}
           {(query.isError || uncertain) && !denied && !lostAccess && (
             <RefreshButton label="Refresh tables"
               disabled={query.isFetching || mutation.isPending}
@@ -215,6 +210,14 @@ function TableWorkspace({ userId }: { userId: string }) {
               pending={query.isFetching}
             />
           )}
+          </div>
+          {query.isPending && <ListSkeleton label="Loading tables…" tables />}
+          {query.isError && (
+            <ErrorState error={query.error} resource="tables" action="load"
+              permissionMessage="Your access changed. Refresh the shop workspace to continue."
+              unavailableMessage="Your access changed. Refresh the shop workspace to continue." />
+          )}
+
           {query.isSuccess &&
             !lostAccess &&
             (query.data.tables.length ? (

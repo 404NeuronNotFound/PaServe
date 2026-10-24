@@ -185,13 +185,6 @@
     .phase-two .staff-actions > :is(button, .select-field) {
       flex: 1 1 112px;
     }
-    .kitchen-heading {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    .kitchen-refresh {
-      justify-items: start;
-    }
     .kitchen-history > li {
       grid-template-columns: 30px minmax(0, 1fr) auto;
       gap: var(--spacing-3);

@@ -67,16 +67,11 @@ export function SalesTrends({
       className="daily-analytics sales-trends"
       aria-labelledby="sales-trends-title"
     >
-      <div className="daily-analytics-heading">
+      <div className="daily-analytics-heading refresh-heading">
         <div>
           {!compact && <p className="sales-eyebrow">ANALYTICS / COMPARISON</p>}
           <h2 id="sales-trends-title">Sales Trends</h2>
-          {!compact && (
-            <p>
-              {startDate} – {endDate} · Manila (UTC+8). Compared with the
-              immediately preceding equal-length period.
-            </p>
-          )}
+
         </div>
         <RefreshButton
           label="Refresh sales trends"
@@ -85,6 +80,12 @@ export function SalesTrends({
           disabled={!valid || query.isFetching}
           onClick={() => void query.refetch()}
         />
+          {!compact && (
+            <p className="refresh-heading-description">
+              {startDate} – {endDate} · Manila (UTC+8). Compared with the
+              immediately preceding equal-length period.
+            </p>
+          )}
       </div>
       {!valid && (
         <InlineMessage>

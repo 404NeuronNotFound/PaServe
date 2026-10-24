@@ -142,7 +142,7 @@ function OrderDetailsWorkspace({
       <Link className="owner-order-back" to={`${shopPath(shopId)}/orders`}>
         <FiArrowLeft aria-hidden="true" /> Back to active orders
       </Link>
-      <header className="active-orders-header">
+      <header className="active-orders-header refresh-heading">
         <div className="owner-orders-heading">
           <span className="owner-orders-emblem">
             <FiFileText aria-hidden="true" />
@@ -152,7 +152,6 @@ function OrderDetailsWorkspace({
             <h1 ref={heading} tabIndex={-1}>
               {order?.orderNumber ?? "Order details"}
             </h1>
-            <p>The original order. Every detail, preserved.</p>
           </div>
         </div>
         <RefreshButton label="Refresh"
@@ -161,6 +160,7 @@ function OrderDetailsWorkspace({
           disabled={query.isFetching || mutation.isPending}
           onClick={() => void query.refetch()}
         />
+        <p className="refresh-heading-description">The original order. Every detail, preserved.</p>
       </header>
       <OrderViewsNavigation />
       {query.isPending && <OrderDetailsSkeleton />}

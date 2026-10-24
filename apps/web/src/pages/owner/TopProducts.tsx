@@ -43,16 +43,11 @@ export function TopProducts({
       className="daily-analytics top-products"
       aria-labelledby="top-products-title"
     >
-      <div className="daily-analytics-heading">
+      <div className="daily-analytics-heading refresh-heading">
         <div>
           {!compact && <p className="sales-eyebrow">ANALYTICS / PRODUCTS</p>}
           <h2 id="top-products-title">Top Products</h2>
-          {!compact && (
-            <p>
-              {startDate} – {endDate} · Manila (UTC+8), both dates included.
-              Confirmed, paid, completed orders only.
-            </p>
-          )}
+
         </div>
         <RefreshButton
           label="Refresh top products"
@@ -60,6 +55,12 @@ export function TopProducts({
           onClick={() => void query.refetch()}
           pending={query.isFetching}
         />
+          {!compact && (
+            <p className="refresh-heading-description">
+              {startDate} – {endDate} · Manila (UTC+8), both dates included.
+              Confirmed, paid, completed orders only.
+            </p>
+          )}
       </div>
       <div className="daily-analytics-controls">
         <div className="top-products-metric">

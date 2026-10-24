@@ -237,10 +237,9 @@ function SalesWorkspace({ userId }: { userId: string }) {
       className="sales-dashboard sales-minimal"
       aria-labelledby="sales-title"
     >
-      <PageHeader className="sales-header">
+      <PageHeader className="sales-header refresh-heading">
         <div>
           <h1 id="sales-title">Sales dashboard</h1>
-          <p className="sales-intro">{shop.name} · Completed sales · PHP</p>
         </div>
         <RefreshButton
           label="Refresh sales"
@@ -248,6 +247,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
           onClick={refreshSales}
           pending={query.isFetching}
         />
+        <p className="sales-intro refresh-heading-description">{shop.name} · Completed sales · PHP</p>
       </PageHeader>
       <div className="sales-period-panel" id="sales-overview">
         <div
@@ -495,7 +495,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
               label="sales trends"
               placeholder={
                 <section className="daily-analytics sales-trends">
-                  <div className="daily-analytics-heading"><h2>Sales Trends</h2><SkeletonBlock width={44} height={44} /></div>
+                  <div className="daily-analytics-heading refresh-heading"><h2>Sales Trends</h2><SkeletonBlock width={44} height={44} /></div>
                   <SalesReportSkeleton kind="trends" label="Loading sales trends…" />
                 </section>
               }
@@ -776,7 +776,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
               label="top products"
               placeholder={
                 <section className="daily-analytics">
-                  <div className="daily-analytics-heading"><h2>Top Products</h2><SkeletonBlock width={44} height={44} /></div>
+                  <div className="daily-analytics-heading refresh-heading"><h2>Top Products</h2><SkeletonBlock width={44} height={44} /></div>
                   <SalesReportSkeleton kind="products" label="Loading top products…" />
                 </section>
               }
@@ -801,7 +801,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 label="peak hours"
                 placeholder={
                   <section className="daily-analytics">
-                    <div className="daily-analytics-heading"><h2>Peak Hours</h2><SkeletonBlock width={44} height={44} /></div>
+                    <div className="daily-analytics-heading refresh-heading"><h2>Peak Hours</h2><SkeletonBlock width={44} height={44} /></div>
                     <SalesReportSkeleton kind="hours" label="Loading peak hours…" />
                   </section>
                 }
@@ -820,7 +820,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
                 label="average preparation time"
                 placeholder={
                   <section className="daily-analytics average-prep-time">
-                    <div className="daily-analytics-heading"><h2>Average Prep Time</h2><SkeletonBlock width={44} height={44} /></div>
+                    <div className="daily-analytics-heading refresh-heading"><h2>Average Prep Time</h2><SkeletonBlock width={44} height={44} /></div>
                     <p className="sales-range-help sales-prep-pair">Preparing → Ready</p>
                     <PreparationMetricSkeleton />
                   </section>

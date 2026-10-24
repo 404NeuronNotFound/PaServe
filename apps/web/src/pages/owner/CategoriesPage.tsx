@@ -513,7 +513,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
           className="categories-list-panel"
           aria-labelledby="category-list-title"
         >
-          <div className="categories-toolbar">
+          <div className="categories-toolbar refresh-heading">
             <div className="categories-panel-heading">
               <h2 id="category-list-title" tabIndex={-1}>
                 Your categories
@@ -522,32 +522,6 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                 <span>{query.data.categories.length}</span>
               )}
             </div>
-            <div className="categories-toolbar-actions">
-              {query.isSuccess &&
-                !query.isError &&
-                query.data.categories.length > 1 &&
-                !reordering && (
-                  <Button variant="outline" size="inherit"
-                    id="category-reorder-button"
-                    type="button"
-                    className="secondary-button categories-reorder"
-                    disabled={
-                      Boolean(editing) ||
-                      Boolean(deleting) ||
-                      mutation.isPending ||
-                      visibility.isPending ||
-                      order.isPending ||
-                      query.isFetching ||
-                      lostAccess ||
-                      unverified ||
-                      query.data.categories.length > CATEGORY_REORDER_MAX
-                    }
-                    onClick={() => setReordering(true)}
-                  >
-                    <FiShuffle aria-hidden="true" />
-                    Reorder categories
-                  </Button>
-                )}
               {(!requestDenied || unverified) && !query.isPending && (
                 <RefreshButton label="Refresh categories"
                   title={query.isFetching ? "Refreshing categories" : "Refresh categories"}
@@ -574,6 +548,33 @@ function CategoryWorkspace({ userId }: { userId: string }) {
                   pending={query.isFetching}
                 />
               )}
+            <div className="categories-toolbar-actions refresh-heading-description">
+              {query.isSuccess &&
+                !query.isError &&
+                query.data.categories.length > 1 &&
+                !reordering && (
+                  <Button variant="outline" size="inherit"
+                    id="category-reorder-button"
+                    type="button"
+                    className="secondary-button categories-reorder"
+                    disabled={
+                      Boolean(editing) ||
+                      Boolean(deleting) ||
+                      mutation.isPending ||
+                      visibility.isPending ||
+                      order.isPending ||
+                      query.isFetching ||
+                      lostAccess ||
+                      unverified ||
+                      query.data.categories.length > CATEGORY_REORDER_MAX
+                    }
+                    onClick={() => setReordering(true)}
+                  >
+                    <FiShuffle aria-hidden="true" />
+                    Reorder categories
+                  </Button>
+                )}
+
             </div>
           </div>
           {visibilityError && (unverified || !displayedCategories.some((category) => category.id === visibilityError.id)) && (

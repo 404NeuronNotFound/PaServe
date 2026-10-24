@@ -71,19 +71,19 @@ function ReceiptRead({
           className="order-receipt-card"
           aria-labelledby="receipt-page-title"
         >
-          <header className="order-receipt-heading">
+          <header className="order-receipt-heading refresh-heading">
             <div>
               <p className="section-label">Your digital copy</p>
               <h1 id="receipt-page-title" ref={heading} tabIndex={-1}>
                 Receipt {receipt.orderNumber}
               </h1>
-              <p className="order-receipt-intro">
-                {receipt.mode === "DINE_IN"
-                  ? `Dine-in · Table ${receipt.table!.number}`
-                  : "Takeout / pickup"}
-              </p>
             </div>
-            <p className="order-receipt-context">Digital receipt</p>
+            <RefreshButton label="Refresh receipt" onClick={retry} />
+            <p className="order-receipt-intro refresh-heading-description">
+              Digital receipt · {receipt.mode === "DINE_IN"
+                ? `Dine-in · Table ${receipt.table!.number}`
+                : "Takeout / pickup"}
+            </p>
           </header>
           <section
             className="order-receipt-details receipt-view-details"
@@ -99,9 +99,6 @@ function ReceiptRead({
           <footer>
             <p>Keep this receipt for your records.</p>
             <div className="order-receipt-footer-actions">
-              <RefreshButton label="Refresh receipt"
-                onClick={retry}
-              />
               <Link
                 className="primary-button"
                 to={trackingPath(shopSlug, orderId)}

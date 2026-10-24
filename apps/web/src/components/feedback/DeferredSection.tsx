@@ -20,7 +20,7 @@ class SectionBoundary extends Component<
   override render() {
     if (this.state.failed)
       return (
-        <section className="daily-analytics">
+        <section className="daily-analytics refresh-recovery">
           <InlineMessage>
             We couldn’t load {this.props.label}. Other sections remain
             available.

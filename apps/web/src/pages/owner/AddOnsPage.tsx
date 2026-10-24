@@ -77,13 +77,12 @@ function AddOnLibrary() {
       className="customization-page addon-library"
       aria-labelledby="addons-title"
     >
-      <header className="customization-heading">
+      <header className="customization-heading refresh-heading">
         <div>
           <p className="section-label">YOUR MENU, YOUR EXTRAS</p>
           <h1 id="addons-title">Shop add-ons</h1>
-          <p>Create once. Offer on any product.</p>
         </div>
-        <div className="customization-actions">
+        <div className="customization-actions refresh-heading-actions">
           <RefreshButton label="Refresh add-ons"
             pending={refreshing || query.isFetching}
             pendingLabel="Refreshing add-ons..."
@@ -106,6 +105,7 @@ function AddOnLibrary() {
             <span>Create add-on</span>
           </Button>
         </div>
+        <p className="refresh-heading-description">Create once. Offer on any product.</p>
       </header>
       {error && !editor && <InlineMessage>{error}</InlineMessage>}
       {query.isError && (

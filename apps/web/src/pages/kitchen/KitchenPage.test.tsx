@@ -150,10 +150,15 @@ it("switches distance presentation by keyboard while preserving FIFO, modifiers 
   ]);
   await screen.findByRole("article", { name: "Order ORD-000001" });
   const toggle = screen.getByRole("button", { name: "Distance view" });
+  const standard = screen.getByRole("button", { name: "Standard" });
+  expect(screen.getByRole("group", { name: "Ticket display" })).toBeInTheDocument();
+  expect(standard).toHaveAttribute("aria-pressed", "true");
   expect(toggle).toHaveAttribute("aria-pressed", "false");
   toggle.focus();
   await userEvent.keyboard(" ");
   expect(toggle).toHaveAttribute("aria-pressed", "true");
+  expect(standard).toHaveAttribute("aria-pressed", "false");
+  expect(screen.getByText(/One ticket per row on phones/)).toBeInTheDocument();
   const orders = screen.getAllByRole("article");
   expect(orders[0]).toHaveAccessibleName("Order ORD-000001");
   expect(orders[1]).toHaveAccessibleName("Order ORD-000002");
@@ -164,8 +169,12 @@ it("switches distance presentation by keyboard while preserving FIFO, modifiers 
   }
   expect(api.post).not.toHaveBeenCalled();
   await userEvent.keyboard(" ");
-  expect(toggle).toHaveAttribute("aria-pressed", "false");
+  expect(toggle).toHaveAttribute("aria-pressed", "true");
   expect(toggle).toHaveFocus();
+  await userEvent.click(standard);
+  expect(toggle).toHaveAttribute("aria-pressed", "false");
+  expect(standard).toHaveAttribute("aria-pressed", "true");
+  expect(standard).toHaveFocus();
 });
 it("refreshes queued orders when the shop's New Order subscription signals entry or reconnect", async () => {
   setup("KITCHEN");

@@ -624,12 +624,30 @@ function ProductWorkspace({ userId }: { userId: string }) {
   }
   return (
     <section className="products-page" aria-labelledby="products-title">
-      <PageHeader className="products-heading">
+      <PageHeader className="products-heading refresh-heading">
         <div>
           <p className="section-label">THE HEART OF YOUR MENU</p>
           <h1 id="products-title">Products</h1>
-          <p>Favorites worth coming back for, at {membership.shop.name}.</p>
         </div>
+        <div className="products-heading-actions refresh-heading-actions">
+          <RefreshButton label="Refresh products"
+            pending={query.isFetching}
+            pendingLabel="Refreshing products"
+            title="Refresh products"
+            disabled={
+              query.isFetching ||
+              (denied && !unverified) ||
+              creating ||
+              Boolean(editing) ||
+              ordering ||
+              Boolean(archiving) ||
+              archiveBusy ||
+              Boolean(availableBusy)
+            }
+            onClick={() => void refreshProducts()}
+          />
+        </div>
+        <p className="products-intro refresh-heading-description">Favorites worth coming back for, at {membership.shop.name}.</p>
         <Button variant="default" size="inherit"
           id="create-product-button"
           className="primary-button product-create-fab"
@@ -699,22 +717,6 @@ function ProductWorkspace({ userId }: { userId: string }) {
               </p>
             )}
           </div>
-          <RefreshButton label="Refresh products"
-            pending={query.isFetching}
-            pendingLabel="Refreshing products"
-            title="Refresh products"
-            disabled={
-              query.isFetching ||
-              (denied && !unverified) ||
-              creating ||
-              Boolean(editing) ||
-              ordering ||
-              Boolean(archiving) ||
-              archiveBusy ||
-              Boolean(availableBusy)
-            }
-            onClick={() => void refreshProducts()}
-          />
         </div>
         {query.isSuccess &&
           !denied &&

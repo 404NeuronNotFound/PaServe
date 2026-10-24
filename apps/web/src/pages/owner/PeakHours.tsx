@@ -42,16 +42,11 @@ export function PeakHours({
       className="daily-analytics peak-hours"
       aria-labelledby="peak-hours-title"
     >
-      <div className="daily-analytics-heading">
+      <div className="daily-analytics-heading refresh-heading">
         <div>
           {!compact && <p className="sales-eyebrow">ANALYTICS / HOURS</p>}
           <h2 id="peak-hours-title">Peak Hours</h2>
-          {!compact && (
-            <p className="sales-panel-period">
-              {startDate} – {endDate} · Manila (UTC+8), both dates included.
-              Confirmed, paid, completed orders only.
-            </p>
-          )}
+
         </div>
         <RefreshButton
           label="Refresh peak hours"
@@ -60,6 +55,12 @@ export function PeakHours({
           disabled={query.isFetching}
           onClick={() => void query.refetch()}
         />
+          {!compact && (
+            <p className="refresh-heading-description sales-panel-period">
+              {startDate} – {endDate} · Manila (UTC+8), both dates included.
+              Confirmed, paid, completed orders only.
+            </p>
+          )}
       </div>
       {query.isPending && (compact ? <SalesReportSkeleton kind="hours" label="Loading peak hours…" /> : <ReportSkeleton label="Loading peak hours…" chart />)}
       {query.isError && (

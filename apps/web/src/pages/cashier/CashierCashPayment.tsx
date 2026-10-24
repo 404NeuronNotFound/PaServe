@@ -334,7 +334,7 @@ export function CashierCashPayment({
         className="scanner-panel cashier-cash-result"
         aria-labelledby="cash-paid-title"
       >
-        <header className="cashier-paid-header">
+        <header className="cashier-paid-header refresh-heading">
           <div className="cashier-paid-heading">
             <p className="section-label">Payment complete</p>
             <h2 id="cash-paid-title" ref={resultHeading} tabIndex={-1}>
@@ -350,9 +350,17 @@ export function CashierCashPayment({
               {review.order.orderNumber} is paid.
             </p>
           </div>
-          <span className="cashier-cash-emblem" aria-hidden="true">
+          {blocked ? (
+            <RefreshButton
+              label="Refresh payment"
+              pending={busy && pendingAction === "refresh"}
+              pendingLabel="Refreshing payment..."
+              disabled={busy}
+              onClick={() => void refresh()}
+            />
+          ) : <span className="cashier-cash-emblem" aria-hidden="true">
             <FiCheckCircle aria-hidden="true" />
-          </span>
+          </span>}
         </header>
         <div className="cashier-paid-body">
           <div className="cashier-paid-context">
@@ -431,15 +439,6 @@ export function CashierCashPayment({
           </div>
           {error && <InlineMessage>{error}</InlineMessage>}
           <div className="cashier-paid-actions">
-            {blocked && (
-              <RefreshButton
-                label="Refresh payment"
-                pending={busy && pendingAction === "refresh"}
-                pendingLabel="Refreshing payment..."
-                disabled={busy}
-                onClick={() => void refresh()}
-              />
-            )}
             {!blocked &&
               review.order.status === "CONFIRMED" &&
               review.order.paymentStatus === "PAID" && (
@@ -775,7 +774,7 @@ export function CashierCashPayment({
     </CashierOrderReview>
   ) : (
     <section className="scanner-panel" aria-label="Order payment">
-      <div className="cashier-summary-toolbar">
+      <div className="cashier-summary-toolbar refresh-heading">
         <h2>{manual ? recordLabel : "Collect cash"}</h2>
         {refreshControl}
       </div>

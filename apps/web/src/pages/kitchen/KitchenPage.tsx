@@ -23,6 +23,8 @@ import {
   FiCheck,
   FiClock,
   FiCoffee,
+  FiGrid,
+  FiMaximize2,
   FiFileText,
   FiPlay,
   FiShoppingBag,
@@ -221,30 +223,30 @@ function NewOrders() {
             : "Order updates are delayed. Refresh orders to check."}
         </InlineMessage>
       )}
-      <header className="kitchen-heading">
+      <header className="kitchen-heading refresh-heading">
         <div>
           <p className="section-label">KITCHEN / BARISTA · {shop.name}</p>
           <h1 ref={heading} tabIndex={-1}>
             {view.title}
             <span>.</span>
           </h1>
-          <p>
-            {state === "COMPLETED" ? "Every order, neatly kept." : view.intro}
-          </p>
         </div>
-        <div className="kitchen-refresh">
+        <div className="kitchen-refresh refresh-heading-actions">
           <RefreshButton label="Refresh orders"
             title={queue.isFetching ? "Refreshing orders" : "Refresh orders"}
             disabled={queue.isFetching}
             onClick={() => void queue.refetch()}
             pending={queue.isFetching}
           />
-          <span role="status">
+        </div>
+        <p className="kitchen-intro refresh-heading-description">
+          {state === "COMPLETED" ? "Every order, neatly kept." : view.intro}
+        </p>
+        <p className="kitchen-sync refresh-heading-description" role="status">
             {queue.dataUpdatedAt
               ? `Last checked ${time(new Date(queue.dataUpdatedAt).toISOString())} · checks every 15s`
               : "Connecting to your queue"}
-          </span>
-        </div>
+        </p>
       </header>
       <div
         className="kitchen-state-switch"
@@ -282,12 +284,24 @@ function NewOrders() {
       </div>
       {state !== "COMPLETED" && (
         <div className="kitchen-display-options">
-          <Button variant="outline" aria-pressed={distanceView}
-            aria-describedby="kitchen-distance-hint"
-            onClick={() => setDistanceView((value) => !value)}>
-            Distance view
-          </Button>
-          <p id="kitchen-distance-hint">Larger tickets and text for reading across the counter.</p>
+          <div className="kitchen-display-copy">
+            <p className="kitchen-display-label">Ticket display</p>
+            <p id="kitchen-distance-hint">
+              {distanceView
+                ? "Larger order numbers, items and notes. One ticket per row on phones."
+                : "Standard ticket size for reviewing more orders at a glance."}
+            </p>
+          </div>
+          <div className="kitchen-display-switch" role="group" aria-label="Ticket display" aria-describedby="kitchen-distance-hint">
+            <Button variant="segment" size="inherit" aria-pressed={!distanceView}
+              onClick={() => setDistanceView(false)}>
+              <FiGrid aria-hidden="true" /> Standard
+            </Button>
+            <Button variant="segment" size="inherit" aria-pressed={distanceView}
+              onClick={() => setDistanceView(true)}>
+              <FiMaximize2 aria-hidden="true" /> Distance view
+            </Button>
+          </div>
         </div>
       )}
       <div hidden={state !== "COMPLETED"}>

@@ -9,3 +9,50 @@
   min-height: var(--control-target-min);
   padding: var(--spacing-3);
 }
+
+/* Shared placement contract: a shrinking title and a reserved control column.
+   Page/feature media queries may wrap descriptions, never the refresh action. */
+:root .refresh-heading.refresh-heading,
+:root .refresh-recovery.refresh-recovery {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 16px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+:root :is(.refresh-heading, .refresh-recovery) > :first-child {
+  min-width: 0;
+  max-width: 100%;
+}
+:root :is(.refresh-heading, .refresh-recovery) > .paserve-refresh-button,
+:root .refresh-heading > .refresh-heading-actions {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  justify-self: end;
+}
+:root .refresh-heading > .refresh-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+:root .refresh-heading > .refresh-heading-description {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+}
+:root .refresh-heading > .refresh-heading-description:empty {
+  display: none;
+}
+:root .refresh-heading :is(h1, h2, h3) {
+  overflow-wrap: anywhere;
+}
+:root .refresh-recovery {
+  align-items: start;
+}
+:root .refresh-recovery > :first-child {
+  margin-block: 0;
+}

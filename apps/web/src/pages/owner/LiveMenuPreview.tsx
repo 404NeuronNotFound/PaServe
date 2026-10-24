@@ -45,7 +45,7 @@ export function LiveMenuPreview({
     );
   return (
     <section className="live-menu-preview" aria-label="Customer menu preview">
-      <div className="menu-preview-toolbar">
+      <div className="menu-preview-toolbar refresh-heading">
         <div role="group" aria-label="Preview width">
           <Button variant="outline" size="inherit"
             className="secondary-button"

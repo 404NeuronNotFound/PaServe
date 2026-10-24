@@ -169,18 +169,12 @@ function ProductCustomization({ productId }: { productId: string }) {
         <FiArrowLeft aria-hidden="true" />
         Back to products
       </Link>
-      <header className="customization-heading">
+      <header className="customization-heading refresh-heading">
         <div>
           <p className="section-label">PRODUCT CUSTOMIZATION</p>
           <h1 id="customize-title">
             {product ? `Customize ${product.name}` : "Product customization"}
           </h1>
-          {product && (
-            <p>
-              Starting price{" "}
-              <strong>{formatProductPrice(product.price)}</strong>
-            </p>
-          )}
         </div>
         <RefreshButton label="Refresh customization"
           pending={refreshing || data.isFetching || products.isFetching}
@@ -195,6 +189,11 @@ function ProductCustomization({ productId }: { productId: string }) {
           }
           onClick={() => void refresh()}
         />
+        {product && (
+          <p className="refresh-heading-description">
+            Starting price <strong>{formatProductPrice(product.price)}</strong>
+          </p>
+        )}
       </header>
       {(products.isPending || (product && data.isPending)) && (
         <ListSkeleton label="Loading customization..." />

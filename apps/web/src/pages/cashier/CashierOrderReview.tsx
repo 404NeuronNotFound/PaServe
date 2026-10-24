@@ -161,7 +161,7 @@ export function CashierOrderReview({
           aria-label="Order summary and actions"
         >
           <div
-            className="cashier-review-summary-header"
+            className="cashier-review-summary-header refresh-heading"
             role="group"
             aria-label="Order summary tools"
           >

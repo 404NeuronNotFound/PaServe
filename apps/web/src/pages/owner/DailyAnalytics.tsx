@@ -91,7 +91,7 @@ export function DailyAnalytics({
       className="daily-analytics"
       aria-labelledby="daily-analytics-title"
     >
-      <div className="daily-analytics-heading">
+      <div className="daily-analytics-heading refresh-heading">
         <div>
           <p className="sales-eyebrow">ANALYTICS / {title.toUpperCase()}</p>
           <h2 id="daily-analytics-title">{title} performance</h2>

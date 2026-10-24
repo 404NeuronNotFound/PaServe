@@ -508,7 +508,7 @@ function ProductDetailsForm({
           </div>
         </fieldset>
         {error && (
-          <div>
+          <div className="refresh-recovery">
             <p role="alert">{error}</p>
             <RefreshButton label="Refresh details"
               onClick={onRefresh}
