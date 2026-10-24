@@ -165,6 +165,34 @@ export class OwnerOrderDetailsService {
     add('PREPARING', saved.preparationStartedAt, saved.preparationStartedBy);
     add('READY', saved.preparationReadyAt, saved.preparationReadyBy);
     add('COMPLETED', saved.completedAt, saved.completedBy);
+    const actorIds = [
+      ...new Set(
+        history.flatMap((event) => (event.actorId ? [event.actorId] : [])),
+      ),
+    ];
+    // Resolve only recorded actors through this shop's memberships. Do not
+    // expose emails or look up arbitrary accounts outside the authorized shop.
+    const actors = actorIds.length
+      ? await this.prisma.shopMember.findMany({
+          where: { shopId, userId: { in: actorIds }, shop: access },
+          select: {
+            userId: true,
+            user: { select: { firstName: true, lastName: true } },
+          },
+        })
+      : [];
+    const names = new Map(
+      actors.map(({ userId, user }) => [
+        userId,
+        [user.firstName?.trim(), user.lastName?.trim()]
+          .filter(Boolean)
+          .join(' ') || null,
+      ]),
+    );
+    for (const event of history)
+      event.actorName = event.actorId
+        ? (names.get(event.actorId) ?? null)
+        : null;
     history.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     // Older writes mixed Prisma's application-clock @updatedAt with database
     // milestone time. Project the latest persisted change, without changing

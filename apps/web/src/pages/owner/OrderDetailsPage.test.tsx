@@ -120,6 +120,28 @@ it("fails an offline action immediately instead of deferring it until reconnect"
   expect(completeOrder).toHaveBeenCalledOnce();
 });
 
+it("shows a readable fallback instead of a raw actor ID when names are unavailable", async () => {
+  const data = orderDetailsFixture();
+  for (const event of data.order.history) delete event.actorName;
+  vi.mocked(getOrderDetails).mockResolvedValue(data);
+  setup();
+  await screen.findByRole("heading", { name: "ORD-000042" });
+  expect(screen.getAllByText("Name unavailable")).toHaveLength(2);
+  expect(screen.getByText("Customer submission")).toBeInTheDocument();
+  expect(screen.queryByText(/Actor ID:/)).not.toBeInTheDocument();
+});
+it("labels automatic queuing separately from human actions", async () => {
+  const data = orderDetailsFixture();
+  data.order.history.splice(2, 0, {
+    status: "QUEUED", at: data.order.paidAt!, actorId: null, actorName: null,
+  });
+  vi.mocked(getOrderDetails).mockResolvedValue(data);
+  setup();
+  await screen.findByRole("heading", { name: "ORD-000042" });
+  expect(screen.getByText("System · Automatically queued")).toBeInTheDocument();
+  expect(screen.getAllByText("Lia Navarro")).toHaveLength(2);
+});
+
 it("shows the saved full snapshot, totals, timestamps, payment and recorded actors", async () => {
   setup();
   await screen.findByRole("heading", { name: "ORD-000042" });
@@ -128,7 +150,8 @@ it("shows the saved full snapshot, totals, timestamps, payment and recorded acto
   expect(screen.getByText(/Oat milk ·/)).toBeInTheDocument();
   expect(screen.getByText("Customer note: Less ice")).toBeInTheDocument();
   expect(screen.getByText(/Dine-in · Table Patio 2/)).toBeInTheDocument();
-  expect(screen.getAllByText(/Actor ID: owner-a/)).toHaveLength(2);
+  expect(screen.getAllByText("Lia Navarro")).toHaveLength(2);
+  expect(screen.queryByText(/Actor ID:/)).not.toBeInTheDocument();
   expect(screen.getByText(/not a complete event log/)).toBeInTheDocument();
   expect(screen.getByText(/Amount received \(PHP\):/)).toHaveTextContent(
     "50.00",

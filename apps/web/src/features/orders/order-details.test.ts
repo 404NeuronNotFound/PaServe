@@ -8,6 +8,11 @@ import {
 import { orderDetailsFixture } from "./__fixtures__/order-details";
 
 afterEach(() => vi.restoreAllMocks());
+it.each([42, "", "x".repeat(162), "Name\nInjected"])("rejects malformed actor display names: %j", (actorName) => {
+  const data = orderDetailsFixture();
+  Object.assign(data.order.history[1], { actorName });
+  expect(() => parseOrderDetails(data, "shop-a", "order-a")).toThrow();
+});
 it("loads an explicit shop/resource with cancellation and isolates cache entries by actor/shop/order", async () => {
   const data = orderDetailsFixture();
   const get = vi.spyOn(api, "get").mockResolvedValue({ data });

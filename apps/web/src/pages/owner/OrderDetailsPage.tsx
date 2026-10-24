@@ -318,9 +318,13 @@ function OrderDetailsWorkspace({
                   <span>
                     {event.status === "PLACED"
                       ? "Customer submission"
-                      : event.actorId
-                        ? `Actor ID: ${event.actorId}`
-                        : "Actor not captured"}
+                      : event.status === "QUEUED" && event.actorId === null
+                        ? "System · Automatically queued"
+                      : event.actorName
+                        ? event.actorName
+                        : event.actorId
+                          ? "Name unavailable"
+                          : "Actor not captured"}
                   </span>
                 </li>
               ))}

@@ -1,4 +1,5 @@
 import {
+  ACCOUNT_LIMITS,
   cashAmountCents,
   isReceiptTimestamp,
   parseReceiptPaymentDetails,
@@ -155,7 +156,12 @@ export function parseOrderDetails(
       !(
         event.actorId === null ||
         (typeof event.actorId === "string" && !!event.actorId)
-      )
+      ) ||
+      !(event.actorName == null ||
+        (typeof event.actorName === "string" && !!event.actorName.trim() &&
+          event.actorName.length <= ACCOUNT_LIMITS.nameMax * 2 + 1 &&
+          !/\p{Cc}/u.test(event.actorName))) ||
+      (event.actorName != null && event.actorId === null)
     )
       throw invalid();
     previous = Date.parse(event.at);

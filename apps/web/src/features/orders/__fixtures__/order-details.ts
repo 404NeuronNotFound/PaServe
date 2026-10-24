@@ -50,11 +50,12 @@ export const orderDetailsFixture = (): OwnerOrderDetailsResponse => ({
     completedAt: "2026-10-16T00:05:00.000Z",
     history: [
       { status: "PLACED", at: "2026-10-16T00:00:00.000Z", actorId: null },
-      { status: "PAID", at: "2026-10-16T00:01:00.000Z", actorId: "owner-a" },
+      { status: "PAID", at: "2026-10-16T00:01:00.000Z", actorId: "owner-a", actorName: "Lia Navarro" },
       {
         status: "COMPLETED",
         at: "2026-10-16T00:05:00.000Z",
         actorId: "owner-a",
+        actorName: "Lia Navarro",
       },
     ],
     permittedActions: ["RECEIPT"],

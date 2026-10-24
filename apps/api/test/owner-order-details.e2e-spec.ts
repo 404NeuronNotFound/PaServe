@@ -21,7 +21,7 @@ describe('Owner order details HTTP', () => {
       .overrideProvider(PrismaService)
       .useValue({
         order: { findFirst },
-        shopMember: { findUnique: membership },
+        shopMember: { findUnique: membership, findMany: vi.fn().mockResolvedValue([{ userId: actorId, user: { firstName: 'Lia', lastName: 'Navarro' } }]) },
       })
       .overrideProvider(AuthService)
       .useValue({ currentUser: async () => ({ id: actorId }) })

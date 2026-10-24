@@ -294,6 +294,43 @@ describe('Cash collection', () => {
     });
   }
   const paymentMethods = ['CASH', 'GCASH_MANUAL', 'CARD_MANUAL', 'OTHER'] as const;
+  it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)(
+    'keeps the same authenticated %s actor through a fresh complete workflow',
+    async (staffRole) => {
+      role = staffRole;
+      await preparePending();
+      await atomic().expect(200);
+      expect(saved).toMatchObject({ decidedBy: userId, paidBy: userId, preparationStatus: 'QUEUED' });
+      for (const [path, field] of [
+        ['start-preparing', 'preparationStartedBy'],
+        ['mark-ready', 'preparationReadyBy'],
+        ['complete', 'completedBy'],
+      ] as const) {
+        const response = await request(app.getHttpServer()).post(`/api/v1/shops/${shopId}/orders/${orderId}/${path}`).set('Authorization', 'Bearer session').send({}).expect(200);
+        expect(response.body.order[field]).toBe(userId);
+        expect(saved[field]).toBe(userId);
+        expect(saved).toMatchObject({ decidedBy: userId, paidBy: userId });
+      }
+      expect(new Set([saved.decidedBy, saved.paidBy, saved.preparationStartedBy, saved.preparationReadyBy, saved.completedBy])).toEqual(new Set([userId]));
+    },
+  );
+  it('attributes a handoff to the new authenticated actor without replacing earlier actors', async () => {
+    role = 'OWNER';
+    await preparePending();
+    await atomic().expect(200);
+    await request(app.getHttpServer()).post(`/api/v1/shops/${shopId}/orders/${orderId}/start-preparing`).set('Authorization', 'Bearer session').send({}).expect(200);
+    const secondActor = '85992537-5d60-4d22-8e1e-60a114644681';
+    auth.mockResolvedValue({ id: secondActor });
+    role = 'MANAGER';
+    await request(app.getHttpServer()).post(`/api/v1/shops/${shopId}/orders/${orderId}/mark-ready`).set('Authorization', 'Bearer session').send({}).expect(200);
+    expect(saved).toMatchObject({ decidedBy: userId, paidBy: userId, preparationStartedBy: userId, preparationReadyBy: secondActor });
+    // Opening/retrying an already-recorded milestone must not claim its actor.
+    auth.mockResolvedValue({ id: userId });
+    await request(app.getHttpServer()).post(`/api/v1/shops/${shopId}/orders/${orderId}/mark-ready`).set('Authorization', 'Bearer session').send({}).expect(200);
+    expect(saved.preparationReadyBy).toBe(secondActor);
+    await request(app.getHttpServer()).post(`/api/v1/shops/${shopId}/orders/${orderId}/complete`).set('Authorization', 'Bearer session').send({}).expect(200);
+    expect(saved).toMatchObject({ completedBy: userId, preparationReadyBy: secondActor, paidBy: userId });
+  });
   function settlement(method: (typeof paymentMethods)[number], body: Record<string, unknown> = {}) {
     if (method === 'CASH') return collect(body);
     if (method === 'GCASH_MANUAL') return gcash(body);

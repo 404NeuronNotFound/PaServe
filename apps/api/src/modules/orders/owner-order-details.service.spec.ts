@@ -72,14 +72,85 @@ const row = () => ({
 });
 describe('Owner order details', () => {
   const findFirst = vi.fn(),
-    requireOwner = vi.fn();
+    requireOwner = vi.fn(),
+    findActors = vi.fn();
   const service = new OwnerOrderDetailsService(
-    { order: { findFirst } } as unknown as PrismaService,
+    {
+      order: { findFirst },
+      shopMember: { findMany: findActors },
+    } as unknown as PrismaService,
     { requireOwner } as unknown as ShopMembersService,
   );
   beforeEach(() => {
     vi.resetAllMocks();
     findFirst.mockResolvedValue(row());
+    findActors.mockResolvedValue([
+      { userId: actorId, user: { firstName: 'Lia', lastName: 'Navarro' } },
+    ]);
+  });
+
+  it('resolves recorded actor names once within the authorized shop without reading credentials or emails', async () => {
+    const result = await service.get(actorId, shopId, orderId);
+    expect(result.order.history[1]).toMatchObject({
+      actorId,
+      actorName: 'Lia Navarro',
+    });
+    expect(result.order.history[0].actorName).toBeNull();
+    expect(findActors).toHaveBeenCalledTimes(1);
+    expect(findActors).toHaveBeenCalledWith({
+      where: {
+        shopId,
+        userId: { in: [actorId] },
+        shop: expect.objectContaining({ id: shopId }),
+      },
+      select: {
+        userId: true,
+        user: { select: { firstName: true, lastName: true } },
+      },
+    });
+  });
+  it('maps each milestone to its saved actor ID rather than the viewer or membership result order', async () => {
+    const secondActor = randomUUID();
+    const saved = row();
+    saved.preparationStartedBy = secondActor;
+    saved.preparationReadyBy = secondActor;
+    findFirst.mockResolvedValue(saved);
+    findActors.mockResolvedValue([
+      {
+        userId: secondActor,
+        user: { firstName: 'Rafael', lastName: 'Navarro' },
+      },
+      { userId: actorId, user: { firstName: 'Lia', lastName: 'Navarro' } },
+    ]);
+    const { order } = await service.get(actorId, shopId, orderId);
+    for (const event of order.history) {
+      if (event.status === 'QUEUED' || event.status === 'PLACED') {
+        expect(event.actorId).toBeNull();
+        expect(event.actorName).toBeNull();
+      } else if (event.status === 'PREPARING' || event.status === 'READY') {
+        expect(event).toMatchObject({
+          actorId: secondActor,
+          actorName: 'Rafael Navarro',
+        });
+      } else expect(event).toMatchObject({ actorId, actorName: 'Lia Navarro' });
+    }
+  });
+  it.each([
+    [[], null],
+    [
+      [{ userId: actorId, user: { firstName: '  Lia  ', lastName: null } }],
+      'Lia',
+    ],
+    [
+      [{ userId: actorId, user: { firstName: null, lastName: ' Navarro ' } }],
+      'Navarro',
+    ],
+    [[{ userId: actorId, user: { firstName: ' ', lastName: null } }], null],
+  ])('handles missing membership or incomplete names', async (actors, name) => {
+    findActors.mockResolvedValue(actors);
+    const result = await service.get(actorId, shopId, orderId);
+    expect(result.order.history[1].actorName).toBe(name);
+    expect(result.order.history[1].actorId).toBe(actorId);
   });
 
   it('uses the latest saved milestone when legacy application-clock updatedAt lags database time', async () => {
@@ -214,6 +285,7 @@ describe('Owner order details', () => {
             },
           };
           const database = {
+            shopMember: { findMany: findActors },
             order: {
               findFirst: vi.fn().mockResolvedValue(saved),
               findMany: vi.fn().mockResolvedValue([saved]),
@@ -295,6 +367,7 @@ describe('Owner order details', () => {
                 status,
                 at: queue[timestamp],
                 actorId: actor ? queue[actor] : null,
+                actorName: actor && queue[actor] ? 'Lia Navarro' : null,
               });
             else expect(event).toBeUndefined();
           }
@@ -351,7 +424,12 @@ describe('Owner order details', () => {
     });
     expect(order.snapshotIssue).toBeTruthy();
     expect(order.history).toEqual([
-      { status: 'PLACED', at: time(0).toISOString(), actorId: null },
+      {
+        status: 'PLACED',
+        at: time(0).toISOString(),
+        actorId: null,
+        actorName: null,
+      },
     ]);
   });
   it.each(['sum', 'sequence', 'arithmetic', 'identity', 'shop'])(
