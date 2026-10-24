@@ -35,6 +35,79 @@ describe('Safe owner order search', () => {
     });
   });
   it.each([
+    ['Table 2', '2'],
+    ['table #2', '2'],
+    ['TABLE: Patio', 'Patio'],
+    ['Table A%_\\', 'A\\%\\_\\\\'],
+  ])(
+    'recognizes a table prefix and keeps its label literal: %s',
+    (search, label) => {
+      expect(ownerOrderSearchWhere(search)?.OR).toEqual([
+        {
+          orderNumber: {
+            contains: search.replace(/[\\%_]/g, '\\$&'),
+            mode: 'insensitive',
+          },
+        },
+        {
+          tableNumber: {
+            contains: search.replace(/[\\%_]/g, '\\$&'),
+            mode: 'insensitive',
+          },
+        },
+        { tableNumber: { contains: label, mode: 'insensitive' } },
+      ]);
+    },
+  );
+  it.each([
+    ['dine - in', { mode: 'DINE_IN' }],
+    ['DINE_IN', { mode: 'DINE_IN' }],
+    ['take out', { mode: 'TAKEOUT' }],
+    ['take', { mode: 'TAKEOUT' }],
+    ['TAKE O', { mode: 'TAKEOUT' }],
+    ['dine', { mode: 'DINE_IN' }],
+    ['di', { mode: 'DINE_IN' }],
+    ['takeaway', { mode: 'TAKEOUT' }],
+    ['pickup', { mode: 'TAKEOUT' }],
+    ['ready', { preparationStatus: 'READY' }],
+    ['Ready to serve', { preparationStatus: 'READY' }],
+    ['preparing', { preparationStatus: 'PREPARING' }],
+    ['prep', { preparationStatus: 'PREPARING' }],
+    ['prepare', { preparationStatus: 'PREPARING' }],
+    ['read', { preparationStatus: 'READY' }],
+    ['que', { preparationStatus: 'QUEUED' }],
+    ['queued', { preparationStatus: 'QUEUED' }],
+    ['queud', { preparationStatus: 'QUEUED' }],
+    ['pending confirmation', { status: 'PENDING_CONFIRMATION' }],
+    ['confirmed', { status: 'CONFIRMED' }],
+    ['completed', { preparationStatus: 'COMPLETED' }],
+    ['cancelled', { status: 'REJECTED' }],
+    ['paid', { paymentStatus: 'PAID' }],
+    ['unpaid', { paymentStatus: 'UNPAID' }],
+  ])(
+    'matches workflow terms while retaining literal label matches: %s',
+    (search, predicate) => {
+      const literal = search.replace(/[\\%_]/g, '\\$&');
+      expect(ownerOrderSearchWhere(search)?.OR).toEqual([
+        { orderNumber: { contains: literal, mode: 'insensitive' } },
+        { tableNumber: { contains: literal, mode: 'insensitive' } },
+        predicate,
+      ]);
+    },
+  );
+  it.each([
+    'table',
+    'table #',
+    'constructor',
+    '__proto__',
+    't',
+    '%',
+    'take%',
+    'taken',
+  ])('does not broaden short, wildcard or unknown terms: %s', (search) => {
+    expect(ownerOrderSearchWhere(search)?.OR).toHaveLength(2);
+  });
+  it.each([
     null,
     ['ORD'],
     {},
@@ -113,5 +186,21 @@ describe.each([
       ).rejects.toMatchObject({ status: 400 });
       expect(findMany).not.toHaveBeenCalled();
     });
+    it.each(['ready', 'dine - in', 'Table 2', 'take', 'prep'])(
+      'keeps keyword search inside the shop and view: %s',
+      async (search) => {
+        await service.list(actorId, shopId, undefined, search);
+        const { where, take } = findMany.mock.calls[0][0];
+        expect(where.shopId).toBe(shopId);
+        expect(where.shop.members.some.userId).toBe(actorId);
+        expect(where.AND).toContainEqual(ownerOrderSearchWhere(search));
+        if (view === 'completed') {
+          expect(where.preparationStatus).toBe('COMPLETED');
+          expect(where.paymentStatus).toBe('PAID');
+        } else if (view === 'cancelled') expect(where.status).toBe('REJECTED');
+        else expect(where.completedAt).toBeNull();
+        expect(take).toBe(26);
+      },
+    );
   },
 );

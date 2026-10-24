@@ -75,7 +75,7 @@ export function OrderSearch({
           type="search"
           value={draft}
           maxLength={OWNER_ORDER_SEARCH_MAX_LENGTH}
-          placeholder="Order number or table label"
+          placeholder="Order, table, type or status"
           aria-describedby={`${id}-help${error ? ` ${id}-error` : ""}`}
           aria-invalid={!!error}
           onChange={(event) => {
@@ -110,7 +110,8 @@ export function OrderSearch({
         )}
       </div>
       <p id={`${id}-help`}>
-        Results update as you type. Press Enter to search immediately.
+        Try Table 2, dine-in, takeout, queued, preparing or ready. Results update
+        as you type; press Enter to search immediately.
       </p>
       {search && <p>Showing matches for “{search}”.</p>}
       {error && <InlineMessage id={`${id}-error`}>{error}</InlineMessage>}
