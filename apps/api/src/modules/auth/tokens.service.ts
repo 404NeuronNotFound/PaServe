@@ -48,16 +48,19 @@ export class TokensService {
     expiresAt: Date,
     keepSignedIn = true,
   ) {
+    const now = Math.floor(Date.now() / 1000);
+    const sessionExpiry = Math.floor(expiresAt.getTime() / 1000);
+    const expiresIn = Math.min(ACCESS_TOKEN_SECONDS, sessionExpiry - now);
+    if (!Number.isFinite(expiresIn) || expiresIn <= 0) throw invalidSession();
     const payload = { sub: userId, sid: sessionId };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(
-        { ...payload, type: 'access' },
+        { ...payload, type: 'access', exp: now + expiresIn },
         {
           secret: this.accessSecret,
           algorithm: 'HS256',
           issuer: 'paserve-api',
           audience: 'paserve:web',
-          expiresIn: ACCESS_TOKEN_SECONDS,
           jwtid: randomUUID(),
         },
       ),
@@ -66,7 +69,7 @@ export class TokensService {
           ...payload,
           type: 'refresh',
           keepSignedIn,
-          exp: Math.floor(expiresAt.getTime() / 1000),
+          exp: sessionExpiry,
         },
         {
           secret: this.refreshSecret,
@@ -77,7 +80,7 @@ export class TokensService {
         },
       ),
     ]);
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, expiresIn };
   }
 
   async verify(token: string, type: 'access' | 'refresh'): Promise<Claims> {

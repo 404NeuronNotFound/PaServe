@@ -22,11 +22,7 @@ import type {
   ChangeEmailDto,
   ChangePasswordDto,
 } from './dto/update-account.dto.js';
-import {
-  TokensService,
-  ACCESS_TOKEN_SECONDS,
-  invalidSession,
-} from './tokens.service.js';
+import { TokensService, invalidSession } from './tokens.service.js';
 
 @Injectable()
 export class AuthService {
@@ -83,7 +79,7 @@ export class AuthService {
       throw error;
     }
     return {
-      response: this.loginResponse(account, pair.accessToken),
+      response: this.loginResponse(account, pair.accessToken, pair.expiresIn),
       refreshToken: pair.refreshToken,
       expiresAt,
       keepSignedIn,
@@ -118,7 +114,11 @@ export class AuthService {
       throw invalidSession();
     }
     return {
-      response: this.loginResponse(session.user, pair.accessToken),
+      response: this.loginResponse(
+        session.user,
+        pair.accessToken,
+        pair.expiresIn,
+      ),
       refreshToken: pair.refreshToken,
       expiresAt: session.expiresAt,
       keepSignedIn: claims.keepSignedIn ?? true,
@@ -236,12 +236,13 @@ export class AuthService {
   private loginResponse(
     user: { id: string; email: string; createdAt: Date },
     accessToken: string,
+    expiresIn: number,
   ): LoginResponse {
     return {
       user: this.safeUser(user),
       accessToken,
       tokenType: 'Bearer',
-      expiresIn: ACCESS_TOKEN_SECONDS,
+      expiresIn,
     };
   }
 

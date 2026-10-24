@@ -23,6 +23,13 @@ afterEach(() => {
   localStorage.clear();
 });
 const event = { type: "signed-out", id: "another-tab" };
+it("does not sign out or publish a logout on browser-close lifecycle events", () => {
+  const ended = vi.fn(); cleanup = listenForSignOut(ended);
+  for (const name of ["beforeunload", "pagehide", "unload"]) window.dispatchEvent(new Event(name));
+  expect(ended).not.toHaveBeenCalled();
+  expect(localStorage.getItem("paserve.auth.signed-out")).toBeNull();
+  expect(channels[0].postMessage).not.toHaveBeenCalled();
+});
 it("deduplicates broadcast and storage notices and ignores malformed messages", () => {
   const ended = vi.fn();
   cleanup = listenForSignOut(ended);

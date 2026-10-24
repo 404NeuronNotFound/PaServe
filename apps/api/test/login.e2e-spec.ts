@@ -408,6 +408,47 @@ describe('Login and session HTTP flow', () => {
     expect(jwt.decode(rotatedToken).exp).toBe(jwt.decode(legacy).exp);
   });
 
+  it.each([false, true])(
+    'enforces the absolute server deadline even when the browser stays open (keepSignedIn=%s)',
+    async (keepSignedIn) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      const started = new Date('2026-10-24T08:00:00.000Z');
+      vi.setSystemTime(started);
+      try {
+        const response = await login(keepSignedIn).expect(200);
+        const lifetime = (keepSignedIn ? 7 * 24 : 8) * 60 * 60 * 1000;
+        vi.setSystemTime(started.getTime() + lifetime - 1000);
+        const lastRefresh = await cookiePost(
+          'refresh',
+          cookie(response),
+        ).expect(200);
+        expect(lastRefresh.body.expiresIn).toBe(1);
+        const jwt = app.get(JwtService);
+        expect(jwt.decode(lastRefresh.body.accessToken as string).exp).toBe(
+          Math.floor((started.getTime() + lifetime) / 1000),
+        );
+        await request(app.getHttpServer())
+          .get('/api/v1/auth/me')
+          .set('Authorization', `Bearer ${lastRefresh.body.accessToken}`)
+          .expect(200);
+        const rotations = repository.rotateSession.mock.calls.length;
+        vi.setSystemTime(started.getTime() + lifetime);
+        await request(app.getHttpServer())
+          .get('/api/v1/auth/me')
+          .set('Authorization', `Bearer ${lastRefresh.body.accessToken}`)
+          .expect(401);
+        const rejected = await cookiePost(
+          'refresh',
+          cookie(lastRefresh),
+        ).expect(401);
+        expect(rejected.headers['set-cookie']).toBeUndefined();
+        expect(repository.rotateSession).toHaveBeenCalledTimes(rotations);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it('rotates refresh JWT and revokes the entire session on reuse', async () => {
     const response = await login().expect(200);
     const oldCookie = cookie(response);
