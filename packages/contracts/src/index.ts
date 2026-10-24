@@ -931,6 +931,8 @@ export interface OwnerOrderDetailsResponse {
       status: "PLACED" | "CONFIRMED" | "REJECTED" | "PAID" | "QUEUED" | "PREPARING" | "READY" | "COMPLETED";
       at: string;
       actorId: string | null;
+      /** Current profile name from this shop's membership; absent on older APIs. */
+      actorName?: string | null;
     }[];
     permittedActions: OwnerOrderAction[];
   };
