@@ -185,7 +185,7 @@
   font-weight: 500;
 }
 .order-reference-front .order-receipt-qr h2,
-.order-reference-front .order-receipt-qr p {
+.order-reference-front .order-receipt-qr p:not(.feedback-inline) {
   margin: 0;
 }
 .order-reference-front .order-receipt-qr h2 {
@@ -424,11 +424,6 @@
 }
 .order-receipt-number .secondary-button:focus-visible {
   outline-color: var(--menu-on-primary);
-}
-.order-receipt-number .feedback-inline {
-  background: #fce9dd;
-  color: #642519;
-  border-color: #d6a18b;
 }
 .order-receipt-details > dl,
 .receipt-totals {

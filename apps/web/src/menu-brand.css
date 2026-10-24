@@ -1,6 +1,18 @@
 /* Shop colors decorate bounded surfaces; application text/surfaces stay neutral.
    Load after shared controls and accessibility so Day/Night hover rules cannot
    replace one half of a shop's contrast-tested foreground/background pair. */
+/* Feedback must keep its own surface/text pair inside shop-colored QR cards,
+   receipts and dialogs, rather than inheriting the brand's label color. */
+:root :is(.public-menu, .customer-dialog, .customer-order-page, .customer-cart-dock, .menu-category-sheet) .feedback-inline:is(.feedback-error, .feedback-warning) {
+  background: var(--color-error-surface);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+:root :is(.public-menu, .customer-dialog, .customer-order-page, .customer-cart-dock, .menu-category-sheet) .feedback-inline:is(.feedback-info, .feedback-success) {
+  background: var(--color-secondary);
+  color: var(--color-text);
+  border-color: var(--color-control-border);
+}
 :root :is(.public-menu, .customer-dialog, .customer-order-page, .customer-cart-dock, .menu-category-sheet) .secondary-button {
   /* Also cover router links and unstyled pending buttons, which otherwise
      inherit the legacy dark-masthead label color on a light page. An opaque
