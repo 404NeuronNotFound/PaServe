@@ -113,6 +113,7 @@ export class PreparationStartService {
               preparationStatus: 'PREPARING',
               preparationStartedAt: startedAt,
               preparationStartedBy: actorId,
+              updatedAt: startedAt,
             },
           });
           if (result.count !== 1) throw changed();

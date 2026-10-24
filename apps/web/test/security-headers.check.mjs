@@ -70,7 +70,7 @@ const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gu)];
 assert.ok(scripts.length);
 for (const [, attributes, body] of scripts) {
   assert.ok(
-    /src="\/assets\//u.test(attributes),
+    /src="(?:\/assets\/[^"\s]+|\/appearance-init\.js)"/u.test(attributes),
     "Release scripts must be external same-origin assets",
   );
   assert.equal(body.trim(), "");
@@ -81,9 +81,9 @@ function address(server) {
   assert.ok(value && typeof value !== "string");
   return `http://127.0.0.1:${value.port}`;
 }
-function common(response) {
+function common(response, development = false) {
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
-  assert.equal(response.headers.get("x-frame-options"), "DENY");
+  assert.equal(response.headers.get("x-frame-options"), development ? "SAMEORIGIN" : "DENY");
   assert.equal(response.headers.get("referrer-policy"), "no-referrer");
   assert.ok(
     response.headers.get("permissions-policy").includes("camera=(self)"),
@@ -131,11 +131,13 @@ const dev = await createServer({
 try {
   await dev.listen();
   const response = await fetch(address(dev));
-  common(response);
+  common(response, true);
   assert.ok(
     response.headers.get(name).includes("script-src 'self' 'unsafe-inline'"),
   );
   assert.ok(response.headers.get(name).includes("ws://localhost:*"));
+  assert.ok(response.headers.get(name).includes("frame-src 'self'"));
+  assert.ok(response.headers.get(name).includes("frame-ancestors 'self'"));
   await response.arrayBuffer();
 } finally {
   await dev.close();

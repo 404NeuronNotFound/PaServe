@@ -130,6 +130,7 @@ export class PreparationCompleteService {
               preparationStatus: 'COMPLETED',
               completedAt,
               completedBy: actorId,
+              updatedAt: completedAt,
             },
           });
           if (result.count !== 1) throw changed();

@@ -55,9 +55,28 @@ describe("frontend deployment security policy", () => {
     );
     expect(dev["script-src"]).toContain("'unsafe-inline'");
     expect(dev["connect-src"]).toContain("ws://localhost:*");
+    expect(dev["connect-src"]).toContain("ws://127.0.0.1:*");
+    expect(dev["connect-src"]).not.toContain("ws://[::1]:*");
+    expect(dev["connect-src"]).not.toContain("ws:");
+    expect(frontendSecurity({}, true).metaPolicy).not.toContain("ws://[::1]");
     expect(prod["script-src"]).not.toContain("'unsafe-inline'");
     expect(prod["connect-src"]).not.toContain("ws://localhost:*");
     expect(JSON.stringify(prod)).not.toContain("unsafe-eval");
+  });
+  it("allows same-origin simulator frames only on the development server", () => {
+    const development = frontendSecurity({}, true);
+    const dev = directives(development.headers["Content-Security-Policy"]);
+    expect(dev["frame-src"]).toEqual(["'self'"]);
+    expect(dev["frame-ancestors"]).toEqual(["'self'"]);
+    expect(development.headers["X-Frame-Options"]).toBe("SAMEORIGIN");
+    expect(directives(development.metaPolicy!)["frame-src"]).toEqual(["'self'"]);
+    for (const security of [frontendSecurity({}), frontendSecurity({}, false, false)]) {
+      const policy = directives(security.headers["Content-Security-Policy"]);
+      expect(policy["frame-src"]).toEqual(["'none'"]);
+      expect(policy["frame-ancestors"]).toEqual(["'none'"]);
+      expect(security.headers["X-Frame-Options"]).toBe("DENY");
+      expect(security.deploymentHeaders["X-Frame-Options"]).toBe("DENY");
+    }
   });
   it.each(["", "/api/v1"])(
     "supports same-origin API configuration: %s",

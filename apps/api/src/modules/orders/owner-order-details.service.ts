@@ -166,6 +166,15 @@ export class OwnerOrderDetailsService {
     add('READY', saved.preparationReadyAt, saved.preparationReadyBy);
     add('COMPLETED', saved.completedAt, saved.completedBy);
     history.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    // Older writes mixed Prisma's application-clock @updatedAt with database
+    // milestone time. Project the latest persisted change, without changing
+    // recorded milestones or requiring a data rewrite for existing orders.
+    const updatedAt = new Date(
+      Math.max(
+        saved.updatedAt.getTime(),
+        ...history.map((event) => Date.parse(event.at)),
+      ),
+    );
     const permittedActions: OwnerOrderDetailsResponse['order']['permittedActions'] =
       [];
     if (items && !snapshotIssue) {
@@ -206,7 +215,7 @@ export class OwnerOrderDetailsService {
         payment,
         rejectionReason: saved.rejectionReason,
         createdAt: saved.createdAt.toISOString(),
-        updatedAt: saved.updatedAt.toISOString(),
+        updatedAt: updatedAt.toISOString(),
         paidAt: saved.paidAt?.toISOString() ?? null,
         completedAt: saved.completedAt?.toISOString() ?? null,
         history,

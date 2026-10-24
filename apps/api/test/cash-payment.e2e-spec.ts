@@ -517,6 +517,9 @@ describe('Cash collection', () => {
       expect(
         Date.parse(first.body.order.preparationStartedAt),
       ).toBeGreaterThanOrEqual(saved.queuedAt!.getTime());
+      expect(updateOrder.mock.calls[0][0].data.updatedAt.toISOString()).toBe(
+        first.body.order.preparationStartedAt,
+      );
       const replay = await start().expect(200);
       expect(replay.body).toEqual({
         order: first.body.order,
@@ -636,6 +639,9 @@ describe('Cash collection', () => {
       expect(
         Date.parse(first.body.order.preparationReadyAt),
       ).toBeGreaterThanOrEqual(saved.preparationStartedAt!.getTime());
+      expect(updateOrder.mock.calls[0][0].data.updatedAt.toISOString()).toBe(
+        first.body.order.preparationReadyAt,
+      );
       expect((await ready().expect(200)).body).toEqual({
         order: first.body.order,
         alreadyReady: true,
@@ -765,6 +771,9 @@ describe('Cash collection', () => {
       });
       expect(Date.parse(first.body.order.completedAt)).toBeGreaterThanOrEqual(
         saved.preparationReadyAt!.getTime(),
+      );
+      expect(updateOrder.mock.calls[0][0].data.updatedAt.toISOString()).toBe(
+        first.body.order.completedAt,
       );
       expect((await complete().expect(200)).body).toEqual({
         order: first.body.order,

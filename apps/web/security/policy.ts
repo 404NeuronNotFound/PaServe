@@ -82,14 +82,18 @@ export function frontendSecurity(
       true,
     ),
   ];
+  // CSP host-source grammar does not support bracketed IPv6 literals.
+  // Use localhost (which can resolve to IPv6) or IPv4 for development HMR.
   if (development)
-    connections.push("ws://localhost:*", "ws://127.0.0.1:*", "ws://[::1]:*");
+    connections.push("ws://localhost:*", "ws://127.0.0.1:*");
   const directives: Record<string, string[]> = {
     "default-src": ["'none'"],
     "base-uri": ["'none'"],
     "object-src": ["'none'"],
-    "frame-src": ["'none'"],
-    "frame-ancestors": ["'none'"],
+    // Local phone simulators embed this app in a same-origin iframe. Keep
+    // framing disabled in built/preview/deployed apps, regardless of viewport.
+    "frame-src": development ? ["'self'"] : ["'none'"],
+    "frame-ancestors": development ? ["'self'"] : ["'none'"],
     "form-action": ["'self'"],
     "script-src": development ? ["'self'", "'unsafe-inline'"] : ["'self'"],
     "script-src-attr": ["'none'"],
@@ -127,7 +131,7 @@ export function frontendSecurity(
       ? "Content-Security-Policy-Report-Only"
       : "Content-Security-Policy"]: serialize(),
     "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
+    "X-Frame-Options": development ? "SAMEORIGIN" : "DENY",
     "X-XSS-Protection": "0",
     "X-Download-Options": "noopen",
     "Referrer-Policy": "no-referrer",

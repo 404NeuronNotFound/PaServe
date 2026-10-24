@@ -82,6 +82,27 @@ describe('Owner order details', () => {
     findFirst.mockResolvedValue(row());
   });
 
+  it('uses the latest saved milestone when legacy application-clock updatedAt lags database time', async () => {
+    const saved = row();
+    saved.updatedAt = new Date(saved.completedAt.getTime() - 1227);
+    findFirst.mockResolvedValue(saved);
+    const result = await service.get(actorId, shopId, orderId);
+    expect(result.order.updatedAt).toBe(saved.completedAt.toISOString());
+    expect(result.order.completedAt).toBe(saved.completedAt.toISOString());
+    expect(result.order.history.at(-1)?.at).toBe(
+      saved.completedAt.toISOString(),
+    );
+  });
+
+  it('retains a later saved updatedAt rather than replacing it with the last workflow event', async () => {
+    const saved = row();
+    saved.updatedAt = time(6);
+    findFirst.mockResolvedValue(saved);
+    expect((await service.get(actorId, shopId, orderId)).order.updatedAt).toBe(
+      time(6).toISOString(),
+    );
+  });
+
   it('returns saved names, exact prices, modifiers, notes, payment and recorded history without secrets or live menu reads', async () => {
     const saved = {
       ...row(),
@@ -198,14 +219,12 @@ describe('Owner order details', () => {
               findMany: vi.fn().mockResolvedValue([saved]),
             },
             shop: {
-              findFirst: vi
-                .fn()
-                .mockResolvedValue({
-                  id: shopId,
-                  name: 'Renamed cafe',
-                  primaryColor: null,
-                  accentColor: null,
-                }),
+              findFirst: vi.fn().mockResolvedValue({
+                id: shopId,
+                name: 'Renamed cafe',
+                primaryColor: null,
+                accentColor: null,
+              }),
             },
           } as unknown as PrismaService;
           const owner = new OwnerOrderDetailsService(database, {

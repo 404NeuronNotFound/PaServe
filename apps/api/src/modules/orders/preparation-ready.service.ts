@@ -125,6 +125,7 @@ export class PreparationReadyService {
               preparationStatus: 'READY',
               preparationReadyAt: readyAt,
               preparationReadyBy: actorId,
+              updatedAt: readyAt,
             },
           });
           if (result.count !== 1) throw changed();
