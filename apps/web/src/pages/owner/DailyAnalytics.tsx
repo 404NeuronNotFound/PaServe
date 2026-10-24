@@ -95,15 +95,6 @@ export function DailyAnalytics({
         <div>
           <p className="sales-eyebrow">ANALYTICS / {title.toUpperCase()}</p>
           <h2 id="daily-analytics-title">{title} performance</h2>
-          <p id="daily-range-help">
-            {monthly
-              ? "Calendar months in Manila (UTC+8), from the first day through the last day. Partial months count only selected dates."
-              : weekly
-                ? "Monday–Sunday weeks in Manila (UTC+8). Partial weeks count only selected dates."
-                : "One row per business day in Manila (UTC+8)."}{" "}
-            Both dates are included; maximum 366 days. Sales count confirmed,
-            paid, completed orders by completion date.
-          </p>
         </div>
         <RefreshButton label={`Refresh ${period} analytics`}
           pending={query.isFetching}
@@ -112,27 +103,36 @@ export function DailyAnalytics({
           onClick={() => void query.refetch()}
         />
       </div>
+      <p id="daily-range-help" className="sales-range-help">
+        {monthly
+          ? "Calendar months in Manila (UTC+8), from the first day through the last day. Partial months count only selected dates."
+          : weekly
+            ? "Monday–Sunday weeks in Manila (UTC+8). Partial weeks count only selected dates."
+            : "One row per business day in Manila (UTC+8)."}{" "}
+        Both dates are included; maximum 366 days. Sales count confirmed,
+        paid, completed orders by completion date.
+      </p>
       <div className="daily-analytics-controls">
         <div
           className="analytics-period-toggle"
           role="group"
           aria-label="Analytics aggregation"
         >
-          <Button variant="outline" size="inherit" type="submit"
+          <Button variant="outline" size="inherit" type="button"
             className="secondary-button"
             aria-pressed={period === "daily"}
             onClick={() => setPeriod("daily")}
           >
             Daily
           </Button>
-          <Button variant="outline" size="inherit" type="submit"
+          <Button variant="outline" size="inherit" type="button"
             className="secondary-button"
             aria-pressed={weekly}
             onClick={() => setPeriod("weekly")}
           >
             Weekly
           </Button>
-          <Button variant="outline" size="inherit" type="submit"
+          <Button variant="outline" size="inherit" type="button"
             className="secondary-button"
             aria-pressed={monthly}
             onClick={() => setPeriod("monthly")}
@@ -180,6 +180,7 @@ export function DailyAnalytics({
           <p className="management-results" role="status">
             Rows {history.first}-{history.last} of {history.total}. Range totals include every row in the selected period.
           </p>
+          <p className="sales-table-scroll-hint">Swipe or scroll sideways to see all columns.</p>
           <Table containerClassName="daily-analytics-table" scrollLabel={`${title} performance table`}>
               <caption>
                 {title} aggregation by completion date
