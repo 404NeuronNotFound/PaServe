@@ -35,6 +35,7 @@
   margin-block: 4px;
 }
 .live-menu-preview {
+  container: live-preview / inline-size;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -51,6 +52,9 @@
   flex-shrink: 0;
 }
 .menu-preview-toolbar > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 320px);
   padding: 4px;
   gap: 4px;
   border: 1px solid var(--color-border);
@@ -58,7 +62,12 @@
   background: var(--color-canvas);
 }
 .phase-two .menu-preview-toolbar button[aria-pressed] {
-  min-width: 112px;
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  white-space: nowrap;
+  overflow-wrap: normal;
   margin: 0;
   border-color: transparent;
   transition:
@@ -206,10 +215,33 @@
     padding: 12px;
   }
   .phase-two .menu-preview-toolbar button[aria-pressed] {
-    min-width: 96px;
+    min-width: 0;
   }
   .menu-preview-dialog {
     padding: 16px;
+  }
+}
+@container live-preview (max-width: 360px) {
+  .phase-two .menu-preview-toolbar button[aria-pressed] {
+    padding: 10px 6px;
+    gap: 4px;
+  }
+  .menu-preview-toolbar button[aria-pressed] > svg {
+    display: none;
+  }
+}
+@media (max-width: 360px) {
+  .menu-preview-dialog > .menu-preview-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .menu-preview-dialog > .menu-preview-heading > h2 {
+    margin: 0;
+  }
+  .menu-preview-dialog > .menu-preview-heading > button {
+    width: 100%;
+    min-height: 44px;
   }
 }
 @media (max-height: 700px) {
