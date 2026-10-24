@@ -1,4 +1,5 @@
 import { Button } from "../../components/ui/button";
+import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { useEffect, useRef, type ReactNode } from "react";
 import { FiCheckCircle, FiArrowLeft } from "react-icons/fi";
@@ -15,6 +16,7 @@ export function CashierOrderReview({
   purpose = "review",
   paymentMethod = "CASH",
   confirming = false,
+  refresh,
 }: {
   order: VerifyOrderQrResponse["order"];
   onNext: () => void;
@@ -24,6 +26,12 @@ export function CashierOrderReview({
   purpose?: "review" | "payment";
   paymentMethod?: "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER";
   confirming?: boolean;
+  refresh?: {
+    label: string;
+    pending: boolean;
+    disabled: boolean;
+    onClick: () => void;
+  };
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const quantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -152,7 +160,21 @@ export function CashierOrderReview({
           className="cashier-review-summary"
           aria-label="Order summary and actions"
         >
-          <p className="section-label">AT A GLANCE</p>
+          <div
+            className="cashier-review-summary-header"
+            role="group"
+            aria-label="Order summary tools"
+          >
+            <p className="section-label">AT A GLANCE</p>
+            {refresh && (
+              <RefreshButton
+                label={refresh.label}
+                pending={refresh.pending}
+                disabled={refresh.disabled}
+                onClick={refresh.onClick}
+              />
+            )}
+          </div>
           <dl>
             <div>
               <dt>Order type</dt>
@@ -164,11 +186,15 @@ export function CashierOrderReview({
             </div>
             <div>
               <dt>Order status</dt>
-              <dd><StatusBadge state={order.status} /></dd>
+              <dd>
+                <StatusBadge state={order.status} />
+              </dd>
             </div>
             <div>
               <dt>Payment status</dt>
-              <dd><StatusBadge state={order.paymentStatus} /></dd>
+              <dd>
+                <StatusBadge state={order.paymentStatus} />
+              </dd>
             </div>
           </dl>
           <div className="cashier-review-total">
@@ -183,7 +209,14 @@ export function CashierOrderReview({
             </p>
           )}
           {children}
-          <Button variant="outline" size="inherit" type="submit" className="secondary-button" onClick={onNext} disabled={busy}>
+          <Button
+            variant="outline"
+            size="inherit"
+            type="submit"
+            className="secondary-button"
+            onClick={onNext}
+            disabled={busy}
+          >
             <FiArrowLeft aria-hidden="true" /> Scan another order
           </Button>
         </aside>

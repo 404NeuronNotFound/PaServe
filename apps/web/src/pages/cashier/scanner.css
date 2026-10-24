@@ -56,12 +56,6 @@
 .phase-two .scanner-fallback > .field {
   margin: 24px 0;
 }
-.phase-two .scanner-fallback input[type="file"] {
-  height: auto;
-  padding: 12px;
-  width: 100%;
-  min-width: 0;
-}
 .phase-two .scanner-fallback textarea {
   min-height: 100px;
   resize: vertical;
@@ -585,21 +579,6 @@
 .phase-two .scanner-more-content {
   padding-bottom: 4px;
 }
-.phase-two .scanner-more input[type="file"] {
-
-  padding: 8px;
-}
-.phase-two .scanner-more input::file-selector-button {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  min-height: 44px;
-  margin-right: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  font: inherit;
-}
 .phase-two .scanner-more textarea {
   min-height: 84px;
 
@@ -697,6 +676,23 @@
   gap: 18px;
   margin: 22px 0;
 }
+.cashier-summary-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+}
+.cashier-summary-toolbar > .section-label,
+.cashier-summary-toolbar > h2 { margin: 0; }
+.cashier-summary-toolbar > button { flex-shrink: 0; }
+.cashier-review-summary-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+}
+.cashier-review-summary-header > .section-label { margin: 0; }
 .phase-two .cashier-review-summary dd {
   max-width: 65%;
   text-align: right;

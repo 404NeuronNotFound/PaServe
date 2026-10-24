@@ -8,7 +8,6 @@ import { Link } from "react-router-dom";
 import { isAxiosError } from "axios";
 import {
   FiCamera,
-  FiUpload,
   FiArrowRight,
   FiHash,
   FiChevronDown,
@@ -34,6 +33,7 @@ import { SelectField } from "../../components/forms/SelectField";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { CashierOrderDecision } from "./CashierOrderDecision";
 import { CashierCashPayment } from "./CashierCashPayment";
+import { OrderQrImagePicker } from "./OrderQrImagePicker";
 import { lookupCashPayment } from "../../features/cashier/cash-payment";
 import "./scanner.css";
 
@@ -440,23 +440,7 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
             Other scanning options <FiChevronDown aria-hidden="true" />
           </summary>
           <div className="scanner-more-content">
-            <div className="field">
-              <label htmlFor="scanner-image">
-                <FiUpload aria-hidden="true" /> Choose an order QR image
-              </label>
-              <Input
-                id="scanner-image"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                disabled={busy || lostAccess}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  if (file) void image(file);
-                }}
-              />
-              <p>PNG, JPEG or WebP · up to 10 MB. Read on this device.</p>
-            </div>
+            <OrderQrImagePicker disabled={lostAccess} pending={busy} onSelect={image} />
             <form onSubmit={manual}>
               <div className="field">
                 <label htmlFor="scanner-paste">Paste order QR contents</label>

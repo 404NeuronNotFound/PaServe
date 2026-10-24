@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FiImage, FiUploadCloud, FiRefreshCw, FiX } from "react-icons/fi";
 import { PRODUCT_IMAGE_LIMITS, PRODUCT_IMAGE_TYPES } from "@paserve/contracts";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
+import "../../components/media/photo-picker.css";
 
 export function ProductPhotoPicker({
   file,

@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CashierOrderReview } from "./CashierOrderReview";
 import { cashierLine } from "../../test/cashier-fixtures";
@@ -18,19 +18,49 @@ const order: VerifyOrderQrResponse["order"] = {
   reviewVersion: "a".repeat(64),
   items: [cashierLine],
 };
+it.each(["review", "payment"] as const)(
+  "anchors a single refresh control beside the summary heading for %s",
+  async (purpose) => {
+    const refresh = vi.fn();
+    render(
+      <CashierOrderReview
+        order={order}
+        onNext={vi.fn()}
+        purpose={purpose}
+        refresh={{
+          label: "Refresh order",
+          pending: false,
+          disabled: false,
+          onClick: refresh,
+        }}
+      />,
+    );
+    const header = within(
+      screen.getByRole("group", { name: "Order summary tools" }),
+    );
+    expect(header.getByText("AT A GLANCE")).toBeVisible();
+    await userEvent
+      .setup()
+      .click(header.getByRole("button", { name: "Refresh order" }));
+    expect(
+      screen.getAllByRole("button", { name: "Refresh order" }),
+    ).toHaveLength(1);
+    expect(refresh).toHaveBeenCalledTimes(1);
+  },
+);
 it.each(["ORD-000042", "ORD-1000000", "ORD-9223372036854775807"])(
   "displays the complete saved receipt/kitchen reference %s in cashier review",
   (orderNumber) => {
-    render(<CashierOrderReview order={{ ...order, orderNumber }} onNext={vi.fn()} />);
+    render(
+      <CashierOrderReview order={{ ...order, orderNumber }} onNext={vi.fn()} />,
+    );
     expect(screen.getByText(orderNumber)).toBeVisible();
   },
 );
 it("displays saved items, modifiers, notes, type/table, total and statuses", () => {
   render(<CashierOrderReview order={order} onNext={vi.fn()} />);
   expect(screen.getByText("ORD-000042")).toBeVisible();
-  expect(
-    screen.getByRole("heading", { name: "Review order" }),
-  ).toHaveFocus();
+  expect(screen.getByRole("heading", { name: "Review order" })).toHaveFocus();
   expect(screen.getByText("Dine-in · Table A3")).toBeInTheDocument();
   expect(
     screen.getByRole("heading", { name: "2 × Saved Latte" }),
@@ -41,8 +71,12 @@ it("displays saved items, modifiers, notes, type/table, total and statuses", () 
   expect(screen.getByText("Pending confirmation")).toBeInTheDocument();
   expect(screen.getByText("Unpaid")).toBeInTheDocument();
   expect(screen.getAllByText("₱135.50")).toHaveLength(2);
-  expect(screen.getByRole("heading", { name: "Order items (2 items)" })).toBeInTheDocument();
-  expect(screen.getByText(/Check the items, options, customer notes and total/)).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Order items (2 items)" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(/Check the items, options, customer notes and total/),
+  ).toBeInTheDocument();
   expect(screen.getByText("Order total (PHP)")).toBeInTheDocument();
 });
 it("keeps repeated products as separate lines, including a plain line without notes", () => {

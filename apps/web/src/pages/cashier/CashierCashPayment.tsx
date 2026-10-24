@@ -84,7 +84,9 @@ export function CashierCashPayment({
   const [reference, setReference] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(true);
-  const [pendingAction, setPendingAction] = useState<"refresh" | "review" | "record">("refresh");
+  const [pendingAction, setPendingAction] = useState<
+    "refresh" | "review" | "record"
+  >("refresh");
   const [blocked, setBlocked] = useState(true);
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
@@ -96,7 +98,11 @@ export function CashierCashPayment({
   const attempt = useRef<string | null>(null);
   const resultHeading = useRef<HTMLHeadingElement>(null);
   const amountInput = useRef<HTMLInputElement>(null);
-  useDraftGuard(!review?.payment && Boolean(amount || reference || description || receivedConfirmed), busy && pendingAction === "record");
+  useDraftGuard(
+    !review?.payment &&
+      Boolean(amount || reference || description || receivedConfirmed),
+    busy && pendingAction === "record",
+  );
   const normalized = normalizeCashAmount(amount);
   const change =
     review && normalized
@@ -429,7 +435,8 @@ export function CashierCashPayment({
           {error && <InlineMessage>{error}</InlineMessage>}
           <div className="cashier-paid-actions">
             {blocked && (
-              <RefreshButton label="Refresh payment"
+              <RefreshButton
+                label="Refresh payment"
                 pending={busy && pendingAction === "refresh"}
                 pendingLabel="Refreshing payment..."
                 disabled={busy}
@@ -439,7 +446,9 @@ export function CashierCashPayment({
             {!blocked &&
               review.order.status === "CONFIRMED" &&
               review.order.paymentStatus === "PAID" && (
-                <Button variant="outline" size="inherit"
+                <Button
+                  variant="outline"
+                  size="inherit"
                   type="button"
                   className="secondary-button"
                   disabled={busy}
@@ -448,13 +457,28 @@ export function CashierCashPayment({
                   <FiFileText aria-hidden="true" /> View receipt
                 </Button>
               )}
-            <Button variant="default" size="inherit" type="submit" className="primary-button" onClick={onNext}>
+            <Button
+              variant="default"
+              size="inherit"
+              type="submit"
+              className="primary-button"
+              onClick={onNext}
+            >
               Scan another order <FiArrowRight aria-hidden="true" />
             </Button>
           </div>
         </div>
       </section>
     );
+  const refreshControl = (
+    <RefreshButton
+      label="Refresh payment"
+      pending={busy && pendingAction === "refresh"}
+      pendingLabel="Refreshing payment..."
+      disabled={busy || confirm}
+      onClick={() => void refresh()}
+    />
+  );
   const controls = (
     <div className="cashier-cash-controls">
       {review && (
@@ -485,27 +509,44 @@ export function CashierCashPayment({
             <>
               {other && (
                 <>
-                  <FormField id="other-payment-description" label="Payment method description" required hint={<> Required. Up to 80 characters, such as Bank transfer or Shop
-                    voucher. Use Cash, GCash or Card for those methods. Do not
-                    enter card details. </>} error={description.length > 0 && invalidDescription ? "Enter a plain-text method description of up to 80 characters without card details." : undefined}>
-                  <Input
+                  <FormField
                     id="other-payment-description"
-                    value={description}
-                    maxLength={80}
+                    label="Payment method description"
                     required
-                    disabled={busy || blocked || confirm}
-                    aria-invalid={description.length > 0 && invalidDescription}
-                    aria-describedby={
-                      description.length > 0 && invalidDescription
-                        ? "other-payment-description-hint other-payment-description-error"
-                        : "other-payment-description-hint"
+                    hint={
+                      <>
+                        {" "}
+                        Required. Up to 80 characters, such as Bank transfer or
+                        Shop voucher. Use Cash, GCash or Card for those methods.
+                        Do not enter card details.{" "}
+                      </>
                     }
-                    onChange={(event) => {
-                      setDescription(event.target.value);
-                      setReceivedConfirmed(false);
-                      attempt.current = null;
-                    }}
-                  />
+                    error={
+                      description.length > 0 && invalidDescription
+                        ? "Enter a plain-text method description of up to 80 characters without card details."
+                        : undefined
+                    }
+                  >
+                    <Input
+                      id="other-payment-description"
+                      value={description}
+                      maxLength={80}
+                      required
+                      disabled={busy || blocked || confirm}
+                      aria-invalid={
+                        description.length > 0 && invalidDescription
+                      }
+                      aria-describedby={
+                        description.length > 0 && invalidDescription
+                          ? "other-payment-description-hint other-payment-description-error"
+                          : "other-payment-description-hint"
+                      }
+                      onChange={(event) => {
+                        setDescription(event.target.value);
+                        setReceivedConfirmed(false);
+                        attempt.current = null;
+                      }}
+                    />
                   </FormField>
                 </>
               )}
@@ -520,26 +561,42 @@ export function CashierCashPayment({
                 This records the cashier’s confirmation. No gateway verification
                 is performed.
               </p>
-              <FormField id="gcash-reference" label="Reference note / number (optional)" hint={<> {card
-                  ? "Up to 200 characters. Use a terminal receipt/reference; do not enter card numbers or security codes."
-                  : "Up to 200 characters. Recorded as a cashier note."} </>} error={invalidReference ? other || card ? "Use a receipt reference of up to 200 characters without card details." : "Enter a plain-text reference of up to 200 characters." : undefined}>
-              <Input
+              <FormField
                 id="gcash-reference"
-                value={reference}
-                maxLength={200}
-                autoComplete="off"
-                disabled={busy || blocked || confirm}
-                aria-invalid={invalidReference}
-                aria-describedby={
-                  invalidReference
-                    ? "gcash-reference-hint gcash-reference-error"
-                    : "gcash-reference-hint"
+                label="Reference note / number (optional)"
+                hint={
+                  <>
+                    {" "}
+                    {card
+                      ? "Up to 200 characters. Use a terminal receipt/reference; do not enter card numbers or security codes."
+                      : "Up to 200 characters. Recorded as a cashier note."}{" "}
+                  </>
                 }
-                onChange={(event) => {
-                  setReference(event.target.value);
-                  attempt.current = null;
-                }}
-              />
+                error={
+                  invalidReference
+                    ? other || card
+                      ? "Use a receipt reference of up to 200 characters without card details."
+                      : "Enter a plain-text reference of up to 200 characters."
+                    : undefined
+                }
+              >
+                <Input
+                  id="gcash-reference"
+                  value={reference}
+                  maxLength={200}
+                  autoComplete="off"
+                  disabled={busy || blocked || confirm}
+                  aria-invalid={invalidReference}
+                  aria-describedby={
+                    invalidReference
+                      ? "gcash-reference-hint gcash-reference-error"
+                      : "gcash-reference-hint"
+                  }
+                  onChange={(event) => {
+                    setReference(event.target.value);
+                    attempt.current = null;
+                  }}
+                />
               </FormField>
               <label className="cashier-gcash-confirm">
                 <Input
@@ -560,42 +617,71 @@ export function CashierCashPayment({
             </>
           ) : (
             <>
-              <FormField id="cash-amount" label="Amount received (PHP)" required
-                hint={<>Enter the cash actually received, with up to two decimal places. It must cover the total. Maximum {formatCartPrice(CASH_AMOUNT_MAX)}.</>}
-                error={invalidAmount ? normalized ? "The amount received is below the order total." : `Enter a valid amount with up to two decimal places. Maximum ${formatCartPrice(CASH_AMOUNT_MAX)}.` : undefined}
+              <FormField
+                id="cash-amount"
+                label="Amount received (PHP)"
+                required
+                hint={
+                  <>
+                    Enter the cash actually received, with up to two decimal
+                    places. It must cover the total. Maximum{" "}
+                    {formatCartPrice(CASH_AMOUNT_MAX)}.
+                  </>
+                }
+                error={
+                  invalidAmount
+                    ? normalized
+                      ? "The amount received is below the order total."
+                      : `Enter a valid amount with up to two decimal places. Maximum ${formatCartPrice(CASH_AMOUNT_MAX)}.`
+                    : undefined
+                }
               >
-              <div className="cashier-cash-input">
-                <span className="cashier-cash-currency" aria-hidden="true">
-                  ₱
-                </span>
-                <Input
-                  id="cash-amount"
-                  ref={amountInput}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  placeholder="0.00"
-                  maxLength={CASH_AMOUNT_MAX.length}
-                  value={amount}
-                  disabled={busy || blocked || confirm}
-                  onChange={(event) => {
-                    setAmount(event.target.value);
-                    attempt.current = null;
-                  }}
-                  aria-invalid={invalidAmount}
-                  aria-describedby={
-                    invalidAmount
-                      ? "cash-amount-hint cash-amount-error"
-                      : "cash-amount-hint"
-                  }
-                />
-              </div>
+                <div className="cashier-cash-input">
+                  <span className="cashier-cash-currency" aria-hidden="true">
+                    ₱
+                  </span>
+                  <Input
+                    id="cash-amount"
+                    ref={amountInput}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder="0.00"
+                    maxLength={CASH_AMOUNT_MAX.length}
+                    value={amount}
+                    disabled={busy || blocked || confirm}
+                    onChange={(event) => {
+                      setAmount(event.target.value);
+                      attempt.current = null;
+                    }}
+                    aria-invalid={invalidAmount}
+                    aria-describedby={
+                      invalidAmount
+                        ? "cash-amount-hint cash-amount-error"
+                        : "cash-amount-hint"
+                    }
+                  />
+                </div>
               </FormField>
-              <div className="cashier-tender-shortcuts" role="group" aria-label="Cash amount shortcuts">
-                <p>Choose the cash actually handed over. You can edit the amount.</p>
-                {[review.order.totalPrice, ...["100.00", "200.00", "500.00", "1000.00"].filter((value) => {
-                  const difference = cashChange(value, review.order.totalPrice);
-                  return difference !== null && difference !== "0.00";
-                })].map((value, index) => (
+              <div
+                className="cashier-tender-shortcuts"
+                role="group"
+                aria-label="Cash amount shortcuts"
+              >
+                <p>
+                  Choose the cash actually handed over. You can edit the amount.
+                </p>
+                {[
+                  review.order.totalPrice,
+                  ...["100.00", "200.00", "500.00", "1000.00"].filter(
+                    (value) => {
+                      const difference = cashChange(
+                        value,
+                        review.order.totalPrice,
+                      );
+                      return difference !== null && difference !== "0.00";
+                    },
+                  ),
+                ].map((value, index) => (
                   <Button
                     key={value}
                     variant="outline"
@@ -606,7 +692,9 @@ export function CashierCashPayment({
                       amountInput.current?.focus();
                     }}
                   >
-                    {index === 0 ? `Exact ${formatCartPrice(value)}` : formatCartPrice(value)}
+                    {index === 0
+                      ? `Exact ${formatCartPrice(value)}`
+                      : formatCartPrice(value)}
                   </Button>
                 ))}
               </div>
@@ -629,12 +717,6 @@ export function CashierCashPayment({
           </PendingButton>
         </>
       )}
-      <RefreshButton label="Refresh payment"
-        pending={busy && pendingAction === "refresh"}
-        pendingLabel="Refreshing payment..."
-        disabled={busy || confirm}
-        onClick={() => void refresh()}
-      />
       {busy && <p role="status">Checking or recording payment…</p>}
       {error && <InlineMessage>{error}</InlineMessage>}
       <DecisionDialog
@@ -665,7 +747,9 @@ export function CashierCashPayment({
                   : "Check the cash before recording payment.")
         }
         confirmLabel={recordLabel}
-        pendingLabel={pendingOrder ? "Confirming payment…" : "Recording payment…"}
+        pendingLabel={
+          pendingOrder ? "Confirming payment…" : "Recording payment…"
+        }
         cancelLabel="Keep reviewing"
         onConfirm={collect}
         onClose={() => setConfirm(false)}
@@ -680,14 +764,32 @@ export function CashierCashPayment({
       purpose="payment"
       paymentMethod={method}
       confirming={!!pendingOrder}
+      refresh={{
+        label: "Refresh payment",
+        pending: busy && pendingAction === "refresh",
+        disabled: busy || confirm,
+        onClick: () => {
+          void refresh();
+        },
+      }}
     >
       {controls}
     </CashierOrderReview>
   ) : (
     <section className="scanner-panel" aria-label="Order payment">
-      <h2>{manual ? recordLabel : "Collect cash"}</h2>
+      <div className="cashier-summary-toolbar">
+        <h2>{manual ? recordLabel : "Collect cash"}</h2>
+        {refreshControl}
+      </div>
       {controls}
-      <Button variant="outline" size="inherit" type="submit" className="secondary-button" onClick={onNext} disabled={busy}>
+      <Button
+        variant="outline"
+        size="inherit"
+        type="submit"
+        className="secondary-button"
+        onClick={onNext}
+        disabled={busy}
+      >
         Scan another order
       </Button>
     </section>

@@ -1,4 +1,3 @@
-import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Textarea } from "../../components/ui/textarea";
 import { Button } from "../../components/ui/button";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
@@ -44,7 +43,9 @@ export function CashierOrderDecision({
 }) {
   const [review, setReview] = useState(order);
   const [busy, setBusy] = useState(false);
-  const [pendingAction, setPendingAction] = useState<"refresh" | "confirm" | "reject" | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    "refresh" | "confirm" | "reject" | null
+  >(null);
   const [blocked, setBlocked] = useState(
     order.status !== "PENDING_CONFIRMATION" || order.paymentStatus !== "UNPAID",
   );
@@ -58,7 +59,10 @@ export function CashierOrderDecision({
   const running = useRef(false);
   const active = useRef(false);
   const request = useRef<AbortController | null>(null);
-  useDraftGuard(!decision && Boolean(reason), busy && pendingAction !== "refresh");
+  useDraftGuard(
+    !decision && Boolean(reason),
+    busy && pendingAction !== "refresh",
+  );
   const resultHeading = useRef<HTMLHeadingElement>(null);
   useConfirmedOrderEvents(
     order.shopId,
@@ -209,7 +213,13 @@ export function CashierOrderDecision({
             Reason: {decision.rejectionReason}
           </p>
         )}
-        <Button variant="outline" size="inherit" type="submit" className="secondary-button" onClick={onNext}>
+        <Button
+          variant="outline"
+          size="inherit"
+          type="submit"
+          className="secondary-button"
+          onClick={onNext}
+        >
           Scan another order
         </Button>
       </section>
@@ -220,17 +230,17 @@ export function CashierOrderDecision({
       onNext={onNext}
       source={qrToken ? "qr" : "number"}
       busy={busy || Boolean(action)}
+      refresh={{
+        label: "Refresh order",
+        pending: busy && pendingAction === "refresh",
+        disabled: busy || Boolean(action),
+        onClick: () => {
+          void refresh();
+        },
+      }}
     >
       <div className="cashier-decision-controls">
         <p>Confirmation and payment must succeed together.</p>
-        <RefreshButton label="Refresh order"
-          pending={busy && pendingAction === "refresh"}
-          pendingLabel="Refreshing order..."
-          disabled={busy || Boolean(action)}
-          onClick={() => {
-            void refresh();
-          }}
-        />
         <div className="field">
           <label htmlFor="cashier-rejection-reason">
             Rejection reason (optional)
@@ -268,7 +278,9 @@ export function CashierOrderDecision({
               void refresh("reject");
             }}
           >
-            {busy && pendingAction === "reject" ? "Checking order..." : "Reject order"}
+            {busy && pendingAction === "reject"
+              ? "Checking order..."
+              : "Reject order"}
           </Button>
         </div>
         {busy && (
