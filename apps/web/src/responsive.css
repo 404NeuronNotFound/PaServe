@@ -121,7 +121,6 @@
   :root[data-short-viewport] .menu-browse-bar,
   :root[data-short-viewport] .kitchen-state-switch,
   :root[data-short-viewport] .customization-dialog footer,
-  :root[data-short-viewport] .phase-two .settings-savebar,
   :root[data-short-viewport] .categories-create-panel {
     position: static;
   }

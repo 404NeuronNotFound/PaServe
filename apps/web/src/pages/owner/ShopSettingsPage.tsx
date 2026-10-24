@@ -4,7 +4,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { Button } from "../../components/ui/button";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { FormSkeleton } from "../../components/feedback/LoadingSkeleton";
-import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { isAxiosError } from "axios";
@@ -121,6 +121,12 @@ const fields = [
     hint: "For example: Monday–Friday, 8am–6pm; Saturday, 9am–4pm. Display information only; it does not schedule ordering.",
   },
 ] as const;
+const settingsSections = [
+  { id: "appearance", title: "Menu appearance", description: "Choose the colors and layout your customers see.", fields: fields.slice(0, 3) },
+  { id: "business", title: "Business details", description: "Introduce your shop with a name and a short description.", fields: fields.slice(3, 6) },
+  { id: "contact", title: "Contact and location", description: "Help customers find you and get in touch.", fields: fields.slice(6, 10) },
+  { id: "hours", title: "Operating information", description: "Let customers know when to visit.", fields: fields.slice(10) },
+];
 type Field = keyof UpdateShopRequest;
 type Values = Record<Field, string>;
 const normalizedValue = (key: Field, value: string) =>
@@ -430,6 +436,20 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
           Preview changes
         </Button>
       </div>
+      <details className="settings-section-nav">
+        <summary>Jump to section</summary>
+        <nav aria-label="Settings sections">
+          {[{ id: "photos", title: "Shop photos" }, ...settingsSections].map((section) => (
+            <Button key={section.id} variant="ghost" size="sm" type="button" onClick={(event) => {
+              const target = document.getElementById(`settings-section-${section.id}`);
+              event.currentTarget.closest("details")?.removeAttribute("open");
+              target?.focus();
+              target?.scrollIntoView?.({ block: "start" });
+            }}>{section.title}</Button>
+          ))}
+        </nav>
+      </details>
+      <h2 id="settings-section-photos" className="settings-photos-title" tabIndex={-1}>Shop photos</h2>
       <div className="settings-assets">
         <ShopLogoUpload
           shopId={shop.id}
@@ -459,11 +479,14 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
         aria-busy={mutation.isPending}
         onSubmit={(event) => void submit(event)}
       >
-        {fields.map((field) => (
-          <Fragment key={field.key}>
-            {"section" in field && (
-              <h2 className="settings-group-heading">{field.section}</h2>
-            )}
+        {settingsSections.map((section) => (
+          <section className="settings-section" key={section.id} aria-labelledby={`settings-section-${section.id}`}>
+            <header className="settings-section-heading">
+              <h2 id={`settings-section-${section.id}`} className="settings-group-heading" tabIndex={-1}>{section.title}</h2>
+              <p>{section.description}</p>
+            </header>
+            <div className="settings-section-fields">
+            {section.fields.map((field) => (
             <div
               className={
                 field.key === "description" || field.key === "operatingHours"
@@ -584,7 +607,9 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                 )}
               </FormField>
             </div>
-          </Fragment>
+            ))}
+            </div>
+          </section>
         ))}
         {error && (
           <InlineMessage className="settings-form-error">{error}</InlineMessage>
@@ -592,19 +617,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
         <p role="status" className="sr-only">
           {mutation.isPending ? "Saving shop settings. Please wait." : ""}
         </p>
-        <div className="shop-context-actions settings-savebar">
-          <span className="field-hint" role="status">
-            {dirty ? "Unsaved changes" : "All changes saved"}
-          </span>
-          <Button variant="default" size="inherit"
-            aria-busy={mutation.isPending}
-            type="submit"
-            className="primary-button"
-            disabled={busy || !dirty}
-          >
-            <FiSave aria-hidden="true" />
-            {mutation.isPending ? "Saving…" : "Save settings"}
-          </Button>
+        <div className="settings-secondary-actions">
           <Button variant="outline" size="inherit"
             type="button"
             className="secondary-button"
@@ -631,6 +644,20 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
             <FiArrowLeft aria-hidden="true" />
             Back to shop
           </Link>
+        </div>
+        <div className="shop-context-actions settings-savebar">
+          <span className="field-hint" role="status">
+            {dirty ? "Unsaved changes" : "All changes saved"}
+          </span>
+          <Button variant="default" size="inherit"
+            aria-busy={mutation.isPending}
+            type="submit"
+            className="primary-button"
+            disabled={busy || !dirty}
+          >
+            <FiSave aria-hidden="true" />
+            {mutation.isPending ? "Saving…" : "Save settings"}
+          </Button>
         </div>
       </form>
       {previewOpen && (

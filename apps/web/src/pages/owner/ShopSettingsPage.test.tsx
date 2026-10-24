@@ -77,6 +77,23 @@ const membership: UserMembership = {
   shop: { id: shop.id, name: shop.name, slug: shop.slug, isActive: true },
 };
 
+it("jumps to a settings section without losing edits or saving the form", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  setup();
+  const user = userEvent.setup();
+  const business = await screen.findByLabelText("Business name (required)");
+  await user.clear(business);
+  await user.type(business, "Draft shop name");
+  await user.click(screen.getByText("Jump to section", { exact: true }));
+  const navigation = screen.getByRole("navigation", { name: "Settings sections" });
+  await user.click(within(navigation).getByRole("button", { name: "Contact and location" }));
+  expect(screen.getByRole("heading", { name: "Contact and location" })).toHaveFocus();
+  expect(screen.getByText("Jump to section").closest("details")).not.toHaveAttribute("open");
+  expect(business).toHaveValue("Draft shop name");
+  expect(screen.getByRole("button", { name: "Save settings" })).toBeEnabled();
+  expect(updateShop).not.toHaveBeenCalled();
+});
+
 it("saves a banner without losing business edits and locks conflicting controls during upload", async () => {
   vi.mocked(getShopSettings).mockResolvedValue({ shop });
   let complete!: (value: { shop: ShopSettings; storagePath: string }) => void;
