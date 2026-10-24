@@ -1,8 +1,14 @@
 /* Compact sales workspace; financial data and report details remain available. */
 .sales-minimal .sales-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--spacing-4);
   margin-bottom: 20px;
   padding-bottom: 0;
 }
+.sales-minimal .sales-header > div { min-width: 0; }
+.sales-minimal .sales-header > button { align-self: start; }
 .sales-minimal .sales-header h1 {
   font: 500 30px/1.2 var(--font-display);
   letter-spacing: -0.8px;

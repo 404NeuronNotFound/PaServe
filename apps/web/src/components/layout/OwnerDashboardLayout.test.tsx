@@ -58,7 +58,11 @@ const profile = {
     memberships: [member("a"), member("b", "ADMIN")],
   },
 };
+const dialogShow = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "showModal");
+const dialogClose = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "close");
 beforeEach(() => {
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: function (this: HTMLDialogElement) { this.open = true; } });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value: function (this: HTMLDialogElement) { this.open = false; } });
   vi.mocked(getCurrentUser).mockResolvedValue(profile);
   vi.mocked(getShopMembership).mockImplementation(async (id) =>
     member(id, id === "b" ? "ADMIN" : "OWNER"),
@@ -78,6 +82,8 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  if (dialogShow) Object.defineProperty(HTMLDialogElement.prototype, "showModal", dialogShow); else delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).showModal;
+  if (dialogClose) Object.defineProperty(HTMLDialogElement.prototype, "close", dialogClose); else delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).close;
   focusManager.setFocused(undefined);
   vi.resetAllMocks();
   vi.unstubAllGlobals();
@@ -311,7 +317,7 @@ it.each(["ADMIN", "MANAGER", "CASHIER", "KITCHEN"] as const)(
     await screen.findByRole("heading", { name: "Cafe A" });
     const nav = screen.getByRole("navigation", { name: "Shop navigation" });
     const tasks = screen.getByRole("navigation", { name: "Common tasks" });
-    expect(within(tasks).getAllByRole("link").map((link) => link.textContent)).toEqual(
+    expect(within(tasks).getAllByRole("link").map((link) => link.getAttribute("aria-label"))).toEqual(
       role === "CASHIER" ? ["Cashier"] : role === "KITCHEN" ? ["Kitchen / Barista"]
         : ["Sales dashboard", "Cashier", "Kitchen / Barista", "Products"],
     );

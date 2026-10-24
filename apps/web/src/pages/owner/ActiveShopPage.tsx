@@ -2,20 +2,25 @@ import { Card } from "../../components/ui/card";
 import { ShopLogo } from "../../components/shops/ShopLogo";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import {
-  FiArrowUpRight,
-  FiSettings,
-  FiUsers,
-  FiUser,
-} from "react-icons/fi";
+import { FiArrowUpRight, FiSettings, FiUsers, FiUser } from "react-icons/fi";
 import { useActiveShop, shopPath } from "../../features/shops/active-shop";
 import { navigationForRole } from "../../components/layout/workspace-navigation";
 import "../../components/layout/workspace-navigation.css";
 
+const taskDescriptions: Record<string, string> = {
+  sales: "View performance",
+  orders: "Follow every order",
+  cashier: "Take payments",
+  kitchen: "Manage preparation",
+  products: "Manage your menu",
+};
+
 export function ActiveShopPage() {
   const membership = useActiveShop();
   const tasks = navigationForRole(membership.role).flatMap((group) =>
-    group.items.filter((item) => group.id === "daily" ? Boolean(item.path) : item.path === "products"),
+    group.items.filter((item) =>
+      group.id === "daily" ? Boolean(item.path) : item.path === "products",
+    ),
   );
   // Older shops could use these names before they became reserved routes.
   const publicMenuPath = ["menu", "connection"].includes(membership.shop.slug)
@@ -43,7 +48,11 @@ export function ActiveShopPage() {
           </p>
           <p>Your role: {membership.role.toLowerCase()}</p>
         </div>
-        <ShopLogo url={membership.shop.logoUrl} name={membership.shop.name} className="shop-overview-emblem" />
+        <ShopLogo
+          url={membership.shop.logoUrl}
+          name={membership.shop.name}
+          className="shop-overview-emblem"
+        />
       </div>
       <div className="shop-overview-address">
         <span className="section-label">YOUR MENU IDENTITY</span>
@@ -55,8 +64,23 @@ export function ActiveShopPage() {
           <h2>Common tasks</h2>
           <div>
             {tasks.map(({ path, label, icon: Icon }) => (
-              <Link key={path} className="secondary-button" to={`${shopPath(membership.shopId)}/${path}`}>
-                <Icon aria-hidden="true" />{label}
+              <Link
+                key={path}
+                className="workspace-task-card"
+                aria-label={label}
+                to={`${shopPath(membership.shopId)}/${path}`}
+              >
+                <span className="workspace-task-icon">
+                  <Icon aria-hidden="true" />
+                </span>
+                <span className="workspace-task-copy">
+                  <strong>{label}</strong>
+                  <small>{taskDescriptions[path]}</small>
+                </span>
+                <FiArrowUpRight
+                  className="workspace-task-arrow"
+                  aria-hidden="true"
+                />
               </Link>
             ))}
           </div>
@@ -64,48 +88,54 @@ export function ActiveShopPage() {
       )}
       <nav className="shop-overview-actions" aria-label="Shop actions">
         {membership.role === "OWNER" && (
-          <Card asChild className="shop-action-card"><article>
+          <Card asChild className="shop-action-card">
+            <article>
+              <span className="shop-action-icon">
+                <FiSettings aria-hidden="true" />
+              </span>
+              <span className="section-label">MAKE IT YOURS</span>
+              <strong>Business details</strong>
+              <span>
+                Business details, contact information, and operating hours.
+              </span>
+              <Link
+                className="primary-button"
+                to={`${shopPath(membership.shopId)}/settings`}
+              >
+                Shop settings
+                <FiArrowUpRight aria-hidden="true" />
+              </Link>
+            </article>
+          </Card>
+        )}
+        <Card asChild className="shop-action-card">
+          <article>
             <span className="shop-action-icon">
-              <FiSettings aria-hidden="true" />
+              <FiUsers aria-hidden="true" />
             </span>
-            <span className="section-label">MAKE IT YOURS</span>
-            <strong>Business details</strong>
-            <span>
-              Business details, contact information, and operating hours.
-            </span>
-            <Link
-              className="primary-button"
-              to={`${shopPath(membership.shopId)}/settings`}
-            >
-              Shop settings
+            <span className="section-label">YOUR PEOPLE & PLACES</span>
+            <strong>Your places</strong>
+            <span>Choose the place you want to manage next.</span>
+            <Link className="secondary-button" to="/app/shops">
+              Switch shop
               <FiArrowUpRight aria-hidden="true" />
             </Link>
-          </article></Card>
-        )}
-        <Card asChild className="shop-action-card"><article>
-          <span className="shop-action-icon">
-            <FiUsers aria-hidden="true" />
-          </span>
-          <span className="section-label">YOUR PEOPLE & PLACES</span>
-          <strong>Your places</strong>
-          <span>Choose the place you want to manage next.</span>
-          <Link className="secondary-button" to="/app/shops">
-            Switch shop
-            <FiArrowUpRight aria-hidden="true" />
-          </Link>
-        </article></Card>
-        <Card asChild className="shop-action-card"><article>
-          <span className="shop-action-icon">
-            <FiUser aria-hidden="true" />
-          </span>
-          <span className="section-label">YOUR PERSONAL SPACE</span>
-          <strong>Your profile</strong>
-          <span>See your profile and all your shop memberships.</span>
-          <Link className="secondary-button" to="/app/account">
-            Your account
-            <FiArrowUpRight aria-hidden="true" />
-          </Link>
-        </article></Card>
+          </article>
+        </Card>
+        <Card asChild className="shop-action-card">
+          <article>
+            <span className="shop-action-icon">
+              <FiUser aria-hidden="true" />
+            </span>
+            <span className="section-label">YOUR PERSONAL SPACE</span>
+            <strong>Your profile</strong>
+            <span>See your profile and all your shop memberships.</span>
+            <Link className="secondary-button" to="/app/account">
+              Your account
+              <FiArrowUpRight aria-hidden="true" />
+            </Link>
+          </article>
+        </Card>
       </nav>
     </section>
   );

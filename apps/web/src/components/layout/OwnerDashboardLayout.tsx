@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   FiCoffee,
   FiUser,
@@ -34,6 +34,8 @@ import "./dashboard-header.css";
 import "./dashboard-frame.css";
 import { DashboardSidebarNavigation } from "./DashboardSidebarNavigation";
 import { WorkspaceBreadcrumbs } from "./WorkspaceBreadcrumbs";
+import { MobileWorkspaceNavigation } from "./MobileWorkspaceNavigation";
+import { navigationForRole } from "./workspace-navigation";
 
 export function OwnerDashboardLayout() {
   const membership = useActiveShop();
@@ -56,6 +58,19 @@ export function DashboardFrame({
   const client = useQueryClient();
   const user = client.getQueryData<CurrentUserResponse>(currentUserKey)?.user;
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const currentDestination = membership
+    ? (navigationForRole(membership.role)
+        .flatMap((group) => group.items)
+        .find(
+          (item) =>
+            item.path &&
+            (pathname === `${shopPath(membership.shopId)}/${item.path}` ||
+              pathname.startsWith(
+                `${shopPath(membership.shopId)}/${item.path}/`,
+              )),
+        )?.label ?? "Overview")
+    : "Workspace";
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -70,7 +85,10 @@ export function DashboardFrame({
   useEffect(() => {
     const query = window.matchMedia?.("(max-width: 760px)");
     if (!query) return;
-    const update = () => setMobile(query.matches);
+    const update = () => {
+      setMobile(query.matches);
+      if (!query.matches) setNavigationOpen(false);
+    };
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
@@ -149,10 +167,11 @@ export function DashboardFrame({
     items[next]?.focus();
   }
   return (
-    <div className="dashboard-shell phase-two" data-sidebar-collapsed={rail}>
-      <SkipLink targetId="dashboard-content">
-        Skip to page content
-      </SkipLink>
+    <div
+      className="dashboard-shell phase-two shop-dashboard-shell"
+      data-sidebar-collapsed={rail}
+    >
+      <SkipLink targetId="dashboard-content">Skip to page content</SkipLink>
       <header className="workspace-header dashboard-header dashboard-header-compact">
         <Link className="wordmark" to="/app">
           <span className="brand-symbol">
@@ -264,56 +283,86 @@ export function DashboardFrame({
         <button
           className="secondary-button dashboard-navigation-toggle"
           ref={navigationTrigger}
+          type="button"
+          aria-label="Navigation"
+          aria-haspopup={mobile ? "dialog" : undefined}
           aria-expanded={navigationOpen}
-          aria-controls="dashboard-navigation"
+          aria-controls={
+            mobile ? "mobile-workspace-navigation" : "dashboard-navigation"
+          }
           onClick={() => setNavigationOpen(!navigationOpen)}
         >
-          <FiMenu aria-hidden="true" />
-          Navigation
+          <span className="dashboard-mobile-location">
+            <small>WORKSPACE</small>
+            <strong>{currentDestination}</strong>
+          </span>
+          <span className="dashboard-mobile-menu-label">
+            <FiMenu aria-hidden="true" />
+            Menu
+          </span>
         </button>
-        <aside
-          className="dashboard-sidebar dashboard-sidebar-premium"
-          id="dashboard-navigation"
-          data-open={navigationOpen}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") closeNavigation();
-          }}
-        >
-          <div className="dashboard-sidebar-toolbar">
-            <span className="dashboard-sidebar-label">WORKSPACE</span>
-            <button
-              type="button"
-              className="dashboard-sidebar-collapse"
-              onClick={toggleSidebar}
-              aria-label={rail ? "Expand sidebar" : "Collapse sidebar"}
-              title={rail ? "Expand sidebar" : "Collapse sidebar"}
-              aria-expanded={!rail}
-              aria-controls="dashboard-navigation"
-            >
-              {rail ? <FiChevronRight aria-hidden="true" /> : <FiChevronLeft aria-hidden="true" />}
-            </button>
-          </div>
-          {membership && (
-            <div className="dashboard-sidebar-identity">
-              <ShopLogo
-                url={membership.shop.logoUrl}
-                name={membership.shop.name}
-                className="dashboard-sidebar-emblem"
-              />
-              <div>
-                <strong>{membership.shop.name}</strong>
-                <p className="dashboard-shop-role">
-                  {membership.role.toLowerCase()} workspace
-                </p>
-              </div>
+        {!mobile && (
+          <aside
+            className="dashboard-sidebar dashboard-sidebar-premium"
+            id="dashboard-navigation"
+            data-open={navigationOpen}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") closeNavigation();
+            }}
+          >
+            <div className="dashboard-sidebar-toolbar">
+              <span className="dashboard-sidebar-label">WORKSPACE</span>
+              <button
+                type="button"
+                className="dashboard-sidebar-collapse"
+                onClick={toggleSidebar}
+                aria-label={rail ? "Expand sidebar" : "Collapse sidebar"}
+                title={rail ? "Expand sidebar" : "Collapse sidebar"}
+                aria-expanded={!rail}
+                aria-controls="dashboard-navigation"
+              >
+                {rail ? (
+                  <FiChevronRight aria-hidden="true" />
+                ) : (
+                  <FiChevronLeft aria-hidden="true" />
+                )}
+              </button>
             </div>
-          )}
-          <DashboardSidebarNavigation
-            membership={membership}
-            rail={rail}
-            onNavigate={closeNavigation}
-          />
-        </aside>
+            {membership && (
+              <div className="dashboard-sidebar-identity">
+                <ShopLogo
+                  url={membership.shop.logoUrl}
+                  name={membership.shop.name}
+                  className="dashboard-sidebar-emblem"
+                />
+                <div>
+                  <strong>{membership.shop.name}</strong>
+                  <p className="dashboard-shop-role">
+                    {membership.role.toLowerCase()} workspace
+                  </p>
+                </div>
+              </div>
+            )}
+            <DashboardSidebarNavigation
+              membership={membership}
+              rail={rail}
+              onNavigate={closeNavigation}
+            />
+          </aside>
+        )}
+        {mobile && (
+          <MobileWorkspaceNavigation
+            open={navigationOpen}
+            onClose={closeNavigation}
+            shopName={membership?.shop.name ?? "Your workspace"}
+          >
+            <DashboardSidebarNavigation
+              membership={membership}
+              rail={false}
+              onNavigate={closeNavigation}
+            />
+          </MobileWorkspaceNavigation>
+        )}
         <main
           className="dashboard-content"
           id="dashboard-content"
