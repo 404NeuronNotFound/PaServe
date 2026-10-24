@@ -11,6 +11,7 @@ import axios, { type InternalAxiosRequestConfig } from "axios";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../../lib/api/client";
 import { useSessionStore } from "../stores/session";
 import { withSessionLock } from "./session-lock";
+import { announceSignOut } from "./session-events";
 
 const cookieHeaders = { "X-PaServe-Client": "web" };
 const cookieRequest = {
@@ -20,13 +21,28 @@ const cookieRequest = {
 export const currentUserKey = ["auth", "me"] as const;
 let refreshPromise: Promise<LoginResponse> | null = null;
 let logoutPromise: Promise<void> | null = null;
+type SessionConfig = InternalAxiosRequestConfig & { sessionVersion?: number };
+
+function requireSessionVersion(version: number) {
+  const state = useSessionStore.getState();
+  if (state.version !== version || state.signedOutElsewhere) {
+    throw new axios.CanceledError("This session has ended.");
+  }
+}
+
+function finishSession() {
+  useSessionStore.getState().endSession();
+  announceSignOut();
+}
 
 export async function loginAccount(
   input: LoginRequest,
 ): Promise<LoginResponse> {
+  const version = useSessionStore.getState().version;
   const { data } = await withSessionLock(() =>
     api.post<LoginResponse>("/auth/login", input, cookieRequest),
   );
+  requireSessionVersion(version);
   useSessionStore.getState().setAccessToken(data.accessToken);
   return data;
 }
@@ -36,15 +52,19 @@ export function refreshSession(): Promise<LoginResponse> {
     return Promise.reject(new Error("Sign-out is in progress."));
   }
   if (!refreshPromise) {
-    refreshPromise = withSessionLock(() =>
-      api.post<LoginResponse>("/auth/refresh", {}, cookieRequest),
-    )
+    const version = useSessionStore.getState().version;
+    refreshPromise = withSessionLock(() => {
+      requireSessionVersion(version);
+      return api.post<LoginResponse>("/auth/refresh", {}, cookieRequest);
+    })
       .then(({ data }) => {
+        requireSessionVersion(version);
         useSessionStore.getState().setAccessToken(data.accessToken);
         return data;
       })
       .catch((error: unknown) => {
-        useSessionStore.getState().setAccessToken(null);
+        if (useSessionStore.getState().version === version)
+          useSessionStore.getState().setAccessToken(null);
         throw error;
       })
       .finally(() => {
@@ -58,12 +78,25 @@ api.interceptors.request.use((config) => {
   const token = useSessionStore.getState().accessToken;
   if (token && !config.url?.startsWith("/auth/"))
     config.headers.Authorization = `Bearer ${token}`;
+  if (config.headers.Authorization || config.url?.startsWith("/auth/")) {
+    const version = useSessionStore.getState().version;
+    requireSessionVersion(version);
+    (config as SessionConfig).sessionVersion = version;
+  }
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const version = (response.config as SessionConfig).sessionVersion;
+    if (version !== undefined) requireSessionVersion(version);
+    return response;
+  },
   async (error: unknown) => {
+    if (axios.isAxiosError(error) && error.config) {
+      const version = (error.config as SessionConfig).sessionVersion;
+      if (version !== undefined) requireSessionVersion(version);
+    }
     if (
       axios.isAxiosError(error) &&
       error.response?.status === 401 &&
@@ -90,6 +123,7 @@ api.interceptors.response.use(
 );
 
 export async function getCurrentUser(): Promise<CurrentUserResponse> {
+  const version = useSessionStore.getState().version;
   if (!useSessionStore.getState().accessToken) await refreshSession();
   const { data } = await api.get<CurrentUserResponse>("/auth/me", {
     timeout: AUTH_REQUEST_TIMEOUT_MS,
@@ -97,6 +131,7 @@ export async function getCurrentUser(): Promise<CurrentUserResponse> {
       Authorization: `Bearer ${useSessionStore.getState().accessToken}`,
     },
   });
+  requireSessionVersion(version);
   return data;
 }
 
@@ -106,7 +141,7 @@ export function logoutAccount(): Promise<void> {
       // Finish rotation before logout so the server revokes the current cookie.
       if (refreshPromise) await refreshPromise.catch(() => undefined);
       await withSessionLock(() => api.post("/auth/logout", {}, cookieRequest));
-      useSessionStore.getState().setAccessToken(null);
+      finishSession();
     })().finally(() => {
       logoutPromise = null;
     });
@@ -137,11 +172,13 @@ export async function updateProfile(input: UpdateProfileRequest) {
 }
 
 export async function changeEmail(input: ChangeEmailRequest) {
-  await api.post("/auth/email", input, await accountRequest());
-  useSessionStore.getState().setAccessToken(null);
+  const config = await accountRequest();
+  await withSessionLock(() => api.post("/auth/email", input, config));
+  finishSession();
 }
 
 export async function changePassword(input: ChangePasswordRequest) {
-  await api.post("/auth/password", input, await accountRequest());
-  useSessionStore.getState().setAccessToken(null);
+  const config = await accountRequest();
+  await withSessionLock(() => api.post("/auth/password", input, config));
+  finishSession();
 }
