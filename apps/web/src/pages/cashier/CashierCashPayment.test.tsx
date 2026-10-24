@@ -58,6 +58,11 @@ const originalModal = Object.getOwnPropertyDescriptor(
     HTMLDialogElement.prototype,
     "close",
   );
+async function choosePaymentMethod(user: ReturnType<typeof userEvent.setup>, value: string) {
+  const labels: Record<string, string> = { CASH: 'Cash', GCASH_MANUAL: 'GCash (manual)', CARD_MANUAL: 'Card (manual)', OTHER: 'Other (manual)' };
+  await user.click(screen.getByRole('combobox', { name: 'Payment method' }));
+  await user.click(screen.getByRole('option', { name: labels[value], exact: true }));
+}
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(reviewCashPayment).mockResolvedValue(review);
@@ -299,7 +304,7 @@ const otherPaid = {
 };
 it("requires a description and attestation for OTHER and displays the saved method details", async () => {
   const { user } = await setup();
-  await user.selectOptions(screen.getByLabelText("Payment method"), "OTHER");
+  await choosePaymentMethod(user, "OTHER");
   expect(
     screen.getByRole("button", { name: "Record other payment" }),
   ).toBeDisabled();
@@ -351,7 +356,7 @@ it("requires a description and attestation for OTHER and displays the saved meth
 });
 it("rejects common card details in OTHER and recovers uncertain saves", async () => {
   const { user } = await setup();
-  await user.selectOptions(screen.getByLabelText("Payment method"), "OTHER");
+  await choosePaymentMethod(user, "OTHER");
   await user.type(
     screen.getByLabelText("Payment method description"),
     "Bank transfer",
@@ -399,10 +404,7 @@ const cardPaid = {
 };
 it("records card only after external completion attestation and confirmation", async () => {
   const { user } = await setup();
-  await user.selectOptions(
-    screen.getByLabelText("Payment method"),
-    "CARD_MANUAL",
-  );
+  await choosePaymentMethod(user, "CARD_MANUAL");
   expect(
     screen.queryByLabelText("Amount received (PHP)"),
   ).not.toBeInTheDocument();
@@ -452,10 +454,7 @@ it("records card only after external completion attestation and confirmation", a
 });
 it("recovers uncertain card recording through an explicit saved-state refresh", async () => {
   const { user } = await setup();
-  await user.selectOptions(
-    screen.getByLabelText("Payment method"),
-    "CARD_MANUAL",
-  );
+  await choosePaymentMethod(user, "CARD_MANUAL");
   await user.click(screen.getByRole("checkbox"));
   await user.click(screen.getByRole("button", { name: "Record card payment" }));
   vi.mocked(recordManualCardPayment).mockRejectedValue(
@@ -480,10 +479,7 @@ it("recovers uncertain card recording through an explicit saved-state refresh", 
 });
 it("clears external card attestation on changed review and method switch", async () => {
   const { user } = await setup();
-  await user.selectOptions(
-    screen.getByLabelText("Payment method"),
-    "CARD_MANUAL",
-  );
+  await choosePaymentMethod(user, "CARD_MANUAL");
   await user.click(screen.getByRole("checkbox"));
   vi.mocked(reviewCashPayment).mockResolvedValue({
     order: { ...order, reviewVersion: "b".repeat(64) },
@@ -494,10 +490,7 @@ it("clears external card attestation on changed review and method switch", async
   expect(screen.getByRole("checkbox")).not.toBeChecked();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   await user.click(screen.getByRole("checkbox"));
-  await user.selectOptions(
-    screen.getByLabelText("Payment method"),
-    "GCASH_MANUAL",
-  );
+  await choosePaymentMethod(user, "GCASH_MANUAL");
   expect(screen.getByRole("checkbox")).not.toBeChecked();
   expect(recordManualCardPayment).not.toHaveBeenCalled();
 });
@@ -655,10 +648,7 @@ const gcashPaid = {
 };
 it("requires manual receipt verification and dialog confirmation before recording GCash", async () => {
   const { user } = await setup();
-  await user.selectOptions(
-    screen.getByLabelText("Payment method"),
-    "GCASH_MANUAL",
-  );
+  await choosePaymentMethod(user, "GCASH_MANUAL");
   expect(
     screen.queryByLabelText("Amount received (PHP)"),
   ).not.toBeInTheDocument();
@@ -697,10 +687,7 @@ it("requires manual receipt verification and dialog confirmation before recordin
 });
 it("blocks uncertain GCash saves and recovers the saved method on refresh", async () => {
   const { user } = await setup();
-  await user.selectOptions(
-    screen.getByLabelText("Payment method"),
-    "GCASH_MANUAL",
-  );
+  await choosePaymentMethod(user, "GCASH_MANUAL");
   await user.click(screen.getByRole("checkbox"));
   await user.click(
     screen.getByRole("button", { name: "Record GCash payment" }),
@@ -727,10 +714,7 @@ it("blocks uncertain GCash saves and recovers the saved method on refresh", asyn
 });
 it("clears GCash attestation when refreshed order details change", async () => {
   const { user } = await setup();
-  await user.selectOptions(
-    screen.getByLabelText("Payment method"),
-    "GCASH_MANUAL",
-  );
+  await choosePaymentMethod(user, "GCASH_MANUAL");
   await user.click(screen.getByRole("checkbox"));
   vi.mocked(reviewCashPayment).mockResolvedValue({
     order: { ...order, reviewVersion: "b".repeat(64) },
@@ -746,10 +730,7 @@ it("clears GCash attestation when refreshed order details change", async () => {
 });
 it("saves and displays an optional reference without implying gateway verification", async () => {
   const { user } = await setup();
-  await user.selectOptions(
-    screen.getByLabelText("Payment method"),
-    "GCASH_MANUAL",
-  );
+  await choosePaymentMethod(user, "GCASH_MANUAL");
   await user.type(
     screen.getByLabelText("Reference note / number (optional)"),
     "001234567890 - checked",

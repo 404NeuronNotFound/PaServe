@@ -1,5 +1,6 @@
 import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { FormField } from "../../components/forms/FormField";
+import { SelectField } from "../../components/forms/SelectField";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
@@ -479,14 +480,20 @@ export function CashierCashPayment({
     <div className="cashier-cash-controls">
       {review && (
         <>
-          <label htmlFor="payment-method">Payment method</label>
-          <select
+          <SelectField
             id="payment-method"
+            label="Payment method"
             value={method}
             disabled={busy || blocked || confirm}
-            onChange={(event) => {
+            options={[
+              { value: "CASH", label: "Cash" },
+              { value: "GCASH_MANUAL", label: "GCash (manual)" },
+              { value: "CARD_MANUAL", label: "Card (manual)" },
+              { value: "OTHER", label: "Other (manual)" },
+            ]}
+            onChange={(value) => {
               setMethod(
-                event.target.value as
+                value as
                   "CASH" | "GCASH_MANUAL" | "CARD_MANUAL" | "OTHER",
               );
               setAmount("");
@@ -495,12 +502,7 @@ export function CashierCashPayment({
               setDescription("");
               attempt.current = null;
             }}
-          >
-            <option value="CASH">Cash</option>
-            <option value="GCASH_MANUAL">GCash (manual)</option>
-            <option value="CARD_MANUAL">Card (manual)</option>
-            <option value="OTHER">Other (manual)</option>
-          </select>
+          />
           {manual ? (
             <>
               {other && (

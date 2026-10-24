@@ -101,6 +101,11 @@ const close = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   "close",
 );
+async function choosePaymentMethod(user: ReturnType<typeof userEvent.setup>, value: string) {
+  const labels: Record<string, string> = { CASH: 'Cash', GCASH_MANUAL: 'GCash (manual)', CARD_MANUAL: 'Card (manual)', OTHER: 'Other (manual)' };
+  await user.click(screen.getByRole('combobox', { name: 'Payment method' }));
+  await user.click(screen.getByRole('option', { name: labels[value], exact: true }));
+}
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(verifyScannedOrder).mockResolvedValue(order);
@@ -158,7 +163,7 @@ it.each(["CASH", "GCASH_MANUAL", "CARD_MANUAL", "OTHER"])(
     const { user } = setup();
     await user.click(screen.getByRole("button", { name: "Confirm and pay" }));
     await screen.findByLabelText("Payment method");
-    await user.selectOptions(screen.getByLabelText("Payment method"), method);
+    await choosePaymentMethod(user, method);
     if (method === "CASH")
       await user.type(screen.getByLabelText("Amount received (PHP)"), "200");
     else {
