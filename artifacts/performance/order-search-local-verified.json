@@ -1,0 +1,333 @@
+{
+  "startedAt": "2026-10-24T03:15:55.976Z",
+  "environment": "local-development-demo",
+  "targetOrigin": "http://localhost:3000",
+  "workload": {
+    "levels": [
+      1,
+      5,
+      10
+    ],
+    "stageSeconds": 30,
+    "searchEveryMs": 3000,
+    "backgroundPollEveryMs": 15000,
+    "views": [
+      "active",
+      "completed",
+      "cancelled"
+    ],
+    "searchesAreDebouncedTerms": true,
+    "firstPageOnly": true,
+    "continuePastLatencyFailure": true
+  },
+  "budgets": {
+    "p95Ms": 1000,
+    "maximumErrorRate": 0.01,
+    "maximumMissedRate": 0.01,
+    "minimumSamplesPerStage": 100
+  },
+  "identities": 5,
+  "shops": 5,
+  "stages": [
+    {
+      "virtualClients": 1,
+      "elapsedSeconds": 30.01,
+      "requests": 12,
+      "successes": 12,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 0.4,
+      "p50Ms": 666,
+      "p95Ms": 773,
+      "p99Ms": 773,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 12
+      },
+      "sloPass": true,
+      "sampleSufficient": false,
+      "byTraffic": {
+        "search": {
+          "requests": 10,
+          "successes": 10,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.33,
+          "p50Ms": 666,
+          "p95Ms": 773,
+          "p99Ms": 773,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 10
+          }
+        },
+        "poll": {
+          "requests": 2,
+          "successes": 2,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.07,
+          "p50Ms": 645,
+          "p95Ms": 772,
+          "p99Ms": 772,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 2
+          }
+        }
+      },
+      "byView": {
+        "active": {
+          "requests": 12,
+          "successes": 12,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.4,
+          "p50Ms": 666,
+          "p95Ms": 773,
+          "p99Ms": 773,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 12
+          }
+        },
+        "completed": {
+          "requests": 0,
+          "successes": 0,
+          "failures": 0,
+          "errorRate": 1,
+          "requestsPerSecond": 0,
+          "p50Ms": null,
+          "p95Ms": null,
+          "p99Ms": null,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {}
+        },
+        "cancelled": {
+          "requests": 0,
+          "successes": 0,
+          "failures": 0,
+          "errorRate": 1,
+          "requestsPerSecond": 0,
+          "p50Ms": null,
+          "p95Ms": null,
+          "p99Ms": null,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {}
+        }
+      }
+    },
+    {
+      "virtualClients": 5,
+      "elapsedSeconds": 30.07,
+      "requests": 60,
+      "successes": 60,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 2,
+      "p50Ms": 668,
+      "p95Ms": 783,
+      "p99Ms": 1242,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 60
+      },
+      "sloPass": true,
+      "sampleSufficient": false,
+      "byTraffic": {
+        "search": {
+          "requests": 50,
+          "successes": 50,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 1.66,
+          "p50Ms": 669,
+          "p95Ms": 958,
+          "p99Ms": 1242,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 50
+          }
+        },
+        "poll": {
+          "requests": 10,
+          "successes": 10,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.33,
+          "p50Ms": 660,
+          "p95Ms": 670,
+          "p99Ms": 670,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 10
+          }
+        }
+      },
+      "byView": {
+        "active": {
+          "requests": 24,
+          "successes": 24,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.8,
+          "p50Ms": 666,
+          "p95Ms": 767,
+          "p99Ms": 958,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 24
+          }
+        },
+        "completed": {
+          "requests": 24,
+          "successes": 24,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.8,
+          "p50Ms": 673,
+          "p95Ms": 1133,
+          "p99Ms": 1242,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 24
+          }
+        },
+        "cancelled": {
+          "requests": 12,
+          "successes": 12,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.4,
+          "p50Ms": 668,
+          "p95Ms": 783,
+          "p99Ms": 783,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 12
+          }
+        }
+      }
+    },
+    {
+      "virtualClients": 10,
+      "elapsedSeconds": 30.37,
+      "requests": 120,
+      "successes": 120,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 3.95,
+      "p50Ms": 651,
+      "p95Ms": 823,
+      "p99Ms": 1077,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 120
+      },
+      "sloPass": true,
+      "sampleSufficient": true,
+      "byTraffic": {
+        "search": {
+          "requests": 100,
+          "successes": 100,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 3.29,
+          "p50Ms": 653,
+          "p95Ms": 823,
+          "p99Ms": 1077,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 100
+          }
+        },
+        "poll": {
+          "requests": 20,
+          "successes": 20,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.66,
+          "p50Ms": 641,
+          "p95Ms": 674,
+          "p99Ms": 928,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 20
+          }
+        }
+      },
+      "byView": {
+        "active": {
+          "requests": 48,
+          "successes": 48,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 1.58,
+          "p50Ms": 654,
+          "p95Ms": 938,
+          "p99Ms": 1082,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 48
+          }
+        },
+        "completed": {
+          "requests": 36,
+          "successes": 36,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 1.19,
+          "p50Ms": 647,
+          "p95Ms": 672,
+          "p99Ms": 953,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 36
+          }
+        },
+        "cancelled": {
+          "requests": 36,
+          "successes": 36,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 1.19,
+          "p50Ms": 652,
+          "p95Ms": 671,
+          "p99Ms": 1030,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 36
+          }
+        }
+      }
+    }
+  ],
+  "highestPassingVirtualClients": 10,
+  "limitations": [
+    "Virtual clients reuse the supplied owner identities; this is not a unique-user capacity claim.",
+    "First-page order reads only; no browser rendering, writes, realtime streams, refresh-token load or other dashboards.",
+    "Record representative database size, server resources, DB pool metrics and other traffic separately.",
+    "This bounded test does not establish saturation capacity or production capacity."
+  ],
+  "testSessionsRevoked": 5,
+  "testSessionsCreated": 5,
+  "finishedAt": "2026-10-24T03:17:30.600Z"
+}

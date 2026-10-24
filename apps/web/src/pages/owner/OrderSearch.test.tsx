@@ -102,6 +102,26 @@ function search(value: string) {
 describe.each(["active", "completed", "cancelled"] as const)(
   "%s owner search",
   (view) => {
+    it("searches automatically after typing pauses without submitting the form", async () => {
+      setup(view);
+      await waitFor(() => expect(requests[view]).toHaveBeenCalledTimes(1));
+      fireEvent.change(screen.getByRole("searchbox"), {
+        target: { value: " Patio " },
+      });
+      expect(requests[view]).toHaveBeenCalledTimes(1);
+      await waitFor(() =>
+        expect(requests[view]).toHaveBeenLastCalledWith(
+          "a",
+          null,
+          expect.any(AbortSignal),
+          "Patio",
+          {},
+        ),
+      );
+      expect(
+        screen.queryByRole("button", { name: "Search" }),
+      ).not.toBeInTheDocument();
+    });
     it("attempts an explicit offline refresh and reports failure instead of keeping stale results paused", async () => {
       const { client } = setup(view);
       await waitFor(() => expect(requests[view]).toHaveBeenCalledTimes(1));

@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed": "pnpm --filter api seed",
-    "seed:dry-run": "pnpm --filter api seed:dry-run"
+    "seed:dry-run": "pnpm --filter api seed:dry-run",
+    "test:search-load": "node scripts/order-search-load.mjs",
+    "test:search-load-metrics": "node scripts/order-search-load.test.mjs"
   },
   "keywords": [],
   "author": "",
