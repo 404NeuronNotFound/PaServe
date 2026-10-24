@@ -1,0 +1,38 @@
+.paserve-search-field {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 46px;
+  padding-left: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-muted);
+}
+.paserve-search-field:focus-within {
+  outline: 2px solid var(--color-text);
+  outline-offset: 3px;
+}
+.paserve-search-field > svg {
+  flex-shrink: 0;
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+.paserve-search-field .ui-input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+.paserve-search-field input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.paserve-search-field > button {
+  flex: 0 0 44px;
+  margin: 0;
+}

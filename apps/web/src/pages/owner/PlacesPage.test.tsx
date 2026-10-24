@@ -83,6 +83,18 @@ it("searches by role and recovers from no matching places", async () => {
   expect(search).toHaveFocus();
   expect(screen.getByRole("heading", { name: "Hapag" })).toBeVisible();
 });
+it("clears the integrated search control and keeps one create-shop action", async () => {
+  const user = setup();
+  const search = screen.getByRole("searchbox", { name: "Search your places" });
+  await user.type(search, "owner");
+  expect(screen.queryByRole("heading", { name: "Coffee Corner" })).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Clear place search" }));
+  expect(search).toHaveValue("");
+  expect(search).toHaveFocus();
+  expect(screen.getByRole("heading", { name: "Coffee Corner" })).toBeVisible();
+  expect(screen.queryByRole("button", { name: "Clear place search" })).not.toBeInTheDocument();
+  expect(screen.getAllByRole("link", { name: "Create shop" })).toHaveLength(1);
+});
 it("explains how to start when there are no memberships", () => {
   setup(true);
   expect(

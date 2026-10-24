@@ -7,14 +7,7 @@
   margin-bottom: var(--spacing-6);
 }
 .places-search {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
   width: min(100%, 420px);
-}
-.places-search .ui-input {
-  min-width: 0;
-  flex: 1;
 }
 .places-toolbar p,
 .place-address,
@@ -110,6 +103,26 @@
 .places-empty h2,
 .places-empty p {
   margin: 0;
+}
+@media (max-width: 760px) {
+  .places-page {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+  .places-page .places-create-shop {
+    position: fixed;
+    z-index: 30;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    min-height: 56px;
+    margin: 0;
+    box-shadow: var(--shadow-control-hover);
+  }
+  .places-search {
+    width: 100%;
+  }
+  body:has(.places-create-shop) .feedback-overlay {
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
 }
 .places-empty p {
   max-width: 50ch;

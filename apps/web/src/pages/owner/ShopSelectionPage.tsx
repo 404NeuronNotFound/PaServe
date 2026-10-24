@@ -1,5 +1,5 @@
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { SearchField } from "../../components/forms/SearchField";
 import { ShopLogo } from "../../components/shops/ShopLogo";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,7 +11,6 @@ import {
   FiPlus,
   FiSearch,
   FiUser,
-  FiX,
 } from "react-icons/fi";
 import { currentUserKey } from "../../features/auth/api/session";
 import { rememberedShop, shopPath } from "../../features/shops/active-shop";
@@ -125,30 +124,15 @@ export function ShopSelectionPage() {
             </div>
             <div className="selection-tools">
               {shops.length > 0 && (
-                <div className="selection-search">
-                  <FiSearch aria-hidden="true" />
-                  <label className="sr-only" htmlFor="shop-search">
-                    Search shops
-                  </label>
-                  <Input
+                  <SearchField className="selection-search" label="Search shops"
                     id="shop-search"
                     ref={searchInput}
-                    type="search"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search your shops…"
                     aria-describedby="selection-search-hint"
+                    onClear={clearSearch}
                   />
-                  {search && (
-                    <Button variant="ghost" size="inherit"
-                      type="button"
-                      aria-label="Clear search"
-                      onClick={clearSearch}
-                    >
-                      <FiX aria-hidden="true" />
-                    </Button>
-                  )}
-                </div>
               )}
               <Link className="primary-button" to="/app/onboarding/create-shop">
                 <FiPlus aria-hidden="true" /> Create shop

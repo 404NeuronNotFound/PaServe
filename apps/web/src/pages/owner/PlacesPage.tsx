@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { FiArrowUpRight, FiCoffee, FiPlus, FiSearch } from "react-icons/fi";
 import { AccountFrame } from "../../components/layout/AccountFrame";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { SearchField } from "../../components/forms/SearchField";
 import { ShopLogo } from "../../components/shops/ShopLogo";
 import { AccessSkeleton } from "../../components/feedback/LoadingSkeleton";
 import {
@@ -22,6 +22,11 @@ export function PlacesPage() {
   });
   const [search, setSearch] = useState("");
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  function clearSearch() {
+    setSearch("");
+    searchInput.current?.focus();
+  }
   useEffect(() => {
     document.title = "Your places · PaServe";
     headingRef.current?.focus();
@@ -48,7 +53,7 @@ export function PlacesPage() {
               together.
             </p>
           </div>
-          <Button asChild>
+          <Button asChild className="places-create-shop">
             <Link to="/app/onboarding/create-shop">
               <FiPlus aria-hidden="true" />
               Create shop
@@ -60,17 +65,18 @@ export function PlacesPage() {
         ) : memberships.length ? (
           <>
             <div className="places-toolbar">
-              <label className="places-search" htmlFor="places-search">
-                <FiSearch aria-hidden="true" />
-                <span className="sr-only">Search your places</span>
-                <Input
+              <SearchField className="places-search"
+                  label="Search your places" clearLabel="Clear place search"
                   id="places-search"
-                  type="search"
+                  ref={searchInput}
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search by name, role or menu address"
+                  onClear={clearSearch}
+                  placeholder="Search your places…"
+                  autoComplete="off"
+                  aria-describedby="places-search-hint"
                 />
-              </label>
+              <p id="places-search-hint" className="sr-only">Find a shop by name, role or menu address.</p>
               <p role="status">
                 {query
                   ? `${visible.length} of ${memberships.length}`
@@ -129,10 +135,7 @@ export function PlacesPage() {
                 <p>Try another shop name, role or menu address.</p>
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setSearch("");
-                    document.getElementById("places-search")?.focus();
-                  }}
+                  onClick={clearSearch}
                 >
                   Clear search
                 </Button>
