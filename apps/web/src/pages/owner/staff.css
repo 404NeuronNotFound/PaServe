@@ -307,6 +307,27 @@
   font-size: 12px;
   margin: 12px 0;
 }
+.phase-two .staff-member-filters {
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+  margin-bottom: 8px;
+}
+.phase-two .staff-filter-results {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-height: 44px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+.phase-two .staff-filter-results > p {
+  margin: 0;
+}
+.phase-two .staff-filter-results > button {
+  flex-shrink: 0;
+  min-height: 44px;
+}
 .phase-two .staff-list {
   list-style: none;
   padding: 0;
@@ -529,6 +550,10 @@
   }
 }
 @container staff-team (max-width: 420px) {
+  .phase-two .staff-member-filters {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
   .phase-two .staff-manage-trigger {
     width: 44px;
     min-width: 44px;

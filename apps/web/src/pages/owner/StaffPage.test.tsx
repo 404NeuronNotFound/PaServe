@@ -82,6 +82,24 @@ it("keeps member controls collapsed and opens only the selected member's access"
   expect(changeStaffRole).not.toHaveBeenCalled();
 });
 
+it("clears member search and access together, keeps sorting and the invitation draft, and restores search focus", async () => {
+  const user = setup();
+  const search = await screen.findByRole("textbox", { name: "Search shop members" });
+  await user.type(screen.getByLabelText("Staff email address"), "draft@example.com");
+  await user.click(screen.getByRole("combobox", { name: "Sort members" }));
+  await user.click(screen.getByRole("option", { name: "Email Z to A" }));
+  await user.click(screen.getByRole("combobox", { name: "Filter member access" }));
+  await user.click(screen.getByRole("option", { name: "Enabled and active" }));
+  await user.type(search, "staff@");
+  await user.click(screen.getByRole("button", { name: "Clear member filters" }));
+  expect(search).toHaveValue("");
+  expect(search).toHaveFocus();
+  expect(screen.getByRole("combobox", { name: "Filter member access" })).toHaveTextContent("All access states");
+  expect(screen.getByRole("combobox", { name: "Sort members" })).toHaveTextContent("Email Z to A");
+  expect(screen.getByLabelText("Staff email address")).toHaveValue("draft@example.com");
+  expect(screen.queryByRole("button", { name: "Clear member filters" })).not.toBeInTheDocument();
+});
+
 it("focuses the invitation form from the page shortcut without changing the draft", async () => {
   const user = setup();
   const email = await screen.findByLabelText("Staff email address");

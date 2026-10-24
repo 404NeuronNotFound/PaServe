@@ -471,29 +471,30 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 </Button>
               )}
             </div>
-            <div className="management-filters">
-              <FormField id="staff-access-filter" label="Filter member access">
+            <div className="management-filters staff-member-filters">
+              <FormField id="staff-access-filter" label="Access">
                 <SelectField id="staff-access-filter" label="Filter member access" value={accessFilter}
                   disabled={busy} onChange={(value) => { setAccessFilter(value); setMemberPage(1); }}
                   options={[{ value: "", label: "All access states" }, { value: "enabled", label: "Enabled and active" },
                     { value: "disabled", label: "Access disabled" }, { value: "inactive", label: "Account inactive" }]} />
               </FormField>
-              <FormField id="staff-sort" label="Sort members">
+              <FormField id="staff-sort" label="Sort by">
                 <SelectField id="staff-sort" label="Sort members" value={memberSort}
                   disabled={busy} onChange={(value) => { setMemberSort(value); setMemberPage(1); }}
                   options={[{ value: "roster", label: "Roster order" }, { value: "email", label: "Email A to Z" },
                     { value: "email-desc", label: "Email Z to A" }, { value: "role", label: "Role, then email" }]} />
               </FormField>
             </div>
-            <p className="management-results" role="status">
-              Sorted by {memberSort === "roster" ? "roster order (oldest membership first)" :
-                memberSort === "role" ? "role, then email (A to Z)" : memberSort === "email-desc" ? "email (Z to A)" : "email (A to Z)"}.
-            </p>
-            <p className="management-results staff-search-results" role="status">
+            <div className="staff-filter-results">
+              <p className="management-results staff-search-results" role="status">
               {memberResults.first}-{memberResults.last} of {members.length} {members.length === 1 ? "member" : "members"}
               {hasMemberFilters ? " found." : "."}
-            </p>
-            {hasMemberFilters && <Button variant="outline" disabled={busy} onClick={resetMembers}>Clear member filters</Button>}
+              </p>
+              {hasMemberFilters && <Button variant="ghost" size="sm" type="button"
+                aria-label="Clear member filters" disabled={busy} onClick={resetMembers}>
+                <FiX aria-hidden="true" /> Clear filters
+              </Button>}
+            </div>
             <ul className="staff-list staff-member-list">
               {memberResults.records.map((member) => (
                 <li key={member.id}>
