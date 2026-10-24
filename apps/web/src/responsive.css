@@ -51,8 +51,7 @@
     min-width: 0;
   }
   .tables-create,
-  .categories-create-panel,
-  .phase-two .staff-invite-panel {
+  .categories-create-panel {
     grid-row: 1;
   }
   :is(.staff-permissions-scroll, .daily-analytics-table,

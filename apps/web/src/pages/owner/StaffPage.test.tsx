@@ -57,6 +57,52 @@ const data: ShopStaffResponse = {
   ],
 };
 
+it("keeps member controls collapsed and opens only the selected member's access", async () => {
+  vi.mocked(listStaff).mockResolvedValue({ ...data, members: [...data.members,
+    { ...data.members[1], id: "another-member", userId: "another", email: "another@example.com" },
+  ] });
+  const user = setup();
+  const first = await screen.findByRole("button", { name: "Manage access for staff@example.com" });
+  const second = screen.getByRole("button", { name: "Manage access for another@example.com" });
+  expect(first).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("navigation", { name: "Shop members pagination" })).not.toBeInTheDocument();
+  await user.click(first);
+  expect(first).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("combobox", { name: "Role for staff@example.com" })).toBeInTheDocument();
+  await user.click(second);
+  expect(first).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("combobox", { name: "Role for staff@example.com" })).not.toBeInTheDocument();
+  expect(screen.getByRole("combobox", { name: "Role for another@example.com" })).toBeInTheDocument();
+  await user.keyboard(" ");
+  expect(second).toHaveAttribute("aria-expanded", "false");
+  expect(second).toHaveFocus();
+  expect(removeStaff).not.toHaveBeenCalled();
+  expect(setStaffAccess).not.toHaveBeenCalled();
+  expect(changeStaffRole).not.toHaveBeenCalled();
+});
+
+it("focuses the invitation form from the page shortcut without changing the draft", async () => {
+  const user = setup();
+  const email = await screen.findByLabelText("Staff email address");
+  await user.type(email, "teammate@example.com");
+  await user.click(screen.getByRole("button", { name: "Invite staff" }));
+  expect(email).toHaveFocus();
+  expect(email).toHaveValue("teammate@example.com");
+  expect(inviteStaff).not.toHaveBeenCalled();
+});
+
+it("keeps empty invitation history concise and offers a working invitation shortcut", async () => {
+  vi.mocked(listStaff).mockResolvedValue({ ...data, invitations: [] });
+  const user = setup();
+  const history = await screen.findByRole("region", { name: "Recent invitations" });
+  expect(within(history).getByText("No invitations yet.")).toBeInTheDocument();
+  expect(within(history).queryByRole("combobox")).not.toBeInTheDocument();
+  expect(within(history).queryByRole("navigation")).not.toBeInTheDocument();
+  await user.click(within(history).getByRole("button", { name: "Start an invitation" }));
+  expect(screen.getByLabelText("Staff email address")).toHaveFocus();
+});
+
 it("pages a large roster, filters before paging and keeps the invitation draft", async () => {
   vi.mocked(listStaff).mockResolvedValue({ ...data, members: Array.from({ length: 21 }, (_, index) => ({
     ...data.members[1], id: `member-${index}`, email: `member${String(index).padStart(2, "0")}@example.com`, isEnabled: index % 2 === 0,
@@ -112,6 +158,15 @@ beforeEach(() => {
     this.removeAttribute("open");
   };
 });
+async function findStaffControl(role: "button" | "combobox", name: string | RegExp) {
+  if (typeof name === "string" && (["Disable", "Enable", "Remove"].includes(name) || name.startsWith("Role for "))) {
+    const email = name.startsWith("Role for ") ? name.slice("Role for ".length) : "staff@example.com";
+    const manage = await screen.findByRole("button", { name: `Manage access for ${email}` });
+    if (manage.getAttribute("aria-expanded") !== "true") await userEvent.click(manage);
+  }
+  return screen.findByRole(role, { name });
+}
+
 function setup(role: ShopRole = "OWNER", client = new QueryClient()) {
   client.setQueryData(["auth", "me"], { user: { id: "owner" } });
   render(
@@ -150,7 +205,7 @@ it.each(["ADMIN", "MANAGER", "CASHIER", "KITCHEN"] as const)(
 it("helps an owner with no staff start an invitation without submitting it", async () => {
   vi.mocked(listStaff).mockResolvedValue({ ...data, members: [data.members[0]], invitations: [] });
   const user = setup();
-  await user.click(await screen.findByRole("button", { name: "Invite your first teammate" }));
+  await user.click(await findStaffControl("button", "Invite your first teammate"));
   expect(screen.getByLabelText("Staff email address")).toHaveFocus();
   expect(inviteStaff).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Start an invitation" }));
@@ -258,7 +313,7 @@ it.each([false, true])(
       screen.getByRole("button", { name: "Create invitation link" }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Copy invitation link" }),
+      await findStaffControl("button", "Copy invitation link"),
     );
     expect(write).toHaveBeenCalledWith(
       `${window.location.origin}/join/shop-a#token=${"a".repeat(64)}`,
@@ -277,14 +332,14 @@ it("shows network failure with a working retry", async () => {
     .mockRejectedValueOnce(new Error("offline"))
     .mockResolvedValueOnce(data);
   const user = setup();
-  await user.click(await screen.findByRole("button", { name: "Try again" }));
+  await user.click(await findStaffControl("button", "Try again"));
   expect(
     await screen.findByRole("heading", { name: "Staff & invitations" }),
   ).toBeInTheDocument();
 });
 it("requires confirmation before removing staff and preserves the owner", async () => {
   const user = setup();
-  await user.click(await screen.findByRole("button", { name: "Remove" }));
+  await user.click(await findStaffControl("button", "Remove"));
   expect(removeStaff).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Remove access" }));
   expect(removeStaff).toHaveBeenCalledWith("shop-a", "staff-member");
@@ -303,7 +358,7 @@ it("confirms suspension and keeps the member's account and role", async () => {
     });
   });
   const user = setup();
-  await user.click(await screen.findByRole("button", { name: "Disable" }));
+  await user.click(await findStaffControl("button", "Disable"));
   const dialog = screen.getByRole("dialog", { name: "Disable shop access?" });
   expect(dialog).toHaveTextContent(
     /Their account, role, history, and other shop memberships are kept/,
@@ -351,7 +406,7 @@ it("enables suspended membership without treating account inactivity as shop sus
     });
   });
   const user = setup();
-  await user.click(await screen.findByRole("button", { name: "Enable" }));
+  await user.click(await findStaffControl("button", "Enable"));
   const dialog = screen.getByRole("dialog", { name: "Enable shop access?" });
   expect(dialog).toHaveTextContent(/Their account must also be active/);
   await user.click(
@@ -361,7 +416,7 @@ it("enables suspended membership without treating account inactivity as shop sus
     isEnabled: true,
   });
   expect(
-    await screen.findByRole("button", { name: "Disable" }),
+    await findStaffControl("button", "Disable"),
   ).toBeInTheDocument();
   expect(screen.getByText(/account inactive/)).toBeInTheDocument();
 });
@@ -369,7 +424,7 @@ it("enables suspended membership without treating account inactivity as shop sus
 it("shows a suspension failure in the dialog and leaves current access displayed", async () => {
   vi.mocked(setStaffAccess).mockRejectedValue(new Error("offline"));
   const user = setup();
-  await user.click(await screen.findByRole("button", { name: "Disable" }));
+  await user.click(await findStaffControl("button", "Disable"));
   await user.click(screen.getByRole("button", { name: "Disable access" }));
   expect(
     await screen.findByText(/Unable to complete this action/),
@@ -425,6 +480,7 @@ it("protects another owner as well as the signed-in owner", async () => {
   expect(
     within(team).queryByLabelText("Role for other-owner@example.com"),
   ).not.toBeInTheDocument();
+  await findStaffControl("button", "Remove");
   expect(within(team).getAllByRole("button", { name: "Remove" })).toHaveLength(
     1,
   );
@@ -433,7 +489,7 @@ it("protects another owner as well as the signed-in owner", async () => {
 it("does not offer OWNER when inviting staff or changing staff roles", async () => {
   const user = setup();
   for (const name of ["Shop role", "Role for staff@example.com"]) {
-    const control = await screen.findByRole("combobox", { name });
+    const control = await findStaffControl("combobox", name);
     await user.click(control);
     expect(
       screen.queryByRole("option", { name: "Owner" }),
@@ -444,7 +500,7 @@ it("does not offer OWNER when inviting staff or changing staff roles", async () 
 it("confirms and revokes only the selected invitation", async () => {
   const user = setup();
   await user.click(
-    await screen.findByRole("button", { name: "Revoke invitation" }),
+    await findStaffControl("button", "Revoke invitation"),
   );
   expect(revokeInvitation).not.toHaveBeenCalled();
   await user.click(
@@ -456,7 +512,7 @@ it("confirms and revokes only the selected invitation", async () => {
 it("confirms a role change before saving", async () => {
   const user = setup();
   await user.click(
-    await screen.findByRole("combobox", { name: "Role for staff@example.com" }),
+    await findStaffControl("combobox", "Role for staff@example.com"),
   );
   await user.click(screen.getByRole("option", { name: "Kitchen / Barista" }));
   expect(
@@ -485,9 +541,7 @@ it("explains shared kitchen/barista permissions and confirms before assignment",
   const user = setup();
   const chooseKitchen = async () => {
     await user.click(
-      await screen.findByRole("combobox", {
-        name: "Role for staff@example.com",
-      }),
+      await findStaffControl("combobox", "Role for staff@example.com"),
     );
     await user.click(screen.getByRole("option", { name: "Kitchen / Barista" }));
   };
@@ -531,7 +585,7 @@ it("invites a barista using the shared KITCHEN role", async () => {
     token: "a".repeat(64),
   });
   const user = setup();
-  await user.click(await screen.findByRole("combobox", { name: "Shop role" }));
+  await user.click(await findStaffControl("combobox", "Shop role"));
   await user.click(screen.getByRole("option", { name: "Kitchen / Barista" }));
   await user.type(
     screen.getByLabelText("Staff email address"),
@@ -578,9 +632,7 @@ it("explains admin permissions and requires confirmation before assignment", asy
   const user = setup();
   const chooseAdmin = async () => {
     await user.click(
-      await screen.findByRole("combobox", {
-        name: "Role for staff@example.com",
-      }),
+      await findStaffControl("combobox", "Role for staff@example.com"),
     );
     await user.click(screen.getByRole("option", { name: "Admin" }));
   };
@@ -618,9 +670,7 @@ it.each(["Manager", "Cashier", "Kitchen"])(
     vi.mocked(listStaff).mockResolvedValue(adminData);
     const user = setup();
     await user.click(
-      await screen.findByRole("combobox", {
-        name: "Role for staff@example.com",
-      }),
+      await findStaffControl("combobox", "Role for staff@example.com"),
     );
     await user.click(
       screen.getByRole("option", {
@@ -674,9 +724,7 @@ it("explains operational manager access and confirms before assignment", async (
   const user = setup();
   const chooseManager = async () => {
     await user.click(
-      await screen.findByRole("combobox", {
-        name: "Role for staff@example.com",
-      }),
+      await findStaffControl("combobox", "Role for staff@example.com"),
     );
     await user.click(screen.getByRole("option", { name: "Manager" }));
   };
@@ -718,9 +766,7 @@ it.each(["Cashier", "Kitchen"])(
     });
     const user = setup();
     await user.click(
-      await screen.findByRole("combobox", {
-        name: "Role for staff@example.com",
-      }),
+      await findStaffControl("combobox", "Role for staff@example.com"),
     );
     await user.click(
       screen.getByRole("option", {
@@ -756,7 +802,7 @@ it.each(["Cashier", "Kitchen"])(
 
 it("shows the manager invitation permissions before an invitation is created", async () => {
   const user = setup();
-  await user.click(await screen.findByRole("combobox", { name: "Shop role" }));
+  await user.click(await findStaffControl("combobox", "Shop role"));
   await user.click(screen.getByRole("option", { name: "Manager" }));
   expect(
     screen.getByRole("combobox", { name: "Shop role" }),
@@ -780,9 +826,7 @@ it("explains counter permissions and confirms before assigning CASHIER", async (
   const user = setup();
   const chooseCashier = async () => {
     await user.click(
-      await screen.findByRole("combobox", {
-        name: "Role for staff@example.com",
-      }),
+      await findStaffControl("combobox", "Role for staff@example.com"),
     );
     await user.click(screen.getByRole("option", { name: "Cashier" }));
   };
@@ -825,7 +869,7 @@ it("keeps failed cashier assignment in context without reporting saved access", 
   vi.mocked(changeStaffRole).mockRejectedValue(new Error("offline"));
   const user = setup();
   await user.click(
-    await screen.findByRole("combobox", { name: "Role for staff@example.com" }),
+    await findStaffControl("combobox", "Role for staff@example.com"),
   );
   await user.click(screen.getByRole("option", { name: "Cashier" }));
   await user.click(screen.getByRole("button", { name: "Assign cashier" }));
@@ -915,9 +959,7 @@ it.each(["MEMBER_UNAVAILABLE", "INVITATION_UNAVAILABLE"])(
     else vi.mocked(removeStaff).mockRejectedValue(failure);
     const user = setup();
     await user.click(
-      await screen.findByRole("button", {
-        name: invitation ? "Revoke invitation" : "Remove",
-      }),
+      await findStaffControl("button", invitation ? "Revoke invitation" : "Remove"),
     );
     const dialog = screen.getByRole("dialog");
     await user.click(
@@ -947,7 +989,7 @@ it.each([
       apiFailure(status, code, "Access lost."),
     );
     const user = setup();
-    await user.click(await screen.findByRole("button", { name: "Remove" }));
+    await user.click(await findStaffControl("button", "Remove"));
     await user.click(screen.getByRole("button", { name: "Remove access" }));
     expect(
       await screen.findByRole("heading", { name: "Owner access required" }),
@@ -967,7 +1009,7 @@ it("does not promise to enable a suspended member when changing their role", asy
   });
   const user = setup();
   await user.click(
-    await screen.findByRole("combobox", { name: "Role for staff@example.com" }),
+    await findStaffControl("combobox", "Role for staff@example.com"),
   );
   await user.click(screen.getByRole("option", { name: "Kitchen / Barista" }));
   expect(screen.getByRole("dialog")).toHaveTextContent(
@@ -987,7 +1029,7 @@ it("hides staff when stale-target recovery discovers that the owner also lost ac
       apiFailure(404, "SHOP_NOT_ACCESSIBLE", "Shop unavailable."),
     );
   const user = setup();
-  await user.click(await screen.findByRole("button", { name: "Remove" }));
+  await user.click(await findStaffControl("button", "Remove"));
   await user.click(screen.getByRole("button", { name: "Remove access" }));
   expect(
     await screen.findByRole("heading", { name: "Owner access required" }),
@@ -1034,7 +1076,7 @@ it("keeps staff drafts, focus and controls mounted during a background read", as
   vi.mocked(listStaff).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
   let refresh!: Promise<void>;
   act(() => { refresh = client.invalidateQueries({ queryKey: ["staff", "owner", "shop-a"] }); });
-  await screen.findByRole("button", { name: /Refreshing staff/ });
+  await findStaffControl("button", /Refreshing staff/);
   expect(screen.getByLabelText("Staff email address")).toBe(email);
   expect(email).toHaveFocus();
   expect(email).toBeEnabled();
@@ -1044,18 +1086,18 @@ it("keeps staff drafts, focus and controls mounted during a background read", as
   await act(async () => { finish(data); await refresh; });
   expect(email).toHaveValue("draft@example.com.new");
   expect(email).toHaveFocus();
-  expect(await screen.findByRole("button", { name: "Create invitation link" })).toBeEnabled();
+  expect(await findStaffControl("button", "Create invitation link")).toBeEnabled();
 });
 
 it("does not dismiss a staff decision or claim success while its refresh is pending", async () => {
   const client = new QueryClient();
   const user = setup("OWNER", client);
-  await user.click(await screen.findByRole("button", { name: "Disable" }));
+  await user.click(await findStaffControl("button", "Disable"));
   let finish!: (data: ShopStaffResponse) => void;
   vi.mocked(listStaff).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
   let refresh!: Promise<void>;
   act(() => { refresh = client.invalidateQueries({ queryKey: ["staff", "owner", "shop-a"] }); });
-  await screen.findByRole("button", { name: /Refreshing staff/ });
+  await findStaffControl("button", /Refreshing staff/);
   await user.click(screen.getByRole("button", { name: "Disable access" }));
   await screen.findByText(/Wait for the latest details before confirming/);
   expect(screen.getByRole("dialog", { name: "Disable shop access?" })).toBeInTheDocument();

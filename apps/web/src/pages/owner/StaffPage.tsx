@@ -24,6 +24,8 @@ import {
   FiArrowUpRight,
   FiUserMinus,
   FiMail,
+  FiUnlock,
+  FiMoreHorizontal,
 } from "react-icons/fi";
 import {
   STAFF_ROLES,
@@ -164,6 +166,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
   const mounted = useRef(false);
   const running = useRef(false);
   const [email, setEmail] = useState("");
+  const [managedMember, setManagedMember] = useState<string | null>(null);
   const [emailError, setEmailError] = useState("");
   const [roleError, setRoleError] = useState("");
   const serverErrorFocus = useRef<"staff-email" | "staff-role" | null>(null);
@@ -413,19 +416,23 @@ function StaffWorkspace({ userId }: { userId: string }) {
             {query.isFetching ? "Refreshing staff…" : ""}
           </span>
         </div>
-        <div className="staff-overview" role="group" aria-label="Team overview">
-          <span>
-            <FiUsers aria-hidden="true" />
-            {query.data.members.length}{" "}
-            {query.data.members.length === 1 ? "member" : "members"}
-          </span>
-          <span>
-            <FiClock aria-hidden="true" />
-            {pendingCount} pending {pendingCount === 1 ? "invite" : "invites"}
-          </span>
+        <div className="staff-heading-actions">
+          <div className="staff-overview" role="group" aria-label="Team overview">
+            <span>
+              <FiUsers aria-hidden="true" />
+              {query.data.members.length}{" "}
+              {query.data.members.length === 1 ? "member" : "members"}
+            </span>
+            <span>
+              <FiClock aria-hidden="true" />
+              {pendingCount} pending {pendingCount === 1 ? "invite" : "invites"}
+            </span>
+          </div>
+          <Button type="button" disabled={busy} onClick={() => invitationEmail.current?.focus()}>
+            <FiUserPlus aria-hidden="true" /> Invite staff
+          </Button>
         </div>
       </header>
-      <PermissionMatrix />
       <div className="staff-grid">
         <div className="staff-team-panels">
           <section className="staff-panel" aria-labelledby="staff-list-title">
@@ -487,7 +494,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
               {hasMemberFilters ? " found." : "."}
             </p>
             {hasMemberFilters && <Button variant="outline" disabled={busy} onClick={resetMembers}>Clear member filters</Button>}
-            <ul className="staff-list">
+            <ul className="staff-list staff-member-list">
               {memberResults.records.map((member) => (
                 <li key={member.id}>
                   <div className="staff-person">
@@ -496,13 +503,13 @@ function StaffWorkspace({ userId }: { userId: string }) {
                     </span>
                     <div className="staff-person-details">
                       <strong>{member.email}</strong>
-                      <span>
+                      <span className="staff-member-meta">
                         {member.role === "KITCHEN"
                           ? "kitchen / barista"
                           : member.role.toLowerCase()}
                         {!member.isActive ? " · account inactive" : ""}
+                        <StatusBadge state={member.isEnabled ? "ENABLED" : "DISABLED"} />
                       </span>
-                      <StatusBadge state={member.isEnabled ? "ENABLED" : "DISABLED"} />
                     </div>
                   </div>
                   {member.role === "OWNER" ? (
@@ -513,7 +520,37 @@ function StaffWorkspace({ userId }: { userId: string }) {
                       <FiLock aria-hidden="true" /> Owner
                     </span>
                   ) : (
-                    <RowActions label={`Actions for ${member.email}`} className="staff-actions">
+                    <Button variant="ghost" type="button" className="staff-manage-trigger"
+                      aria-label={`Manage access for ${member.email}`}
+                      title={`Manage access for ${member.email}`}
+                      aria-expanded={managedMember === member.id}
+                      aria-controls={managedMember === member.id ? `staff-access-${member.id}` : undefined}
+                      disabled={busy}
+                      onClick={() => setManagedMember(managedMember === member.id ? null : member.id)}>
+                      <span>Manage access</span> <FiMoreHorizontal aria-hidden="true" />
+                    </Button>
+                  )}
+                  {member.role !== "OWNER" && managedMember === member.id && (
+                    <RowActions id={`staff-access-${member.id}`} label={`Actions for ${member.email}`} className="staff-actions">
+                      <FormField id={`role-${member.id}`} label="Shop role" className="staff-member-role">
+                        <SelectField
+                          id={`role-${member.id}`}
+                          label={`Role for ${member.email}`}
+                          value={member.role}
+                          options={roles}
+                          onChange={(value) => {
+                            if (value !== member.role)
+                              setDecision({
+                                kind: "role",
+                                id: member.id,
+                                email: member.email,
+                                role: value as StaffRole,
+                                previousRole: member.role as StaffRole,
+                              });
+                          }}
+                          disabled={busy}
+                        />
+                      </FormField>
                       <Button variant="outline" size="inherit" type="button"
                         className="secondary-button"
                         disabled={busy}
@@ -525,25 +562,9 @@ function StaffWorkspace({ userId }: { userId: string }) {
                           })
                         }
                       >
+                        {member.isEnabled ? <FiLock aria-hidden="true" /> : <FiUnlock aria-hidden="true" />}
                         {member.isEnabled ? "Disable" : "Enable"}
                       </Button>
-                      <SelectField
-                        id={`role-${member.id}`}
-                        label={`Role for ${member.email}`}
-                        value={member.role}
-                        options={roles}
-                        onChange={(value) => {
-                          if (value !== member.role)
-                            setDecision({
-                              kind: "role",
-                              id: member.id,
-                              email: member.email,
-                              role: value as StaffRole,
-                              previousRole: member.role as StaffRole,
-                            });
-                        }}
-                        disabled={busy}
-                      />
                       <Button variant="outline" size="inherit" type="button"
                         className="secondary-button"
                         disabled={busy}
@@ -562,9 +583,9 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 </li>
               ))}
             </ul>
-            <ListPagination label="Shop members pagination" page={memberResults.page} pageCount={memberResults.pageCount}
+            {query.data.members.length > 10 && <ListPagination label="Shop members pagination" page={memberResults.page} pageCount={memberResults.pageCount}
               hasNext={memberResults.hasNext} pending={busy}
-              onPrevious={() => setMemberPage(memberResults.page - 1)} onNext={() => setMemberPage(memberResults.page + 1)} />
+              onPrevious={() => setMemberPage(memberResults.page - 1)} onNext={() => setMemberPage(memberResults.page + 1)} />}
             {!members.length && (
               <EmptyState icon={<FiUsers />} title={hasMemberFilters ? "No members match your search." : "No shop members to show."}
                 description={hasMemberFilters ? "Try another email, role or access state, or show the full team." : "Invite a teammate and choose the access they need for this shop."}>
@@ -600,6 +621,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 {query.data.invitations.length}
               </span>
             </header>
+            {query.data.invitations.length > 0 && <>
             <p className="management-results">Showing up to 100 recent invitations. Search and filters apply to this history.</p>
             <div className="management-filters">
               <FormField id="invitation-search" label="Search invitations">
@@ -620,6 +642,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
               setInvitationSearch(""); setInvitationStatus(""); setInvitationPage(1);
               document.getElementById("invitation-search")?.focus();
             }}>Clear invitation filters</Button>}
+            </>}
             {hasInvitationFilters && query.data.invitations.length > 0 && !invitations.length && <EmptyState icon={<FiMail />} title="No matching invitations."
               description="Try another email, role or status, or clear the invitation filters." />}
             {!query.data.invitations.length ? (
@@ -680,9 +703,9 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 ))}
               </ul>
             )}
-            <ListPagination label="Invitations pagination" page={invitationResults.page} pageCount={invitationResults.pageCount}
+            {query.data.invitations.length > 10 && <ListPagination label="Invitations pagination" page={invitationResults.page} pageCount={invitationResults.pageCount}
               hasNext={invitationResults.hasNext} pending={busy}
-              onPrevious={() => setInvitationPage(invitationResults.page - 1)} onNext={() => setInvitationPage(invitationResults.page + 1)} />
+              onPrevious={() => setInvitationPage(invitationResults.page - 1)} onNext={() => setInvitationPage(invitationResults.page + 1)} />}
           </section>
         </div>
         <section
@@ -787,6 +810,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
           </div>
         </section>
       </div>
+      <PermissionMatrix />
       <DecisionDialog
         open={Boolean(decision)}
         title={

@@ -545,12 +545,14 @@ export function StaffSkeleton() {
   return (
     <LoadingRegion label="Checking staff access…">
       <div className="staff-workspace">
-        <div className="skeleton-lines">
-          <SkeletonBlock width={120} />
-          <SkeletonBlock width="55%" height={50} />
-          <SkeletonBlock width="45%" />
+        <div className="staff-heading">
+          <div className="skeleton-lines">
+            <SkeletonBlock width={120} />
+            <SkeletonBlock width="55%" height={50} />
+            <SkeletonBlock width="45%" />
+          </div>
+          <SkeletonBlock width={160} height={48} />
         </div>
-        <SkeletonBlock width={220} height={44} />
         <div className="staff-grid">
           <div className="staff-team-panels">
             {[0, 1].map((panel) => (
@@ -570,6 +572,7 @@ export function StaffSkeleton() {
             <SkeletonBlock height={44} />
           </div>
         </div>
+        <SkeletonBlock height={68} />
       </div>
     </LoadingRegion>
   );
