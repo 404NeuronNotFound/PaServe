@@ -35,6 +35,8 @@ export function AccountPage() {
   }, [location.hash]);
   if (location.hash === "#profile-heading")
     return <Navigate to="/app/account/profile" replace />;
+  if (location.hash === "#shops-heading")
+    return <Navigate to="/app/account/places" replace />;
   return (
     <AccountFrame>
       <div className="account-overview" id="overview">

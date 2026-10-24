@@ -43,7 +43,7 @@ export function AccountFrame({
   const location = useLocation();
   const navigate = useNavigate();
   const profile = location.pathname.endsWith("/profile");
-  const places = !profile && location.hash === "#shops-heading";
+  const places = location.pathname.endsWith("/places");
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem("paserve.sidebar.collapsed") === "true";
@@ -188,8 +188,8 @@ export function AccountFrame({
                   <span>Your profile</span>
                 </Link>
                 <Link
-                  to="/app/account#shops-heading"
-                  aria-current={places ? "location" : undefined}
+                  to="/app/account/places"
+                  aria-current={places ? "page" : undefined}
                   title={rail ? "Your places" : undefined}
                   onClick={() => setOpen(false)}
                 >

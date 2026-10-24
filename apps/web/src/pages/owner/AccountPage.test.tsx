@@ -12,6 +12,7 @@ import {
 import { useSessionStore } from "../../features/auth/stores/session";
 import { AccountPage } from "./AccountPage";
 import { ProfilePage } from "./ProfilePage";
+import { PlacesPage } from "./PlacesPage";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -95,6 +96,7 @@ it("offers one Create shop action and tracks the selected account section", asyn
         <Routes>
           <Route path="/app/account" element={<AccountPage />} />
           <Route path="/app/account/profile" element={<ProfilePage />} />
+          <Route path="/app/account/places" element={<PlacesPage />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -118,6 +120,6 @@ it("offers one Create shop action and tracks the selected account section", asyn
   expect(screen.getByRole("heading", { name: "Your profile" })).toHaveFocus();
   expect(places).not.toBeInTheDocument();
   await user.click(screen.getByRole("link", { name: "Your places" }));
-  expect(screen.getByRole("link", { name: "Your places" })).toHaveAttribute("aria-current", "location");
-  expect(screen.getByRole("heading", { name: "Your people. Your places." })).toHaveFocus();
+  expect(screen.getByRole("link", { name: "Your places" })).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("heading", { name: "Your places" })).toHaveFocus();
 });
