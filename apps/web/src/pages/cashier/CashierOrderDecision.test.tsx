@@ -104,7 +104,7 @@ const close = Object.getOwnPropertyDescriptor(
 async function choosePaymentMethod(user: ReturnType<typeof userEvent.setup>, value: string) {
   const labels: Record<string, string> = { CASH: 'Cash', GCASH_MANUAL: 'GCash (manual)', CARD_MANUAL: 'Card (manual)', OTHER: 'Other (manual)' };
   await user.click(screen.getByRole('combobox', { name: 'Payment method' }));
-  await user.click(screen.getByRole('option', { name: labels[value], exact: true }));
+  await user.click(screen.getByRole('option', { name: labels[value] }));
 }
 beforeEach(() => {
   vi.resetAllMocks();
