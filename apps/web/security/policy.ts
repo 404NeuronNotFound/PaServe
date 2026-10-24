@@ -115,7 +115,8 @@ export function frontendSecurity(
     ],
     "connect-src": ["'self'", ...connections],
     "media-src": ["'self'", "blob:"],
-    "worker-src": ["'none'"],
+    // Vite's development client uses a blob worker for its connection timer.
+    "worker-src": development ? ["blob:"] : ["'none'"],
     "manifest-src": ["'self'"],
   };
   const serialize = (meta = false) =>
@@ -143,7 +144,7 @@ export function frontendSecurity(
     "Permissions-Policy":
       "camera=(self), microphone=(), geolocation=(), payment=(), usb=()",
   };
-  const deploymentHeaders = {
+  const deploymentHeaders: HeaderMap = {
     ...headers,
     "Strict-Transport-Security": "max-age=31536000",
   };

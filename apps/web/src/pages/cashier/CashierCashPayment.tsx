@@ -44,10 +44,7 @@ import { CashierOrderReview } from "./CashierOrderReview";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { formatCartPrice } from "../../lib/money";
-import {
-  verifyScannedOrder,
-  lookupOrderNumber,
-} from "../../features/cashier/order-qr";
+import { verifyScannedOrder } from "../../features/cashier/order-qr";
 import { useConfirmedOrderEvents } from "../../features/orders/useConfirmedOrderEvents";
 
 function failureMessage(error: unknown) {
@@ -132,23 +129,22 @@ export function CashierCashPayment({
     : normalized !== null && change !== null;
   const loadReview = useCallback(
     async (signal: AbortSignal): Promise<CashPaymentReviewResponse> => {
-      if (!pendingOrder) return reviewCashPayment(shopId, orderId, signal);
-      try {
-        const order = qrToken
-          ? await verifyScannedOrder(shopId, qrToken, signal)
-          : await lookupOrderNumber(shopId, pendingOrder.orderNumber, signal);
-        return { order, payment: null };
-      } catch (error) {
-        if (signal.aborted) throw error;
-        // A consumed QR after an uncertain save can only recover a saved paid receipt.
-        try {
-          const saved = await reviewCashPayment(shopId, orderId, signal);
-          if (saved.payment) return saved;
-        } catch {
-          /* keep the reference failure */
-        }
-        throw error;
+      const saved = await reviewCashPayment(shopId, orderId, signal);
+      // A saved paid receipt is the source of truth after an uncertain write.
+      // Pending QR workflows still verify their credential before another write.
+      if (saved.payment) return saved;
+      if (!pendingOrder) {
+        if (saved.order.status === "PENDING_CONFIRMATION")
+          throw new Error("This order is awaiting confirmation. Scan another order and reopen it by number to confirm and pay.");
+        return saved;
       }
+      if (saved.order.status !== "PENDING_CONFIRMATION")
+        throw new Error("This order was confirmed elsewhere. Scan another order and reopen it by number to review payment.");
+      if (qrToken) {
+        const order = await verifyScannedOrder(shopId, qrToken, signal);
+        return { order, payment: null };
+      }
+      return saved;
     },
     [pendingOrder, qrToken, shopId, orderId],
   );

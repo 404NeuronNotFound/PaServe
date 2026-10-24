@@ -30,6 +30,7 @@ assert.ok(!deploymentPolicy.includes("script-src 'self' 'unsafe-inline'"));
 assert.ok(!deploymentPolicy.includes("unsafe-eval"));
 assert.ok(!deploymentPolicy.includes("ws://localhost:*"));
 assert.ok(deploymentPolicy.includes("frame-ancestors 'none'"));
+assert.ok(deploymentPolicy.includes("worker-src 'none'"));
 assert.ok(hostHeaders.includes("Strict-Transport-Security: max-age=31536000"));
 assert.ok(nginx.includes('add_header X-Frame-Options "DENY" always;'));
 if (process.argv.includes("--release")) {
@@ -138,6 +139,7 @@ try {
   assert.ok(response.headers.get(name).includes("ws://localhost:*"));
   assert.ok(response.headers.get(name).includes("frame-src 'self'"));
   assert.ok(response.headers.get(name).includes("frame-ancestors 'self'"));
+  assert.ok(response.headers.get(name).includes("worker-src blob:"));
   await response.arrayBuffer();
 } finally {
   await dev.close();

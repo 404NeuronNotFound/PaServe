@@ -227,6 +227,47 @@ describe('Cash collection', () => {
     version = (await qr.verify(userId, shopId, orderId, pendingToken)).order
       .reviewVersion;
   }
+  it.each(['PENDING_CONFIRMATION', 'CONFIRMED'])(
+    'reviews %s through the read-only cashier endpoint without an expected conflict',
+    async (status) => {
+      if (status === 'PENDING_CONFIRMATION') await preparePending();
+      for (const method of ['get', 'post'] as const) {
+        const response = method === 'get'
+          ? await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/orders/${orderId}/cashier-review`).set('Authorization', 'Bearer session').expect(200)
+          : await request(app.getHttpServer()).post(`/api/v1/shops/${shopId}/orders/cashier-review/lookup-number`).set('Authorization', 'Bearer session').send({ orderNumber: saved.orderNumber }).expect(200);
+        expect(response.headers['cache-control']).toBe('no-store');
+        expect(response.body.order.status).toBe(status);
+        expect(response.body.payment).toBeNull();
+        expect(JSON.stringify(response.body)).not.toMatch(/qrToken|paymentRequestId/);
+      }
+      expect(updateOrder).not.toHaveBeenCalled();
+      if (status === 'PENDING_CONFIRMATION') await read().expect(409);
+    },
+  );
+  it('returns the saved receipt directly after payment and cannot collect again', async () => {
+    await collect().expect(200);
+    const response = await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/orders/${orderId}/cashier-review`).set('Authorization', 'Bearer session').expect(200);
+    expect(response.body.order.paymentStatus).toBe('PAID');
+    expect(response.body.payment.requestId).toBe(requestId);
+    updateOrder.mockClear();
+    await collect({ requestId: '68bb31e6-9c13-4c07-9e04-fbb29b0584ab' }).expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('preserves cashier permissions, identity and shop boundaries for the new reads', async () => {
+    const path = `/api/v1/shops/${shopId}/orders/${orderId}/cashier-review`;
+    await request(app.getHttpServer()).get(path).expect(401);
+    role = 'KITCHEN';
+    await request(app.getHttpServer()).get(path).set('Authorization', 'Bearer session').expect(403);
+    await request(app.getHttpServer()).post(`/api/v1/shops/${shopId}/orders/cashier-review/lookup-number`).set('Authorization', 'Bearer session').send({ orderNumber: saved.orderNumber }).expect(403);
+    role = 'OWNER';
+    await request(app.getHttpServer()).get(path.replace(shopId, '85bcdf9f-d1be-4669-a01c-0b657f5a2f8e')).set('Authorization', 'Bearer session').expect(404);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
+  it('keeps rejected orders blocked by cashier review', async () => {
+    saved.status = 'REJECTED';
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/orders/${orderId}/cashier-review`).set('Authorization', 'Bearer session').expect(409);
+    expect(updateOrder).not.toHaveBeenCalled();
+  });
   function atomic(
     method = 'CASH',
     body: Record<string, unknown> = {},

@@ -46,7 +46,12 @@ export class CashPaymentService {
     private readonly qr: OrderQrService,
   ) {}
 
-  async lookup(actorId: string, shopId: string, orderNumber: string) {
+  async lookup(
+    actorId: string,
+    shopId: string,
+    orderNumber: string,
+    allowPending = false,
+  ) {
     if (!isValidOrderNumber(orderNumber))
       throw new BadRequestException({
         code: 'INVALID_ORDER_NUMBER',
@@ -61,7 +66,7 @@ export class CashPaymentService {
       select: { id: true },
     });
     if (!saved) throw this.unavailable();
-    return this.review(actorId, shopId, saved.id);
+    return this.review(actorId, shopId, saved.id, this.prisma, allowPending);
   }
 
   async review(
@@ -69,6 +74,7 @@ export class CashPaymentService {
     shopId: string,
     orderId: string,
     database: Pick<Prisma.TransactionClient, 'order'> = this.prisma,
+    allowPending = false,
   ): Promise<CashPaymentReviewResponse> {
     if (!isUUID(orderId))
       throw new BadRequestException({
@@ -83,6 +89,7 @@ export class CashPaymentService {
       },
       select: {
         id: true,
+        status: true,
         orderNumber: true,
         paymentStatus: true,
         paymentMethod: true,
@@ -99,7 +106,13 @@ export class CashPaymentService {
       },
     });
     if (!saved) throw this.unavailable();
-    const { order } = await this.qr.reviewPayment(
+    // Read-only cashier status checks can review pending orders. Settlement
+    // paths keep the confirmed-only default and conditional write predicates.
+    const read =
+      allowPending && saved.status === 'PENDING_CONFIRMATION'
+        ? this.qr.reviewNumber.bind(this.qr)
+        : this.qr.reviewPayment.bind(this.qr);
+    const { order } = await read(
       actorId,
       shopId,
       orderId,
@@ -108,7 +121,11 @@ export class CashPaymentService {
       CASH_PAYMENT_ROLES,
     );
     // Repeated reads can race payment collection. Never return a mixed paid/unpaid review.
-    if (order.paymentStatus !== saved.paymentStatus) throw conflict();
+    if (
+      order.paymentStatus !== saved.paymentStatus ||
+      (allowPending && order.status !== saved.status)
+    )
+      throw conflict();
     let payment: CashPaymentReviewResponse['payment'] = null;
     if (saved.paymentStatus === 'PAID') {
       if (

@@ -69,7 +69,7 @@ beforeEach(() => {
   vi.mocked(verifyScannedOrder).mockResolvedValue(order);
   vi.mocked(lookupOrderNumber).mockResolvedValue(order);
   vi.mocked(lookupCashPayment).mockResolvedValue({
-    order: { ...order, status: "CONFIRMED" },
+    order,
     payment: null,
   });
   vi.mocked(reviewCashPayment).mockResolvedValue({
@@ -101,7 +101,7 @@ it("prefills an owner handoff without looking up or processing the order automat
   expect(lookupOrderNumber).not.toHaveBeenCalled();
   expect(lookupCashPayment).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Find order" }));
-  await waitFor(() => expect(lookupOrderNumber).toHaveBeenCalledWith(shopId, "ORD-000042", expect.any(AbortSignal)));
+  await waitFor(() => expect(lookupCashPayment).toHaveBeenCalledWith(shopId, "ORD-000042", expect.any(AbortSignal)));
 });
 function failure(
   status: number,
@@ -297,7 +297,7 @@ it("loads a receipt by number through a separate fallback, without calling QR ve
   await user.type(screen.getByLabelText("Find by order number"), "ORD-000042");
   await user.click(screen.getByRole("button", { name: "Find order" }));
   expect(await screen.findByText("Order loaded by number")).toBeInTheDocument();
-  expect(lookupOrderNumber).toHaveBeenCalledWith(
+  expect(lookupCashPayment).toHaveBeenCalledWith(
     shopId,
     "ORD-000042",
     expect.any(AbortSignal),
@@ -308,9 +308,7 @@ it("loads a receipt by number through a separate fallback, without calling QR ve
   expect(screen.getByLabelText("Find by order number")).toHaveValue("");
 });
 it("reopens a confirmed order by number for cash collection", async () => {
-  vi.mocked(lookupOrderNumber).mockRejectedValue(
-    failure(409, "ORDER_NOT_PENDING_CONFIRMATION"),
-  );
+  vi.mocked(lookupCashPayment).mockResolvedValue({ order: { ...order, status: "CONFIRMED" }, payment: null });
   const { user } = setup();
   await user.type(screen.getByLabelText("Find by order number"), "ORD-000042");
   await user.click(screen.getByRole("button", { name: "Find order" }));
@@ -321,8 +319,29 @@ it("reopens a confirmed order by number for cash collection", async () => {
     expect.any(AbortSignal),
   );
   expect(verifyScannedOrder).not.toHaveBeenCalled();
+  expect(lookupOrderNumber).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Scan another order" }));
   expect(screen.getByLabelText("Find by order number")).toHaveValue("");
+});
+it("opens an already-paid order as a receipt without probing the pending-only lookup", async () => {
+  const paid = {
+    order: { ...order, status: "CONFIRMED", paymentStatus: "PAID" },
+    payment: {
+      method: "CASH" as const,
+      requestId: "58bb31e6-9c13-4c07-9e04-fbb29b0584ab",
+      amountReceived: "200.00", changeDue: "64.50",
+      paidAt: "2026-10-13T00:00:00.000Z", paidBy: "cashier",
+    },
+  };
+  vi.mocked(lookupCashPayment).mockResolvedValue(paid);
+  vi.mocked(reviewCashPayment).mockResolvedValue(paid);
+  const { user } = setup();
+  await user.type(screen.getByLabelText("Find by order number"), "ORD-000042");
+  await user.click(screen.getByRole("button", { name: "Find order" }));
+  await screen.findByRole("heading", { name: "Cash payment recorded" });
+  expect(lookupOrderNumber).not.toHaveBeenCalled();
+  expect(verifyScannedOrder).not.toHaveBeenCalled();
+  expect(screen.queryByLabelText("Amount received (PHP)")).not.toBeInTheDocument();
 });
 it.each([401, 403, 500])(
   "handles a response without a JSON error body (%s)",

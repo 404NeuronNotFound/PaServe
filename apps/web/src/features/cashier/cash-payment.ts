@@ -33,12 +33,13 @@ function parseCash(
   data: CashPaymentReviewResponse,
   shopId: string,
   orderId: string,
+  allowPending = false,
 ): CashPaymentReviewResponse {
   const order = parseReview(
     { verified: true, order: data?.order },
     shopId,
     orderId,
-    true,
+    !(allowPending && data?.order?.status === "PENDING_CONFIRMATION"),
   );
   const payment = data.payment;
   if (
@@ -113,10 +114,10 @@ export async function reviewCashPayment(
   signal: AbortSignal,
 ) {
   const { data } = await api.get<CashPaymentReviewResponse>(
-    `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}/cash-payment`,
+    `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}/cashier-review`,
     { signal, timeout: AUTH_REQUEST_TIMEOUT_MS },
   );
-  return parseCash(data, shopId, orderId);
+  return parseCash(data, shopId, orderId, true);
 }
 export async function lookupCashPayment(
   shopId: string,
@@ -127,7 +128,7 @@ export async function lookupCashPayment(
   if (!isOrderNumber(orderNumber))
     throw new Error("Enter a valid order number, such as ORD-000006.");
   const { data } = await api.post<CashPaymentReviewResponse>(
-    `/shops/${encodeURIComponent(shopId)}/orders/cash-payment/lookup-number`,
+    `/shops/${encodeURIComponent(shopId)}/orders/cashier-review/lookup-number`,
     { orderNumber },
     { signal, timeout: AUTH_REQUEST_TIMEOUT_MS },
   );
@@ -139,7 +140,7 @@ export async function lookupCashPayment(
     )
   )
     throw new Error("The order lookup response could not be verified.");
-  return parseCash(data, shopId, data.order.id);
+  return parseCash(data, shopId, data.order.id, true);
 }
 export async function collectCashPayment(
   shopId: string,

@@ -260,7 +260,7 @@ it("loads the authoritative confirmed order with fixed shop route", async () => 
     order,
   );
   expect(api.get).toHaveBeenCalledWith(
-    `/shops/${shopId}/orders/${orderId}/cash-payment`,
+    `/shops/${shopId}/orders/${orderId}/cashier-review`,
     { signal, timeout: 15000 },
   );
 });
@@ -300,9 +300,16 @@ it.each([
     reviewCashPayment(shopId, orderId, new AbortController().signal),
   ).rejects.toThrow();
 });
-it("rejects pending, cross-shop and mixed payment state", async () => {
+it("loads pending cashier reviews without treating a normal workflow state as a conflict", async () => {
+  const data = { order: { ...order, status: "PENDING_CONFIRMATION" }, payment: null };
+  vi.mocked(api.get).mockResolvedValue({ data });
+  expect(await reviewCashPayment(shopId, orderId, new AbortController().signal)).toEqual(data);
+});
+it("rejects rejected, cross-shop and mixed payment state", async () => {
   for (const data of [
-    { order: { ...order, status: "PENDING_CONFIRMATION" }, payment: null },
+    { order: { ...order, status: "REJECTED" }, payment: null },
+    { order: { ...order, status: "PENDING_CONFIRMATION" }, payment },
+    { order: { ...order, status: "PENDING_CONFIRMATION", paymentStatus: "PAID" }, payment },
     { order: { ...order, shopId: "other" }, payment: null },
     { order, payment },
   ]) {
@@ -318,6 +325,7 @@ it("looks up a confirmed order by normalized number", async () => {
   expect(vi.mocked(api.post).mock.calls[0][1]).toEqual({
     orderNumber: "ORD-000042",
   });
+  expect(vi.mocked(api.post).mock.calls[0][0]).toBe(`/shops/${shopId}/orders/cashier-review/lookup-number`);
 });
 it("rejects mismatched response number", async () => {
   vi.mocked(api.post).mockResolvedValue({ data: { order, payment: null } });

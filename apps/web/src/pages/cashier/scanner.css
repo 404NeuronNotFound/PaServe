@@ -493,6 +493,35 @@
   align-items: center;
   justify-content: center;
 }
+/* Size to the panel, including when the sidebar reduces the available width.
+   Each control gets a readable row instead of squeezing words into columns. */
+.phase-two .scanner-camera-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  align-items: stretch;
+  gap: 10px;
+}
+.phase-two .scanner-camera-controls > button {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  height: auto;
+  margin: 0;
+  padding: 12px 16px;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+.phase-two .scanner-camera-controls svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+.phase-two .scanner-camera-controls .pending-button-idle,
+.phase-two .scanner-camera-controls .pending-button-progress {
+  flex-wrap: nowrap;
+  overflow-wrap: normal;
+}
 .phase-two .scanner-status {
   color: var(--color-muted);
   font-size: 12px;

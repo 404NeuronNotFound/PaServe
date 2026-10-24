@@ -58,6 +58,8 @@ describe("frontend deployment security policy", () => {
     expect(dev["connect-src"]).toContain("ws://127.0.0.1:*");
     expect(dev["connect-src"]).not.toContain("ws://[::1]:*");
     expect(dev["connect-src"]).not.toContain("ws:");
+    expect(dev["worker-src"]).toEqual(["blob:"]);
+    expect(prod["worker-src"]).toEqual(["'none'"]);
     expect(frontendSecurity({}, true).metaPolicy).not.toContain("ws://[::1]");
     expect(prod["script-src"]).not.toContain("'unsafe-inline'");
     expect(prod["connect-src"]).not.toContain("ws://localhost:*");
@@ -74,6 +76,7 @@ describe("frontend deployment security policy", () => {
       const policy = directives(security.headers["Content-Security-Policy"]);
       expect(policy["frame-src"]).toEqual(["'none'"]);
       expect(policy["frame-ancestors"]).toEqual(["'none'"]);
+      expect(policy["worker-src"]).toEqual(["'none'"]);
       expect(security.headers["X-Frame-Options"]).toBe("DENY");
       expect(security.deploymentHeaders["X-Frame-Options"]).toBe("DENY");
     }

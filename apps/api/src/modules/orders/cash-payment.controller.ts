@@ -24,6 +24,39 @@ import { LookupOrderNumberDto } from './order-number-lookup.dto.js';
 @RateLimit('orderAction')
 export class CashPaymentController {
   constructor(private readonly cash: CashPaymentService) {}
+  @RateLimit('staffVerification')
+  @Post('cashier-review/lookup-number')
+  @HttpCode(200)
+  @Permissions('shop.payments.record', 'shop.orders.read')
+  lookupCashier(
+    @Body() dto: LookupOrderNumberDto,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.cash.lookup(
+      request.user.id,
+      request.shopMembership.shopId,
+      dto.orderNumber,
+      true,
+    );
+  }
+  @Get(':orderId/cashier-review')
+  @Permissions('shop.payments.record', 'shop.orders.read')
+  reviewCashier(
+    @Param('orderId') orderId: string,
+    @Req() request: ShopMemberRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.cash.review(
+      request.user.id,
+      request.shopMembership.shopId,
+      orderId,
+      undefined,
+      true,
+    );
+  }
   @Post(':orderId/create-payment')
   @HttpCode(200)
   @Permissions(

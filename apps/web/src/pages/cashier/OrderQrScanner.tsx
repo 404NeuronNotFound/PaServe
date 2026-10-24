@@ -22,7 +22,6 @@ import type {
 import {
   parseOrderQr,
   verifyScannedOrder,
-  lookupOrderNumber,
 } from "../../features/cashier/order-qr";
 import { readQrImage } from "../../features/cashier/qr-decoder";
 import {
@@ -168,24 +167,11 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
     setError("");
     setPasted("");
     load(async (controller) => {
-      try {
-        return await lookupOrderNumber(shopId, number, controller.signal);
-      } catch (failure) {
-        if (
-          !isAxiosError<ApiErrorResponse>(failure) ||
-          failure.response?.status !== 409 ||
-          failure.response.data?.code !== "ORDER_NOT_PENDING_CONFIRMATION"
-        )
-          throw failure;
-        const saved = await lookupCashPayment(
-          shopId,
-          number,
-          controller.signal,
-        );
-        if (mounted.current && !controller.signal.aborted)
-          setPaymentOrderId(saved.order.id);
-        return saved.order;
-      }
+      const saved = await lookupCashPayment(shopId, number, controller.signal);
+      if (mounted.current && !controller.signal.aborted &&
+          saved.order.status === "CONFIRMED")
+        setPaymentOrderId(saved.order.id);
+      return saved.order;
     }, "");
   }
   function start(selected = "") {
@@ -322,10 +308,11 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
             <FiMaximize aria-hidden="true" /> Keep the QR inside the frame
           </span>
         </div>
-        <div className="scanner-controls">
+        <div className="scanner-controls scanner-camera-controls">
           <PendingButton
             pending={phase === "starting"}
             pendingLabel="Starting camera..."
+            type="button"
             className="primary-button"
             onClick={() => start()}
             disabled={
@@ -334,18 +321,18 @@ export function OrderQrScanner({ shopId, initialOrderNumber = "" }: { shopId: st
           >
             <FiCamera aria-hidden="true" /> Start camera
           </PendingButton>
-          <Button variant="outline" size="inherit" type="submit"
+          <Button variant="outline" size="inherit" type="button"
             className="secondary-button"
             onClick={stopCamera}
             disabled={phase === "idle"}
           >
             <FiPause aria-hidden="true" /> Stop camera
           </Button>
-          <Button variant="outline" size="inherit" disabled={busy || lostAccess} onClick={() => {
+          <Button variant="outline" size="inherit" type="button" aria-label="Use manual order lookup" disabled={busy || lostAccess} onClick={() => {
             stopCamera();
             document.getElementById("scanner-order-number")?.focus();
           }}>
-            <FiHash aria-hidden="true" /> Use manual order lookup
+            <FiHash aria-hidden="true" /> Enter order number
           </Button>
         </div>
         {cameras.length > 1 && (

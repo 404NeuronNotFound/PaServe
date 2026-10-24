@@ -1198,6 +1198,7 @@ export interface CashPaymentReceipt {
   description?: string | null;
 }
 export interface CashPaymentReviewResponse {
+  /** Read-only cashier review supports pending orders; payment writes still require their specific source state. */
   order: VerifyOrderQrResponse["order"];
   payment: CashPaymentReceipt | null;
   /** Absent on older servers; null for orders not yet queued. */

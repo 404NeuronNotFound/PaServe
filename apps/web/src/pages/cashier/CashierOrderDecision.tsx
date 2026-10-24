@@ -75,6 +75,7 @@ export function CashierOrderDecision({
       void reviewCashPayment(order.shopId, order.id, controller.signal)
         .then((saved) => {
           if (active.current && !controller.signal.aborted && saved.payment) {
+            setReview(saved.order);
             setBlocked(true);
             setAction(null);
             setCollectingCash(true);
@@ -188,7 +189,7 @@ export function CashierOrderDecision({
   if (collectingCash)
     return (
       <CashierCashPayment
-        pendingOrder={review}
+        pendingOrder={review.status === "PENDING_CONFIRMATION" ? review : undefined}
         qrToken={qrToken}
         shopId={order.shopId}
         orderId={order.id}

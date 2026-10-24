@@ -13,6 +13,7 @@ import "./components/forms/forms.css";
 import "./components/paserve/management.css";
 import "./menu-brand.css";
 import "./motion.css";
+import "./components/ui/modal-responsive.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

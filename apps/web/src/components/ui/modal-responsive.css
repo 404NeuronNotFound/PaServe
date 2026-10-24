@@ -1,0 +1,120 @@
+/* Shared viewport and action layout for native and primitive dialogs.
+   Keep print geometry (especially table QR cards and receipts) independent. */
+@media screen {
+  dialog[open]:not(.mobile-workspace-navigation),
+  .ui-dialog-content {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: calc(100% - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+    max-height: calc(var(--app-viewport-height, 100dvh) - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overscroll-behavior: contain;
+    scroll-padding-block: 20px;
+    overflow-wrap: anywhere;
+  }
+
+  :is(dialog[open], .ui-dialog-content, .ui-sheet-content) :is(input, textarea, select) {
+    min-width: 0;
+    max-width: 100%;
+    scroll-margin-block: 20px;
+  }
+}
+
+@media screen and (max-width: 560px) {
+  .feedback-dialog.feedback-dialog,
+  .ui-dialog-content,
+  .ui-sheet-content {
+    padding: 20px;
+  }
+
+  .feedback-dialog.feedback-dialog {
+    width: calc(100% - 32px);
+    overflow: auto;
+  }
+  .feedback-dialog h2 {
+    font-size: 24px;
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+  .feedback-dialog > p {
+    margin-block: 0 20px;
+    line-height: 1.65;
+  }
+
+  /* Preserve DOM/focus order: the safe cancel action remains first. Do not
+     reverse buttons visually or shrink them to fit side by side on phones. */
+  dialog[open] :is(.feedback-dialog-actions, .category-editor-actions,
+    .customization-footer-actions, .table-qr-actions),
+  .brand-crop-dialog[open] > footer,
+  :is(.ui-dialog-content, .ui-sheet-content) > footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    width: 100%;
+    margin-inline: 0;
+    align-items: stretch;
+  }
+
+  dialog[open] :is(.feedback-dialog-actions, .category-editor-actions,
+    .customization-footer-actions, .table-qr-actions) > :is(button, a),
+  .brand-crop-dialog[open] > footer > button,
+  .customer-dialog[open] .customer-dialog-footer > button,
+  :is(.ui-dialog-content, .ui-sheet-content) > footer > :is(button, a) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 48px;
+    height: auto;
+    padding: 12px 16px;
+    margin: 0;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  dialog[open] :is(.feedback-dialog-actions, .category-editor-actions,
+    .customization-footer-actions, .table-qr-actions) svg {
+    flex-shrink: 0;
+  }
+  dialog[open] :is(.pending-button-idle, .pending-button-progress) {
+    flex-wrap: nowrap;
+    overflow-wrap: normal;
+  }
+
+  .customization-dialog[open] footer {
+    position: static;
+    padding-bottom: 0;
+  }
+  .customization-dialog[open] .customization-footer-context {
+    width: 100%;
+  }
+  .customer-dialog[open] .customer-dialog-footer {
+    gap: 12px;
+    padding-inline: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  }
+  .customer-dialog[open] .customer-dialog-footer > :is(div, form) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  :is(.menu-preview-dialog, .kitchen-details)[open] > header,
+  .table-qr-dialog[open] .table-qr-heading {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  :is(.menu-preview-dialog, .kitchen-details)[open] > header > button,
+  .table-qr-dialog[open] .table-qr-heading > button {
+    min-width: 44px;
+    min-height: 44px;
+    flex-shrink: 0;
+    white-space: normal;
+  }
+
+  .product-create-dialog[open] .product-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :is(.ui-dialog-content, .ui-sheet-content) .ui-modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

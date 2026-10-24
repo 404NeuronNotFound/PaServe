@@ -107,7 +107,7 @@ beforeEach(() => {
   vi.mocked(lookupOrderNumber).mockResolvedValue(order);
   vi.mocked(decideOrder).mockResolvedValue(decision);
   vi.mocked(reviewCashPayment).mockResolvedValue({
-    order: { ...order, status: "CONFIRMED" },
+    order,
     payment: null,
   });
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
