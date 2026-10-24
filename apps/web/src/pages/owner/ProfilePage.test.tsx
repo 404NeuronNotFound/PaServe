@@ -111,12 +111,13 @@ it("saves personal details with bearer authentication and updates account identi
   expect(client.getQueryData(currentUserKey)).toMatchObject({
     user: { firstName: "Maria" },
   });
-  expect(screen.getByText("Maria Navarro")).toBeVisible();
+  expect(screen.getAllByText("Maria Navarro")).toHaveLength(2);
 });
 
 it("blocks mismatched passwords and leaves the account signed in", async () => {
   const post = vi.spyOn(api, "post");
   const { user } = setup();
+  await user.click(screen.getByRole("tab", { name: "Password" }));
   await user.type(
     screen.getByLabelText("Current password", { exact: true }),
     "current-passphrase",
@@ -149,6 +150,7 @@ it("shows current-password errors without losing drafts or clearing the session"
   };
   vi.spyOn(api, "post").mockRejectedValue(error);
   const { user } = setup();
+  await user.click(screen.getByRole("tab", { name: "Sign-in email" }));
   await user.clear(screen.getByLabelText("Email address"));
   await user.type(screen.getByLabelText("Email address"), "new@example.com");
   await user.type(
@@ -172,6 +174,11 @@ it.each(["email", "password"] as const)(
   async (kind) => {
     const post = vi.spyOn(api, "post").mockResolvedValue({ status: 204 });
     const { user, client, router } = setup();
+    await user.click(
+      screen.getByRole("tab", {
+        name: kind === "email" ? "Sign-in email" : "Password",
+      }),
+    );
     if (kind === "email") {
       await user.clear(screen.getByLabelText("Email address"));
       await user.type(
@@ -221,6 +228,27 @@ it.each(["email", "password"] as const)(
     expect(useSessionStore.getState().accessToken).toBeNull();
   },
 );
+
+it("keeps drafts when switching editors and supports keyboard section navigation", async () => {
+  const { user } = setup();
+  expect(
+    screen.getByRole("tabpanel", { name: "Personal details" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("tabpanel", { name: "Password" }),
+  ).not.toBeInTheDocument();
+  await user.type(screen.getByLabelText("First name"), " draft");
+  await user.click(screen.getByRole("tab", { name: "Sign-in email" }));
+  await user.clear(screen.getByLabelText("Email address"));
+  await user.type(screen.getByLabelText("Email address"), "draft@example.com");
+  await user.click(screen.getByRole("tab", { name: "Personal details" }));
+  expect(screen.getByLabelText("First name")).toHaveValue("Lia draft");
+  await user.keyboard("{ArrowDown}");
+  expect(screen.getByRole("tab", { name: "Sign-in email" })).toHaveFocus();
+  expect(screen.getByLabelText("Email address")).toHaveValue(
+    "draft@example.com",
+  );
+});
 
 it("protects unsaved details when using the sidebar", async () => {
   const { user } = setup();

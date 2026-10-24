@@ -15,6 +15,8 @@ import {
   FiEye,
   FiEyeOff,
   FiShield,
+  FiArrowRight,
+  FiCoffee,
 } from "react-icons/fi";
 import {
   ACCOUNT_LIMITS,
@@ -28,7 +30,7 @@ import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { PendingButton } from "../../components/feedback/PendingButton";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
-import { FormSkeleton } from "../../components/feedback/LoadingSkeleton";
+import { SkeletonBlock } from "../../components/feedback/LoadingSkeleton";
 import { feedback } from "../../app/stores/feedback";
 import { useDraftGuard } from "../../app/router/useDraftGuard";
 import {
@@ -59,6 +61,7 @@ function PasswordField({
   onChange,
   error,
   newPassword = false,
+  hint,
 }: {
   id: string;
   label: string;
@@ -66,20 +69,11 @@ function PasswordField({
   onChange: (value: string) => void;
   error?: string;
   newPassword?: boolean;
+  hint?: string;
 }) {
   const [visible, setVisible] = useState(false);
   return (
-    <FormField
-      id={id}
-      label={label}
-      required
-      error={error}
-      hint={
-        newPassword
-          ? `Use ${REGISTRATION_LIMITS.passwordMin}–${REGISTRATION_LIMITS.passwordMax} characters.`
-          : undefined
-      }
-    >
+    <FormField id={id} label={label} required error={error} hint={hint}>
       <div className="profile-password-control">
         <Input
           id={id}
@@ -97,6 +91,7 @@ function PasswordField({
           size="icon"
           aria-label={`${visible ? "Hide" : "Show"} ${label.toLowerCase()}`}
           aria-pressed={visible}
+          aria-controls={id}
           onClick={() => setVisible(!visible)}
         >
           {visible ? (
@@ -126,7 +121,40 @@ export function ProfilePage() {
           releaseRef={releaseRef}
         />
       ) : (
-        <FormSkeleton label="Loading your profile…" />
+        <div className="profile-settings-page">
+          <span className="sr-only" role="status">
+            Loading your profile…
+          </span>
+          <div className="profile-loading-heading" aria-hidden="true">
+            <SkeletonBlock width={120} />
+            <SkeletonBlock width="min(100%, 300px)" height={40} />
+            <SkeletonBlock width="min(100%, 440px)" />
+          </div>
+          <div
+            className="profile-loading-layout"
+            aria-hidden="true"
+            aria-busy="true"
+          >
+            <SkeletonBlock height={160} />
+            <div className="profile-editor-layout">
+              <div className="profile-loading-navigation">
+                {[0, 1, 2].map((item) => (
+                  <SkeletonBlock key={item} height={72} />
+                ))}
+              </div>
+              <div className="profile-settings-card profile-card-skeleton">
+                <SkeletonBlock width="65%" height={44} />
+                {[0, 1, 2].map((field) => (
+                  <div key={field}>
+                    <SkeletonBlock width="40%" />
+                    <SkeletonBlock height={48} />
+                  </div>
+                ))}
+                <SkeletonBlock width={160} height={44} />
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </AccountFrame>
   );
@@ -142,6 +170,8 @@ function ProfileEditor({
   const client = useQueryClient();
   const navigate = useNavigate();
   const heading = useRef<HTMLHeadingElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(false);
   const lock = useRef(false);
   const [firstName, setFirstName] = useState(user.firstName ?? "");
   const [lastName, setLastName] = useState(user.lastName ?? "");
@@ -152,6 +182,19 @@ function ProfileEditor({
   const [confirmation, setConfirmation] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [section, setSection] = useState<"details" | "email" | "password">(
+    "details",
+  );
+  useEffect(() => {
+    const page = pageRef.current;
+    if (!page) return;
+    const update = () => setCompact(page.clientWidth <= 1000);
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(update);
+    observer.observe(page);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     document.title = "Your profile · PaServe";
     heading.current?.focus();
@@ -209,6 +252,29 @@ function ProfileEditor({
     credentials.variables === "email" ? credentials.error : null;
   const credentialError =
     credentials.variables === "password" ? credentials.error : null;
+  const sections = [
+    {
+      id: "details",
+      label: "Personal details",
+      description: "Your name across PaServe",
+      Icon: FiUser,
+      dirty: profileDirty,
+    },
+    {
+      id: "email",
+      label: "Sign-in email",
+      description: "Where you sign in",
+      Icon: FiMail,
+      dirty: email !== user.email || Boolean(emailPassword),
+    },
+    {
+      id: "password",
+      label: "Password",
+      description: "Keep your access secure",
+      Icon: FiLock,
+      dirty: Boolean(currentPassword || password || confirmation),
+    },
+  ] as const;
   function submitCredentials(kind: "email" | "password") {
     if (lock.current) return;
     setPasswordError("");
@@ -228,8 +294,8 @@ function ProfileEditor({
     credentials.mutate(kind);
   }
   return (
-    <div className="profile-settings-page">
-      <header className="page-header">
+    <div className="profile-settings-page" ref={pageRef}>
+      <header className="page-header profile-page-header">
         <div>
           <p className="section-label">PERSONAL ACCOUNT</p>
           <h1 ref={heading} tabIndex={-1}>
@@ -238,109 +304,202 @@ function ProfileEditor({
           <p>Keep your details up to date and your account secure.</p>
         </div>
       </header>
-      <div className="profile-settings-grid">
-        <section
-          className="profile-settings-card"
-          aria-labelledby="personal-details-title"
-        >
-          <header className="profile-settings-heading">
-            <span className="profile-settings-icon">
-              <FiUser aria-hidden="true" />
-            </span>
-            <div>
-              <h2 id="personal-details-title">Personal details</h2>
-              <p>How you appear across your workspaces.</p>
-            </div>
-          </header>
-          <form
-            aria-label="Update personal details"
-            onSubmit={(event) => {
+      <section className="profile-identity" aria-label="Account summary">
+        <div className="profile-identity-person">
+          <span className="profile-identity-avatar" aria-hidden="true">
+            {(
+              [user.firstName?.[0], user.lastName?.[0]]
+                .filter(Boolean)
+                .join("") || user.email[0]
+            ).toUpperCase()}
+          </span>
+          <div>
+            <p className="profile-identity-eyebrow">
+              ONE ACCOUNT. EVERY WORKSPACE.
+            </p>
+            <h2>
+              {[user.firstName, user.lastName].filter(Boolean).join(" ") ||
+                "Your account"}
+            </h2>
+            <p className="profile-identity-email">{user.email}</p>
+          </div>
+        </div>
+        <dl className="profile-identity-facts">
+          <div>
+            <dt>Member since</dt>
+            <dd>
+              {new Intl.DateTimeFormat("en-PH", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                timeZone: "Asia/Manila",
+              }).format(new Date(user.createdAt))}
+            </dd>
+          </div>
+          <div>
+            <dt>
+              <FiCoffee aria-hidden="true" /> Your places
+            </dt>
+            <dd>
+              {user.memberships.length}{" "}
+              {user.memberships.length === 1 ? "membership" : "memberships"}
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <div className="profile-editor-layout">
+        <aside className="profile-section-navigation">
+          <p className="section-label">ACCOUNT SETTINGS</p>
+          <div
+            role="tablist"
+            aria-label="Profile settings"
+            aria-orientation={compact ? "horizontal" : "vertical"}
+            onKeyDown={(event) => {
+              const index = sections.findIndex((item) => item.id === section);
+              const next =
+                event.key === "ArrowDown" || event.key === "ArrowRight"
+                  ? (index + 1) % sections.length
+                  : event.key === "ArrowUp" || event.key === "ArrowLeft"
+                    ? (index + sections.length - 1) % sections.length
+                    : event.key === "Home"
+                      ? 0
+                      : event.key === "End"
+                        ? sections.length - 1
+                        : null;
+              if (next === null || busy) return;
               event.preventDefault();
-              if (lock.current) return;
-              lock.current = true;
-              setSaved(false);
-              profileMutation.mutate({ firstName, lastName });
+              setSection(sections[next].id);
+              document
+                .getElementById(`profile-tab-${sections[next].id}`)
+                ?.focus();
             }}
           >
-            <fieldset disabled={busy}>
-              <FormField
-                id="profile-first-name"
-                label="First name"
-                optional
-                error={fieldError(profileMutation.error, "firstName")}
+            {sections.map(({ id, label, description, Icon, dirty }) => (
+              <Button
+                key={id}
+                id={`profile-tab-${id}`}
+                role="tab"
+                aria-label={label}
+                aria-selected={section === id}
+                aria-controls={`profile-panel-${id}`}
+                tabIndex={section === id ? 0 : -1}
+                disabled={busy}
+                variant="ghost"
+                className="profile-section-tab"
+                onClick={() => setSection(id)}
               >
-                <Input
-                  id="profile-first-name"
-                  autoComplete="given-name"
-                  value={firstName}
-                  maxLength={ACCOUNT_LIMITS.nameMax}
-                  onChange={(event) => {
-                    setFirstName(event.target.value);
-                    setSaved(false);
-                  }}
-                />
-              </FormField>
-              <FormField
-                id="profile-last-name"
-                label="Last name"
-                optional
-                error={fieldError(profileMutation.error, "lastName")}
-              >
-                <Input
-                  id="profile-last-name"
-                  autoComplete="family-name"
-                  value={lastName}
-                  maxLength={ACCOUNT_LIMITS.nameMax}
-                  onChange={(event) => {
-                    setLastName(event.target.value);
-                    setSaved(false);
-                  }}
-                />
-              </FormField>
-              {profileMutation.isError && (
-                <InlineMessage>{message(profileMutation.error)}</InlineMessage>
-              )}
-              {saved && (
-                <InlineMessage tone="success">
-                  Your details are saved.
-                </InlineMessage>
-              )}
-              <PendingButton
-                className="primary-button"
-                pending={profileMutation.isPending}
-                pendingLabel="Saving details…"
-                disabled={!profileDirty}
-              >
-                Save details
-              </PendingButton>
-            </fieldset>
-          </form>
-          <dl className="profile-account-facts">
-            <div>
-              <dt>Sign-in email</dt>
-              <dd>{user.email}</dd>
-            </div>
-            <div>
-              <dt>Member since</dt>
-              <dd>
-                {new Intl.DateTimeFormat("en-PH", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  timeZone: "Asia/Manila",
-                }).format(new Date(user.createdAt))}
-              </dd>
-            </div>
-          </dl>
-          <p className="profile-security-note">
+                <Icon aria-hidden="true" />
+                <span>
+                  <strong>{label}</strong>
+                  <small>{description}</small>
+                </span>
+                {dirty ? (
+                  <span className="profile-draft-dot" aria-hidden="true" />
+                ) : (
+                  <FiArrowRight aria-hidden="true" />
+                )}
+              </Button>
+            ))}
+          </div>
+          <p className="profile-navigation-note">
             <FiShield aria-hidden="true" />
-            Your account details apply to every shop you belong to.
+            Your account details are shared across your shops. Shop settings
+            stay in each workspace.
           </p>
-        </section>
-        <div className="profile-security-stack">
+        </aside>
+        <div className="profile-settings-grid">
           <section
             className="profile-settings-card"
-            aria-labelledby="email-settings-title"
+            id="profile-panel-details"
+            role="tabpanel"
+            aria-labelledby="profile-tab-details"
+            hidden={section !== "details"}
+          >
+            <header className="profile-settings-heading">
+              <span className="profile-settings-icon">
+                <FiUser aria-hidden="true" />
+              </span>
+              <div>
+                <h2 id="personal-details-title">Personal details</h2>
+                <p>How you appear across your workspaces.</p>
+              </div>
+            </header>
+            <form
+              aria-label="Update personal details"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (lock.current) return;
+                lock.current = true;
+                setSaved(false);
+                profileMutation.mutate({ firstName, lastName });
+              }}
+            >
+              <fieldset disabled={busy}>
+                <FormField
+                  id="profile-first-name"
+                  label="First name"
+                  optional
+                  error={fieldError(profileMutation.error, "firstName")}
+                >
+                  <Input
+                    id="profile-first-name"
+                    autoComplete="given-name"
+                    value={firstName}
+                    maxLength={ACCOUNT_LIMITS.nameMax}
+                    onChange={(event) => {
+                      setFirstName(event.target.value);
+                      setSaved(false);
+                    }}
+                  />
+                </FormField>
+                <FormField
+                  id="profile-last-name"
+                  label="Last name"
+                  optional
+                  error={fieldError(profileMutation.error, "lastName")}
+                >
+                  <Input
+                    id="profile-last-name"
+                    autoComplete="family-name"
+                    value={lastName}
+                    maxLength={ACCOUNT_LIMITS.nameMax}
+                    onChange={(event) => {
+                      setLastName(event.target.value);
+                      setSaved(false);
+                    }}
+                  />
+                </FormField>
+                {profileMutation.isError && (
+                  <InlineMessage>
+                    {message(profileMutation.error)}
+                  </InlineMessage>
+                )}
+                {saved && (
+                  <InlineMessage tone="success">
+                    Your details are saved.
+                  </InlineMessage>
+                )}
+                <p className="profile-form-hint">
+                  <FiUser aria-hidden="true" /> Your name applies to every shop
+                  you belong to.
+                </p>
+                <PendingButton
+                  className="primary-button"
+                  pending={profileMutation.isPending}
+                  pendingLabel="Saving details…"
+                  disabled={!profileDirty}
+                >
+                  Save details
+                </PendingButton>
+              </fieldset>
+            </form>
+          </section>
+          <section
+            className="profile-settings-card"
+            id="profile-panel-email"
+            role="tabpanel"
+            aria-labelledby="profile-tab-email"
+            hidden={section !== "email"}
           >
             <header className="profile-settings-heading">
               <span className="profile-settings-icon">
@@ -383,6 +542,7 @@ function ProfileEditor({
                   error={fieldError(emailError, "currentPassword")}
                 />
                 <p className="profile-form-hint">
+                  <FiShield aria-hidden="true" />
                   Changing your email signs you out on all devices. Sign in
                   again with the new address.
                 </p>
@@ -406,7 +566,10 @@ function ProfileEditor({
           </section>
           <section
             className="profile-settings-card"
-            aria-labelledby="password-settings-title"
+            id="profile-panel-password"
+            role="tabpanel"
+            aria-labelledby="profile-tab-password"
+            hidden={section !== "password"}
           >
             <header className="profile-settings-heading">
               <span className="profile-settings-icon">
@@ -438,6 +601,7 @@ function ProfileEditor({
                   value={password}
                   onChange={setPassword}
                   newPassword
+                  hint={`Use ${REGISTRATION_LIMITS.passwordMin}–${REGISTRATION_LIMITS.passwordMax} characters.`}
                   error={fieldError(credentialError, "password")}
                 />
                 <PasswordField
@@ -452,6 +616,7 @@ function ProfileEditor({
                   error={passwordError}
                 />
                 <p className="profile-form-hint">
+                  <FiShield aria-hidden="true" />
                   Changing your password signs you out on all devices. Sign in
                   again with the new password.
                 </p>
