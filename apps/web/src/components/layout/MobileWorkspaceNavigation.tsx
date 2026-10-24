@@ -6,12 +6,16 @@ import "./mobile-workspace-navigation.css";
 export function MobileWorkspaceNavigation({
   open,
   onClose,
-  shopName,
+  contextName,
+  eyebrow = "YOUR WORKSPACE",
+  title = "Explore your shop",
   children,
 }: {
   open: boolean;
   onClose: () => void;
-  shopName: string;
+  contextName: string;
+  eyebrow?: string;
+  title?: string;
   children: ReactNode;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -36,9 +40,9 @@ export function MobileWorkspaceNavigation({
     >
       <header className="mobile-workspace-heading">
         <div>
-          <p className="section-label">YOUR WORKSPACE</p>
-          <h2 id="mobile-workspace-title">Explore your shop</h2>
-          <p>{shopName}</p>
+          <p className="section-label">{eyebrow}</p>
+          <h2 id="mobile-workspace-title">{title}</h2>
+          <p>{contextName}</p>
         </div>
         <Button
           variant="ghost"

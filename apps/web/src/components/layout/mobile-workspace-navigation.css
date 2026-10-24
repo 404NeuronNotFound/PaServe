@@ -94,19 +94,19 @@
   flex-shrink: 0;
 }
 @media screen and (max-width: 760px) {
-  .phase-two.shop-dashboard-shell .dashboard-body {
+  .phase-two:is(.shop-dashboard-shell, .account-shell) .dashboard-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
   }
-  .phase-two.shop-dashboard-shell .dashboard-navigation-toggle {
+  .phase-two:is(.shop-dashboard-shell, .account-shell) .dashboard-navigation-toggle {
     display: flex;
     justify-content: space-between;
     align-self: stretch;
     margin: var(--spacing-3) var(--workspace-gutter) 0;
     padding: var(--spacing-3) var(--spacing-4);
   }
-  .shop-dashboard-shell .dashboard-content {
+  :is(.shop-dashboard-shell, .account-shell) .dashboard-content {
     grid-row: 2;
     min-height: 0;
   }
@@ -120,6 +120,9 @@
   .phase-two .shop-overview-hero {
     padding: var(--spacing-6);
   }
+}
+.account-shell .mobile-workspace-links .dashboard-nav-links > a:last-child {
+  grid-column: 1 / -1;
 }
 @media (max-width: 360px) {
   .dashboard-mobile-location small {

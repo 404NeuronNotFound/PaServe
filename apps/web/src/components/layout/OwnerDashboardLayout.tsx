@@ -354,7 +354,7 @@ export function DashboardFrame({
           <MobileWorkspaceNavigation
             open={navigationOpen}
             onClose={closeNavigation}
-            shopName={membership?.shop.name ?? "Your workspace"}
+            contextName={membership?.shop.name ?? "Your workspace"}
           >
             <DashboardSidebarNavigation
               membership={membership}

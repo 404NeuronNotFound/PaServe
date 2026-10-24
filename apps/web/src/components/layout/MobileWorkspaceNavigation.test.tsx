@@ -16,7 +16,7 @@ afterEach(() => {
 });
 function Sheet() {
   const [open, setOpen] = useState(false);
-  return <><button onClick={() => setOpen(true)}>Navigation</button><MobileWorkspaceNavigation open={open} onClose={() => setOpen(false)} shopName="Cafe A"><a href="/app/shops/a/orders">Orders</a></MobileWorkspaceNavigation></>;
+  return <><button onClick={() => setOpen(true)}>Navigation</button><MobileWorkspaceNavigation open={open} onClose={() => setOpen(false)} contextName="Cafe A"><a href="/app/shops/a/orders">Orders</a></MobileWorkspaceNavigation></>;
 }
 it("opens a named modal and supports explicit close and native Escape dismissal", async () => {
   const user = userEvent.setup(); render(<Sheet />);

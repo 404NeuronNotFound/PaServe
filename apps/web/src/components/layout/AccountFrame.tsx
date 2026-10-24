@@ -19,6 +19,7 @@ import { rememberShop } from "../../features/shops/active-shop";
 import { feedback } from "../../app/stores/feedback";
 import { AppearanceToggle } from "./AppearanceToggle";
 import { SkipLink } from "./SkipLink";
+import { MobileWorkspaceNavigation } from "./MobileWorkspaceNavigation";
 import { Button } from "../ui/button";
 import { InlineMessage } from "../feedback/InlineMessage";
 import "./dashboard-sidebar.css";
@@ -44,6 +45,8 @@ export function AccountFrame({
   const navigate = useNavigate();
   const profile = location.pathname.endsWith("/profile");
   const places = location.pathname.endsWith("/places");
+  const currentDestination = profile ? "Your profile" : places ? "Your places" : "Overview";
+  const accountName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Your account";
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem("paserve.sidebar.collapsed") === "true";
@@ -59,7 +62,10 @@ export function AccountFrame({
   useEffect(() => {
     const query = window.matchMedia?.("(max-width: 760px)");
     if (!query) return;
-    const update = () => setMobile(query.matches);
+    const update = () => {
+      setMobile(query.matches);
+      if (!query.matches) setOpen(false);
+    };
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
@@ -84,6 +90,46 @@ export function AccountFrame({
       /* Layout still works. */
     }
   }
+  function closeNavigation() {
+    setOpen(false);
+    if (open) trigger.current?.focus();
+  }
+  const accountNavigation = (
+    <nav aria-label="Account navigation">
+      <div className="dashboard-nav-group">
+        <p className="dashboard-nav-label">Personal</p>
+        <div className="dashboard-nav-links">
+          <Link
+            to="/app/account"
+            aria-current={!profile && !places ? "page" : undefined}
+            title={rail ? "Overview" : undefined}
+            onClick={closeNavigation}
+          >
+            <FiGrid aria-hidden="true" />
+            <span>Overview</span>
+          </Link>
+          <Link
+            to="/app/account/profile"
+            aria-current={profile ? "page" : undefined}
+            title={rail ? "Your profile" : undefined}
+            onClick={closeNavigation}
+          >
+            <FiUser aria-hidden="true" />
+            <span>Your profile</span>
+          </Link>
+          <Link
+            to="/app/account/places"
+            aria-current={places ? "page" : undefined}
+            title={rail ? "Your places" : undefined}
+            onClick={closeNavigation}
+          >
+            <FiCoffee aria-hidden="true" />
+            <span>Your places</span>
+          </Link>
+        </div>
+      </div>
+    </nav>
+  );
   return (
     <div
       className="dashboard-shell phase-two account-shell"
@@ -112,18 +158,25 @@ export function AccountFrame({
         </div>
       </header>
       <div className="dashboard-body">
-        <button
+        <Button variant="outline" size="inherit"
           ref={trigger}
           type="button"
           className="dashboard-navigation-toggle"
+          aria-label="Navigation"
+          aria-haspopup={mobile ? "dialog" : undefined}
           aria-expanded={open}
-          aria-controls="account-navigation"
+          aria-controls={mobile ? "mobile-workspace-navigation" : "account-navigation"}
           onClick={() => setOpen(!open)}
         >
-          <FiMenu aria-hidden="true" />
-          Navigation
-        </button>
-        <aside
+          <span className="dashboard-mobile-location">
+            <small>YOUR SPACE</small>
+            <strong>{currentDestination}</strong>
+          </span>
+          <span className="dashboard-mobile-menu-label">
+            <FiMenu aria-hidden="true" /> Menu
+          </span>
+        </Button>
+        {!mobile && <aside
           id="account-navigation"
           className="dashboard-sidebar dashboard-sidebar-premium"
           data-open={open}
@@ -158,48 +211,16 @@ export function AccountFrame({
               <FiUser aria-hidden="true" />
             </span>
             <div>
-              <strong>
-                {[user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
-                  "Your account"}
-              </strong>
+              <strong>{accountName}</strong>
               <p className="dashboard-shop-role">Personal account</p>
             </div>
           </div>
-          <nav aria-label="Account navigation">
-            <div className="dashboard-nav-group">
-              <p className="dashboard-nav-label">Personal</p>
-              <div className="dashboard-nav-links">
-                <Link
-                  to="/app/account"
-                  aria-current={!profile && !places ? "page" : undefined}
-                  title={rail ? "Overview" : undefined}
-                  onClick={() => setOpen(false)}
-                >
-                  <FiGrid aria-hidden="true" />
-                  <span>Overview</span>
-                </Link>
-                <Link
-                  to="/app/account/profile"
-                  aria-current={profile ? "page" : undefined}
-                  title={rail ? "Your profile" : undefined}
-                  onClick={() => setOpen(false)}
-                >
-                  <FiUser aria-hidden="true" />
-                  <span>Your profile</span>
-                </Link>
-                <Link
-                  to="/app/account/places"
-                  aria-current={places ? "page" : undefined}
-                  title={rail ? "Your places" : undefined}
-                  onClick={() => setOpen(false)}
-                >
-                  <FiCoffee aria-hidden="true" />
-                  <span>Your places</span>
-                </Link>
-              </div>
-            </div>
-          </nav>
-        </aside>
+          {accountNavigation}
+        </aside>}
+        {mobile && <MobileWorkspaceNavigation open={open} onClose={closeNavigation}
+          contextName={accountName} eyebrow="YOUR SPACE" title="Explore your space">
+          {accountNavigation}
+        </MobileWorkspaceNavigation>}
         <main className="dashboard-content" id="account-content" tabIndex={-1}>
           <nav className="workspace-breadcrumbs" aria-label="Breadcrumb">
             <ol>
@@ -208,11 +229,7 @@ export function AccountFrame({
               </li>
               <li>
                 <span aria-current="page">
-                  {profile
-                    ? "Your profile"
-                    : places
-                      ? "Your places"
-                      : "Overview"}
+                  {currentDestination}
                 </span>
               </li>
             </ol>

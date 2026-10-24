@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -16,6 +16,7 @@ import { PlacesPage } from "./PlacesPage";
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   useSessionStore.getState().setAccessToken(null);
   localStorage.removeItem("paserve.sidebar.collapsed");
 });
@@ -83,6 +84,58 @@ it("finishes an in-flight refresh before logout and blocks further refresh attem
   completeLogout({ status: 204 });
   await loggingOut;
   expect(useSessionStore.getState().accessToken).toBeNull();
+});
+
+it("uses the shared mobile navigation drawer, tracks the account page, and restores the desktop rail on resize", async () => {
+  const listeners = new Set<() => void>();
+  const media = { matches: true, addEventListener: (_: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_: string, listener: () => void) => listeners.delete(listener) };
+  vi.stubGlobal("matchMedia", vi.fn(() => media));
+  const show = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "showModal");
+  const close = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, "close");
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: function (this: HTMLDialogElement) { this.open = true; } });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value: function (this: HTMLDialogElement) { this.open = false; } });
+  try {
+    localStorage.setItem("paserve.sidebar.collapsed", "true");
+    const client = new QueryClient();
+    client.setQueryData(currentUserKey, { user: { id: "u", email: "owner@example.com", firstName: "Lia", lastName: "Navarro", createdAt: "2026-10-08T00:00:00Z", memberships: [] } });
+    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/app/account"]}><Routes>
+      <Route path="/app/account" element={<AccountPage />} />
+      <Route path="/app/account/profile" element={<ProfilePage />} />
+    </Routes></MemoryRouter></QueryClientProvider>);
+    const user = userEvent.setup();
+    let trigger = screen.getByRole("button", { name: "Navigation" });
+    expect(trigger).toHaveTextContent("Overview");
+    expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
+    await user.click(trigger);
+    let dialog = screen.getByRole("dialog", { name: "Explore your space" });
+    expect(within(dialog).getByText("Lia Navarro")).toBeVisible();
+    expect(within(dialog).getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+    await user.click(within(dialog).getByRole("button", { name: "Close navigation" }));
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await user.click(trigger);
+    dialog = screen.getByRole("dialog", { name: "Explore your space" });
+    fireEvent(dialog, new Event("cancel", { bubbles: true, cancelable: true }));
+    expect(trigger).toHaveFocus();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.click(trigger);
+    await user.click(within(screen.getByRole("dialog")).getByRole("link", { name: "Your profile" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Your profile" })).toHaveFocus();
+    trigger = screen.getByRole("button", { name: "Navigation" });
+    expect(trigger).toHaveTextContent("Your profile");
+    await user.click(trigger);
+    act(() => { media.matches = false; listeners.forEach((listener) => listener()); });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+    expect(localStorage.getItem("paserve.sidebar.collapsed")).toBe("true");
+  } finally {
+    if (show) Object.defineProperty(HTMLDialogElement.prototype, "showModal", show);
+    else delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).showModal;
+    if (close) Object.defineProperty(HTMLDialogElement.prototype, "close", close);
+    else delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).close;
+  }
 });
 
 it("offers one Create shop action and tracks the selected account section", async () => {

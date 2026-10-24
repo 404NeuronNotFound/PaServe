@@ -481,10 +481,10 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
       >
         {settingsSections.map((section) => (
           <section className="settings-section" key={section.id} aria-labelledby={`settings-section-${section.id}`}>
-            <header className="settings-section-heading">
+            <div className="settings-section-heading">
               <h2 id={`settings-section-${section.id}`} className="settings-group-heading" tabIndex={-1}>{section.title}</h2>
               <p>{section.description}</p>
-            </header>
+            </div>
             <div className="settings-section-fields">
             {section.fields.map((field) => (
             <div
