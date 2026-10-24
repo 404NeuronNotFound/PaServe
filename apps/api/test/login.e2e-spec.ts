@@ -188,6 +188,7 @@ describe('Login and session HTTP flow', () => {
     expect(setCookie).toContain('HttpOnly');
     expect(setCookie).toContain('SameSite=Lax');
     expect(setCookie).toContain('Path=/api/v1/auth');
+    expect(setCookie).toContain('Expires=');
     const refresh = decodeURIComponent(cookie(response).split('=')[1]);
     const claims = await app
       .get(TokensService)

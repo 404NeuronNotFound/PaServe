@@ -10,6 +10,7 @@ import type {
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../../lib/api/client";
 import { useSessionStore } from "../stores/session";
+import { withSessionLock } from "./session-lock";
 
 const cookieHeaders = { "X-PaServe-Client": "web" };
 const cookieRequest = {
@@ -23,10 +24,8 @@ let logoutPromise: Promise<void> | null = null;
 export async function loginAccount(
   input: LoginRequest,
 ): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>(
-    "/auth/login",
-    input,
-    cookieRequest,
+  const { data } = await withSessionLock(() =>
+    api.post<LoginResponse>("/auth/login", input, cookieRequest),
   );
   useSessionStore.getState().setAccessToken(data.accessToken);
   return data;
@@ -37,8 +36,9 @@ export function refreshSession(): Promise<LoginResponse> {
     return Promise.reject(new Error("Sign-out is in progress."));
   }
   if (!refreshPromise) {
-    refreshPromise = api
-      .post<LoginResponse>("/auth/refresh", {}, cookieRequest)
+    refreshPromise = withSessionLock(() =>
+      api.post<LoginResponse>("/auth/refresh", {}, cookieRequest),
+    )
       .then(({ data }) => {
         useSessionStore.getState().setAccessToken(data.accessToken);
         return data;
@@ -105,7 +105,7 @@ export function logoutAccount(): Promise<void> {
     logoutPromise = (async () => {
       // Finish rotation before logout so the server revokes the current cookie.
       if (refreshPromise) await refreshPromise.catch(() => undefined);
-      await api.post("/auth/logout", {}, cookieRequest);
+      await withSessionLock(() => api.post("/auth/logout", {}, cookieRequest));
       useSessionStore.getState().setAccessToken(null);
     })().finally(() => {
       logoutPromise = null;
@@ -118,14 +118,21 @@ async function accountRequest() {
   if (logoutPromise) throw new Error("Sign-out is in progress.");
   if (refreshPromise) await refreshPromise;
   if (!useSessionStore.getState().accessToken) await refreshSession();
-  return { ...cookieRequest, headers: {
-    ...cookieHeaders,
-    Authorization: `Bearer ${useSessionStore.getState().accessToken}`,
-  } };
+  return {
+    ...cookieRequest,
+    headers: {
+      ...cookieHeaders,
+      Authorization: `Bearer ${useSessionStore.getState().accessToken}`,
+    },
+  };
 }
 
 export async function updateProfile(input: UpdateProfileRequest) {
-  const { data } = await api.patch<UpdateProfileResponse>("/auth/profile", input, await accountRequest());
+  const { data } = await api.patch<UpdateProfileResponse>(
+    "/auth/profile",
+    input,
+    await accountRequest(),
+  );
   return data;
 }
 

@@ -19,6 +19,7 @@ import { ProfilePage } from "../../pages/owner/ProfilePage";
 import { PlacesPage } from "../../pages/owner/PlacesPage";
 import { CreateShopPage } from "../../pages/owner/CreateShopPage";
 import { ProtectedRoute } from "../../features/auth/components/ProtectedRoute";
+import { AuthEntryRoute } from "../../features/auth/components/AuthEntryRoute";
 import { ActiveShopRoute } from "../../features/shops/ActiveShopRoute";
 import {
   ResolveActiveShop,
@@ -63,8 +64,8 @@ export function AppRouter() {
           element={<CustomerOrderPage />}
         />
         <Route path="/" element={<Navigate to="/register" replace />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<AuthEntryRoute><RegisterPage /></AuthEntryRoute>} />
+        <Route path="/login" element={<AuthEntryRoute><LoginPage /></AuthEntryRoute>} />
         <Route path="/join/:shopId" element={<JoinShopPage />} />
         <Route
           path="/app"

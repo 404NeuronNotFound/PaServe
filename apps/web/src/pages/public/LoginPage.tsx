@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AuthLayout } from "../../components/layout/AuthLayout";
 import { LoginForm } from "../../features/auth/components/LoginForm";
 import { feedback } from "../../app/stores/feedback";
+import { signInDestination } from "../../features/auth/sign-in-destination";
 
 export function LoginPage() {
   useEffect(() => {
@@ -13,11 +14,7 @@ export function LoginPage() {
   const location = useLocation();
   const requestedPath: unknown = location.state?.returnTo;
   // Only resume a known cashier route; never accept arbitrary redirect URLs.
-  const returnTo =
-    typeof requestedPath === "string" &&
-    /^\/app\/shops\/[a-zA-Z0-9-]+\/cashier\/?$/.test(requestedPath)
-      ? requestedPath
-      : "/app";
+  const returnTo = signInDestination(requestedPath);
   const queryClient = useQueryClient();
   return (
     <AuthLayout headingId="login-heading">
