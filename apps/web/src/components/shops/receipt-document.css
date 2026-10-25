@@ -192,3 +192,6 @@
   .customer-receipt-page .order-receipt-footer-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
   .customer-receipt-page .order-receipt-footer-actions > a:last-child { grid-column: 1 / -1; }
 }
+
+/* Additional print identity never appears in the digital receipt. */
+.receipt-print-only { display: none; }

@@ -7,6 +7,7 @@ import { ReceiptPaymentMethod } from "../../pages/public/ReceiptPaymentMethod";
 import { ReceiptTotals } from "../../pages/public/ReceiptTotals";
 import { ReceiptTimestamps } from "../../pages/public/ReceiptTimestamps";
 import "./receipt-document.css";
+import "./receipt-document-print.css";
 
 /** Saved receipt values shared by the customer copy and cashier print view. */
 export function ReceiptDocument({ shopDetails, shopName, orderContext, orderNumber, items, totalPrice, subtotalPrice, payment, createdAt, paidAt, completedAt }: {
@@ -25,6 +26,10 @@ export function ReceiptDocument({ shopDetails, shopName, orderContext, orderNumb
   return (
     <section className="receipt-document" aria-label="Order receipt">
       <div className="receipt-ticket-paper">
+        <div className="receipt-print-only receipt-print-masthead">
+          <p>Customer copy / Paid receipt</p>
+          <span className="receipt-paid-stamp"><FiCheckCircle aria-hidden="true" /> Payment received</span>
+        </div>
         <header className="receipt-ticket-welcome">
           <span className="receipt-ticket-celebration" aria-hidden="true"><PiConfettiLight /></span>
           <h2>Thank you!</h2>
@@ -37,6 +42,9 @@ export function ReceiptDocument({ shopDetails, shopName, orderContext, orderNumb
           <p>{orderContext}<br /><span>Payment confirmed by the cashier.</span></p>
         </div>
         <div className="receipt-document-identity">
+          <span className="receipt-print-only receipt-print-monogram" aria-hidden="true">
+            {(shopDetails?.name ?? shopName ?? "Receipt").trim().split(/\s+/).slice(0, 2).map((word) => Array.from(word)[0]).join("").toLocaleUpperCase()}
+          </span>
           {shopDetails ? <ReceiptShopDetails details={shopDetails} /> : <h2>{shopName ?? "Order receipt"}</h2>}
         </div>
         <div className="receipt-document-body">
