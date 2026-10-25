@@ -15,7 +15,12 @@ export default defineConfig(({ mode, command, isPreview }) => {
   );
   return {
     plugins: [react(), securityHeadersPlugin(security)],
-    server: { headers: security.headers },
+    server: {
+      headers: security.headers,
+      proxy: {
+        "/api": { target: "http://127.0.0.1:3000" },
+      },
+    },
     preview: { headers: frontendSecurity(env, false, false).headers },
   };
 });

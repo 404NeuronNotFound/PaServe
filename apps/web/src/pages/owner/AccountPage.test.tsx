@@ -129,6 +129,7 @@ it("uses the shared mobile navigation drawer, tracks the account page, and resto
     act(() => { media.matches = false; listeners.forEach((listener) => listener()); });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Navigation" })).not.toBeInTheDocument();
     expect(localStorage.getItem("paserve.sidebar.collapsed")).toBe("true");
   } finally {
     if (show) Object.defineProperty(HTMLDialogElement.prototype, "showModal", show);
@@ -155,6 +156,9 @@ it("offers one Create shop action and tracks the selected account section", asyn
     </QueryClientProvider>,
   );
   expect(screen.getAllByRole("link", { name: "Create shop" })).toHaveLength(1);
+  // Desktop has exactly the sidebar and main content; no mobile control can
+  // become a third grid item when shared button styles change.
+  expect(screen.queryByRole("button", { name: "Navigation" })).not.toBeInTheDocument();
   expect(
     screen.queryByRole("link", { name: /Add a new shop/i }),
   ).not.toBeInTheDocument();

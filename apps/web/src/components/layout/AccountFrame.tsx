@@ -158,7 +158,7 @@ export function AccountFrame({
         </div>
       </header>
       <div className="dashboard-body">
-        <Button variant="outline" size="inherit"
+        {mobile && <Button variant="outline" size="inherit"
           ref={trigger}
           type="button"
           className="dashboard-navigation-toggle"
@@ -175,7 +175,7 @@ export function AccountFrame({
           <span className="dashboard-mobile-menu-label">
             <FiMenu aria-hidden="true" /> Menu
           </span>
-        </Button>
+        </Button>}
         {!mobile && <aside
           id="account-navigation"
           className="dashboard-sidebar dashboard-sidebar-premium"
