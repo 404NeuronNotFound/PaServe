@@ -4,3 +4,6 @@
 
 node_modules
 dist
+
+# Per-computer certificates for local phone camera testing.
+.local-https/

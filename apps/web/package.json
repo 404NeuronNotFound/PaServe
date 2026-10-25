@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter @paserve/contracts build && vite",
+    "dev:camera": "pnpm --filter @paserve/contracts build && vite --mode camera --host 0.0.0.0 --port 5443 --strictPort",
     "build": "pnpm --filter @paserve/contracts build && tsc -b && vite build",
     "build:local": "pnpm --filter @paserve/contracts build && tsc -b && vite build --mode local-build",
     "lint": "eslint . && node test/ui-conventions.check.mjs",
