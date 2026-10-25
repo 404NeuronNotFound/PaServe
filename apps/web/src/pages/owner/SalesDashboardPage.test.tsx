@@ -283,6 +283,7 @@ it("starts with the overview and loads shared-period history only when opened", 
   expect(vi.mocked(DailyAnalytics).mock.calls.at(-1)?.[0]).toMatchObject({
     startDate: "2026-10-16",
     endDate: "2026-10-16",
+    rangeMode: "single-day",
     enabled: true,
   });
 });
@@ -314,6 +315,7 @@ it("uses the one central picker for history, single-day cards and applied custom
   expect(vi.mocked(DailyAnalytics).mock.calls.at(-1)?.[0]).toMatchObject({
     startDate: "2026-10-15",
     endDate: "2026-10-17",
+    rangeMode: "custom",
     enabled: true,
   });
   expect(screen.getByText("Daily, weekly & monthly history")).toBeVisible();

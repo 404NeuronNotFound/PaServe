@@ -11,6 +11,8 @@ import {
   salesDailyRange,
   salesWeeklyRange,
   salesMonthlyRange,
+  salesBusinessDate,
+  salesBusinessDayBounds,
 } from "@paserve/contracts";
 import { getDailyAnalytics } from "../../features/orders/daily-analytics";
 import { getWeeklyAnalytics } from "../../features/orders/weekly-analytics";
@@ -23,12 +25,23 @@ import { calculateAverageOrderValue, formatCartPrice } from "../../lib/money";
 const accessUnavailable = (error: unknown) =>
   isAxiosError(error) && [401, 403, 404].includes(error.response?.status ?? 0);
 
+const dateFormat = new Intl.DateTimeFormat("en-PH", {
+  timeZone: "UTC", month: "short", day: "numeric", year: "numeric",
+});
+const monthFormat = new Intl.DateTimeFormat("en-PH", {
+  timeZone: "UTC", month: "long", year: "numeric",
+});
+const formatRange = (start: string, end: string) => dateFormat.formatRange(
+  new Date(`${start}T00:00:00Z`), new Date(`${end}T00:00:00Z`),
+);
+
 export function DailyAnalytics({
   userId,
   shopId,
   today,
-  startDate: start,
+  startDate: selectedStart,
   endDate: end,
+  rangeMode,
   enabled = true,
 }: {
   userId: string;
@@ -36,15 +49,25 @@ export function DailyAnalytics({
   today: string;
   startDate: string;
   endDate: string;
+  rangeMode?: "single-day" | "custom";
   enabled?: boolean;
 }) {
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
+  const presets = rangeMode === "single-day" ||
+    (rangeMode === undefined && selectedStart === end);
+  const days = period === "monthly" ? 30 : period === "weekly" ? 7 : 1;
+  const anchor = salesBusinessDayBounds(end);
+  const start = presets && period !== "daily"
+    ? anchor
+      ? salesBusinessDate(new Date(Date.parse(anchor.from) - (days - 1) * 86_400_000))
+      : ""
+    : selectedStart;
   const [pagination, setPagination] = useState({ scope: "", page: 1 });
   const scope = `${userId}:${shopId}:${period}:${start}:${end}`;
   const weekly = period === "weekly";
   const monthly = period === "monthly";
   const title = monthly ? "Monthly" : weekly ? "Weekly" : "Daily";
-  const valid = !!(monthly
+  const valid = !!salesDailyRange(selectedStart, end) && !!(monthly
     ? salesMonthlyRange(start, end)
     : weekly
       ? salesWeeklyRange(start, end)
@@ -72,18 +95,23 @@ export function DailyAnalytics({
       ? report.months.map((month) => ({
           ...month,
           key: month.month,
-          label: `${month.month} (${month.monthStart} – ${month.monthEnd})${month.partial ? ` (partial: ${month.fromDate} – ${month.toDate})` : ""}${month.fromDate <= today && month.toDate >= today ? " (in progress)" : ""}`,
+          label: monthFormat.format(new Date(`${month.month}-01T00:00:00Z`)),
+          detail: [month.partial ? formatRange(month.fromDate, month.toDate) : null,
+            month.fromDate <= today && month.toDate >= today ? "In progress" : null].filter(Boolean).join(" · "),
         }))
       : "weeks" in report
         ? report.weeks.map((week) => ({
             ...week,
             key: week.weekStart,
-            label: `${week.weekStart} – ${week.weekEnd}${week.partial ? ` (partial: ${week.fromDate} – ${week.toDate})` : ""}${week.fromDate <= today && week.toDate >= today ? " (in progress)" : ""}`,
+            label: formatRange(week.fromDate, week.toDate),
+            detail: [week.partial ? "Partial week" : null,
+              week.fromDate <= today && week.toDate >= today ? "In progress" : null].filter(Boolean).join(" · "),
           }))
         : report.days.map((day) => ({
             ...day,
             key: day.businessDate,
-            label: `${day.businessDate}${day.businessDate === today ? " (in progress)" : ""}`,
+            label: day.businessDate,
+            detail: day.businessDate === today ? "In progress" : "",
           })));
   const history = listPage<NonNullable<typeof rows>[number]>(rows || [], pagination.scope === scope ? pagination.page : 1, 25);
   return (
@@ -93,7 +121,6 @@ export function DailyAnalytics({
     >
       <div className="daily-analytics-heading refresh-heading">
         <div>
-          <p className="sales-eyebrow">ANALYTICS / {title.toUpperCase()}</p>
           <h2 id="daily-analytics-title">{title} performance</h2>
         </div>
         <RefreshButton label={`Refresh ${period} analytics`}
@@ -103,20 +130,11 @@ export function DailyAnalytics({
           onClick={() => void query.refetch()}
         />
       </div>
-      <p id="daily-range-help" className="sales-range-help">
-        {monthly
-          ? "Calendar months in Manila (UTC+8), from the first day through the last day. Partial months count only selected dates."
-          : weekly
-            ? "Monday–Sunday weeks in Manila (UTC+8). Partial weeks count only selected dates."
-            : "One row per business day in Manila (UTC+8)."}{" "}
-        Both dates are included; maximum 366 days. Sales count confirmed,
-        paid, completed orders by completion date.
-      </p>
       <div className="daily-analytics-controls">
         <div
           className="analytics-period-toggle"
           role="group"
-          aria-label="Analytics aggregation"
+          aria-label="Sales history period"
         >
           <Button variant="outline" size="inherit" type="button"
             className="secondary-button"
@@ -141,10 +159,10 @@ export function DailyAnalytics({
           </Button>
         </div>
       </div>
-      <p className="sales-range-help">
-        {start && end ? `${start} – ${end}. ` : ""}Uses the reporting period
-        selected above. Grouping does not change the dates.
-      </p>
+      {valid && <p className="sales-range-help">
+        {presets ? period === "daily" ? "Selected day" : `Last ${days} days` : "Custom range"}
+        {" · "}{formatRange(start, end)}
+      </p>}
       {!enabled && (
         <InlineMessage tone="info">
           History will update when the selected sales report is available.
@@ -167,32 +185,17 @@ export function DailyAnalytics({
       )}
       {report && (
         <>
-          <p className="daily-analytics-summary" role="status">
-            {start} — {end} · {formatCartPrice(report.totalSales)} gross sales ·{" "}
-            {report.completedOrders.toLocaleString("en-PH")} completed orders ·{" "}
-            {report.itemsSold.toLocaleString("en-PH")} items sold
-          </p>
           {report.completedOrders === 0 && (
             <ReportEmptyState title="No completed sales in this range."
               description={`All ${monthly ? "months" : weekly ? "weeks" : "days"} are shown below. Choose another reporting period above, or check again after paid orders are completed.`}
               label="sales history" pending={query.isFetching} onRefresh={() => void query.refetch()} />
           )}
-          <p className="management-results" role="status">
-            Rows {history.first}-{history.last} of {history.total}. Range totals include every row in the selected period.
-          </p>
+          {history.pageCount > 1 && <p className="management-results" role="status">
+            Rows {history.first}–{history.last} of {history.total}
+          </p>}
           <p className="sales-table-scroll-hint">Swipe or scroll sideways to see all columns.</p>
           <Table containerClassName="daily-analytics-table" scrollLabel={`${title} performance table`}>
-              <caption>
-                {title} aggregation by completion date
-                {monthly
-                  ? "; calendar months"
-                  : weekly
-                    ? "; weeks run Monday–Sunday"
-                    : ""}
-                {end >= today
-                  ? ". Today is in progress; future dates have no completed sales."
-                  : "."}
-              </caption>
+              <caption className="sr-only">{title} completed sales for {formatRange(start, end)}</caption>
               <thead>
                 <tr>
                   <th scope="col">
@@ -211,7 +214,9 @@ export function DailyAnalytics({
               <tbody>
                 {history.records.map((day) => (
                   <tr key={day.key}>
-                    <th scope="row">{day.label}</th>
+                    <th scope="row">{day.label}
+                      {day.detail && <small className="analytics-period-detail">{day.detail}</small>}
+                    </th>
                     <td data-numeric>{formatCartPrice(day.totalSales)}</td>
                     <td data-numeric>{day.completedOrders.toLocaleString("en-PH")}</td>
                     <td data-numeric>{day.itemsSold.toLocaleString("en-PH")}</td>
@@ -243,12 +248,18 @@ export function DailyAnalytics({
                 </tr>
               </tfoot>
             </Table>
-          <ListPagination label="Sales history pagination" page={history.page} pageCount={history.pageCount}
+          {history.pageCount > 1 && <ListPagination label="Sales history pagination" page={history.page} pageCount={history.pageCount}
             hasNext={history.hasNext} pending={query.isFetching}
             onPrevious={() => setPagination({ scope, page: history.page - 1 })}
-            onNext={() => setPagination({ scope, page: history.page + 1 })} />
+            onNext={() => setPagination({ scope, page: history.page + 1 })} />}
         </>
       )}
+      <details className="analytics-report-notes">
+        <summary>About this report</summary>
+        <p>Confirmed, paid and completed orders, grouped by completion date in Manila (UTC+8).
+          Weeks run Monday–Sunday; months follow the calendar. Only dates in the displayed
+          range count. Today is still in progress.</p>
+      </details>
     </section>
   );
 }

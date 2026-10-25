@@ -973,7 +973,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
           <span>
             <strong>Daily, weekly & monthly history</strong>
             <span>
-              Explore the selected reporting period by day, week or month.
+              Completed sales over time.
             </span>
           </span>
           <FiChevronDown aria-hidden="true" />
@@ -985,6 +985,7 @@ function SalesWorkspace({ userId }: { userId: string }) {
             today={today}
             startDate={reportStartDate}
             endDate={reportEndDate}
+            rangeMode={custom ? "custom" : "single-day"}
             enabled={valid && !denied}
           />
         )}

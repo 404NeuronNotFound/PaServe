@@ -73,6 +73,7 @@ function setup(
   startDate = "2026-10-16",
   endDate = "2026-10-16",
   enabled = true,
+  rangeMode?: "single-day" | "custom",
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -85,6 +86,7 @@ function setup(
         today="2026-10-16"
         startDate={start}
         endDate={end}
+        rangeMode={rangeMode}
         enabled={active}
       />
     </QueryClientProvider>
@@ -108,7 +110,7 @@ it("pages a long history without changing range totals and resets for a new rang
   vi.mocked(getDailyAnalytics).mockResolvedValue(fixtures("2026-10-01", "2026-10-02").daily);
   rerender(view("2026-10-01", "2026-10-02"));
   await waitFor(() => expect(screen.getByRole("table")).toHaveTextContent("2026-10-02"));
-  expect(screen.getByRole("navigation", { name: "Sales history pagination" })).toHaveTextContent("Page 1 of 1");
+  expect(screen.queryByRole("navigation", { name: "Sales history pagination" })).not.toBeInTheDocument();
 });
 it("uses supplied dates and weighted average without adding another date picker", async () => {
   vi.mocked(getDailyAnalytics).mockResolvedValue(fixtures().daily);
@@ -122,32 +124,64 @@ it("uses supplied dates and weighted average without adding another date picker"
     expect.any(AbortSignal),
   );
   expect(container.querySelector('input[type="date"]')).toBeNull();
-  expect(screen.getByText(/Grouping does not change the dates/)).toBeVisible();
+  expect(screen.getByText(/Selected day ·/)).toBeVisible();
 });
-it.each(["Weekly", "Monthly"] as const)(
-  "changes %s grouping while retaining exactly the selected day",
-  async (period) => {
-    const data = fixtures();
-    vi.mocked(getDailyAnalytics).mockResolvedValue(data.daily);
-    vi.mocked(getWeeklyAnalytics).mockResolvedValue(data.weekly);
-    vi.mocked(getMonthlyAnalytics).mockResolvedValue(data.monthly);
+it.each([
+  ["Weekly", "2026-10-10", 7],
+  ["Monthly", "2026-09-17", 30],
+] as const)(
+  "loads %s history for its full trailing range",
+  async (period, startDate, days) => {
+    vi.mocked(getDailyAnalytics).mockResolvedValue(fixtures().daily);
+    vi.mocked(getWeeklyAnalytics).mockResolvedValue(fixtures(startDate, "2026-10-16").weekly);
+    vi.mocked(getMonthlyAnalytics).mockResolvedValue(fixtures(startDate, "2026-10-16").monthly);
     setup();
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: period }));
     const table = await screen.findByRole("region", {
       name: `${period} performance table`,
     });
-    expect(table).toHaveTextContent("partial: 2026-10-16 – 2026-10-16");
+    expect(screen.getByText(new RegExp(`Last ${days} days ·`))).toBeVisible();
+    expect(within(table).getByRole("row", { name: /Range total/ })).toHaveTextContent("₱10.01");
     expect(
       period === "Weekly" ? getWeeklyAnalytics : getMonthlyAnalytics,
     ).toHaveBeenCalledWith(
       "shop",
-      "2026-10-16",
+      startDate,
       "2026-10-16",
       expect.any(AbortSignal),
     );
+    fireEvent.click(screen.getByRole("button", { name: "Daily" }));
+    await screen.findByRole("region", { name: "Daily performance table" });
+    expect(screen.getByRole("table")).not.toHaveTextContent("partial:");
   },
 );
+it.each([
+  ["2026-10-25", "2026-09-26"],
+  ["2026-01-10", "2025-12-12"],
+  ["2024-03-01", "2024-02-01"],
+])("includes thirty business days ending %s, across calendar boundaries", async (endDate, startDate) => {
+  vi.mocked(getDailyAnalytics).mockResolvedValue(fixtures(endDate, endDate).daily);
+  vi.mocked(getMonthlyAnalytics).mockResolvedValue(fixtures(startDate, endDate).monthly);
+  setup(endDate, endDate);
+  await screen.findByRole("table");
+  fireEvent.click(screen.getByRole("button", { name: "Monthly" }));
+  const table = await screen.findByRole("region", { name: "Monthly performance table" });
+  expect(getMonthlyAnalytics).toHaveBeenCalledWith("shop", startDate, endDate, expect.any(AbortSignal));
+  expect(table).toHaveTextContent("Range total");
+});
+it.each(["Weekly", "Monthly"] as const)("keeps an explicitly applied one-day custom range in %s", async (period) => {
+  const data = fixtures();
+  vi.mocked(getDailyAnalytics).mockResolvedValue(data.daily);
+  vi.mocked(getWeeklyAnalytics).mockResolvedValue(data.weekly);
+  vi.mocked(getMonthlyAnalytics).mockResolvedValue(data.monthly);
+  setup("2026-10-16", "2026-10-16", true, "custom");
+  await screen.findByRole("table");
+  fireEvent.click(screen.getByRole("button", { name: period }));
+  await screen.findByRole("region", { name: `${period} performance table` });
+  expect(period === "Weekly" ? getWeeklyAnalytics : getMonthlyAnalytics).toHaveBeenCalledWith("shop", "2026-10-16", "2026-10-16", expect.any(AbortSignal));
+  expect(screen.getByText(/Custom range ·/)).toBeVisible();
+});
 it.each(["Weekly", "Monthly"] as const)(
   "preserves %s grouping when the parent applies a different range",
   async (period) => {
@@ -239,7 +273,6 @@ it("retains zero days and truthful no-data state", async () => {
   expect(
     await screen.findByText(/No completed sales in this range/),
   ).toBeVisible();
-  expect(screen.getByRole("table")).toHaveTextContent(
-    "2026-10-16 (in progress)",
-  );
+  expect(screen.getByRole("table")).toHaveTextContent("2026-10-16");
+  expect(screen.getByRole("table")).toHaveTextContent("In progress");
 });
