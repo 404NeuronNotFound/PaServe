@@ -1,0 +1,30 @@
+.recovery-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 max(var(--layout-gutter), env(safe-area-inset-right, 0px))
+    max(16px, env(safe-area-inset-bottom, 0px))
+    max(var(--layout-gutter), env(safe-area-inset-left, 0px));
+  background: var(--color-canvas);
+  color: var(--color-text);
+}
+.recovery-header {
+  width: min(100%, 1120px);
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: max(20px, env(safe-area-inset-top, 0px)) 20px;
+}
+.recovery-header .wordmark {
+  color: var(--color-text);
+  min-width: 0;
+}
+.recovery-footer {
+  margin-inline: auto;
+  padding-top: 24px;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}

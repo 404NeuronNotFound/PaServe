@@ -1,4 +1,4 @@
-import { Button } from "../../../components/ui/button";
+import { SessionRecoveryPage } from "../../../components/feedback/SessionRecoveryPage";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate, useLocation } from "react-router-dom";
@@ -41,18 +41,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
         <Navigate to="/login" replace state={{ returnTo: location.pathname }} />
       );
     return (
-      <main className="connection-page">
-        <h1>Unable to check your session</h1>
-        <p>Please check your connection and try again.</p>
-        <Button variant="default" size="inherit"
-          className="primary-button"
-          onClick={() => {
-            void session.refetch();
-          }}
-        >
-          Try again
-        </Button>
-      </main>
+      <SessionRecoveryPage title="Unable to check your session"
+        pending={session.isFetching} onRetry={() => { void session.refetch(); }} />
     );
   }
   return children;

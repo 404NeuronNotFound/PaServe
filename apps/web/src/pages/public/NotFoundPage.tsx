@@ -1,8 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiArrowUpRight, FiCoffee } from "react-icons/fi";
-import { AppearanceToggle } from "../../components/layout/AppearanceToggle";
-import { SkipLink } from "../../components/layout/SkipLink";
+import { RecoveryLayout } from "../../components/layout/RecoveryLayout";
 import { Button } from "../../components/ui/button";
 import { useSessionStore } from "../../features/auth/stores/session";
 import "./not-found.css";
@@ -19,15 +18,7 @@ export function NotFoundPage() {
     heading.current?.focus();
   }, []);
   return (
-    <div className="not-found-page phase-two">
-      <SkipLink targetId="not-found-content">Skip to page content</SkipLink>
-      <header className="not-found-header">
-        <Link className="wordmark" to="/" aria-label="PaServe home">
-          <span className="brand-symbol"><FiCoffee aria-hidden="true" /></span>
-          <span>PaServe<span className="wordmark-period">.</span></span>
-        </Link>
-        <AppearanceToggle />
-      </header>
+    <RecoveryLayout contentId="not-found-content">
       <main id="not-found-content" className="not-found-content" tabIndex={-1} aria-labelledby="not-found-title">
         <div className="not-found-copy">
           <p className="section-label">404 · A LITTLE OFF COURSE</p>
@@ -49,7 +40,6 @@ export function NotFoundPage() {
           <span className="not-found-art-caption">A small detour.</span>
         </div>
       </main>
-      <footer className="not-found-footer">PaServe · Your everyday space.</footer>
-    </div>
+    </RecoveryLayout>
   );
 }
