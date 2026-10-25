@@ -1,4 +1,6 @@
 import {
+  DINE_IN_SERVICE_MODES,
+  type DineInServiceMode,
   SHOP_LIMITS,
   SHOP_SETTINGS_LIMITS,
   isValidShopPhone,
@@ -27,6 +29,10 @@ const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
 export class UpdateShopDto implements UpdateShopRequest {
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsIn(DINE_IN_SERVICE_MODES)
+  dineInServiceMode?: DineInServiceMode;
+
   @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsBoolean()
   acceptingOrders?: boolean;

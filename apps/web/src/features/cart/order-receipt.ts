@@ -1,3 +1,4 @@
+import { isValidOrderService, type DineInServiceType } from "@paserve/contracts";
 import type {
   CustomerOrderResponse,
   PublicMenuResponse,
@@ -27,6 +28,7 @@ export interface OrderReceipt {
   id: string;
   orderNumber: string | null;
   mode: "DINE_IN" | "TAKEOUT";
+  serviceType?: DineInServiceType | null;
   table: { code: string; number: string } | null;
   status: "PENDING_CONFIRMATION";
   currency: "PHP";
@@ -68,6 +70,7 @@ export function saveOrderReceipt(
     id: order.id,
     orderNumber: order.orderNumber ?? null,
     mode: order.mode,
+    ...(order.serviceType !== undefined ? { serviceType: order.serviceType } : {}),
     table:
       order.mode === "DINE_IN"
         ? { code: order.table.code, number: order.table.number }
@@ -112,6 +115,7 @@ export function readOrderReceipt(
       !(value.orderNumber === null || isOrderNumber(value.orderNumber)) ||
       value.status !== "PENDING_CONFIRMATION" ||
       value.currency !== "PHP" ||
+      !isValidOrderService(value.mode, value.serviceType) ||
       !isOrderTotal(value.totalPrice) ||
       (value.subtotalPrice !== undefined &&
         (!isOrderTotal(value.subtotalPrice) || value.subtotalPrice !== value.totalPrice)) ||
@@ -153,6 +157,7 @@ export function readOrderReceipt(
       id: value.id,
       orderNumber: value.orderNumber,
       mode: value.mode,
+      ...(value.serviceType !== undefined ? { serviceType: value.serviceType } : {}),
       table:
         value.mode === "DINE_IN"
           ? { code: value.table.code, number: value.table.number }

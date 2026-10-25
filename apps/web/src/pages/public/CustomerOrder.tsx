@@ -4,10 +4,12 @@ import { useDraftGuard } from "../../app/router/useDraftGuard";
 import { useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import type {
+  DineInServiceMode,
   CreateCustomerOrderRequest,
   CustomerOrderResponse,
   PublicTableContext,
 } from "@paserve/contracts";
+import { dineInServiceLabel, isValidOrderService } from "@paserve/contracts";
 import {
   cartCheckoutRequest,
   cartEstimatedSubtotal,
@@ -43,6 +45,7 @@ function readAttempt(key: string, shopSlug: string): Attempt | null {
       saved &&
       typeof saved.request?.requestId === "string" &&
       Array.isArray(saved.request.items) &&
+      isValidOrderService(saved.request.mode ?? "DINE_IN", saved.request.serviceType) &&
       Array.isArray(saved.lines)
     ))
       return null;
@@ -64,6 +67,7 @@ function readAttempt(key: string, shopSlug: string): Attempt | null {
           ),
         ) !== JSON.stringify(saved.request.items) ||
         saved.review.mode !== (saved.request.mode ?? "DINE_IN") ||
+        (saved.review.serviceType ?? "TABLE_SERVICE") !== (saved.request.serviceType ?? "TABLE_SERVICE") ||
         (saved.review.mode === "DINE_IN" &&
           (!isPublicTableContext(saved.review.table) ||
             saved.review.table.code !== saved.request.tableCode ||
@@ -79,6 +83,7 @@ function readAttempt(key: string, shopSlug: string): Attempt | null {
 }
 export function CustomerOrder({
   shopSlug,
+  dineInServiceMode = "BOTH",
   table,
   onModeChange,
   initialMode,
@@ -88,6 +93,7 @@ export function CustomerOrder({
   onOrderPlaced,
 }: {
   shopSlug: string;
+  dineInServiceMode?: DineInServiceMode;
   table?: PublicTableContext;
   onModeChange?: (mode: "DINE_IN" | "TAKEOUT") => void;
   initialMode?: "DINE_IN" | "TAKEOUT";
@@ -187,6 +193,9 @@ export function CustomerOrder({
       setReview({
         items: copied as CartItem[],
         mode,
+        ...(mode === "DINE_IN"
+          ? { serviceType: dineInServiceMode === "COUNTER_PICKUP" ? "COUNTER_PICKUP" as const : "TABLE_SERVICE" as const }
+          : {}),
         ...(mode === "DINE_IN" && table ? { table: { ...table } } : {}),
         fingerprint: JSON.stringify(items),
       });
@@ -257,6 +266,7 @@ export function CustomerOrder({
                     shopSlug,
                   ),
                   mode: "DINE_IN",
+                  serviceType: review.serviceType ?? "TABLE_SERVICE",
                   reviewedTotal: cartEstimatedSubtotal(review.items),
                   requestId: crypto.randomUUID(),
                   tableCode: table.code,
@@ -325,6 +335,11 @@ export function CustomerOrder({
         setError(
           "This order has already been processed at the counter. Ask the staff for its current status. Unchanged submitted items were removed from your cart; any new or edited items are kept for your next order.",
         );
+      } else if (sent && status === 409 && isAxiosError(cause) && cause.response?.data?.code === "SERVICE_TYPE_NOT_AVAILABLE") {
+        setAttempt(null);
+        pendingOrders.remove(key);
+        setReview(null);
+        setError("This service option is no longer available. Refresh the menu, then review your order again.");
       } else if (sent && status === 409 && isAxiosError(cause) && cause.response?.data?.code === "ORDER_PRICE_CHANGED") {
         // This explicit server rejection occurs before any order is created.
         // Retire the request ID and require a separate customer confirmation.
@@ -414,6 +429,30 @@ export function CustomerOrder({
       {visibleReview && !onReviewChange && (
         <CartReview review={visibleReview} />
       )}
+      {visibleReview?.mode === "DINE_IN" && (
+        <fieldset className="customer-order-mode" disabled={pending || !!attempt}>
+          <legend>Dine-in service</legend>
+          {(["TABLE_SERVICE", "COUNTER_PICKUP"] as const)
+            .filter((service) => !!attempt || dineInServiceMode === "BOTH" || dineInServiceMode === service)
+            .map((service) => (
+              <label key={service}>
+                <Input type="radio" name={`dine-in-service-${shopSlug}`}
+                  value={service}
+                  checked={(visibleReview.serviceType ?? "TABLE_SERVICE") === service}
+                  onChange={() => {
+                    if (busy.current || attempt) return;
+                    setReview((current) => current ? { ...current, serviceType: service } : current);
+                    setError("");
+                  }} />
+                <span>{dineInServiceLabel(service)}<small className="field-hint">
+                  {service === "TABLE_SERVICE"
+                    ? "We'll bring your order to your table."
+                    : "Collect your order at the counter when it's ready. You're still dining in."}
+                </small></span>
+              </label>
+            ))}
+        </fieldset>
+      )}
       {!visibleReview && (
         <p className="field-hint">
           {mode === "TAKEOUT"
@@ -427,6 +466,7 @@ export function CustomerOrder({
           {receipt.mode === "TAKEOUT"
             ? "Pickup order placed."
             : `Order placed for Table ${receipt.table.number}.`}{" "}
+          {receipt.mode === "DINE_IN" && `${dineInServiceLabel(receipt.serviceType)}. `}
           Total {formatCartPrice(receipt.totalPrice)}. Order reference:{" "}
           {receipt.orderNumber ?? "Unavailable"}. Waiting for Confirmation. Your
           order has been saved. Show your QR or order number to the cashier for

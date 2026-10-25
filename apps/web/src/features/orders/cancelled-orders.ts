@@ -1,3 +1,4 @@
+import { isValidOrderService } from "@paserve/contracts";
 import type {
   CancelledOrdersResponse,
   OwnerOrderFilters,
@@ -52,6 +53,7 @@ export function parseCancelledOrders(
       ids.has(order.id) ||
       order.shopId !== shopId ||
       !isOrderNumber(order.orderNumber) ||
+      !isValidOrderService(order.mode, order.serviceType) ||
       order.status !== "REJECTED" ||
       order.paymentStatus !== "UNPAID" ||
       order.preparationStatus !== null ||

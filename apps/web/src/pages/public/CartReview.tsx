@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from "react";
-import type { PublicTableContext } from "@paserve/contracts";
+import { dineInServiceLabel, type DineInServiceType, type PublicTableContext } from "@paserve/contracts";
 import {
   cartEstimatedSubtotal,
   cartItemCount,
@@ -13,6 +13,7 @@ import { CartItemConfiguration } from "./CartItemConfiguration";
 export interface CartReviewSnapshot {
   items: CartItem[];
   mode: "DINE_IN" | "TAKEOUT";
+  serviceType?: DineInServiceType;
   table?: PublicTableContext;
   fingerprint: string;
 }
@@ -48,6 +49,9 @@ export function CartReview({ review }: { review: CartReviewSnapshot }) {
                 <FiMapPin aria-hidden="true" /> {review.table.number}
               </dd>
             </div>
+          )}
+          {review.mode === "DINE_IN" && (
+            <div><dt>Service</dt><dd>{dineInServiceLabel(review.serviceType)}</dd></div>
           )}
         </dl>
       </div>

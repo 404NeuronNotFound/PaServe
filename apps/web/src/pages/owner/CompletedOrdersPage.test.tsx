@@ -88,7 +88,7 @@ it("shows fulfilled history, saved table/amount, recorded payment and Manila com
     screen.getByText("Fulfilled", { selector: ".active-order-badge" }),
   ).toBeVisible();
   expect(screen.getByText("Confirmed · Paid")).toBeVisible();
-  expect(screen.getByText("Dine-in · Table Patio 2")).toBeVisible();
+  expect(screen.getByText("Dine-in · Table Patio 2 · Table service")).toBeVisible();
   expect(
     screen.getByText("Cash", { selector: ".active-order-payment" }),
   ).toBeVisible();

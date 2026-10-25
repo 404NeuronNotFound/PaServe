@@ -136,6 +136,20 @@ function setup(
   );
   return client;
 }
+it("shows dine-in counter pickup on tickets and marks ready orders collected", async () => {
+  setup("KITCHEN", [{ ...ticket(), serviceType: "COUNTER_PICKUP" }]);
+  await screen.findByRole("article");
+  expect(screen.getByText("Dine-in · Counter pickup")).toBeVisible();
+  expect(screen.getByText("Table Patio 2")).toBeVisible();
+  vi.mocked(api.get).mockResolvedValue({ data: { orders: [{
+    ...ticket(), serviceType: "COUNTER_PICKUP", preparationStatus: "READY",
+    preparationStartedAt: "2026-10-15T01:05:00.000Z", preparationStartedBy: "user-a",
+    preparationReadyAt: "2026-10-15T01:15:00.000Z", preparationReadyBy: "user-a",
+  }], nextCursor: null } });
+  await userEvent.click(screen.getByRole("button", { name: "Ready" }));
+  expect(await screen.findByText("Ready for pickup")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Mark completed ORD-000001" })).toHaveTextContent("Mark collected");
+});
 it.each(["ORD-000042", "ORD-1000000", "ORD-9223372036854775807"])(
   "displays the complete saved receipt/cashier reference %s on kitchen tickets",
   async (orderNumber) => {
@@ -238,7 +252,7 @@ it.each(["KITCHEN", "OWNER", "ADMIN", "MANAGER"] as const)(
     });
     for (const text of [
       "Table Patio 2",
-      "Dine-in",
+      "Dine-in · Table service",
       "Iced latte",
       "Large",
       "+ Oat milk",

@@ -1,5 +1,5 @@
 import type { VerifyOrderQrResponse } from "@paserve/contracts";
-import { parseReceiptShopDetails } from "@paserve/contracts";
+import { isValidOrderService, parseReceiptShopDetails } from "@paserve/contracts";
 import { api } from "../../lib/api/client";
 import "../auth/api/session";
 import { AUTH_REQUEST_TIMEOUT_MS } from "../../lib/api/client";
@@ -64,6 +64,7 @@ export function parseReview(
     data.order?.id !== orderId ||
     data.order.shopId !== shopId ||
     !isOrderNumber(data.order.orderNumber) ||
+    !isValidOrderService(data.order.mode, data.order.serviceType) ||
     !["DINE_IN", "TAKEOUT"].includes(data.order.mode) ||
     data.order.currency !== "PHP" ||
     !isOrderTotal(data.order.totalPrice) ||
@@ -109,6 +110,7 @@ export function parseReview(
   return {
     id,
     shopId,
+    ...(data.order.serviceType !== undefined ? { serviceType: data.order.serviceType } : {}),
     ...(data.order.shopDetails ? { shopDetails: parseReceiptShopDetails(data.order.shopDetails)! } : {}),
     orderNumber,
     mode,

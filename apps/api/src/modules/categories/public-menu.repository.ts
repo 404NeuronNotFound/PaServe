@@ -39,6 +39,7 @@ export class PublicMenuRepository {
         primaryColor: true,
         accentColor: true,
         menuLayout: true,
+        dineInServiceMode: true,
         categories: {
           where: { shopId: shop.id, isVisible: true },
           select: {

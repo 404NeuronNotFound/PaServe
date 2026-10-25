@@ -126,6 +126,27 @@ function setup(path = "/menu/cafe/orders/order-a") {
   );
 }
 
+it.each(["READY", "COMPLETED"] as const)("keeps dine-in counter pickup visible at %s and uses collection instructions", async (preparationStatus) => {
+  const orderId = "e47f6994-a303-4a7b-87b0-2386d5198828";
+  saveOrderReceipt("cafe", "Cafe", { ...order, id: orderId, mode: "DINE_IN", serviceType: "COUNTER_PICKUP", table });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({
+    order: {
+      id: orderId, shopId: "05bcdf9f-d1be-4669-a01c-0b657f5a2f8e", orderNumber: "ORD-000042",
+      status: "CONFIRMED", paymentStatus: "PAID", confirmedAt: "2026-10-15T01:01:00Z",
+      preparationStatus, preparationStartedAt: "2026-10-15T01:02:00Z",
+      preparationReadyAt: "2026-10-15T01:03:00Z",
+      completedAt: preparationStatus === "COMPLETED" ? "2026-10-15T01:04:00Z" : null,
+      updatedAt: "2026-10-15T01:04:00Z",
+    },
+  }) }));
+  setup(`/menu/cafe/orders/${orderId}`);
+  expect(screen.getByText(/Dine-in.*Counter pickup/)).toBeInTheDocument();
+  await screen.findByRole("heading", { name: preparationStatus === "READY" ? "Collect your order at the counter" : "Your order is fulfilled" });
+  expect(screen.queryByText(/Please stay at Table/)).not.toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent(preparationStatus === "READY" ? "Please collect it at the counter" : "Your order has been collected");
+  vi.unstubAllGlobals();
+});
+
 it("keeps tracking focused on the order reference without receipt details or an unpaid receipt link", () => {
   saveOrderReceipt("cafe", "Cafe", { ...order, shopDetails: { name: "Original Cafe", address: "12 Old Street", phone: null, contactEmail: null, website: null } });
   recoverOrderReceipt("cafe", "order-a", { ...readOrderReceipt("cafe", "order-a"),
@@ -202,7 +223,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)("updates a pending %s receipt to confir
   const expiresAt = Date.parse("2030-01-01T00:00:00Z");
   const token = `${Buffer.from(JSON.stringify({ v: 1, purpose: "order-receipt", shopId, orderId, nonce: "75992537-5d60-4d22-8e1e-60a114644681", exp: expiresAt })).toString("base64url")}.${"a".repeat(43)}`;
   const saved: CustomerOrderResponse["order"] =
-    mode === "DINE_IN" ? { ...order, mode, table } : order;
+    mode === "DINE_IN" ? { ...order, mode, serviceType: "TABLE_SERVICE", table } : order;
   saveOrderReceipt("cafe", "Cafe", {
     ...saved,
     id: orderId,
@@ -512,7 +533,7 @@ it.each(["TAKEOUT", "DINE_IN"] as const)(
   "navigates from %s checkout to the saved receipt and recovers it after refresh",
   async (mode) => {
     const saved: CustomerOrderResponse["order"] =
-      mode === "DINE_IN" ? { ...order, mode, table } : order;
+      mode === "DINE_IN" ? { ...order, mode, serviceType: "TABLE_SERVICE", table } : order;
     vi.mocked(api.get).mockResolvedValue({
       data: {
         shop: {
@@ -667,7 +688,7 @@ it.each([{ totalPrice: "1.00" }, { id: ".." }])(
   },
 );
 it("restores only display data from storage containing credentials and notes", () => {
-  saveOrderReceipt("cafe", "Cafe", { ...order, mode: "DINE_IN", table });
+  saveOrderReceipt("cafe", "Cafe", { ...order, mode: "DINE_IN", serviceType: "TABLE_SERVICE", table });
   const key = "paserve-order-receipt:v1:cafe:order-a";
   const raw = JSON.parse(sessionStorage.getItem(key)!);
   Object.assign(raw, { qrToken: "private-order-token", notes: "private note" });
@@ -765,7 +786,7 @@ it.each(["invalid", "T12\n", "../other"])(
   (code) => {
     saveOrderReceipt("cafe", "Cafe", {
       ...order,
-      mode: "DINE_IN",
+      mode: "DINE_IN", serviceType: "TABLE_SERVICE",
       table: { ...table, code },
     });
     setup();

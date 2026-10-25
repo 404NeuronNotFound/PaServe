@@ -9,6 +9,7 @@ import {
 import {
   PRODUCT_CURRENCY,
   ORDER_INPUT_LIMITS,
+  isValidOrderService,
   isValidProductSelection,
   type CustomerOrderResponse,
 } from '@paserve/contracts';
@@ -44,6 +45,7 @@ export class OrdersService {
       !dto.items.length ||
       dto.items.length > ORDER_INPUT_LIMITS.linesMax ||
       !Array.from(dto.items).every(isValidProductSelection) ||
+      !isValidOrderService(dto.mode ?? 'DINE_IN', dto.serviceType) ||
       (dto.reviewedTotal !== undefined &&
         (typeof dto.reviewedTotal !== 'string' ||
           !/^(?:0|[1-9]\d{0,9})\.\d{2}$(?![\s\S])/.test(dto.reviewedTotal))) ||
@@ -56,6 +58,8 @@ export class OrdersService {
         message: 'Provide valid order items and order mode.',
       });
     const mode = dto.mode ?? 'DINE_IN';
+    const serviceType =
+      mode === 'DINE_IN' ? dto.serviceType ?? 'TABLE_SERVICE' : null;
     const unavailable = () =>
       new NotFoundException({
         code: mode === 'TAKEOUT' ? 'SHOP_NOT_AVAILABLE' : 'TABLE_NOT_AVAILABLE',
@@ -85,6 +89,8 @@ export class OrdersService {
       .update(
         JSON.stringify({
           mode,
+          // Preserve pre-feature request hashes for table service and takeout retries.
+          ...(serviceType === 'COUNTER_PICKUP' ? { serviceType } : {}),
           ...(dto.reviewedTotal !== undefined
             ? { reviewedTotal: dto.reviewedTotal }
             : {}),
@@ -156,7 +162,7 @@ export class OrdersService {
       if (order.mode === 'TAKEOUT')
         return {
           trackingToken: this.tokens.issueTracking(order),
-          order: { ...common, mode: 'TAKEOUT', table: null },
+          order: { ...common, mode: 'TAKEOUT', serviceType: null, table: null },
         };
       if (!order.tableCode || !order.tableNumber || !order.tableId)
         throw new Error('Invalid persisted dine-in table binding.');
@@ -165,6 +171,7 @@ export class OrdersService {
         order: {
           ...common,
           mode: 'DINE_IN',
+          serviceType: order.serviceType ?? 'TABLE_SERVICE',
           table: {
             shopSlug: slug,
             code: order.tableCode,
@@ -184,6 +191,7 @@ export class OrdersService {
               id: string;
               isActive: boolean;
               acceptingOrders: boolean;
+              dineInServiceMode: string;
               name: string;
               displayName: string | null;
               address: string | null;
@@ -191,7 +199,7 @@ export class OrdersService {
               contactEmail: string | null;
               website: string | null;
             }[]
-          >`SELECT "id", "isActive", "acceptingOrders", "name", "displayName", "address", "phone", "contactEmail", "website" FROM "shops" WHERE "slug" = ${slug} FOR UPDATE`;
+          >`SELECT "id", "isActive", "acceptingOrders", "dineInServiceMode", "name", "displayName", "address", "phone", "contactEmail", "website" FROM "shops" WHERE "slug" = ${slug} FOR UPDATE`;
           const shop = shops[0];
           if (!shop) throw unavailable();
           const saved = await tx.order.findUnique({
@@ -201,6 +209,16 @@ export class OrdersService {
           });
           if (saved) return response(saved, tx);
           if (!shop.isActive) throw unavailable();
+          if (
+            mode === 'DINE_IN' &&
+            shop.dineInServiceMode &&
+            shop.dineInServiceMode !== 'BOTH' &&
+            shop.dineInServiceMode !== serviceType
+          )
+            throw new ConflictException({
+              code: 'SERVICE_TYPE_NOT_AVAILABLE',
+              message: 'This dine-in service option is no longer available. Refresh the menu and review your order again.',
+            });
           if (!shop.acceptingOrders)
             throw new ConflictException({
               code: 'SHOP_NOT_ACCEPTING_ORDERS',
@@ -290,6 +308,7 @@ export class OrdersService {
               requestId: dto.requestId,
               requestHash: hash,
               mode,
+              serviceType,
               status: 'PENDING_CONFIRMATION',
               paymentStatus: 'UNPAID',
               orderNumber: formatOrderNumber(numbering.lastOrderNumber),

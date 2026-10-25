@@ -29,6 +29,7 @@ describe('Customer receipt status access', () => {
     status: 'PENDING_CONFIRMATION',
     paymentStatus: 'UNPAID',
     mode: 'TAKEOUT',
+    serviceType: undefined as 'TABLE_SERVICE' | 'COUNTER_PICKUP' | null | undefined,
     totalPrice: { toFixed: () => '12.00' },
     orderItems: [{
       lineNumber: 1, productSnapshotId: 'deleted-product', productNameSnapshot: 'Saved Coffee',
@@ -38,8 +39,8 @@ describe('Customer receipt status access', () => {
       variantsSnapshot: [{ id: 'v', name: 'Large', optionGroupId: 'size', isDefault: false, priceAdjustment: '1.00' }],
       addOnsSnapshot: [{ id: 'a', name: 'Milk', priceAdjustment: '1.00' }],
     }],
-    tableCode: null,
-    tableNumber: null,
+    tableCode: null as string | null,
+    tableNumber: null as string | null,
     ...tokens.metadata(),
     qrTokenRevokedAt: null as Date | null,
     receiptAccessRevokedAt: null as Date | null,
@@ -69,6 +70,16 @@ describe('Customer receipt status access', () => {
       accentColor: null,
     });
     database.order.findFirst.mockImplementation(async () => order);
+  });
+
+  it('recovers the saved dine-in counter pickup choice for customer tracking', async () => {
+    order.mode = 'DINE_IN';
+    order.serviceType = 'COUNTER_PICKUP';
+    order.tableCode = 'T12';
+    order.tableNumber = 'Patio 2';
+    const result = await service.read('cafe', id, tokens.issueTracking(order));
+    expect(result.receipt).toMatchObject({ mode: 'DINE_IN', serviceType: 'COUNTER_PICKUP', table: { code: 'T12', number: 'Patio 2' } });
+    expect(database.order.findFirst.mock.calls[0][0].select.serviceType).toBe(true);
   });
 
   it('reopens the original shop identity after current settings change', async () => {

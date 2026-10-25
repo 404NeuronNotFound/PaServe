@@ -18,6 +18,7 @@ import {
   SHOP_PHONE_HINT,
   SHOP_ACCENT_COLOR_HINT,
   MENU_LAYOUTS,
+  DINE_IN_SERVICE_MODES,
   DEFAULT_MENU_LAYOUT,
   isMenuLayout,
   SHOP_PRIMARY_COLOR_HINT,
@@ -120,6 +121,12 @@ const fields = [
     section: "Operating information",
     hint: "For example: Monday–Friday, 8am–6pm; Saturday, 9am–4pm. Display information only; it does not schedule ordering.",
   },
+  {
+    key: "dineInServiceMode",
+    label: "Dine-in service",
+    max: 20,
+    hint: "Choose how dine-in customers receive their food. Both lets customers choose during order review.",
+  },
 ] as const;
 const settingsSections = [
   { id: "appearance", title: "Menu appearance", description: "Choose the colors and layout your customers see.", fields: fields.slice(0, 3) },
@@ -139,7 +146,7 @@ const valuesFrom = (shop: ShopSettings) =>
       key,
       normalizedValue(
         key,
-        shop[key] ?? (key === "menuLayout" ? DEFAULT_MENU_LAYOUT : ""),
+        shop[key] ?? (key === "menuLayout" ? DEFAULT_MENU_LAYOUT : key === "dineInServiceMode" ? "BOTH" : ""),
       ),
     ]),
   ) as Values;
@@ -288,6 +295,8 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
     const trimmed = value.trim();
     if (key === "menuLayout" && !isMenuLayout(value))
       return "Choose Grid, List, or Compact.";
+    if (key === "dineInServiceMode" && !DINE_IN_SERVICE_MODES.some((mode) => mode === value))
+      return "Choose Table service, Counter pickup, or Both.";
     if (key === "primaryColor" && !isValidShopPrimaryColor(value))
       return SHOP_PRIMARY_COLOR_HINT;
     if (key === "accentColor" && !isValidShopPrimaryColor(value))
@@ -498,7 +507,7 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                 id={`settings-${field.key}`}
                 label={field.key === "name" ? `${field.label} (required)` : field.label}
                 required={field.key === "name"}
-                optional={field.key !== "name" && field.key !== "menuLayout" && field.key !== "primaryColor" && field.key !== "accentColor"}
+                optional={field.key !== "name" && field.key !== "menuLayout" && field.key !== "dineInServiceMode" && field.key !== "primaryColor" && field.key !== "accentColor"}
                 hint={"hint" in field ? field.hint : `Up to ${field.max} characters.`}
                 error={errors[field.key]}
               >
@@ -511,7 +520,18 @@ function SettingsForm({ shop }: { shop: ShopSettings }) {
                     onChange={(value) => changeField(field.key, value)}
                   />
                 )}
-                {field.key === "menuLayout" ? (
+                {field.key === "dineInServiceMode" ? (
+                  <SelectField id="settings-dineInServiceMode" label="Dine-in service"
+                    value={values.dineInServiceMode} disabled={busy}
+                    invalid={Boolean(errors.dineInServiceMode)}
+                    describedBy={`settings-dineInServiceMode-hint${errors.dineInServiceMode ? " settings-dineInServiceMode-error" : ""}`}
+                    onChange={(value) => changeField("dineInServiceMode", value)}
+                    options={[
+                      { value: "BOTH", label: "Both — customer chooses" },
+                      { value: "TABLE_SERVICE", label: "Table service" },
+                      { value: "COUNTER_PICKUP", label: "Counter pickup" },
+                    ]} />
+                ) : field.key === "menuLayout" ? (
                   <SelectField
                     id="settings-menuLayout"
                     label="Menu layout"

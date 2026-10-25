@@ -1,3 +1,4 @@
+import { dineInServiceLabel } from "@paserve/contracts";
 import { ReceiptSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { useEffect, useRef } from "react";
@@ -37,6 +38,7 @@ export function CustomerOrderPage() {
   const preparation = confirmed ? savedStatus.preparationStatus : null;
   const ready = preparation === "READY";
   const completed = preparation === "COMPLETED";
+  const tableService = receipt?.mode === "DINE_IN" && receipt.serviceType !== "COUNTER_PICKUP";
   const preparationCopy =
     preparation === "PREPARING"
       ? {
@@ -51,15 +53,15 @@ export function CustomerOrderPage() {
             label: "Ready",
             heading: "Order ready",
             title:
-              receipt?.mode === "DINE_IN"
+              tableService
                 ? "Ready for table service"
                 : "Collect your order at the counter",
             message:
-              receipt?.mode === "DINE_IN"
+              tableService
                 ? "Your order is ready for table service."
                 : "Your order is ready for pickup. Please collect it at the counter.",
             step:
-              receipt?.mode === "DINE_IN"
+              tableService
                 ? "Preparation complete. Ready to be served."
                 : "Preparation complete. Ready to collect.",
           }
@@ -69,7 +71,7 @@ export function CustomerOrderPage() {
               heading: "Order completed",
               title: "Your order is fulfilled",
               message:
-                receipt?.mode === "DINE_IN"
+                tableService
                   ? "Your order has been served. Thank you!"
                   : "Your order has been collected. Thank you!",
               step: "Order fulfilled.",
@@ -135,7 +137,7 @@ export function CustomerOrderPage() {
             <p className="order-receipt-context">
               <FiCoffee aria-hidden="true" />
               {receipt.mode === "DINE_IN"
-                ? `Dine-in · Table ${receipt.table!.number}`
+                ? `Dine-in · Table ${receipt.table!.number} · ${dineInServiceLabel(receipt.serviceType)}`
                 : "Takeout / pickup"}
             </p>
           </header>
@@ -200,7 +202,7 @@ export function CustomerOrderPage() {
                 {completed ? (
                   "Your order is complete. Thank you for stopping by."
                 ) : ready ? (
-                  receipt.mode === "DINE_IN" ? (
+                  tableService ? (
                     `Please stay at Table ${receipt.table!.number} for service.`
                   ) : (
                     "Have your order number ready when collecting your order."

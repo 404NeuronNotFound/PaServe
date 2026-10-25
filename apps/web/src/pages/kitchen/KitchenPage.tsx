@@ -1,3 +1,4 @@
+import { dineInServiceLabel, type DineInServiceType } from "@paserve/contracts";
 import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Input } from "../../components/ui/input";
 import { statusPresentation } from "../../components/paserve/status-presentation";
@@ -111,6 +112,7 @@ type TransitionRequest = {
   orderId: string;
   orderNumber: string;
   mode: "DINE_IN" | "TAKEOUT";
+  serviceType?: DineInServiceType | null;
 };
 type TransitionResult =
   | StartPreparationResponse
@@ -395,7 +397,7 @@ function NewOrders() {
                 <span>
                   {order.mode === "TAKEOUT"
                     ? "Pickup · Takeout"
-                    : `Table ${order.tableNumber} · Dine-in`}
+                    : `Table ${order.tableNumber} · Dine-in · ${dineInServiceLabel(order.serviceType)}`}
                 </span>
               </div>
               <div className="kitchen-history-summary">
@@ -633,7 +635,7 @@ const Ticket = memo(function Ticket({
   const ready = order.preparationStatus === "READY";
   const completed = order.preparationStatus === "COMPLETED";
   const readyLabel =
-    order.mode === "TAKEOUT" ? "Ready for pickup" : "Ready to serve";
+    order.mode === "TAKEOUT" || order.serviceType === "COUNTER_PICKUP" ? "Ready for pickup" : "Ready to serve";
   const mutationKey = ["kitchen", "transition", user.id, shopId, order.id];
   const pending = useIsMutating({ mutationKey }) > 0;
   const sameActor = (request: TransitionRequest) =>
@@ -681,7 +683,7 @@ const Ticket = memo(function Ticket({
           : "alreadyReady" in result
             ? result.alreadyReady
               ? "This order is already ready."
-              : `${request.orderNumber}: ${request.mode === "TAKEOUT" ? "ready for pickup" : "ready to serve"}.`
+              : `${request.orderNumber}: ${(request.mode === "TAKEOUT" || request.serviceType === "COUNTER_PICKUP") ? "ready for pickup" : "ready to serve"}.`
             : result.alreadyCompleted
               ? "This order is already completed."
               : `${request.orderNumber} completed.`,
@@ -702,6 +704,7 @@ const Ticket = memo(function Ticket({
       orderId: order.id,
       orderNumber: order.orderNumber,
       mode: order.mode,
+      serviceType: order.serviceType,
     });
   };
   const minutes = Math.max(
@@ -710,7 +713,7 @@ const Ticket = memo(function Ticket({
   );
   const count = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const updateMotion = useChangeMotion<HTMLLIElement>(
-    JSON.stringify([order.preparationStatus, order.items, order.tableNumber, order.mode]),
+    JSON.stringify([order.preparationStatus, order.items, order.tableNumber, order.mode, order.serviceType]),
     "queue",
   );
   return (
@@ -747,7 +750,7 @@ const Ticket = memo(function Ticket({
                 ? `Table ${order.tableNumber}`
                 : "Pickup"}
             </strong>
-            <span>{order.mode === "DINE_IN" ? "Dine-in" : "Takeout"}</span>
+            <span>{order.mode === "DINE_IN" ? `Dine-in · ${dineInServiceLabel(order.serviceType)}` : "Takeout"}</span>
           </div>
           <p className="kitchen-wait">
             <FiClock aria-hidden="true" />
@@ -770,7 +773,7 @@ const Ticket = memo(function Ticket({
             <FiCheck aria-hidden="true" />
             <div>
               <strong>
-                {order.mode === "TAKEOUT"
+                {(order.mode === "TAKEOUT" || order.serviceType === "COUNTER_PICKUP")
                   ? "Collected by customer"
                   : "Served to customer"}
               </strong>
@@ -812,7 +815,7 @@ const Ticket = memo(function Ticket({
               </span>
               <span>
                 Preparation complete · Awaiting{" "}
-                {order.mode === "TAKEOUT" ? "collection" : "table service"}
+                {(order.mode === "TAKEOUT" || order.serviceType === "COUNTER_PICKUP") ? "collection" : "table service"}
               </span>
             </div>
           </div>
@@ -913,7 +916,7 @@ const Ticket = memo(function Ticket({
               <FiCheck aria-hidden="true" />
               {pending
                 ? "Completing order…"
-                : order.mode === "TAKEOUT"
+                : (order.mode === "TAKEOUT" || order.serviceType === "COUNTER_PICKUP")
                   ? "Mark collected"
                   : "Mark served"}
             </Button>

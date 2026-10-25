@@ -131,6 +131,46 @@ describe('dine-in order submission', () => {
   });
   const post = (body: unknown = payload()) =>
     request(app.getHttpServer()).post('/api/v1/menu/cafe/orders').send(body);
+  it.each(['TABLE_SERVICE', 'COUNTER_PICKUP'] as const)(
+    'saves %s independently of dine-in mode and table context', async (serviceType) => {
+      const result = await post({ ...payload(), mode: 'DINE_IN', serviceType }).expect(201);
+      expect(result.body.order).toMatchObject({ mode: 'DINE_IN', serviceType, table: { code: 'T12' } });
+      expect(create.mock.calls[0][0].data).toMatchObject({ mode: 'DINE_IN', serviceType, tableId: 'table-a' });
+    },
+  );
+  it('defaults older dine-in requests to table service', async () => {
+    const result = await post().expect(201);
+    expect(result.body.order.serviceType).toBe('TABLE_SERVICE');
+  });
+  it.each(['DELIVERY', '', null, 12])('rejects invalid service type %j before a transaction', async (serviceType) => {
+    await post({ ...payload(), serviceType }).expect(400);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it('rejects a dine-in service type on takeout', async () => {
+    await post({ ...takeout(), serviceType: 'COUNTER_PICKUP' }).expect(400);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it.each([
+    ['TABLE_SERVICE', 'COUNTER_PICKUP'],
+    ['COUNTER_PICKUP', 'TABLE_SERVICE'],
+  ])('rejects service %s when the shop offers only %s', async (serviceType, dineInServiceMode) => {
+    raw.mockReset().mockResolvedValueOnce([{ id: 'shop-a', isActive: true, acceptingOrders: true, dineInServiceMode }]);
+    const result = await post({ ...payload(), serviceType }).expect(409);
+    expect(result.body.code).toBe('SERVICE_TYPE_NOT_AVAILABLE');
+    expect(create).not.toHaveBeenCalled();
+  });
+  it('keeps the original counter pickup choice on replay and rejects changing it under the same request ID', async () => {
+    const body = { ...payload(), serviceType: 'COUNTER_PICKUP' };
+    await post(body).expect(201);
+    saved.mockResolvedValue(create.mock.results[0].value);
+    // A later settings change does not prevent recovery of an existing order.
+    raw.mockReset().mockResolvedValue([{ id: 'shop-a', isActive: true, acceptingOrders: true, dineInServiceMode: 'TABLE_SERVICE' }]);
+    const replay = await post(body).expect(201);
+    expect(replay.body.order.serviceType).toBe('COUNTER_PICKUP');
+    const changed = await post({ ...body, serviceType: 'TABLE_SERVICE' }).expect(409);
+    expect(changed.body.code).toBe('ORDER_REQUEST_CONFLICT');
+    expect(create).toHaveBeenCalledOnce();
+  });
   it.each(['DINE_IN', 'TAKEOUT'] as const)(
     'rejects changed %s prices before any write and returns current line prices',
     async (mode) => {

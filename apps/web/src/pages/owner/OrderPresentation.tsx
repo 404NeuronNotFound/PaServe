@@ -1,3 +1,4 @@
+import { dineInServiceLabel, type DineInServiceType } from "@paserve/contracts";
 import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { PageHeader } from "../../components/paserve/PageHeader";
 import type { ReactNode } from "react";
@@ -63,10 +64,12 @@ export function OrderCardIdentity({
   orderNumber,
   mode,
   tableNumber,
+  serviceType,
 }: {
   orderNumber: string;
   mode: "DINE_IN" | "TAKEOUT";
   tableNumber: string | null;
+  serviceType?: DineInServiceType | null;
 }) {
   const Icon = mode === "TAKEOUT" ? FiShoppingBag : FiGrid;
   return (
@@ -78,7 +81,7 @@ export function OrderCardIdentity({
         <span className="owner-order-eyebrow">ORDER</span>
         <h2>{orderNumber}</h2>
         <p>
-          {mode === "TAKEOUT" ? "Takeout" : `Dine-in · Table ${tableNumber}`}
+          {mode === "TAKEOUT" ? "Takeout" : `Dine-in · Table ${tableNumber} · ${dineInServiceLabel(serviceType)}`}
         </p>
       </div>
     </div>

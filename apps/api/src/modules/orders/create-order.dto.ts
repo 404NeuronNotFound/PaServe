@@ -13,6 +13,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 import {
+  DINE_IN_SERVICE_TYPES,
+  type DineInServiceType,
   ORDER_INPUT_LIMITS,
   PUBLIC_TABLE_CODE_PATTERN,
 } from '@paserve/contracts';
@@ -23,6 +25,10 @@ export class OrderLineDto extends ProductSelectionDto {
   productId!: string;
 }
 export class CreateOrderDto {
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsIn(DINE_IN_SERVICE_TYPES)
+  serviceType?: DineInServiceType;
+
   @ValidateIf((_object, value) => value !== undefined)
   @IsString()
   @Matches(/^(?:0|[1-9]\d{0,9})\.\d{2}$(?![\s\S])/)

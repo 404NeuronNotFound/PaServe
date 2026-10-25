@@ -17,6 +17,7 @@ export function orderSubmissionRequest(
     : {
         requestId: request.requestId,
         mode: "DINE_IN",
+        ...(request.serviceType !== undefined ? { serviceType: request.serviceType } : {}),
         tableCode: request.tableCode,
         tableToken: request.tableToken,
         ...(request.reviewedTotal !== undefined ? { reviewedTotal: request.reviewedTotal } : {}),

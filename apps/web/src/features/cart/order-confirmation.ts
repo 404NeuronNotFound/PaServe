@@ -1,5 +1,6 @@
 import {
   normalizeCustomerNote,
+  isValidOrderService,
   parseReceiptShopDetails,
   type CreateCustomerOrderRequest,
   type CustomerOrderResponse,
@@ -29,6 +30,8 @@ export function isCreatedOrderResponse(
     !isOrderReceiptId(order.id) ||
     order.status !== "PENDING_CONFIRMATION" ||
     order.mode !== (request.mode ?? "DINE_IN") ||
+    !isValidOrderService(order.mode, order.serviceType) ||
+    (order.mode === "DINE_IN" && (order.serviceType ?? "TABLE_SERVICE") !== (request.serviceType ?? "TABLE_SERVICE")) ||
     order.currency !== "PHP" ||
     !isOrderTotal(order.totalPrice) ||
     (request.reviewedTotal !== undefined && order.totalPrice !== request.reviewedTotal) ||

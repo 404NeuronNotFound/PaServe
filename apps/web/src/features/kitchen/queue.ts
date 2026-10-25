@@ -1,3 +1,4 @@
+import { isValidOrderService } from "@paserve/contracts";
 import type {
   PreparationQueueResponse,
   StartPreparationResponse,
@@ -38,6 +39,7 @@ export function parseQueue(
       ids.has(order.id) ||
       order.shopId !== shopId ||
       !isOrderNumber(order.orderNumber) ||
+      !isValidOrderService(order.mode, order.serviceType) ||
       order.preparationStatus !== state ||
       order.currency !== "PHP" ||
       !isOrderTotal(order.totalPrice) ||

@@ -1,3 +1,4 @@
+import { dineInServiceLabel } from "@paserve/contracts";
 import { Button } from "../../components/ui/button";
 import { useEffect, useRef, useState } from "react";
 import { parseReceiptPaymentDetails, type CashPaymentReviewResponse } from "@paserve/contracts";
@@ -30,7 +31,7 @@ export function CashierPaidReceipt({ review, onBack, validating = false }: {
         <Button variant="outline" size="inherit" type="submit" className="secondary-button" onClick={onBack}><FiArrowLeft aria-hidden="true" /> Back to payment</Button>
       </header>
       <ReceiptDocument shopDetails={review.order.shopDetails} orderNumber={review.order.orderNumber}
-        orderContext={review.order.mode === "DINE_IN" ? `Dine-in · Table ${review.order.tableNumber}` : "Takeout / pickup"}
+        orderContext={review.order.mode === "DINE_IN" ? `Dine-in · Table ${review.order.tableNumber} · ${dineInServiceLabel(review.order.serviceType)}` : "Takeout / pickup"}
         items={review.order.items} totalPrice={review.order.totalPrice}
         payment={parseReceiptPaymentDetails(review.payment)} paidAt={review.payment.paidAt} />
       <section className="receipt-print-controls" aria-label="Receipt printing">

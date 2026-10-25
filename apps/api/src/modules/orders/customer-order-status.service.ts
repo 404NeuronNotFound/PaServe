@@ -75,6 +75,7 @@ export class CustomerOrderStatusService {
         completedAt: true,
         queuedAt: true,
         mode: true,
+        serviceType: true,
         tableCode: true,
         tableNumber: true,
         totalPrice: true,
@@ -179,6 +180,7 @@ export class CustomerOrderStatusService {
         id: order.id,
         orderNumber: order.orderNumber,
         mode: order.mode as 'DINE_IN' | 'TAKEOUT',
+        serviceType: order.serviceType,
         table:
           order.mode === 'DINE_IN'
             ? { code: order.tableCode!, number: order.tableNumber! }

@@ -92,6 +92,7 @@ export class ActiveOrdersService {
         shopId: true,
         orderNumber: true,
         mode: true,
+        serviceType: true,
         tableNumber: true,
         status: true,
         paymentStatus: true,

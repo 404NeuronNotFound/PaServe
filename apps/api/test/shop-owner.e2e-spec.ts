@@ -129,6 +129,23 @@ describe('Owner-only shop updates', () => {
       .set('Authorization', `Bearer ${token}`)
       .send(body as object);
 
+  it.each(['BOTH', 'TABLE_SERVICE', 'COUNTER_PICKUP'] as const)('lets the owner configure dine-in service: %s', async (dineInServiceMode) => {
+    const result = await patch(shopA, { dineInServiceMode }).expect(200);
+    expect(result.body.shop.dineInServiceMode).toBe(dineInServiceMode);
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: shopA }), data: { dineInServiceMode },
+      select: expect.objectContaining({ dineInServiceMode: true }),
+    }));
+  });
+  it.each(['DELIVERY', '', null, false])('rejects invalid dine-in service settings: %j', async (dineInServiceMode) => {
+    await patch(shopA, { dineInServiceMode }).expect(400);
+    expect(update).not.toHaveBeenCalled();
+  });
+  it('does not let another shop member change dine-in service availability', async () => {
+    await patch(shopB, { dineInServiceMode: 'COUNTER_PICKUP' }).expect(403);
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it.each([false, true])(
     'allows the owner to set acceptingOrders=%s',
     async (acceptingOrders) => {

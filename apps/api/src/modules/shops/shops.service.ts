@@ -52,6 +52,8 @@ export class ShopsService {
       'menuLayout',
     ] as const;
     const data: ShopSettingsData = {};
+    if (dto.dineInServiceMode !== undefined)
+      data.dineInServiceMode = dto.dineInServiceMode;
     if (dto.acceptingOrders !== undefined)
       data.acceptingOrders = dto.acceptingOrders;
     for (const field of fields) {

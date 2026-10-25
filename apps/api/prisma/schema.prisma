@@ -69,6 +69,7 @@ model Shop {
   menuLayout MenuLayout @default(list)
   isActive    Boolean  @default(true)
   acceptingOrders Boolean @default(true)
+  dineInServiceMode DineInServiceMode @default(BOTH)
   lastOrderNumber BigInt @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -108,6 +109,17 @@ enum OrderMode {
   TAKEOUT
 }
 
+enum DineInServiceType {
+  TABLE_SERVICE
+  COUNTER_PICKUP
+}
+
+enum DineInServiceMode {
+  BOTH
+  TABLE_SERVICE
+  COUNTER_PICKUP
+}
+
 model Order {
   id          String    @id @default(uuid())
   shopId      String
@@ -115,6 +127,7 @@ model Order {
   requestId   String
   requestHash String
   mode        OrderMode @default(DINE_IN)
+  serviceType DineInServiceType?
   status      String    @default("PENDING_CONFIRMATION")
   paymentStatus String @default("UNPAID")
   // Cash collection is atomic with paymentStatus; SQL protects paid receipts.

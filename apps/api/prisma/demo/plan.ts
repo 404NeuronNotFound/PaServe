@@ -468,6 +468,7 @@ export function buildPlan(now: Date, passwordHash: string, seed = 20261022) {
         tableCode: table?.code ?? null,
         tableNumber: table?.number ?? null,
         mode: dine ? 'DINE_IN' : 'TAKEOUT',
+        serviceType: dine ? 'TABLE_SERVICE' as const : null,
         requestId: id(`${orderId}:request`),
         requestHash: createHash('sha256')
           .update(JSON.stringify(selected))

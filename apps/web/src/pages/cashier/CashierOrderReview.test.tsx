@@ -2,6 +2,10 @@ import { expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CashierOrderReview } from "./CashierOrderReview";
+it("shows dine-in counter pickup to the cashier without changing the order type", () => {
+  render(<CashierOrderReview order={{ ...order, serviceType: "COUNTER_PICKUP" }} onNext={vi.fn()} />);
+  expect(screen.getByText("Dine-in · Table A3 · Counter pickup")).toBeVisible();
+});
 import { cashierLine } from "../../test/cashier-fixtures";
 import type { VerifyOrderQrResponse } from "@paserve/contracts";
 
@@ -61,7 +65,7 @@ it("displays saved items, modifiers, notes, type/table, total and statuses", () 
   render(<CashierOrderReview order={order} onNext={vi.fn()} />);
   expect(screen.getByText("ORD-000042")).toBeVisible();
   expect(screen.getByRole("heading", { name: "Review order" })).toHaveFocus();
-  expect(screen.getByText("Dine-in · Table A3")).toBeInTheDocument();
+  expect(screen.getByText("Dine-in · Table A3 · Table service")).toBeInTheDocument();
   expect(
     screen.getByRole("heading", { name: "2 × Saved Latte" }),
   ).toBeInTheDocument();

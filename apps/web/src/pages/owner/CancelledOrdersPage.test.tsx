@@ -90,7 +90,7 @@ it("shows rejection accurately with captured reason/actor, saved total/table and
   expect(
     screen.getByText("Unpaid", { selector: ".active-order-payment" }),
   ).toBeVisible();
-  expect(screen.getByText("Dine-in · Table Patio 2")).toBeVisible();
+  expect(screen.getByText("Dine-in · Table Patio 2 · Table service")).toBeVisible();
   expect(screen.getByText("Item unavailable")).toBeVisible();
   expect(screen.getByText("Recorded actor ID")).toBeVisible();
   expect(screen.getByText("saved-actor-id")).toBeVisible();

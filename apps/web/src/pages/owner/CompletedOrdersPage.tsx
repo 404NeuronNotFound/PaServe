@@ -173,6 +173,7 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
                     orderNumber={order.orderNumber}
                     mode={order.mode}
                     tableNumber={order.tableNumber}
+                    serviceType={order.serviceType}
                   />
                   <div className="active-order-state">
                     <StatusBadge className="active-order-badge" state="COMPLETED">

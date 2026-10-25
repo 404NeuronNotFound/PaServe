@@ -35,6 +35,7 @@ describe('Cashier order QR verification', () => {
     shopId,
     orderNumber: 'ORD-000001',
     mode: 'TAKEOUT' as 'TAKEOUT' | 'DINE_IN',
+    serviceType: undefined as 'TABLE_SERVICE' | 'COUNTER_PICKUP' | null | undefined,
     status: 'PENDING_CONFIRMATION',
     paymentStatus: 'UNPAID',
     currency: 'PHP',
@@ -141,6 +142,18 @@ describe('Cashier order QR verification', () => {
       .post(`/api/v1/shops/${targetShop}/orders/scan-qr`)
       .set('Authorization', 'Bearer staff-session')
       .send({ qrToken: token });
+
+  it('returns dine-in counter pickup for cashier review and includes service in the review digest', async () => {
+    persisted.mode = 'DINE_IN';
+    persisted.tableNumber = 'Patio 2';
+    persisted.serviceType = 'COUNTER_PICKUP';
+    const first = await scan().expect(200);
+    expect(first.body.order).toMatchObject({ mode: 'DINE_IN', serviceType: 'COUNTER_PICKUP', tableNumber: 'Patio 2' });
+    persisted.serviceType = 'TABLE_SERVICE';
+    const second = await scan().expect(200);
+    expect(second.body.order.reviewVersion).not.toBe(first.body.order.reviewVersion);
+    expect(findOrder.mock.calls[0][0].select.serviceType).toBe(true);
+  });
 
   it('rejects tracking-only credentials at both cashier QR endpoints even for authorized staff', async () => {
     const tracking = tokens.issueTracking(persisted);

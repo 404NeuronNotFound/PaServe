@@ -4,12 +4,12 @@ import type { UpdateShopRequest } from '@paserve/contracts';
 import { shopPermissionWhere } from '../tenancy/shop-scope.js';
 export type ShopSettingsData = Pick<
   UpdateShopRequest,
-  'name' | 'menuLayout' | 'acceptingOrders'
+  'name' | 'menuLayout' | 'acceptingOrders' | 'dineInServiceMode'
 > & {
   [
     K in Exclude<
       keyof UpdateShopRequest,
-      'name' | 'menuLayout' | 'acceptingOrders'
+      'name' | 'menuLayout' | 'acceptingOrders' | 'dineInServiceMode'
     >
   ]?: string | null;
 };
@@ -21,6 +21,7 @@ const settingsSelect = {
   description: true,
   isActive: true,
   acceptingOrders: true,
+  dineInServiceMode: true,
   createdAt: true,
   displayName: true,
   phone: true,

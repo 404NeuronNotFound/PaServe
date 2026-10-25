@@ -1,3 +1,4 @@
+import { isValidOrderService } from "@paserve/contracts";
 import {
   ACCOUNT_LIMITS,
   cashAmountCents,
@@ -32,6 +33,7 @@ export function parseOrderDetails(
     order.id !== orderId ||
     order.shopId !== shopId ||
     !isOrderNumber(order.orderNumber) ||
+      !isValidOrderService(order.mode, order.serviceType) ||
     !["PENDING_CONFIRMATION", "CONFIRMED", "REJECTED"].includes(order.status) ||
     !["UNPAID", "PAID"].includes(order.paymentStatus) ||
     !(

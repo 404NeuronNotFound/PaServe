@@ -73,6 +73,13 @@ beforeEach(() => {
   vi.mocked(getActiveOrders).mockResolvedValue(summary());
 });
 afterEach(cleanup);
+it("shows the saved dine-in service on owner order cards", async () => {
+  const data = summary();
+  data.orders[0].serviceType = "COUNTER_PICKUP";
+  vi.mocked(getActiveOrders).mockResolvedValue(data);
+  setup();
+  expect(await screen.findByText("Dine-in · Table Patio 2 · Counter pickup")).toBeVisible();
+});
 
 it("clears an empty search and resets its visible input and server query", async () => {
   vi.mocked(getActiveOrders).mockImplementation(async (_shop, _cursor, _signal, search) =>
@@ -103,7 +110,7 @@ it("shows approval/payment, placed and updated Manila times, order age, type/tab
     }),
   ).toBeVisible();
   expect(screen.getByText("Unpaid")).toBeVisible();
-  expect(screen.getByText("Dine-in · Table Patio 2")).toBeVisible();
+  expect(screen.getByText("Dine-in · Table Patio 2 · Table service")).toBeVisible();
   expect(screen.getByText("₱1,234,567.89")).toBeVisible();
   expect(screen.getByText(/Oct 16, 2026.*08:00:00/)).toBeVisible();
   expect(screen.getByText(/Oct 16, 2026.*08:05:00/)).toBeVisible();

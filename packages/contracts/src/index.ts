@@ -124,6 +124,7 @@ export interface ActiveOrderSummary {
   shopId: string;
   orderNumber: string;
   mode: "DINE_IN" | "TAKEOUT";
+  serviceType?: DineInServiceType | null;
   tableNumber: string | null;
   status: "PENDING_CONFIRMATION" | "CONFIRMED";
   paymentStatus: "UNPAID" | "PAID";
@@ -214,6 +215,7 @@ export interface CompletedOrderSummary {
   shopId: string;
   orderNumber: string;
   mode: "DINE_IN" | "TAKEOUT";
+  serviceType?: DineInServiceType | null;
   tableNumber: string | null;
   status: "CONFIRMED";
   paymentStatus: "PAID";
@@ -237,6 +239,7 @@ export interface CancelledOrderSummary {
   shopId: string;
   orderNumber: string;
   mode: "DINE_IN" | "TAKEOUT";
+  serviceType?: DineInServiceType | null;
   tableNumber: string | null;
   status: "REJECTED";
   paymentStatus: "UNPAID";
@@ -424,7 +427,22 @@ export interface ShopMembershipResponse {
   membership: UserMembership;
 }
 
+export const DINE_IN_SERVICE_TYPES = ["TABLE_SERVICE", "COUNTER_PICKUP"] as const;
+export type DineInServiceType = typeof DINE_IN_SERVICE_TYPES[number];
+export const DINE_IN_SERVICE_MODES = ["BOTH", ...DINE_IN_SERVICE_TYPES] as const;
+export type DineInServiceMode = typeof DINE_IN_SERVICE_MODES[number];
+export function dineInServiceLabel(serviceType?: DineInServiceType | null): string {
+  return serviceType === "COUNTER_PICKUP" ? "Counter pickup" : "Table service";
+}
+/** Missing fields on older receipts mean table service; takeout has no dine-in service. */
+export function isValidOrderService(mode: unknown, serviceType: unknown): boolean {
+  return mode === "DINE_IN"
+    ? serviceType === undefined || DINE_IN_SERVICE_TYPES.includes(serviceType as DineInServiceType)
+    : mode === "TAKEOUT" && (serviceType === undefined || serviceType === null);
+}
+
 export interface UpdateShopRequest {
+  dineInServiceMode?: DineInServiceMode;
   acceptingOrders?: boolean;
   menuLayout?: MenuLayout;
   primaryColor?: string;
@@ -440,6 +458,7 @@ export interface UpdateShopRequest {
 }
 
 export type ShopSettings = CreateShopResponse["shop"] & {
+  dineInServiceMode?: DineInServiceMode;
   acceptingOrders?: boolean;
   menuLayout?: MenuLayout;
   primaryColor?: string | null;
@@ -796,6 +815,7 @@ export interface PublicMenuResponse {
     bannerUrl?: string | null;
     primaryColor?: string | null;
     menuLayout?: MenuLayout;
+    dineInServiceMode?: DineInServiceMode;
     accentColor?: string | null;
   };
   categories: Array<
@@ -877,6 +897,7 @@ export interface CustomerCheckoutRequest {
   /** Customer-reviewed amount; a comparison guard, never the source of saved prices. */
   reviewedTotal?: string;
   mode?: "DINE_IN" | "TAKEOUT";
+  serviceType?: DineInServiceType;
   tableCode?: string;
   tableToken?: string;
   items: (ProductSelectionRequest & { productId: string })[];
@@ -888,6 +909,7 @@ export interface CreateDineInOrderRequest extends CustomerCheckoutRequest {
   tableToken: string;
 }
 export interface CreateTakeoutOrderRequest {
+  serviceType?: never;
   reviewedTotal?: string;
   requestId: string;
   mode: "TAKEOUT";
@@ -910,6 +932,7 @@ export interface OwnerOrderDetailsResponse {
     shopId: string;
     orderNumber: string;
     mode: "DINE_IN" | "TAKEOUT";
+    serviceType?: DineInServiceType | null;
     tableNumber: string | null;
     status: "PENDING_CONFIRMATION" | "CONFIRMED" | "REJECTED";
     paymentStatus: "UNPAID" | "PAID";
@@ -970,6 +993,7 @@ export interface DineInOrderResponse {
     id: string;
     shopDetails?: ReceiptShopDetails | null;
     mode: "DINE_IN";
+    serviceType?: DineInServiceType;
     /** Awaiting staff confirmation; implements the roadmap's PENDING_CONFIRMATION state. */
     status: "PENDING_CONFIRMATION";
     table: PublicTableContext;
@@ -988,7 +1012,7 @@ export interface DineInOrderResponse {
   };
 }
 export interface TakeoutOrderResponse {
-  order: Omit<DineInOrderResponse["order"], "mode" | "table"> & { mode: "TAKEOUT"; table: null };
+  order: Omit<DineInOrderResponse["order"], "mode" | "table" | "serviceType"> & { mode: "TAKEOUT"; table: null; serviceType?: null };
 }
 export type CustomerOrderResponse = DineInOrderResponse | TakeoutOrderResponse;
 /** Authenticated cashier scanning/verification; only the signed token is input.
@@ -1004,6 +1028,7 @@ export interface VerifyOrderQrResponse {
     shopId: string;
     orderNumber: string;
     mode: "DINE_IN" | "TAKEOUT";
+    serviceType?: DineInServiceType | null;
     status: string;
     paymentStatus: string;
     currency: string;
@@ -1043,6 +1068,7 @@ export interface CustomerReceiptSummary {
   id: string;
   orderNumber: string;
   mode: "DINE_IN" | "TAKEOUT";
+  serviceType?: DineInServiceType | null;
   table: { code: string; number: string } | null;
   status: "PENDING_CONFIRMATION";
   currency: "PHP";
@@ -1216,6 +1242,7 @@ export interface PreparationQueueResponse {
     shopId: string;
     orderNumber: string;
     mode: "DINE_IN" | "TAKEOUT";
+    serviceType?: DineInServiceType | null;
     tableNumber: string | null;
     currency: "PHP";
     totalPrice: string;

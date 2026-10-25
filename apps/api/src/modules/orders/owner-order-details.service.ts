@@ -45,6 +45,7 @@ export class OwnerOrderDetailsService {
         shopId: true,
         orderNumber: true,
         mode: true,
+        serviceType: true,
         tableNumber: true,
         status: true,
         paymentStatus: true,
@@ -229,6 +230,7 @@ export class OwnerOrderDetailsService {
         shopId: saved.shopId,
         orderNumber: saved.orderNumber,
         mode: saved.mode,
+        serviceType: saved.serviceType,
         tableNumber: saved.tableNumber,
         status: saved.status as OwnerOrderDetailsResponse['order']['status'],
         paymentStatus:

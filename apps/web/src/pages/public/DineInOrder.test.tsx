@@ -59,6 +59,43 @@ async function placeOrder(name: string) {
   const submit = screen.queryByRole("button", { name });
   if (submit) await userEvent.click(submit);
 }
+it("offers service choices after review and submits counter pickup as dine-in", async () => {
+  vi.mocked(api.post).mockResolvedValue({ data: { order: { ...response.data.order, serviceType: "COUNTER_PICKUP" } } });
+  render(<DineInOrder shopSlug="cafe" table={table} />);
+  expect(screen.queryByRole("group", { name: "Dine-in service" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Review order" }));
+  await userEvent.click(screen.getByRole("radio", { name: /Counter pickup/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Place dine-in order" }));
+  expect(api.post).toHaveBeenCalledWith("/menu/cafe/orders", expect.objectContaining({ mode: "DINE_IN", serviceType: "COUNTER_PICKUP", tableCode: "T12" }));
+  expect(await screen.findByRole("status")).toHaveTextContent("Counter pickup");
+});
+it.each(["TABLE_SERVICE", "COUNTER_PICKUP"] as const)("automatically uses the shop's only service option: %s", async (serviceType) => {
+  vi.mocked(api.post).mockResolvedValue({ data: { order: { ...response.data.order, serviceType } } });
+  render(<DineInOrder shopSlug="cafe" table={table} dineInServiceMode={serviceType} />);
+  await userEvent.click(screen.getByRole("button", { name: "Review order" }));
+  const services = screen.getAllByRole("radio");
+  expect(services).toHaveLength(1);
+  expect(services[0]).toBeChecked();
+  await userEvent.click(screen.getByRole("button", { name: "Place dine-in order" }));
+  expect(api.post).toHaveBeenCalledWith("/menu/cafe/orders", expect.objectContaining({ mode: "DINE_IN", serviceType }));
+});
+it("preserves counter pickup across uncertain submission and remount even if shop options change", async () => {
+  vi.mocked(api.post).mockRejectedValueOnce(new Error("Network lost"))
+    .mockResolvedValueOnce({ data: { order: { ...response.data.order, serviceType: "COUNTER_PICKUP" } } });
+  const first = render(<DineInOrder shopSlug="cafe" table={table} />);
+  await userEvent.click(screen.getByRole("button", { name: "Review order" }));
+  await userEvent.click(screen.getByRole("radio", { name: /Counter pickup/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Place dine-in order" }));
+  await screen.findByRole("alert");
+  const request = vi.mocked(api.post).mock.calls[0][1];
+  first.unmount();
+  render(<DineInOrder shopSlug="cafe" table={table} dineInServiceMode="TABLE_SERVICE" />);
+  expect(screen.getByRole("radio", { name: /Counter pickup/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /Counter pickup/ })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Confirm previous order" }));
+  expect(vi.mocked(api.post).mock.calls[1][1]).toEqual(request);
+  expect(await screen.findByRole("status")).toHaveTextContent("Counter pickup");
+});
 it("inherits dine-in and submits only selections, then shows the saved total and clears submitted lines", async () => {
   vi.mocked(api.post).mockResolvedValue(response);
   render(<DineInOrder shopSlug="cafe" table={table} />);

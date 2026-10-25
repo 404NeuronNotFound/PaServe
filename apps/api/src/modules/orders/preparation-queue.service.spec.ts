@@ -38,6 +38,12 @@ describe('Preparation queue pages', () => {
     };
   }
   beforeEach(() => vi.resetAllMocks());
+  it('returns the saved dine-in counter pickup choice to kitchen staff', async () => {
+    findMany.mockResolvedValue([{ ...row(), mode: 'DINE_IN', serviceType: 'COUNTER_PICKUP', tableNumber: 'Patio 2' }]);
+    const result = await service.list(actorId, shopId);
+    expect(result.orders[0]).toMatchObject({ mode: 'DINE_IN', serviceType: 'COUNTER_PICKUP', tableNumber: 'Patio 2' });
+    expect(findMany.mock.calls[0][0].select.serviceType).toBe(true);
+  });
   it('returns bounded FIFO pages with a tie-breaking cursor and scoped live access', async () => {
     const rows = Array.from({ length: 51 }, row).sort((a, b) =>
       a.id.localeCompare(b.id),

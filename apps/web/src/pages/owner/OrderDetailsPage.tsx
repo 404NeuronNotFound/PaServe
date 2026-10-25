@@ -1,3 +1,4 @@
+import { dineInServiceLabel } from "@paserve/contracts";
 import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Button } from "../../components/ui/button";
 import { StatusBadge } from "../../components/paserve/StatusBadge";
@@ -185,7 +186,7 @@ function OrderDetailsWorkspace({
               <p>
                 {order.mode === "TAKEOUT"
                   ? "Takeout"
-                  : `Dine-in · Table ${order.tableNumber}`}
+                  : `Dine-in · Table ${order.tableNumber} · ${dineInServiceLabel(order.serviceType)}`}
               </p>
               {order.snapshotIssue && (
                 <InlineMessage tone="warning">
@@ -394,7 +395,7 @@ function OrderDetailsWorkspace({
                 orderContext={
                   order.mode === "TAKEOUT"
                     ? "Takeout"
-                    : `Dine-in · Table ${order.tableNumber}`
+                    : `Dine-in · Table ${order.tableNumber} · ${dineInServiceLabel(order.serviceType)}`
                 }
                 orderNumber={order.orderNumber}
                 items={order.items ?? undefined}

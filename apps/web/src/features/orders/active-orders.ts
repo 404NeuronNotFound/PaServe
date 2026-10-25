@@ -1,3 +1,4 @@
+import { isValidOrderService } from "@paserve/contracts";
 import type {
   ActiveOrdersResponse,
   OwnerOrderFilters,
@@ -50,6 +51,7 @@ export function parseActiveOrders(
       ids.has(order.id) ||
       order.shopId !== shopId ||
       !isOrderNumber(order.orderNumber) ||
+      !isValidOrderService(order.mode, order.serviceType) ||
       !["PENDING_CONFIRMATION", "CONFIRMED"].includes(order.status) ||
       !["UNPAID", "PAID"].includes(order.paymentStatus) ||
       !(

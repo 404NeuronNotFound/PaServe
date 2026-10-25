@@ -105,6 +105,7 @@ describe('public menu visibility', () => {
       'bannerUrl',
       'categories',
       'description',
+      'dineInServiceMode',
       'logoUrl',
       'menuLayout',
       'name',

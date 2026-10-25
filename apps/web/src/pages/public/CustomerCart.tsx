@@ -237,6 +237,7 @@ export function CustomerCart({
             <CustomerOrder
               key={shop.slug}
               shopSlug={shop.slug}
+              dineInServiceMode={shop.dineInServiceMode}
               table={table}
               initialMode={mode}
               onModeChange={setMode}

@@ -1,3 +1,4 @@
+import { dineInServiceLabel } from "@paserve/contracts";
 import { Button } from "../../components/ui/button";
 import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { StatusBadge } from "../../components/paserve/StatusBadge";
@@ -180,7 +181,7 @@ export function CashierOrderReview({
               <dt>Order type</dt>
               <dd>
                 {order.mode === "DINE_IN"
-                  ? `Dine-in · Table ${order.tableNumber}`
+                  ? `Dine-in · Table ${order.tableNumber} · ${dineInServiceLabel(order.serviceType)}`
                   : "Takeout / pickup"}
               </dd>
             </div>

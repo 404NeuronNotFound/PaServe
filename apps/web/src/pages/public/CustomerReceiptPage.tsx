@@ -1,3 +1,4 @@
+import { dineInServiceLabel } from "@paserve/contracts";
 import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Button } from "../../components/ui/button";
 import { ReceiptSkeleton } from "../../components/feedback/LoadingSkeleton";
@@ -81,7 +82,7 @@ function ReceiptRead({
             <RefreshButton label="Refresh receipt" onClick={retry} />
             <p className="order-receipt-intro refresh-heading-description">
               Digital receipt · {receipt.mode === "DINE_IN"
-                ? `Dine-in · Table ${receipt.table!.number}`
+                ? `Dine-in · Table ${receipt.table!.number} · ${dineInServiceLabel(receipt.serviceType)}`
                 : "Takeout / pickup"}
             </p>
           </header>
@@ -94,7 +95,7 @@ function ReceiptRead({
                 details.
               </InlineMessage>
             )}
-            <ReceiptDocument {...receipt} orderContext={receipt.mode === "DINE_IN" ? `Dine-in · Table ${receipt.table!.number}` : "Takeout / pickup"} />
+            <ReceiptDocument {...receipt} orderContext={receipt.mode === "DINE_IN" ? `Dine-in · Table ${receipt.table!.number} · ${dineInServiceLabel(receipt.serviceType)}` : "Takeout / pickup"} />
           </section>
           <footer>
             <p>Keep this receipt for your records.</p>

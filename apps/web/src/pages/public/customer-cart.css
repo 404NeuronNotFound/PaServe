@@ -440,6 +440,12 @@ form.customer-cart-notes {
 .customer-cart-dialog .customer-order-mode:disabled label {
   cursor: default;
 }
+  .customer-cart-dialog .customer-order-mode small {
+    display: block;
+    margin: 4px 0 0;
+    color: inherit;
+    font-weight: 400;
+  }
 .customer-cart-dialog .customer-order-actions {
   display: flex;
   gap: 12px;

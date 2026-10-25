@@ -77,6 +77,18 @@ const membership: UserMembership = {
   shop: { id: shop.id, name: shop.name, slug: shop.slug, isActive: true },
 };
 
+it("saves the owner's dine-in service availability", async () => {
+  vi.mocked(getShopSettings).mockResolvedValue({ shop });
+  vi.mocked(updateShop).mockResolvedValue({ shop: { ...shop, dineInServiceMode: "COUNTER_PICKUP" } });
+  setup();
+  const select = await screen.findByRole("combobox", { name: "Dine-in service" });
+  expect(select).toHaveTextContent("Both");
+  await userEvent.click(select);
+  await userEvent.click(screen.getByRole("option", { name: "Counter pickup" }));
+  await userEvent.click(screen.getByRole("button", { name: "Save settings" }));
+  expect(updateShop).toHaveBeenCalledWith(shop.id, { dineInServiceMode: "COUNTER_PICKUP" });
+});
+
 it("jumps to a settings section without losing edits or saving the form", async () => {
   vi.mocked(getShopSettings).mockResolvedValue({ shop });
   setup();
