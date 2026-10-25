@@ -4,6 +4,8 @@ export const RATE_LIMIT_POLICY = 'paserve:rate-limit';
 // Requests per rolling minute. Scoped budgets also have a per-IP ceiling so
 // changing a shop/resource/token/request ID cannot mint unlimited fresh buckets.
 export const RATE_LIMITS = {
+  // Shared per-IP budget for routes without a more specific policy.
+  general: { limit: 600, aggregate: 600, shop: false },
   register: { limit: 5, aggregate: 5, shop: false },
   login: { limit: 10, aggregate: 10, shop: false },
   refresh: { limit: 30, aggregate: 30, shop: false },

@@ -308,6 +308,18 @@ describe('rate limiting admission and recovery', () => {
       .attach('file', Buffer.from('invalid-image'), 'bad.png')
       .expect(429);
   });
+  it('bounds routes without an explicit policy before authentication and shares their budget', async () => {
+    for (let index = 0; index < 600; index++)
+      await request(app.getHttpServer())
+        .get(`/api/v1/shops/${id}/${index % 2 ? 'products' : 'categories'}`)
+        .set('X-Forwarded-For', `198.51.100.${index % 255}`)
+        .expect(401);
+    const blocked = await request(app.getHttpServer())
+      .get(`/api/v1/shops/${id}/tables`)
+      .expect(429);
+    expect(blocked.headers['cache-control']).toBe('no-store');
+    expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
+  });
   it('stores opaque keys instead of credentials or request data', async () => {
     await post()
       .set('Authorization', 'Bearer private-secret')

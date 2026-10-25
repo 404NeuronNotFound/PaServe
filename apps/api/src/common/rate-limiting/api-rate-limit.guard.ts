@@ -17,11 +17,11 @@ import {
 @Injectable()
 export class ApiRateLimitGuard extends ThrottlerGuard {
   override async canActivate(context: ExecutionContext): Promise<boolean> {
-    const name = this.reflector.getAllAndOverride<RateLimitPolicy>(
-      RATE_LIMIT_POLICY,
-      [context.getHandler(), context.getClass()],
-    );
-    if (!name) return true;
+    const name =
+      this.reflector.getAllAndOverride<RateLimitPolicy>(RATE_LIMIT_POLICY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) ?? 'general';
     const policy = RATE_LIMITS[name];
     const request = context.switchToHttp().getRequest<Request>();
     const response = context.switchToHttp().getResponse<Response>();

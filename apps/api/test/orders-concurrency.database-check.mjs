@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
 import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { ConfigService } from '@nestjs/config';
@@ -22,59 +21,26 @@ try {
   await setup.connect();
   await setup.query('BEGIN');
   await setup.query(`CREATE SCHEMA "${schema}"`);
-  await setup.query(`CREATE TABLE ${q('shops')} (
-    "id" TEXT PRIMARY KEY, "slug" TEXT UNIQUE,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`);
-  await setup.query(`CREATE TABLE ${q('restaurant_tables')} (
-    "id" TEXT PRIMARY KEY, "shopId" TEXT NOT NULL,
-    "code" TEXT, "number" TEXT, "isActive" BOOLEAN NOT NULL DEFAULT true
-  )`);
-  await setup.query(
-    `CREATE TYPE ${q('ProductStatus')} AS ENUM ('AVAILABLE', 'SOLD_OUT', 'HIDDEN')`,
-  );
-  await setup.query(`CREATE TABLE ${q('products')} (
-    "id" TEXT PRIMARY KEY, "shopId" TEXT NOT NULL,
-    "status" ${q('ProductStatus')} NOT NULL DEFAULT 'AVAILABLE',
-    "isArchived" BOOLEAN NOT NULL DEFAULT false, UNIQUE ("id", "shopId")
-  )`);
-  for (const migration of [
-    '20261012090000_dine_in_orders',
-    '20261012140000_takeout_mode',
-    '20261012140100_takeout_order_tables',
-    '20261012160000_pending_order_status',
-    '20261012170000_shop_accepting_orders',
-    '20261012180000_parent_order_metadata',
-    '20261012190000_order_items',
-    '20261012200000_order_price_snapshots',
-    '20261012210000_pending_confirmation_status',
-  ]) {
-    const sql = await readFile(
-      new URL(
-        `../prisma/migrations/${migration}/migration.sql`,
-        import.meta.url,
-      ),
-      'utf8',
-    );
-    await setup.query(
-      sql
-        .replace(/^\s*(BEGIN|COMMIT);\s*$/gm, '')
-        .replace(
-          /"(shops|restaurant_tables|products|orders|order_items|OrderMode)"/g,
-          (_match, name) => q(name),
-        ),
-    );
-  }
+  // Copy current table definitions, never business rows. A Phase 11-only schema
+  // becomes stale as checkout adds receipt/payment columns. Migration/FK/RLS
+  // verification lives in the dedicated database checks; this isolates locking.
+  for (const name of ['shops', 'restaurant_tables', 'products', 'orders', 'order_items'])
+    await setup.query(`CREATE TABLE ${q(name)} (LIKE public."${name}" INCLUDING ALL)`);
+  // Prisma qualifies enum inputs using its configured schema. LIKE retains the
+  // public enum type, so rebind order mode to an equivalent private enum.
+  await setup.query(`CREATE TYPE ${q('OrderMode')} AS ENUM ('DINE_IN', 'TAKEOUT')`);
+  await setup.query(`ALTER TABLE ${q('orders')} ALTER COLUMN "mode" DROP DEFAULT`);
+  await setup.query(`ALTER TABLE ${q('orders')} ALTER COLUMN "mode" TYPE ${q('OrderMode')} USING "mode"::text::${q('OrderMode')}`);
+  await setup.query(`ALTER TABLE ${q('orders')} ALTER COLUMN "mode" SET DEFAULT 'DINE_IN'`);
   const shopId = randomUUID();
   const productId = randomUUID();
   const slug = `concurrency-${randomUUID()}`;
-  await setup.query(`INSERT INTO ${q('shops')} ("id", "slug") VALUES ($1,$2)`, [
+  await setup.query(`INSERT INTO ${q('shops')} ("id", "slug", "name", "updatedAt") VALUES ($1,$2,'Concurrency fixture',CURRENT_TIMESTAMP)`, [
     shopId,
     slug,
   ]);
   await setup.query(
-    `INSERT INTO ${q('products')} ("id", "shopId") VALUES ($1,$2)`,
+    `INSERT INTO ${q('products')} ("id", "shopId", "name", "slug", "price", "updatedAt") VALUES ($1,$2,'Concurrency fixture','fixture',1.00,CURRENT_TIMESTAMP)`,
     [productId, shopId],
   );
   await setup.query('COMMIT');
@@ -126,7 +92,7 @@ try {
           error.getResponse?.().code !== 'ORDER_RETRY_REQUIRED'
         ) {
           throw new Error(
-            `Concurrent submission returned an unexpected error: ${error.code ?? error.getResponse?.().code ?? error.name}`,
+            `Concurrent submission returned an unexpected error: ${error.code ?? error.getResponse?.().code ?? error.name}; metadata keys: ${Object.keys(error.meta ?? {}).join(',')}; database code: ${error.meta?.code ?? error.meta?.driverAdapterError?.cause?.originalCode ?? 'none'}`,
           );
         }
         conflicts++;

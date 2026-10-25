@@ -16,11 +16,19 @@ import { AddOnsModule } from './modules/add-ons/add-ons.module.js';
 import { TablesModule } from './modules/tables/tables.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
 import { StaffModule } from './modules/staff/staff.module.js';
+import { frontendOrigins } from './common/http/frontend-origins.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: (config: Record<string, unknown>) => {
+        frontendOrigins(
+          config.FRONTEND_ORIGINS as string | undefined,
+          config.NODE_ENV === 'production',
+        );
+        return config;
+      },
     }),
     RateLimitingModule,
     DatabaseModule,

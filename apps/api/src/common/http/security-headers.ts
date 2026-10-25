@@ -27,6 +27,8 @@ export function configureSecurityHeaders(
       : false,
   });
   app.use((_request: Request, response: Response, next: NextFunction) => {
+    // Apply before guards/body parsing so denied requests and errors cannot be cached.
+    response.setHeader('Cache-Control', 'no-store');
     response.setHeader(
       'Permissions-Policy',
       'camera=(), microphone=(), geolocation=(), payment=(), usb=()',

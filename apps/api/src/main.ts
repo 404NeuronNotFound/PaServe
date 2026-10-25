@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { configureRequestBody } from './common/http/request-body.js';
+import { frontendOrigins } from './common/http/frontend-origins.js';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -14,9 +15,10 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   app.enableCors({
-    origin: (process.env.FRONTEND_ORIGINS ?? 'http://localhost:5173')
-      .split(',')
-      .map((value) => value.trim()),
+    origin: frontendOrigins(
+      process.env.FRONTEND_ORIGINS,
+      process.env.NODE_ENV === 'production',
+    ),
     credentials: true,
     exposedHeaders: [
       'Retry-After',

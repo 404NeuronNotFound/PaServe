@@ -50,6 +50,9 @@ try {
   await setup.query(
     `ALTER TABLE "${schema}".shops ALTER COLUMN "menuLayout" DROP DEFAULT, ALTER COLUMN "menuLayout" TYPE "${schema}"."MenuLayout" USING "menuLayout"::text::"${schema}"."MenuLayout", ALTER COLUMN "menuLayout" SET DEFAULT 'list'::"${schema}"."MenuLayout"`,
   );
+  // Preserve the copied owner invariant without retaining a public enum literal.
+  await setup.query(`ALTER TABLE "${schema}".shop_members DROP CONSTRAINT IF EXISTS shop_members_owner_enabled`);
+  await setup.query(`ALTER TABLE "${schema}".shop_members ADD CONSTRAINT shop_members_owner_enabled CHECK (role::text <> 'OWNER' OR "disabledAt" IS NULL)`);
   await setup.query(
     `ALTER TABLE "${schema}".shop_members ALTER COLUMN role TYPE "${schema}"."ShopRole" USING role::text::"${schema}"."ShopRole"`,
   );

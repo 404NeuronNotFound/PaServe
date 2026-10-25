@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "pnpm --filter api test --maxWorkers=2 && pnpm --filter api test:e2e --maxWorkers=2 && pnpm --filter web test --maxWorkers=2 && pnpm test:search-load-metrics",
+    "lint": "pnpm --filter api lint && pnpm --filter web lint",
+    "build": "pnpm --filter api build && pnpm --filter web build",
+    "verify": "pnpm lint && pnpm test && pnpm build && pnpm --filter web test:security-release && pnpm test:leaks && pnpm audit --audit-level=low",
+    "test:leaks": "node scripts/security-leaks.mjs",
     "seed": "pnpm --filter api seed",
     "seed:dry-run": "pnpm --filter api seed:dry-run",
     "test:search-load": "node scripts/order-search-load.mjs",

@@ -54,6 +54,9 @@ try {
       `CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`,
     );
   }
+  // Preserve the copied owner invariant without retaining a public enum literal.
+  await client.query(`ALTER TABLE "${schema}".shop_members DROP CONSTRAINT IF EXISTS shop_members_owner_enabled`);
+  await client.query(`ALTER TABLE "${schema}".shop_members ADD CONSTRAINT shop_members_owner_enabled CHECK (role::text <> 'OWNER' OR "disabledAt" IS NULL)`);
   for (const [table, column, type, initial] of [
     ['shops', 'menuLayout', 'MenuLayout', 'list'],
     ['shop_members', 'role', 'ShopRole', null],
@@ -824,7 +827,7 @@ try {
     const samples=[];
     for(let i=0;i<3;i++){const started=performance.now();const report=await read();samples.push(performance.now()-started);verify(report);}
     const sorted=[...samples].sort((a,b)=>a-b),maximum=Math.max(...samples);
-    assert.ok(maximum<=budgetMs,`${feature} exceeded ${budgetMs}ms MVP smoke budget: ${Math.round(maximum)}ms`);
+    assert.ok(maximum<=budgetMs,`${String(feature)} exceeded ${budgetMs}ms MVP smoke budget: ${Math.round(maximum)}ms`);
     phase21Performance.push({feature,medianMs:Math.round(sorted[1]),maxMs:Math.round(maximum)});
   }
   // Relax only the rollback copy to exercise legacy/corrupt timestamp pairs.

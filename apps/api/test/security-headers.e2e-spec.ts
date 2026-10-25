@@ -34,6 +34,7 @@ describe('API security headers', () => {
     query.mockReset().mockResolvedValue([{ healthy: 1 }]);
   });
   function check(headers: Record<string, string>) {
+    expect(headers['cache-control']).toBe('no-store');
     expect(headers['x-content-type-options']).toBe('nosniff');
     expect(headers['x-frame-options']).toBe('DENY');
     expect(headers['referrer-policy']).toBe('no-referrer');

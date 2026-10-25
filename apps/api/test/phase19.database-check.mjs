@@ -99,6 +99,9 @@ try {
     await client.query(
       `CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`,
     );
+  // Preserve the copied owner invariant without retaining a public enum literal.
+  await client.query(`ALTER TABLE "${schema}".shop_members DROP CONSTRAINT IF EXISTS shop_members_owner_enabled`);
+  await client.query(`ALTER TABLE "${schema}".shop_members ADD CONSTRAINT shop_members_owner_enabled CHECK (role::text <> 'OWNER' OR "disabledAt" IS NULL)`);
   for (const [table, column, type, initial] of [
     ['shops', 'menuLayout', 'MenuLayout', 'list'],
     ['shop_members', 'role', 'ShopRole', null],
@@ -325,8 +328,8 @@ try {
   const sales = await new CompletedSalesService(prisma).summary(
     actor.id,
     shop.id,
-    '2026-10-16T00:00:00Z',
-    '2026-10-17T00:00:00Z',
+    new Date(Date.parse(savedDetails.completedAt) - 1000).toISOString(),
+    new Date(Date.parse(savedDetails.completedAt) + 1000).toISOString(),
   );
   assert.equal(sales.completedOrders, 1);
   assert.equal(sales.totalSales, '36.00');

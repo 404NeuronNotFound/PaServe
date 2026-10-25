@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
+import { frontendOrigins } from '../../../common/http/frontend-origins.js';
 
 @Injectable()
 export class AuthOriginGuard implements CanActivate {
@@ -13,11 +14,10 @@ export class AuthOriginGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
-    const allowed = (
-      this.config.get<string>('FRONTEND_ORIGINS') ?? 'http://localhost:5173'
-    )
-      .split(',')
-      .map((value) => value.trim());
+    const allowed = frontendOrigins(
+      this.config.get<string>('FRONTEND_ORIGINS'),
+      this.config.get<string>('NODE_ENV') === 'production',
+    );
     // The custom header forces browser preflight; Origin protects cookie requests.
     // Non-browser API clients can send this header without an Origin.
     if (
