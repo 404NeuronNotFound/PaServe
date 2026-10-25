@@ -46,6 +46,7 @@ import { StaffPage } from "../../pages/owner/StaffPage";
 import { JoinShopPage } from "../../pages/public/JoinShopPage";
 import { KitchenRoute } from "../../features/kitchen/KitchenRoute";
 import { KitchenPage } from "../../pages/kitchen/KitchenPage";
+import { NotFoundPage } from "../../pages/public/NotFoundPage";
 
 let sharedRouter: ReturnType<typeof createBrowserRouter> | undefined;
 let routerConsumers = 0;
@@ -110,10 +111,10 @@ export function AppRouter() {
         </Route>
         <Route path="/connection" element={<ConnectionPage />} />
         {["api", "admin", "shops", "menu"].map((path) => (
-          <Route key={path} path={`/${path}`} element={<PageNotFound />} />
+          <Route key={path} path={`/${path}`} element={<NotFoundPage />} />
         ))}
         <Route path="/:shopSlug" element={<PublicMenuPage />} />
-        <Route path="*" element={<PageNotFound />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
   )));
   useEffect(() => {
@@ -130,14 +131,4 @@ export function AppRouter() {
     };
   }, [router]);
   return <RouterProvider router={router} />;
-}
-
-function PageNotFound() {
-  useEffect(() => { document.title = "Page not found · PaServe"; }, []);
-  return (
-    <main className="connection-page">
-      <h1>Page not found</h1>
-      <a href="/register">Go to registration</a>
-    </main>
-  );
 }

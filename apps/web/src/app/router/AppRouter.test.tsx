@@ -378,7 +378,7 @@ it("resolves a new shop context when navigating between public slugs", async () 
   expect(getCurrentUser).not.toHaveBeenCalled();
 });
 
-it.each(["/api", "/admin", "/shops", "/menu", "/unknown/nested"])(
+it.each(["/api", "/admin", "/shops", "/menu", "/unknown/nested", "/app/missing/page"])(
   "does not resolve reserved or unmatched path %s as a shop",
   (path) => {
     renderAt(path);
