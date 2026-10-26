@@ -10,6 +10,7 @@ import { AccountFrame } from "../../components/layout/AccountFrame";
 import { Button } from "../../components/ui/button";
 import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { RefreshButton } from "../../components/feedback/RefreshButton";
+import { NotificationsSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { feedback } from "../../app/stores/feedback";
 import {
   currentUserKey,
@@ -164,7 +165,7 @@ export function NotificationsPage() {
             and try again.
           </InlineMessage>
         )}
-        {query.isPending && <p role="status">Loading notifications…</p>}
+        {query.isPending && <NotificationsSkeleton />}
         {query.isError && (
           <InlineMessage>
             We couldn’t load your notifications. Please try refreshing.

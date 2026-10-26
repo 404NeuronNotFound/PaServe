@@ -15,6 +15,7 @@ import {
   PreparationMetricSkeleton,
   SalesReportSkeleton,
   StaffSkeleton,
+  NotificationsSkeleton,
   FormSkeleton,
 } from "./LoadingSkeleton";
 
@@ -58,6 +59,7 @@ it.each([
   ["payments", <SalesReportSkeleton kind="payments" label="Loading payments" />],
   ["recent orders", <SalesReportSkeleton kind="recent" label="Loading recent orders" />],
   ["staff", <StaffSkeleton />],
+  ["notifications", <NotificationsSkeleton />],
   ["forms", <FormSkeleton label="Loading settings" />],
 ])(
   "provides a quiet %s loading label and hides placeholder content and actions",

@@ -541,6 +541,32 @@ export function PreparationMetricSkeleton() {
   );
 }
 
+export function NotificationsSkeleton() {
+  return (
+    <LoadingRegion label="Loading notifications…">
+      <div className="notification-list">
+        {[0, 1, 2].map((index) => (
+          <div className="notification-card" key={index}>
+            <span className="notification-icon">
+              <SkeletonBlock width="100%" height="100%" />
+            </span>
+            <div className="notification-content skeleton-lines">
+              <SkeletonBlock width="38%" height={22} />
+              <SkeletonBlock width="90%" />
+              <SkeletonBlock width="65%" />
+              <SkeletonBlock width="28%" height={12} />
+              <div className="notification-actions">
+                <SkeletonBlock width={140} height={44} />
+                {index === 0 && <SkeletonBlock width={90} height={44} />}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </LoadingRegion>
+  );
+}
+
 export function StaffSkeleton() {
   return (
     <LoadingRegion label="Checking staff access…">
