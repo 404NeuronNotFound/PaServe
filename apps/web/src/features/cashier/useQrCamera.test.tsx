@@ -217,6 +217,16 @@ it("stops when the browser tab becomes hidden", async () => {
   fireEvent(document, new Event("visibilitychange"));
   expect(source.stop).toHaveBeenCalled();
 });
+it("releases the camera when access verification locks the workspace", async () => {
+  const source = media();
+  getUserMedia.mockResolvedValue(source.stream);
+  render(<Harness />);
+  fireEvent.click(screen.getByText("Start"));
+  await screen.findByText("scanning");
+  act(() => window.dispatchEvent(new Event("paserve:access-verifying")));
+  expect(source.stop).toHaveBeenCalled();
+  expect(screen.getByText("idle")).toBeInTheDocument();
+});
 it("handles camera disconnection", async () => {
   const source = media();
   getUserMedia.mockResolvedValue(source.stream);

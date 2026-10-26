@@ -5,14 +5,14 @@ import { Button } from "../ui/button";
 import { InlineMessage } from "./InlineMessage";
 import "./session-recovery.css";
 
-export function SessionRecoveryPage({ title, onRetry, pending = false }: {
-  title: string; onRetry: () => void; pending?: boolean;
+export function SessionRecoveryPage({ title, onRetry, pending = false, preserveTitle = false }: {
+  title: string; onRetry: () => void; pending?: boolean; preserveTitle?: boolean;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    document.title = `${title} · PaServe`;
+    if (!preserveTitle) document.title = `${title} · PaServe`;
     heading.current?.focus();
-  }, [title]);
+  }, [title, preserveTitle]);
   return (
     <RecoveryLayout contentId="session-recovery-content">
       <main id="session-recovery-content" className="session-recovery-card" tabIndex={-1}

@@ -13,7 +13,7 @@ it("sends the requested context in the URL and forwards cancellation", async () 
   const get = vi.spyOn(api, "get").mockResolvedValue({ data: { membership } });
   const signal = new AbortController().signal;
   expect(await getShopMembership("a", signal)).toEqual(membership);
-  expect(get).toHaveBeenCalledWith("/shops/a/membership", { signal });
+  expect(get).toHaveBeenCalledWith("/shops/a/membership", { signal, timeout: 15000 });
 });
 it.each([
   { ...membership, shopId: "other" },

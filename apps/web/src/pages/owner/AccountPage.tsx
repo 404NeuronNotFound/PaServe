@@ -23,6 +23,7 @@ export function AccountPage() {
     location.state as { createdShopName?: string } | null
   )?.createdShopName;
   const user = client.getQueryData<CurrentUserResponse>(currentUserKey)?.user;
+  const accessNotice = (location.state as { accessNotice?: string } | null)?.accessNotice;
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     document.title = "Your account · PaServe";
@@ -40,6 +41,7 @@ export function AccountPage() {
   return (
     <AccountFrame>
       <div className="account-overview" id="overview">
+        {accessNotice && <InlineMessage tone="warning">{accessNotice}</InlineMessage>}
         <div className="account-hero">
           <div className="account-greeting">
             <p className="section-label">

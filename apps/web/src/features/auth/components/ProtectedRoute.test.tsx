@@ -1,10 +1,11 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   act,
   cleanup,
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { useState, type ReactNode } from "react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
@@ -24,6 +25,12 @@ vi.mock("../api/session", () => ({
 }));
 beforeEach(() => {
   vi.resetAllMocks();
+});
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  focusManager.setFocused(undefined);
+  onlineManager.setOnline(true);
 });
 function renderRoute(
   client = new QueryClient(),
@@ -99,7 +106,16 @@ it.each([
           memberships: [],
         },
       })
-      .mockRejectedValue(new Error("background connection unavailable"));
+      .mockResolvedValue({
+        user: {
+          id: "user-id",
+          email: "owner@example.com",
+          createdAt: "2026-10-08T00:00:00Z",
+          firstName: null,
+          lastName: null,
+          memberships: [],
+        },
+      });
     focusManager.setFocused(true);
     onlineManager.setOnline(true);
     try {
@@ -116,7 +132,8 @@ it.each([
       });
       expect(screen.getByLabelText("Unsaved draft")).toBe(draft);
       expect(draft).toHaveValue("Keep this work");
-      expect(getCurrentUser).toHaveBeenCalledTimes(1);
+      await screen.findByLabelText("Unsaved draft");
+      expect(vi.mocked(getCurrentUser).mock.calls.length).toBeGreaterThan(1);
       expect(
         screen.queryByText("Unable to check your session"),
       ).not.toBeInTheDocument();
@@ -168,5 +185,69 @@ it("does not expose a private page from a cached profile while rechecking a revo
   expect(
     await screen.findByRole("button", { name: "Try again" }),
   ).toBeInTheDocument();
+  expect(screen.queryByText("Private account")).not.toBeInTheDocument();
+});
+it("periodically verifies visible pages, but does not poll in a background tab", async () => {
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+  focusManager.setFocused(true);
+  vi.mocked(getCurrentUser).mockResolvedValue({
+    user: {
+      id: "u",
+      email: "u@example.com",
+      firstName: null,
+      lastName: null,
+      memberships: [],
+      createdAt: "2026-10-08T00:00:00Z",
+    },
+  });
+  renderRoute();
+  await screen.findByRole("heading", { name: "Private account" });
+  const reads = vi.mocked(getCurrentUser).mock.calls.length;
+  await act(async () => {
+    vi.advanceTimersByTime(30_000);
+  });
+  await waitFor(() =>
+    expect(vi.mocked(getCurrentUser).mock.calls.length).toBeGreaterThan(reads),
+  );
+  await act(async () => {
+    focusManager.setFocused(false);
+  });
+  const hiddenReads = vi.mocked(getCurrentUser).mock.calls.length;
+  await act(async () => {
+    vi.advanceTimersByTime(60_000);
+  });
+  expect(getCurrentUser).toHaveBeenCalledTimes(hiddenReads);
+});
+it("clears private caches after a session is revoked during a background check", async () => {
+  vi.mocked(getCurrentUser).mockResolvedValue({
+    user: {
+      id: "u",
+      email: "u@example.com",
+      firstName: null,
+      lastName: null,
+      memberships: [],
+      createdAt: "2026-10-08T00:00:00Z",
+    },
+  });
+  const client = new QueryClient();
+  renderRoute(client);
+  await screen.findByRole("heading", { name: "Private account" });
+  client.setQueryData(["private-order"], { total: "100.00" });
+  const error = new AxiosError("Unauthorized");
+  error.response = {
+    status: 401,
+    statusText: "Unauthorized",
+    headers: {},
+    config: { headers: new AxiosHeaders() },
+    data: {},
+  };
+  vi.mocked(getCurrentUser).mockRejectedValue(error);
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: ["auth", "me"] });
+  });
+  await screen.findByRole("heading", { name: "Sign in" });
+  await waitFor(() =>
+    expect(client.getQueryData(["private-order"])).toBeUndefined(),
+  );
   expect(screen.queryByText("Private account")).not.toBeInTheDocument();
 });

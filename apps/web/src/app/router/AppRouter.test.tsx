@@ -7,7 +7,7 @@ import { getCurrentUser } from "../../features/auth/api/session";
 import { api } from "../../lib/api/client";
 import { useCustomerTables } from "../../features/shops/customer-table";
 
-vi.mock("../../lib/api/client", () => ({ api: { get: vi.fn() } }));
+vi.mock("../../lib/api/client", () => ({ api: { get: vi.fn() }, AUTH_REQUEST_TIMEOUT_MS: 15000 }));
 
 vi.mock("../../features/auth/api/session", () => ({
   currentUserKey: ["auth", "me"],
@@ -169,7 +169,7 @@ it("blocks a direct cashier URL using the live shop role despite a cached OWNER 
   vi.mocked(api.get).mockResolvedValue({ data: { membership } });
   renderAt(`/app/shops/${shopId}/cashier`);
   expect(
-    await screen.findByRole("heading", { name: "Cashier access required" }),
+    await screen.findByRole("heading", { name: "Cafe A" }),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole("heading", { name: "Cashier workspace" }),
@@ -179,6 +179,7 @@ it("blocks a direct cashier URL using the live shop role despite a cached OWNER 
   ).not.toBeInTheDocument();
   expect(api.get).toHaveBeenCalledWith(`/shops/${shopId}/membership`, {
     signal: expect.any(AbortSignal),
+    timeout: 15000,
   });
 });
 
@@ -204,7 +205,7 @@ it("blocks a direct cashier URL for a shop outside the authenticated user's memb
   vi.mocked(api.get).mockRejectedValue(error);
   renderAt("/app/shops/05bcdf9f-d1be-4669-a01c-0b657f5a2f8e/cashier");
   expect(
-    await screen.findByRole("heading", { name: "Shop unavailable" }),
+    await screen.findByText("staff@example.com"),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole("heading", { name: "Cashier workspace" }),

@@ -33,6 +33,7 @@ function setup(client = new QueryClient()) {
             </Route>
             <Route path="/login" element={<SignIn />} />
             <Route path="/app/shops" element={<h1>Choose shop</h1>} />
+            <Route path="/app/shops/shop-a" element={<h1>Shop overview</h1>} />
           </Routes>
         </MemoryRouter>
       </ActiveShopContext.Provider>
@@ -80,7 +81,7 @@ it("denies kitchen staff despite the enclosing OWNER context", async () => {
   vi.mocked(getShopMembership).mockResolvedValue(member("KITCHEN"));
   setup();
   expect(
-    await screen.findByRole("heading", { name: "Cashier access required" }),
+    await screen.findByRole("heading", { name: "Shop overview" }),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole("heading", { name: "Cashier workspace" }),
@@ -120,7 +121,7 @@ it("keeps tools hidden during a network failure and permits retry", async () => 
     await screen.findByRole("heading", { name: "Cashier workspace" }),
   ).toBeInTheDocument();
 });
-it("hides cached access during revalidation and blocks a revoked role", async () => {
+it("keeps a recent verified workspace visible during revalidation and blocks a revoked role", async () => {
   vi.mocked(getShopMembership).mockResolvedValueOnce(member("CASHIER"));
   const client = setup();
   await screen.findByRole("heading", { name: "Cashier workspace" });
@@ -134,14 +135,12 @@ it("hides cached access during revalidation and blocks a revoked role", async ()
   act(() => {
     void client.invalidateQueries({ queryKey: ["cashier", "access"] });
   });
-  await waitFor(() =>
-    expect(
-      screen.queryByRole("heading", { name: "Cashier workspace" }),
-    ).not.toBeInTheDocument(),
-  );
+  await waitFor(() => expect(getShopMembership).toHaveBeenCalledTimes(2));
+  expect(screen.getByRole("heading", { name: "Cashier workspace" })).toBeVisible();
+  expect(screen.queryByRole("dialog", { name: /Checking cashier access/ })).not.toBeInTheDocument();
   await act(async () => resolve(member("KITCHEN")));
   expect(
-    await screen.findByRole("heading", { name: "Cashier access required" }),
+    await screen.findByRole("heading", { name: "Shop overview" }),
   ).toBeInTheDocument();
 });
 it("does not trust a cached cashier grant when entering the route", async () => {

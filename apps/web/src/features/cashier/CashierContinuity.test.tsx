@@ -138,13 +138,19 @@ it("keeps the searched order and review step through repeated tab returns and re
   const accessChecks = vi.mocked(getShopMembership).mock.calls.length;
   const sessionChecks = vi.mocked(getCurrentUser).mock.calls.length;
   for (let i = 0; i < 3; i++) await returnToTab();
-  expect(screen.getByRole("heading", { name: "Review order" })).toBe(review);
+  expect(await screen.findByRole("heading", { name: "Review order" })).toBe(
+    review,
+  );
   expect(screen.getByText("ORD-000042")).toBeInTheDocument();
   expect(
     screen.queryByLabelText("Find by order number"),
   ).not.toBeInTheDocument();
-  expect(getShopMembership).toHaveBeenCalledTimes(accessChecks);
-  expect(getCurrentUser).toHaveBeenCalledTimes(sessionChecks);
+  expect(vi.mocked(getShopMembership).mock.calls.length).toBeGreaterThan(
+    accessChecks,
+  );
+  expect(vi.mocked(getCurrentUser).mock.calls.length).toBeGreaterThan(
+    sessionChecks,
+  );
 });
 it("keeps the payment amount and current payment step while the order refreshes in place", async () => {
   const actor = setup();
@@ -163,10 +169,40 @@ it("keeps the payment amount and current payment step while the order refreshes 
   await returnToTab();
   expect(screen.getByLabelText("Amount received (PHP)")).toBe(amount);
   expect(amount).toHaveValue("200");
+  await waitFor(() => expect(amount).toBeVisible());
+  await waitFor(() => expect(amount).toHaveFocus());
   expect(
     screen.queryByLabelText("Find by order number"),
   ).not.toBeInTheDocument();
   await waitFor(() =>
-    expect(vi.mocked(reviewCashPayment).mock.calls.length).toBeGreaterThan(reviews),
+    expect(vi.mocked(reviewCashPayment).mock.calls.length).toBeGreaterThan(
+      reviews,
+    ),
   );
+});
+it("hides a payment draft on a failed session check and restores it after retry", async () => {
+  const actor = setup();
+  await actor.type(
+    await screen.findByLabelText("Find by order number"),
+    "ORD-000042",
+  );
+  await actor.click(screen.getByRole("button", { name: "Find order" }));
+  await actor.click(
+    await screen.findByRole("button", { name: "Confirm and pay" }),
+  );
+  const amount = await screen.findByLabelText("Amount received (PHP)");
+  await waitFor(() => expect(amount).toBeEnabled());
+  await actor.type(amount, "200");
+  vi.mocked(getCurrentUser).mockRejectedValue(
+    new Error("connection unavailable"),
+  );
+  await returnToTab();
+  await screen.findByRole("button", { name: "Try again" });
+  expect(amount).not.toBeVisible();
+  expect(amount).toHaveValue("200");
+  vi.mocked(getCurrentUser).mockResolvedValue(account);
+  await actor.click(screen.getByRole("button", { name: "Try again" }));
+  await waitFor(() => expect(amount).toBeVisible());
+  expect(screen.getByLabelText("Amount received (PHP)")).toBe(amount);
+  expect(amount).toHaveValue("200");
 });

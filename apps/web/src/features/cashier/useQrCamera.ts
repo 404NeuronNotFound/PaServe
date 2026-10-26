@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadQrDecoder } from "./qr-decoder";
+import { ACCESS_CHECK_EVENT, useAccessVerified } from "../auth/access-status";
 
 export function cameraUnavailableReason() {
   if (window.isSecureContext === false)
@@ -22,6 +23,7 @@ export function cameraFailure(error: unknown): string {
   return "Unable to start camera scanning. Try again, or use an image or pasted QR contents below.";
 }
 export function useQrCamera(onCode: (raw: string) => boolean) {
+  const verified = useAccessVerified();
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,15 +58,18 @@ export function useQrCamera(onCode: (raw: string) => boolean) {
     };
     document.addEventListener("visibilitychange", hidden);
     window.addEventListener("pagehide", stop);
+    window.addEventListener(ACCESS_CHECK_EVENT, stop);
     return () => {
       mounted.current = false;
       stop();
       document.removeEventListener("visibilitychange", hidden);
       window.removeEventListener("pagehide", stop);
+      window.removeEventListener(ACCESS_CHECK_EVENT, stop);
     };
   }, [stop]);
   const start = useCallback(
     async (selected = "") => {
+      if (!verified) return;
       const reason = cameraUnavailableReason();
       if (reason) {
         setError(reason);
@@ -214,7 +219,7 @@ export function useQrCamera(onCode: (raw: string) => boolean) {
         }
       }
     },
-    [release, stop],
+    [release, stop, verified],
   );
   return { videoRef: video, phase, error, cameras, deviceId, start, stop };
 }

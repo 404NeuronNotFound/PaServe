@@ -30,6 +30,7 @@ export function NavigationProtection({ children }: { children: ReactNode }) {
   return <Registry.Provider value={register}>
     {children}
     <DecisionDialog open={blocker.state === "blocked"}
+      className="navigation-decision-dialog"
       title={busy ? "Action in progress" : "Leave this page?"}
       description={busy ? "Wait for the current action to finish before leaving. Your work stays here." : "Unsaved changes will be lost. Saved cart items will remain available."}
       confirmLabel={dirty ? "Discard and leave" : "Leave page"}

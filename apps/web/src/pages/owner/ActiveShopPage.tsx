@@ -1,7 +1,8 @@
 import { Card } from "../../components/ui/card";
 import { ShopLogo } from "../../components/shops/ShopLogo";
 import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { InlineMessage } from "../../components/feedback/InlineMessage";
 import { FiArrowUpRight, FiSettings, FiUsers, FiUser } from "react-icons/fi";
 import { useActiveShop, shopPath } from "../../features/shops/active-shop";
 import { navigationForRole } from "../../components/layout/workspace-navigation";
@@ -17,6 +18,7 @@ const taskDescriptions: Record<string, string> = {
 
 export function ActiveShopPage() {
   const membership = useActiveShop();
+  const accessNotice = (useLocation().state as { accessNotice?: string } | null)?.accessNotice;
   const tasks = navigationForRole(membership.role).flatMap((group) =>
     group.items.filter((item) =>
       group.id === "daily" ? Boolean(item.path) : item.path === "products",
@@ -33,6 +35,7 @@ export function ActiveShopPage() {
   }, [membership.shop.name]);
   return (
     <section className="shop-context-content shop-overview">
+      {accessNotice && <InlineMessage tone="warning">{accessNotice}</InlineMessage>}
       <div className="shop-overview-hero">
         <div>
           <p className="section-label">YOUR WORKSPACE</p>

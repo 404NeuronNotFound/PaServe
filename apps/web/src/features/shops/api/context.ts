@@ -4,14 +4,14 @@ import type {
   UpdateShopResponse,
   ShopSettingsResponse,
 } from "@paserve/contracts";
-import { api } from "../../../lib/api/client";
+import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../../lib/api/client";
 import "../../auth/api/session";
 
 // Capture the target in each request; switching tabs/shops cannot retarget it.
 export async function getShopMembership(shopId: string, signal?: AbortSignal) {
   const { data } = await api.get<ShopMembershipResponse>(
     `/shops/${encodeURIComponent(shopId)}/membership`,
-    { signal },
+    { signal, timeout: AUTH_REQUEST_TIMEOUT_MS },
   );
   if (
     data.membership.shopId !== shopId ||

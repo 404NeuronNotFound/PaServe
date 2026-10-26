@@ -129,6 +129,7 @@ function setup(
               <Route index element={<KitchenPage />} />
             </Route>
             <Route path="/login" element={<h1>Sign in</h1>} />
+            <Route path="/app/shops/shop-a" element={<h1>Shop overview</h1>} />
           </Routes>
         </MemoryRouter>
       </ActiveShopContext.Provider>
@@ -151,7 +152,7 @@ it("keeps the Preparing view and distance layout on tab return while refreshing 
   expect(screen.getByRole("button", { name: "Preparing" })).toHaveAttribute("aria-pressed", "true");
   expect(screen.getByRole("button", { name: "Distance view" })).toHaveAttribute("aria-pressed", "true");
   expect(screen.getByRole("button", { name: "Mark ready ORD-000001" })).toBeInTheDocument();
-  expect(getShopMembership).toHaveBeenCalledTimes(accessReads);
+  expect(vi.mocked(getShopMembership).mock.calls.length).toBeGreaterThan(accessReads);
   await waitFor(() => expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThan(queueReads));
 });
 
@@ -288,7 +289,7 @@ it.each(["KITCHEN", "OWNER", "ADMIN", "MANAGER"] as const)(
 it("denies cashier access even when the outer context is owner", async () => {
   setup("CASHIER");
   expect(
-    await screen.findByRole("heading", { name: "Kitchen access required" }),
+    await screen.findByRole("heading", { name: "Shop overview" }),
   ).toBeInTheDocument();
   expect(api.get).not.toHaveBeenCalled();
 });

@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -44,6 +44,7 @@ function setup(
           <Route path="/app/shops" element={<ShopSelectionPage />} />
           <Route path="/app/shops/:shopId" element={<ActiveShopRoute />}>
             <Route index element={<ActiveShopPage />} />
+            <Route path=":destination" element={<label>Workspace draft<input defaultValue="Unsaved work" /></label>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -133,7 +134,7 @@ it.each([400, 403, 404])(
       screen.queryByRole("heading", { name: "Cafe a" }),
     ).not.toBeInTheDocument();
     expect(
-      await screen.findByRole("heading", { name: "Shop unavailable" }),
+      await screen.findByRole("heading", { name: "Account" }),
     ).toBeInTheDocument();
     expect(rememberedShop("user-a")).toBeNull();
   },
@@ -245,4 +246,40 @@ it("keeps a truthful empty state with one onboarding action", () => {
     "href",
     "/app/onboarding/create-shop",
   );
+});
+
+it.each([
+  ["settings", "ADMIN", false], ["staff", "ADMIN", false],
+  ["products", "CASHIER", false], ["tables", "MANAGER", false],
+  ["sales", "CASHIER", false], ["cashier", "KITCHEN", false],
+  ["kitchen", "CASHIER", false], ["products", "ADMIN", true],
+  ["sales", "MANAGER", true], ["cashier", "MANAGER", true],
+  ["kitchen", "MANAGER", true],
+] as const)("rechecks %s when the role changes to %s (allowed: %s)", async (page, role, allowed) => {
+  vi.mocked(getShopMembership).mockResolvedValue(member("a"));
+  const client = setup(`/app/shops/a/${page}`, [member("a")]);
+  const draft = await screen.findByLabelText("Workspace draft");
+  vi.mocked(getShopMembership).mockResolvedValue(member("a", role));
+  await act(async () => { await client.invalidateQueries({ queryKey: activeShopKey("user-a", "a") }); });
+  if (allowed) {
+    await waitFor(() => expect(draft).toBeVisible());
+    expect(screen.getByLabelText("Workspace draft")).toBe(draft);
+    expect(draft).toHaveValue("Unsaved work");
+  } else {
+    await screen.findByRole("heading", { name: "Cafe a" });
+    expect(screen.queryByLabelText("Workspace draft")).not.toBeInTheDocument();
+    expect(screen.getByText(`Your role: ${role.toLowerCase()}`)).toBeVisible();
+  }
+});
+it("discards only the revoked shop's data and returns to the account", async () => {
+  vi.mocked(getShopMembership).mockResolvedValue(member("a"));
+  const client = setup("/app/shops/a", [member("a"), member("b")]);
+  await screen.findByRole("heading", { name: "Cafe a" });
+  client.setQueryData(["owner-orders", "user-a", "a"], { private: "revoked" });
+  client.setQueryData(["owner-orders", "user-a", "b"], { private: "allowed" });
+  vi.mocked(getShopMembership).mockRejectedValue(failure(404));
+  await act(async () => { await client.invalidateQueries({ queryKey: activeShopKey("user-a", "a") }); });
+  await screen.findByRole("heading", { name: "Account" });
+  await waitFor(() => expect(client.getQueryData(["owner-orders", "user-a", "a"])).toBeUndefined());
+  expect(client.getQueryData(["owner-orders", "user-a", "b"])).toEqual({ private: "allowed" });
 });

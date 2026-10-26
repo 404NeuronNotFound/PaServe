@@ -17,6 +17,7 @@ type DecisionDialogProps = {
   onClose: () => void;
   errorMessage?: (error: unknown) => string;
   animateClose?: boolean;
+  className?: string;
 };
 
 export function DecisionDialog(props: DecisionDialogProps) {
@@ -35,6 +36,7 @@ function OpenDecisionDialog({
   onClose,
   errorMessage,
   animateClose = false,
+  className = "",
 }: DecisionDialogProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
@@ -101,7 +103,7 @@ function OpenDecisionDialog({
   return (
     <dialog
       ref={dialog}
-      className={`feedback-dialog${closing ? " is-closing" : ""}`}
+      className={`feedback-dialog ${className}${closing ? " is-closing" : ""}`}
       aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
