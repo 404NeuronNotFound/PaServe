@@ -240,6 +240,7 @@ model StaffInvitation {
   revokedAt DateTime?
   acceptedAt DateTime?
   acceptedBy String?
+  declinedAt DateTime?
   createdAt DateTime @default(now())
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
@@ -397,4 +398,25 @@ enum MenuLayout {
   grid
   list
   compact
+}
+
+// Account inbox: invitation recipients may register after delivery. No tokens
+// or live tenant permissions are carried in these immutable event snapshots.
+model AccountNotification {
+  id String @id @default(uuid())
+  recipientUserId String?
+  recipientEmail String @db.VarChar(254)
+  kind String @db.VarChar(32)
+  shopId String
+  shopName String
+  actorName String
+  role ShopRole?
+  previousRole ShopRole?
+  invitationId String?
+  createdAt DateTime @default(now())
+  readAt DateTime?
+
+  @@index([recipientUserId, createdAt, id])
+  @@index([recipientEmail, createdAt, id])
+  @@map("account_notifications")
 }

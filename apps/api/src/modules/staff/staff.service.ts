@@ -40,13 +40,15 @@ function invitationResponse(invite: StaffInvitation): InvitationResponse {
     email: invite.email,
     role: invite.role as StaffRole,
     expiresAt: invite.expiresAt.toISOString(),
-    status: invite.acceptedAt
-      ? 'ACCEPTED'
-      : invite.revokedAt
-        ? 'REVOKED'
-        : invite.expiresAt <= new Date()
-          ? 'EXPIRED'
-          : 'PENDING',
+    status: invite.declinedAt
+      ? 'DECLINED'
+      : invite.acceptedAt
+        ? 'ACCEPTED'
+        : invite.revokedAt
+          ? 'REVOKED'
+          : invite.expiresAt <= new Date()
+            ? 'EXPIRED'
+            : 'PENDING',
   };
 }
 
@@ -410,10 +412,14 @@ export class StaffService {
     actorId: string,
     shopId: string,
     token: string,
+    fromInbox = false,
   ) {
     await this.lockShop(tx, shopId);
     const invite = await tx.staffInvitation.findFirst({
-      where: { shopId, tokenHash: hash(token) },
+      where: {
+        shopId,
+        ...(fromInbox ? { id: token } : { tokenHash: hash(token) }),
+      },
     });
     if (
       !invite ||
@@ -431,6 +437,8 @@ export class StaffService {
       where: { id: actorId, isActive: true },
       select: { email: true },
     });
+    if ((!user || user.email !== invite.email) && fromInbox)
+      throw invalidInvitation();
     if (!user || user.email !== invite.email)
       throw new ForbiddenException({
         code: 'INVITATION_EMAIL_MISMATCH',
@@ -472,13 +480,20 @@ export class StaffService {
     });
   }
 
-  async accept(actorId: string, shopId: string, token: string) {
+  async accept(
+    actorId: string,
+    shopId: string,
+    token: string,
+    fromInbox = false,
+  ) {
+    if (fromInbox) this.id(token);
     return this.transaction(async (tx) => {
       const { invite, user, existing } = await this.resolveInvitation(
         tx,
         actorId,
         shopId,
         token,
+        fromInbox,
       );
       if (
         !(await tx.shop.findFirst({
@@ -502,7 +517,7 @@ export class StaffService {
         where: {
           id: invite.id,
           shopId,
-          tokenHash: hash(token),
+          tokenHash: invite.tokenHash,
           revokedAt: null,
           acceptedAt: null,
           expiresAt: { gt: now },
@@ -525,6 +540,54 @@ export class StaffService {
         },
       });
       return { shopId, role: invite.role as StaffRole };
+    });
+  }
+
+  async decline(actorId: string, shopId: string, invitationId: string) {
+    this.id(invitationId);
+    return this.transaction(async (tx) => {
+      const { invite, user, existing } = await this.resolveInvitation(
+        tx,
+        actorId,
+        shopId,
+        invitationId,
+        true,
+      );
+      if (
+        existing ||
+        !(await tx.shop.findFirst({
+          where: shopPermissionWhere(
+            invite.invitedBy,
+            shopId,
+            'shop.staff.manage',
+          ),
+          select: { id: true },
+        }))
+      )
+        throw invalidInvitation();
+      const now = new Date();
+      const result = await tx.staffInvitation.updateMany({
+        where: {
+          id: invite.id,
+          shopId,
+          acceptedAt: null,
+          revokedAt: null,
+          expiresAt: { gt: now },
+        },
+        data: { declinedAt: now, revokedAt: now },
+      });
+      if (result.count !== 1) throw invalidInvitation();
+      await tx.staffAuditEvent.create({
+        data: {
+          shopId,
+          actorId,
+          action: 'DECLINED',
+          targetEmail: user.email,
+          targetUserId: actorId,
+          invitationId: invite.id,
+          role: invite.role,
+        },
+      });
     });
   }
 }

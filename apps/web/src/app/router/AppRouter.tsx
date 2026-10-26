@@ -15,6 +15,7 @@ import { CustomerReceiptPage } from "../../pages/public/CustomerReceiptPage";
 import { ConnectionPage } from "../../pages/public/ConnectionPage";
 import { LoginPage } from "../../pages/public/LoginPage";
 import { AccountPage } from "../../pages/owner/AccountPage";
+import { NotificationsPage } from "../../pages/owner/NotificationsPage";
 import { ProfilePage } from "../../pages/owner/ProfilePage";
 import { PlacesPage } from "../../pages/owner/PlacesPage";
 import { CreateShopPage } from "../../pages/owner/CreateShopPage";
@@ -105,6 +106,7 @@ export function AppRouter() {
             </Route>
           </Route>
           <Route path="account" element={<AccountPage />} />
+          <Route path="account/notifications" element={<NotificationsPage />} />
           <Route path="account/profile" element={<ProfilePage />} />
           <Route path="account/places" element={<PlacesPage />} />
           <Route path="onboarding/create-shop" element={<CreateShopPage />} />

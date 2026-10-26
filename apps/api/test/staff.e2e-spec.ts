@@ -813,4 +813,68 @@ describe('Owner staff invitations through HTTP', () => {
     await attempt().expect(429);
     expect(tx.staffInvitation.create).toHaveBeenCalledTimes(10);
   });
+
+  const inboxDecision = (action: string, auth = true) => {
+    const req = owner().post(
+      `/api/v1/account/notifications/invitations/${shopId}/${resourceId}/${action}`,
+    );
+    return auth ? req.set('Authorization', 'Bearer invitee') : req;
+  };
+  it.each(['accept', 'decline'])(
+    'requires authentication for inbox %s',
+    async (action) => {
+      await inboxDecision(action, false).expect(401);
+      expect(transaction).not.toHaveBeenCalled();
+    },
+  );
+  it('accepts an inbox invitation using live identity, without a membership or exposed token', async () => {
+    role = 'CASHIER';
+    const result = await inboxDecision('accept').expect(200);
+    expect(result.body).toEqual({ shopId, role: 'CASHIER' });
+    expect(tx.staffInvitation.findFirst).toHaveBeenCalledWith({
+      where: { shopId, id: resourceId },
+    });
+    expect(tx.shopMember.create).toHaveBeenCalledWith({
+      data: { shopId, userId, role: 'CASHIER' },
+    });
+  });
+  it('declines atomically without creating a membership and records the result', async () => {
+    await inboxDecision('decline').expect(204);
+    expect(tx.shopMember.create).not.toHaveBeenCalled();
+    expect(tx.staffInvitation.updateMany.mock.calls[0][0].data).toMatchObject({
+      declinedAt: expect.any(Date),
+      revokedAt: expect.any(Date),
+    });
+    expect(tx.staffAuditEvent.create.mock.calls[0][0].data).toMatchObject({
+      action: 'DECLINED',
+      invitationId: resourceId,
+      actorId: userId,
+    });
+  });
+  it.each(['accept', 'decline'])(
+    'hides inbox %s from the wrong email',
+    async (action) => {
+      tx.user.findFirst.mockResolvedValue({
+        email: 'someone-else@example.com',
+      });
+      await inboxDecision(action).expect(404);
+      expect(tx.staffInvitation.updateMany).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['accept', 'decline'])(
+    'rechecks issuer authority for inbox %s',
+    async (action) => {
+      tx.shop.findFirst.mockResolvedValue(null);
+      await inboxDecision(action).expect(404);
+      expect(tx.staffInvitation.updateMany).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['accept', 'decline'])(
+    'rejects revoked and consumed inbox %s',
+    async (action) => {
+      invite.revokedAt = new Date();
+      await inboxDecision(action).expect(404);
+      expect(tx.shopMember.create).not.toHaveBeenCalled();
+    },
+  );
 });

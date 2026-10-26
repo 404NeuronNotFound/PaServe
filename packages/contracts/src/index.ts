@@ -64,7 +64,7 @@ export interface StaffInvitation {
   email: string;
   role: StaffRole;
   expiresAt: string;
-  status: "PENDING" | "EXPIRED" | "REVOKED" | "ACCEPTED";
+  status: "PENDING" | "EXPIRED" | "REVOKED" | "ACCEPTED" | "DECLINED";
 }
 export interface ShopStaffResponse {
   shopId: string;
@@ -81,6 +81,25 @@ export interface CreateStaffInvitationResponse {
 export interface AcceptStaffInvitationResponse {
   shopId: string;
   role: StaffRole;
+}
+
+export type AccountNotificationKind = "INVITED" | "ROLE_CHANGED" | "REMOVED" | "DISABLED" | "ACCEPTED" | "DECLINED";
+export interface AccountNotification {
+  id: string;
+  kind: AccountNotificationKind;
+  shopId: string;
+  shopName: string;
+  actorName: string;
+  role: ShopRole | null;
+  previousRole: ShopRole | null;
+  createdAt: string;
+  readAt: string | null;
+  invitation: { id: string; status: StaffInvitation["status"]; expiresAt: string } | null;
+}
+export interface AccountNotificationsResponse {
+  notifications: AccountNotification[];
+  unreadCount: number;
+  nextCursor: string | null;
 }
 export interface StaffInvitationPreview {
   shopId: string;

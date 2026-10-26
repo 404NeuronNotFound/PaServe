@@ -6,6 +6,7 @@ import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../dist/generated/prisma/client.js';
 import { StaffService } from '../dist/modules/staff/staff.service.js';
+import { AccountNotificationsService } from '../dist/modules/staff/account-notifications.service.js';
 import { TenantResourcesRepository } from '../dist/modules/tenancy/tenant-resources.repository.js';
 import { ShopMembersRepository } from '../dist/modules/shop-members/shop-members.repository.js';
 import { ShopMembersService } from '../dist/modules/shop-members/shop-members.service.js';
@@ -79,6 +80,15 @@ try {
         q(name),
       ),
   );
+  await setup.query(`SET LOCAL search_path TO "${schema}", public`);
+  const notificationsSql = await readFile(
+    new URL(
+      '../prisma/migrations/20261026090000_account_notifications/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  await setup.query(notificationsSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
   const ownerId = randomUUID();
   const userId = randomUUID();
   const otherUser = randomUUID();
@@ -116,6 +126,7 @@ try {
     ),
   });
   const staff = new StaffService(prisma);
+  const inbox = new AccountNotificationsService(prisma);
   const ownerMembership = await prisma.shopMember.findUnique({
     where: { userId_shopId: { userId: ownerId, shopId } },
   });
@@ -144,6 +155,35 @@ try {
   const stored = await prisma.staffInvitation.findUnique({
     where: { id: invitation.invitation.id },
   });
+  let recipientInbox = await inbox.list(userId);
+  assert.equal(recipientInbox.unreadCount, 1);
+  const invitationNotice = recipientInbox.notifications[0];
+  assert.equal(invitationNotice.kind, 'INVITED');
+  assert.equal(invitationNotice.invitation.status, 'PENDING');
+  assert.equal(invitationNotice.shopName, 'Test shop');
+  assert.equal(
+    JSON.stringify(invitationNotice).includes(stored.tokenHash),
+    false,
+  );
+  assert.equal((await inbox.list(otherUser)).unreadCount, 0);
+  await assert.rejects(inbox.markRead(otherUser, invitationNotice.id), {
+    status: 404,
+  });
+  await assert.rejects(inbox.list(otherUser, invitationNotice.id), {
+    status: 404,
+  });
+  await assert.rejects(
+    staff.accept(otherUser, shopId, invitation.invitation.id, true),
+    { status: 404 },
+  );
+  await assert.rejects(
+    staff.decline(otherUser, shopId, invitation.invitation.id),
+    { status: 404 },
+  );
+  await inbox.markRead(userId, invitationNotice.id);
+  recipientInbox = await inbox.list(userId);
+  assert.equal(recipientInbox.unreadCount, 0);
+  assert.equal(recipientInbox.notifications[0].invitation.status, 'PENDING');
   const preview = await staff.preview(userId, shopId, invitation.token);
   assert.equal(preview.shopName, 'Test shop');
   assert.equal(preview.role, 'CASHIER');
@@ -158,7 +198,7 @@ try {
   });
   // Exactly one concurrent acceptance succeeds; the consumed token is rejected.
   const outcomes = await Promise.allSettled([
-    staff.accept(userId, shopId, invitation.token),
+    staff.accept(userId, shopId, invitation.invitation.id, true),
     staff.accept(userId, shopId, invitation.token),
   ]);
   assert.equal(
@@ -169,6 +209,16 @@ try {
   assert.equal(rejected.length, 1);
   assert.equal(rejected[0].reason.status, 404);
   assert.equal(await prisma.shopMember.count({ where: { shopId, userId } }), 1);
+  assert.equal(
+    (await inbox.list(ownerId)).notifications.filter(
+      (n) => n.kind === 'ACCEPTED',
+    ).length,
+    1,
+  );
+  assert.equal(
+    (await inbox.list(userId)).notifications[0].invitation.status,
+    'ACCEPTED',
+  );
   assert.equal(
     await prisma.staffAuditEvent.count({
       where: { shopId, action: 'ACCEPTED' },
@@ -692,7 +742,66 @@ try {
     data: { isActive: true },
   });
   await staff.accept(otherUser, shopId, authorityInvite.token);
-  for (const name of ['staff_invitations', 'staff_audit_events']) {
+  const newEmail = 'future@example.com';
+  const futureInvitation = await staff.invite(ownerId, shopId, {
+    email: newEmail,
+    role: 'KITCHEN',
+  });
+  const futureUser = await prisma.user.create({
+    data: { email: newEmail, passwordHash: 'unused' },
+  });
+  assert.equal(
+    (await inbox.list(futureUser.id)).notifications[0].invitation.status,
+    'PENDING',
+  );
+  const decisions = await Promise.allSettled([
+    staff.decline(futureUser.id, shopId, futureInvitation.invitation.id),
+    staff.decline(futureUser.id, shopId, futureInvitation.invitation.id),
+  ]);
+  assert.equal(decisions.filter((d) => d.status === 'fulfilled').length, 1);
+  assert.equal(
+    await prisma.shopMember.count({ where: { userId: futureUser.id, shopId } }),
+    0,
+  );
+  assert.equal(
+    (await inbox.list(futureUser.id)).notifications[0].invitation.status,
+    'DECLINED',
+  );
+  assert.equal(
+    (await inbox.list(ownerId)).notifications.filter(
+      (n) => n.kind === 'DECLINED',
+    ).length,
+    1,
+  );
+  await assert.rejects(
+    staff.accept(futureUser.id, shopId, futureInvitation.token),
+    { status: 404 },
+  );
+  await assert.rejects(
+    staff.accept(futureUser.id, shopId, futureInvitation.invitation.id, true),
+    { status: 404 },
+  );
+  assert.ok(
+    (await inbox.list(userId)).notifications.some((n) => n.kind === 'REMOVED'),
+  );
+  assert.ok(
+    (await inbox.list(userId)).notifications.some(
+      (n) => n.kind === 'ROLE_CHANGED',
+    ),
+  );
+  assert.ok(
+    (await inbox.list(userId)).notifications.some((n) => n.kind === 'DISABLED'),
+  );
+  const unreadBefore = (await inbox.list(userId)).unreadCount;
+  assert.ok(unreadBefore > 0);
+  await inbox.markRead(userId);
+  assert.equal((await inbox.list(userId)).unreadCount, 0);
+  assert.ok((await inbox.list(ownerId)).unreadCount > 0);
+  for (const name of [
+    'staff_invitations',
+    'staff_audit_events',
+    'account_notifications',
+  ]) {
     const result = await setup.query(
       `SELECT relrowsecurity AS rls,
       has_table_privilege('anon', oid, 'SELECT,INSERT,UPDATE,DELETE') AS anon_access,

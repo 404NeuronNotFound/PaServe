@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   FiCoffee,
+  FiBell,
   FiUser,
   FiGrid,
   FiLogOut,
@@ -22,6 +23,8 @@ import { SkipLink } from "./SkipLink";
 import { MobileWorkspaceNavigation } from "./MobileWorkspaceNavigation";
 import { Button } from "../ui/button";
 import { InlineMessage } from "../feedback/InlineMessage";
+import { useNotifications } from "../../features/account/notifications";
+import "../../pages/owner/notifications.css";
 import "./dashboard-sidebar.css";
 import "./dashboard-header.css";
 import "./dashboard-frame.css";
@@ -41,11 +44,14 @@ export function AccountFrame({
     enabled: false,
   });
   const user = data?.user;
+  const notifications = useNotifications(user?.id ?? "");
+  const unreadCount = notifications.data?.unreadCount ?? 0;
   const location = useLocation();
   const navigate = useNavigate();
   const profile = location.pathname.endsWith("/profile");
   const places = location.pathname.endsWith("/places");
-  const currentDestination = profile ? "Your profile" : places ? "Your places" : "Overview";
+  const inbox = location.pathname.endsWith("/notifications");
+  const currentDestination = profile ? "Your profile" : places ? "Your places" : inbox ? "Notifications" : "Overview";
   const accountName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Your account";
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -101,7 +107,7 @@ export function AccountFrame({
         <div className="dashboard-nav-links">
           <Link
             to="/app/account"
-            aria-current={!profile && !places ? "page" : undefined}
+            aria-current={!profile && !places && !inbox ? "page" : undefined}
             title={rail ? "Overview" : undefined}
             onClick={closeNavigation}
           >
@@ -126,6 +132,10 @@ export function AccountFrame({
             <FiCoffee aria-hidden="true" />
             <span>Your places</span>
           </Link>
+          <Link to="/app/account/notifications" aria-current={inbox ? "page" : undefined}
+            title={rail ? "Notifications" : undefined} onClick={closeNavigation}>
+            <FiBell aria-hidden="true" /><span>Notifications</span>
+          </Link>
         </div>
       </div>
     </nav>
@@ -145,15 +155,22 @@ export function AccountFrame({
         </Link>
         <span className="workspace-label">YOUR EVERYDAY SPACE</span>
         <div className="header-actions">
+          <Link className="account-notification-bell" to="/app/account/notifications"
+            aria-label={notifications.isError ? "Notifications, unavailable" : `Notifications, ${unreadCount} unread`} title="Notifications">
+            <FiBell aria-hidden="true" />
+            {unreadCount > 0 && <span className="account-notification-count" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+          </Link>
           <AppearanceToggle />
           <Button
             variant="outline"
             size="sm"
+            className="account-sign-out"
+            aria-label={logout.isPending ? "Signing out…" : "Sign out"}
             disabled={logout.isPending}
             onClick={() => logout.mutate()}
           >
             <FiLogOut aria-hidden="true" />
-            {logout.isPending ? "Signing out…" : "Sign out"}
+            <span>{logout.isPending ? "Signing out…" : "Sign out"}</span>
           </Button>
         </div>
       </header>

@@ -632,7 +632,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
               <FormField id="invitation-status-filter" label="Filter invitation status">
                 <SelectField id="invitation-status-filter" label="Filter invitation status" value={invitationStatus}
                   disabled={busy} onChange={(value) => { setInvitationStatus(value); setInvitationPage(1); }}
-                  options={[{ value: "", label: "All invitation states" }, ...["PENDING", "ACCEPTED", "EXPIRED", "REVOKED"].map((value) => ({ value, label: value[0] + value.slice(1).toLowerCase() }))]} />
+                  options={[{ value: "", label: "All invitation states" }, ...["PENDING", "ACCEPTED", "DECLINED", "EXPIRED", "REVOKED"].map((value) => ({ value, label: value[0] + value.slice(1).toLowerCase() }))]} />
               </FormField>
             </div>
             <p className="management-results" role="status">
