@@ -25,6 +25,9 @@ const close = Object.getOwnPropertyDescriptor(
   "close",
 );
 beforeEach(() => {
+  // The account header fetches its inbox. Keep this profile fixture isolated
+  // from the running API so its fake token cannot trigger session recovery.
+  vi.spyOn(api, "get").mockResolvedValue({ data: { notifications: [], unreadCount: 0, nextCursor: null } });
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
     configurable: true,
     value: function (this: HTMLDialogElement) {

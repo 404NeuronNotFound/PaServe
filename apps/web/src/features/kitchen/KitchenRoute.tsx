@@ -24,8 +24,10 @@ export function KitchenRoute() {
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: "always",
-    refetchOnWindowFocus: "always",
-    refetchOnReconnect: "always",
+    // Queue data refreshes in place on focus/reconnect. Replacing this boundary
+    // would reset the selected queue/history view and any open ticket.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const status = isAxiosError(access.error)
     ? access.error.response?.status

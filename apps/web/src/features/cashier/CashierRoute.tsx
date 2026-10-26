@@ -24,8 +24,11 @@ export function CashierRoute() {
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: "always",
-    refetchOnWindowFocus: "always",
-    refetchOnReconnect: "always",
+    // Keep the selected order/payment step mounted when returning to the tab.
+    // Entry and explicit revalidation still fail closed; every API action checks
+    // live cashier access, and the open order refreshes independently in place.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const status = isAxiosError(access.error)
     ? access.error.response?.status

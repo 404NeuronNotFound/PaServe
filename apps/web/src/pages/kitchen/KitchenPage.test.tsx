@@ -9,7 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { focusManager, onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AxiosError } from "axios";
 import type {
@@ -108,7 +108,7 @@ afterEach(() => {
     else Reflect.deleteProperty(HTMLDialogElement.prototype, method);
   });
 });
-afterEach(() => vi.resetAllMocks());
+afterEach(() => { cleanup(); vi.resetAllMocks(); focusManager.setFocused(undefined); onlineManager.setOnline(true); });
 function setup(
   role: UserMembership["role"] = "KITCHEN",
   orders = [ticket()],
@@ -136,6 +136,25 @@ function setup(
   );
   return client;
 }
+it("keeps the Preparing view and distance layout on tab return while refreshing queue data", async () => {
+  focusManager.setFocused(true);
+  setup();
+  await screen.findByRole("article");
+  vi.mocked(api.get).mockResolvedValue({ data: { orders: [{ ...ticket(), preparationStatus: "PREPARING", preparationStartedAt: "2026-10-15T01:05:00.000Z", preparationStartedBy: "user-a" }], nextCursor: null } });
+  await userEvent.click(screen.getByRole("button", { name: "Preparing" }));
+  await screen.findByRole("button", { name: "Mark ready ORD-000001" });
+  await userEvent.click(screen.getByRole("button", { name: "Distance view" }));
+  const queueReads = vi.mocked(api.get).mock.calls.length;
+  const accessReads = vi.mocked(getShopMembership).mock.calls.length;
+  await act(async () => { focusManager.setFocused(false); onlineManager.setOnline(false); });
+  await act(async () => { focusManager.setFocused(true); onlineManager.setOnline(true); });
+  expect(screen.getByRole("button", { name: "Preparing" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "Distance view" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "Mark ready ORD-000001" })).toBeInTheDocument();
+  expect(getShopMembership).toHaveBeenCalledTimes(accessReads);
+  await waitFor(() => expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThan(queueReads));
+});
+
 it("shows dine-in counter pickup on tickets and marks ready orders collected", async () => {
   setup("KITCHEN", [{ ...ticket(), serviceType: "COUNTER_PICKUP" }]);
   await screen.findByRole("article");

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { act, render, screen, within, waitFor } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   focusManager,
@@ -106,11 +106,7 @@ it("preserves a settings draft when returning to the browser window", async () =
     focusManager.setFocused(false);
     focusManager.setFocused(true);
   });
-  await waitFor(() =>
-    expect(vi.mocked(getCurrentUser).mock.calls.length).toBeGreaterThan(
-      sessionCalls,
-    ),
-  );
+  expect(getCurrentUser).toHaveBeenCalledTimes(sessionCalls);
   expect(getShopMembership).toHaveBeenCalledTimes(membershipCalls);
   expect(screen.getByLabelText("Business name (required)")).toHaveValue(
     "Unsaved cafe name",

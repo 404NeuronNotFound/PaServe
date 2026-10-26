@@ -17,6 +17,12 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     retry: false,
     staleTime: 0,
     networkMode: "always",
+    refetchOnMount: "always",
+    // Returning to the browser is not navigation. A background session error
+    // would replace the entire workspace and discard its workflow or draft.
+    // Recheck on entry/explicit invalidation; API requests still validate auth.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   // Cashier tools fail closed during revalidation. Other workspaces preserve
   // their existing draft behavior during a background session check.
