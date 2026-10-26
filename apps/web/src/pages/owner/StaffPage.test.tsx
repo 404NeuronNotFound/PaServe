@@ -129,8 +129,9 @@ it("pages a large roster, filters before paging and keeps the invitation draft",
   await user.type(await screen.findByLabelText("Staff email address"), "draft@example.com");
   const pager = within(screen.getByRole("navigation", { name: "Shop members pagination" }));
   expect(screen.getByText("member00@example.com")).toBeInTheDocument();
+  expect(screen.getByText("member11@example.com")).toBeInTheDocument();
+  expect(screen.queryByText("member12@example.com")).not.toBeInTheDocument();
   expect(screen.queryByText("member20@example.com")).not.toBeInTheDocument();
-  await user.click(pager.getByRole("button", { name: "Next" }));
   await user.click(pager.getByRole("button", { name: "Next" }));
   expect(screen.getByText("member20@example.com")).toBeInTheDocument();
   expect(pager.getByRole("button", { name: "Next" })).toBeDisabled();

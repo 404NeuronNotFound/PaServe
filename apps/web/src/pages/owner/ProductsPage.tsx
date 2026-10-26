@@ -1,4 +1,5 @@
 import { RefreshButton } from "../../components/feedback/RefreshButton";
+import { compactPageNumbers } from "../../lib/list-page";
 import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { MediaImage } from "../../components/media/MediaImage";
 import { RowActions } from "../../components/paserve/RowActions";
@@ -575,9 +576,10 @@ function ProductWorkspace({ userId }: { userId: string }) {
           ].some((value) => value.toLocaleLowerCase().includes(term))),
     ),
   );
-  const pageSize = 8;
+  const pageSize = 12;
   const pageCount = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
   const currentPage = Math.min(page, pageCount);
+  const compactPages = compactPageNumbers(currentPage, pageCount);
   const start = (currentPage - 1) * pageSize;
   const pageProducts = filteredProducts.slice(start, start + pageSize);
   const groups = allGroups
@@ -1268,15 +1270,10 @@ function ProductWorkspace({ userId }: { userId: string }) {
                 disabled={browsingLocked || currentPage === 1}
                 onClick={() => changePage(currentPage - 1)}
               >
-                <FiChevronLeft aria-hidden="true" /> Previous
+                <FiChevronLeft aria-hidden="true" /> <span className="product-pagination-label">Previous</span>
               </Button>
               <div className="product-page-numbers">
-                {Array.from(
-                  { length: Math.min(5, pageCount) },
-                  (_, index) =>
-                    Math.max(1, Math.min(currentPage - 2, pageCount - 4)) +
-                    index,
-                ).map((number) => (
+                {compactPages.map((number, index) => typeof number === "number" ? (
                   <Button variant="outline" size="inherit"
                     key={number}
                     type="button"
@@ -1288,7 +1285,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                   >
                     {number}
                   </Button>
-                ))}
+                ) : <span key={`gap-${index}`} className="product-page-ellipsis" aria-hidden="true">…</span>)}
               </div>
               <span>
                 Page {currentPage} of {pageCount}
@@ -1300,7 +1297,7 @@ function ProductWorkspace({ userId }: { userId: string }) {
                 disabled={browsingLocked || currentPage === pageCount}
                 onClick={() => changePage(currentPage + 1)}
               >
-                Next <FiChevronRight aria-hidden="true" />
+                <span className="product-pagination-label">Next</span> <FiChevronRight aria-hidden="true" />
               </Button>
             </nav>
           )}

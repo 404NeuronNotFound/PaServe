@@ -25,6 +25,7 @@ export class ActiveOrdersController {
       cursor,
       search,
       ownerOrderFiltersFromQuery(query),
+      { page: query.page, snapshot: query.snapshot },
     );
   }
 }

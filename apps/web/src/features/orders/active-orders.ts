@@ -1,3 +1,5 @@
+import type { HistoryPageRequest } from "@paserve/contracts";
+import { validHistoryPagination } from "./history-pagination";
 import { isValidOrderService } from "@paserve/contracts";
 import type {
   ActiveOrdersResponse,
@@ -35,6 +37,7 @@ export function parseActiveOrders(
     !data ||
     !Array.isArray(data.orders) ||
     data.orders.length > 25 ||
+    !validHistoryPagination(data.pagination, data.orders.length) ||
     !(
       data.nextCursor === null ||
       (typeof data.nextCursor === "string" &&
@@ -84,12 +87,14 @@ export async function getActiveOrders(
   signal: AbortSignal,
   search = "",
   filters: OwnerOrderFilters = {},
+  paging?: HistoryPageRequest,
 ) {
   const { data } = await api.get<ActiveOrdersResponse>(
     `/shops/${encodeURIComponent(shopId)}/orders/active`,
     {
       params: {
         ...filters,
+        ...paging,
         ...(cursor ? { cursor } : {}),
         ...(search ? { search } : {}),
       },

@@ -1,3 +1,4 @@
+import { validHistoryPagination } from "../orders/history-pagination";
 import { isValidOrderService } from "@paserve/contracts";
 import type {
   PreparationQueueResponse,
@@ -23,6 +24,7 @@ export function parseQueue(
     !data ||
     !Array.isArray(data.orders) ||
     data.orders.length > 50 ||
+    !validHistoryPagination(data.pagination, data.orders.length) ||
     !(
       data.nextCursor === null ||
       (typeof data.nextCursor === "string" &&
@@ -91,7 +93,7 @@ export function parseQueue(
     ids.add(order.id);
     return { ...order, items };
   });
-  return { orders, nextCursor: data.nextCursor };
+  return { ...data, orders };
 }
 
 export type HistoryFilters = {
@@ -99,6 +101,8 @@ export type HistoryFilters = {
   from?: string;
   to?: string;
   limit?: number;
+  page?: number;
+  snapshot?: string;
 };
 
 export async function getPreparationQueue(

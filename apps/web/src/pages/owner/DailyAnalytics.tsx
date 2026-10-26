@@ -249,6 +249,7 @@ export function DailyAnalytics({
               </tfoot>
             </Table>
           {history.pageCount > 1 && <ListPagination label="Sales history pagination" page={history.page} pageCount={history.pageCount}
+            onPage={(page) => setPagination({ scope, page })}
             hasNext={history.hasNext} pending={query.isFetching}
             onPrevious={() => setPagination({ scope, page: history.page - 1 })}
             onNext={() => setPagination({ scope, page: history.page + 1 })} />}

@@ -157,6 +157,24 @@ it("shows access removal without a link back into the shop", async () => {
     screen.queryByRole("link", { name: "View shop" }),
   ).not.toBeInTheDocument();
 });
+it("notifies restored members with an unread badge and a link only for current membership", async () => {
+  notices = [{ ...notice, kind: "ENABLED", invitation: null }];
+  setup();
+  expect(await screen.findByText("Shop access restored")).toBeInTheDocument();
+  expect(screen.getByText("Lia Navarro restored your access to Hiraya as Cashier.")).toBeInTheDocument();
+  expect(within(screen.getByRole("link", { name: "Notifications, 1 unread" })).getByText("1")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Accept invitation" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "View shop" })).not.toBeInTheDocument();
+});
+it("offers the shop link for a restoration notice when membership is active", async () => {
+  notices = [{ ...notice, kind: "ENABLED", invitation: null }];
+  const { client } = setup();
+  client.setQueryData(currentUserKey, { user: { ...user, memberships: [{
+    id: "member-1", shopId: "shop-1", role: "CASHIER",
+    shop: { id: "shop-1", name: "Hiraya", slug: "hiraya", isActive: true },
+  }] } });
+  expect(await screen.findByRole("link", { name: "View shop" })).toHaveAttribute("href", "/app/shops/shop-1");
+});
 it("shows an empty inbox without a red badge", async () => {
   notices = [];
   setup();

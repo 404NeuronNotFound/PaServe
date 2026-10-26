@@ -94,7 +94,7 @@ it("clears an empty search and resets its visible input and server query", async
   await screen.findByText("ORD-000042");
   expect(screen.getByRole("searchbox", { name: "Search orders" })).toHaveValue("");
   await waitFor(() => expect(screen.getByRole("searchbox", { name: "Search orders" })).toHaveFocus());
-  expect(getActiveOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {});
+  expect(getActiveOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 1 });
 });
 
 it("shows approval/payment, placed and updated Manila times, order age, type/table and exact total", async () => {
@@ -195,24 +195,34 @@ it("replaces the displayed status with the current status after manual refetch",
   ).not.toBeInTheDocument();
 });
 
-it("returns to the preceding page using its original cursor", async () => {
-  vi.mocked(getActiveOrders)
-    .mockResolvedValueOnce({ ...summary(), nextCursor: "next" })
-    .mockResolvedValueOnce({ orders: [], nextCursor: null })
-    .mockResolvedValue(summary());
+it("jumps to numbered history pages and keeps the server snapshot until refresh", async () => {
+  const snapshot = "2026-10-17T00:00:00.000Z";
+  vi.mocked(getActiveOrders).mockImplementation(async (_shop, _cursor, _signal, _search, _filters, request) => {
+    const page = request?.page ?? 1;
+    return {
+      orders: Array.from({ length: page === 4 ? 1 : 12 }, (_, index) => ({
+        ...summary().orders[0], id: `order-${page}-${index}`,
+        orderNumber: `ORD-${String(page * 100 + index + 1).padStart(6, "0")}`,
+      })),
+      nextCursor: null,
+      pagination: { page, pageCount: 4, pageSize: 12, total: 37, snapshot, hasNew: false },
+    };
+  });
   setup();
-  await screen.findByText("ORD-000042");
+  await screen.findByText("ORD-000101");
+  fireEvent.click(screen.getByRole("button", { name: "Go to page 4" }));
+  await screen.findByText("ORD-000401");
+  expect(screen.queryByText("ORD-000101")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  expect(getActiveOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 4, snapshot });
+  fireEvent.click(screen.getByRole("button", { name: "Go to page 1" }));
+  await screen.findByText("ORD-000101");
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
-  await screen.findByText("No active orders on this page");
-  fireEvent.click(screen.getByRole("button", { name: "Previous" }));
-  expect(await screen.findByText("ORD-000042")).toBeVisible();
-  expect(getActiveOrders).toHaveBeenLastCalledWith(
-    "a",
-    null,
-    expect.any(AbortSignal),
-    "",
-    {},
-  );
+  await screen.findByText("ORD-000201");
+  expect(getActiveOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 2, snapshot });
+  fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+  await screen.findByText("ORD-000101");
+  expect(getActiveOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 1 });
 });
 
 it("refreshes automatically so fulfilled orders leave the view", async () => {
@@ -238,34 +248,7 @@ it("refreshes automatically so fulfilled orders leave the view", async () => {
     vi.useRealTimers();
   }
 });
-it("pages with the captured cursor and refreshes back to the first page", async () => {
-  vi.mocked(getActiveOrders)
-    .mockResolvedValueOnce({ ...summary(), nextCursor: "next" })
-    .mockResolvedValue({ orders: [], nextCursor: null });
-  setup();
-  await screen.findByText("ORD-000042");
-  fireEvent.click(screen.getByRole("button", { name: "Next" }));
-  expect(
-    await screen.findByText("No active orders on this page"),
-  ).toBeVisible();
-  expect(getActiveOrders).toHaveBeenLastCalledWith(
-    "a",
-    "next",
-    expect.any(AbortSignal),
-    "",
-    {},
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-  await waitFor(() =>
-    expect(getActiveOrders).toHaveBeenLastCalledWith(
-      "a",
-      null,
-      expect.any(AbortSignal),
-      "",
-      {},
-    ),
-  );
-});
+
 it("hides previously loaded orders after a failed refresh and allows retry", async () => {
   setup();
   await screen.findByText("ORD-000042");

@@ -1,3 +1,5 @@
+import type { HistoryPageRequest } from "@paserve/contracts";
+import { validHistoryPagination } from "./history-pagination";
 import { isValidOrderService } from "@paserve/contracts";
 import type {
   CancelledOrdersResponse,
@@ -37,6 +39,7 @@ export function parseCancelledOrders(
     !data ||
     !Array.isArray(data.orders) ||
     data.orders.length > 25 ||
+    !validHistoryPagination(data.pagination, data.orders.length) ||
     !(
       data.nextCursor === null ||
       (typeof data.nextCursor === "string" &&
@@ -91,12 +94,14 @@ export async function getCancelledOrders(
   signal: AbortSignal,
   search = "",
   filters: OwnerOrderFilters = {},
+  paging?: HistoryPageRequest,
 ) {
   const { data } = await api.get<CancelledOrdersResponse>(
     `/shops/${encodeURIComponent(shopId)}/orders/cancelled`,
     {
       params: {
         ...filters,
+        ...paging,
         ...(cursor ? { cursor } : {}),
         ...(search ? { search } : {}),
       },

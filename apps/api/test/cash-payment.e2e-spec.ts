@@ -26,6 +26,7 @@ describe('Cash collection', () => {
     membership = vi.fn(),
     findOrder = vi.fn(),
     findQueue = vi.fn(),
+    countOrders = vi.fn(),
     aggregateOrders = vi.fn(),
     aggregateItems = vi.fn(),
     groupPayments = vi.fn(),
@@ -37,6 +38,7 @@ describe('Cash collection', () => {
     shop: { findFirst: reportAccess },
     orderItem: { aggregate: aggregateItems },
     order: {
+      count: countOrders,
       findFirst: findOrder,
       updateMany: updateOrder,
       findMany: findQueue,
@@ -2011,6 +2013,41 @@ describe('Cash collection', () => {
     expect(result.body.payment.changeDue).toBe('64.50');
     expect(updateOrder).toHaveBeenCalledTimes(1);
   });
+  it.each(['orders/active', 'orders/completed', 'orders/cancelled', 'preparation/completed'])(
+    'wires numbered pagination through the authorized %s route', async (path) => {
+      role = path.startsWith('preparation') ? 'KITCHEN' : 'OWNER';
+      countOrders.mockResolvedValue(0);
+      findQueue.mockResolvedValue([]);
+      findOrder.mockResolvedValue(null);
+      const snapshot = '2026-10-17T00:00:00.000Z';
+      const result = await request(app.getHttpServer())
+        .get(`/api/v1/shops/${shopId}/${path}`)
+        .query({ page: '4', snapshot })
+        .set('Authorization', 'Bearer session')
+        .expect(200);
+      expect(result.headers['cache-control']).toBe('no-store');
+      expect(result.body).toEqual({ orders: [], nextCursor: null, pagination: {
+        page: 1, pageCount: 1, pageSize: 12, total: 0, snapshot, hasNew: false,
+      } });
+      expect(countOrders.mock.calls[0][0].where.AND[0]).toMatchObject({ shopId, shop: { id: shopId, isActive: true } });
+      expect(findQueue).toHaveBeenCalledWith(expect.objectContaining({ skip: 0, take: 12, where: countOrders.mock.calls[0][0].where }));
+    },
+  );
+  it('rejects numbered order history for a kitchen-only member before counting', async () => {
+    role = 'KITCHEN';
+    await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/orders/completed`)
+      .query({ page: '1' }).set('Authorization', 'Bearer session').expect(403);
+    expect(countOrders).not.toHaveBeenCalled();
+  });
+  it.each([{ page: '0' }, { page: '1', cursor: 'cursor' }, { page: '1', snapshot: '2999-01-01T00:00:00.000Z' }])(
+    'rejects invalid numbered history queries at the route: %j', async (query) => {
+      role = 'KITCHEN';
+      await request(app.getHttpServer()).get(`/api/v1/shops/${shopId}/preparation/completed`)
+        .query(query).set('Authorization', 'Bearer session').expect(400);
+      expect(countOrders).not.toHaveBeenCalled();
+      expect(findQueue).not.toHaveBeenCalled();
+    },
+  );
   it('passes completed history filters through the authorized route to the scoped query', async () => {
     role = 'KITCHEN';
     await request(app.getHttpServer())

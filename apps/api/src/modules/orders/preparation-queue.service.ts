@@ -1,3 +1,4 @@
+import { parseHistoryPaging, readHistoryPage } from './history-pagination.js';
 import { rolesForShopPermissions } from '@paserve/contracts';
 import {
   BadRequestException,
@@ -32,10 +33,17 @@ export class PreparationQueueService {
       from?: unknown;
       to?: unknown;
       limit?: unknown;
+      page?: unknown;
+      snapshot?: unknown;
     } = {},
   ): Promise<PreparationQueueResponse> {
     const access = shopAccessWhere(actorId, shopId, PREPARATION_QUEUE_ROLES);
     const completed = preparationStatus === 'COMPLETED';
+    const paging = parseHistoryPaging(history, cursor);
+    if (paging && !completed)
+      throw new BadRequestException(
+        'Numbered pages are only available for completed history.',
+      );
     if (
       history.limit !== undefined &&
       (typeof history.limit !== 'string' || !/^(12|50)$/.test(history.limit))
@@ -94,7 +102,7 @@ export class PreparationQueueService {
         });
       }
     }
-    const saved = await this.prisma.order.findMany({
+    const args = {
       where: {
         shopId,
         shop: access,
@@ -175,8 +183,21 @@ export class PreparationQueueService {
           },
         },
       },
-    });
-    const page = saved.slice(0, limit);
+    } satisfies Prisma.OrderFindManyArgs;
+    const numbered = paging
+      ? await readHistoryPage(
+          this.prisma,
+          paging,
+          args.where,
+          { completedAt: { lte: paging.snapshot } },
+          (tx, where, skip, take) =>
+            tx.order.findMany({ ...args, where, skip, take }),
+        )
+      : undefined;
+    const saved = numbered
+      ? numbered.saved
+      : await this.prisma.order.findMany(args);
+    const page = saved.slice(0, paging ? 12 : limit);
     const orders = page.map((order) => {
       let items: PreparationQueueResponse['orders'][number]['items'];
       try {
@@ -240,8 +261,9 @@ export class PreparationQueueService {
     const last = orders.at(-1);
     return {
       orders,
+      ...(numbered ? { pagination: numbered.pagination } : {}),
       nextCursor:
-        saved.length > limit && last
+        !paging && saved.length > limit && last
           ? Buffer.from(
               JSON.stringify([
                 completed ? last.completedAt : last.queuedAt,

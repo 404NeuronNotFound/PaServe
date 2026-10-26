@@ -38,10 +38,66 @@ describe('Preparation queue pages', () => {
     };
   }
   beforeEach(() => vi.resetAllMocks());
+  it('returns real numbered totals for scoped completed history, including empty results', async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const findFirst = vi.fn().mockResolvedValue(null);
+    findMany.mockResolvedValue([]);
+    const tx = { order: { count, findFirst, findMany } };
+    const transaction = vi.fn(
+      async (read: (db: typeof tx) => Promise<unknown>) => read(tx),
+    );
+    const pagedService = new PreparationQueueService({
+      ...tx,
+      $transaction: transaction,
+    } as unknown as PrismaService);
+    const snapshot = '2026-10-17T00:00:00.000Z';
+    const result = await pagedService.list(
+      actorId,
+      shopId,
+      undefined,
+      'COMPLETED',
+      { page: '4', snapshot, search: '000042', limit: '12' },
+    );
+    expect(result.pagination).toEqual({
+      page: 1,
+      pageCount: 1,
+      pageSize: 12,
+      total: 0,
+      snapshot,
+      hasNew: false,
+    });
+    expect(result.orders).toEqual([]);
+    expect(result.nextCursor).toBeNull();
+    expect(count.mock.calls[0][0].where.AND[0]).toMatchObject({
+      shopId,
+      shop: { id: shopId, isActive: true },
+      preparationStatus: 'COMPLETED',
+      orderNumber: { contains: '000042' },
+    });
+    expect(findMany.mock.calls[0][0]).toMatchObject({
+      where: count.mock.calls[0][0].where,
+      skip: 0,
+      take: 12,
+    });
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'RepeatableRead',
+    });
+  });
   it('returns the saved dine-in counter pickup choice to kitchen staff', async () => {
-    findMany.mockResolvedValue([{ ...row(), mode: 'DINE_IN', serviceType: 'COUNTER_PICKUP', tableNumber: 'Patio 2' }]);
+    findMany.mockResolvedValue([
+      {
+        ...row(),
+        mode: 'DINE_IN',
+        serviceType: 'COUNTER_PICKUP',
+        tableNumber: 'Patio 2',
+      },
+    ]);
     const result = await service.list(actorId, shopId);
-    expect(result.orders[0]).toMatchObject({ mode: 'DINE_IN', serviceType: 'COUNTER_PICKUP', tableNumber: 'Patio 2' });
+    expect(result.orders[0]).toMatchObject({
+      mode: 'DINE_IN',
+      serviceType: 'COUNTER_PICKUP',
+      tableNumber: 'Patio 2',
+    });
     expect(findMany.mock.calls[0][0].select.serviceType).toBe(true);
   });
   it('returns bounded FIFO pages with a tie-breaking cursor and scoped live access', async () => {

@@ -1,4 +1,10 @@
 import {
+  parseHistoryPaging,
+  readHistoryPage,
+  type HistoryPagingQuery,
+} from './history-pagination.js';
+import { Prisma } from '../../generated/prisma/client.js';
+import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -27,7 +33,9 @@ export class CancelledOrdersService {
     cursor?: unknown,
     search?: unknown,
     filters?: unknown,
+    pagingQuery: HistoryPagingQuery = {},
   ): Promise<CancelledOrdersResponse> {
+    const paging = parseHistoryPaging(pagingQuery, cursor);
     const access = shopPermissionWhere(
       actorId,
       shopId,
@@ -64,7 +72,7 @@ export class CancelledOrdersService {
       }
     }
     await this.members.requireOwner(actorId, shopId);
-    const saved = await this.prisma.order.findMany({
+    const args = {
       where: {
         shopId,
         shop: access,
@@ -109,35 +117,56 @@ export class CancelledOrdersService {
         decidedBy: true,
         rejectionReason: true,
       },
-    });
-    const orders = saved.slice(0, 25).map((order): CancelledOrderSummary => {
-      if (
-        (order.decidedAt && order.decidedAt < order.createdAt) ||
-        (order.rejectionReason && order.rejectionReason.length > 300)
-      ) {
-        throw new ConflictException({
-          code: 'CANCELLED_ORDER_UNAVAILABLE',
-          message: 'The saved rejected order could not be loaded.',
-        });
-      }
-      return {
-        ...order,
-        status: 'REJECTED',
-        paymentStatus: 'UNPAID',
-        preparationStatus: null,
-        currency: 'PHP',
-        totalPrice: order.totalPrice.toFixed(2),
-        createdAt: order.createdAt.toISOString(),
-        decidedAt: order.decidedAt?.toISOString() ?? null,
-        decidedBy: order.decidedBy?.trim() || null,
-        rejectionReason: order.rejectionReason?.trim() || null,
-      };
-    });
+    } satisfies Prisma.OrderFindManyArgs;
+    const numbered = paging
+      ? await readHistoryPage(
+          this.prisma,
+          paging,
+          args.where,
+          {
+            OR: [
+              { decidedAt: { lte: paging.snapshot } },
+              { decidedAt: null, createdAt: { lte: paging.snapshot } },
+            ],
+          },
+          (tx, where, skip, take) =>
+            tx.order.findMany({ ...args, where, skip, take }),
+        )
+      : undefined;
+    const saved = numbered
+      ? numbered.saved
+      : await this.prisma.order.findMany(args);
+    const orders = saved
+      .slice(0, paging ? 12 : 25)
+      .map((order): CancelledOrderSummary => {
+        if (
+          (order.decidedAt && order.decidedAt < order.createdAt) ||
+          (order.rejectionReason && order.rejectionReason.length > 300)
+        ) {
+          throw new ConflictException({
+            code: 'CANCELLED_ORDER_UNAVAILABLE',
+            message: 'The saved rejected order could not be loaded.',
+          });
+        }
+        return {
+          ...order,
+          status: 'REJECTED',
+          paymentStatus: 'UNPAID',
+          preparationStatus: null,
+          currency: 'PHP',
+          totalPrice: order.totalPrice.toFixed(2),
+          createdAt: order.createdAt.toISOString(),
+          decidedAt: order.decidedAt?.toISOString() ?? null,
+          decidedBy: order.decidedBy?.trim() || null,
+          rejectionReason: order.rejectionReason?.trim() || null,
+        };
+      });
     const last = orders.at(-1);
     return {
       orders,
+      ...(numbered ? { pagination: numbered.pagination } : {}),
       nextCursor:
-        saved.length > 25 && last
+        !paging && saved.length > 25 && last
           ? Buffer.from(JSON.stringify([last.createdAt, last.id])).toString(
               'base64url',
             )

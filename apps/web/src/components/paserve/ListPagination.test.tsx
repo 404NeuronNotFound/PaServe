@@ -2,9 +2,26 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ListPagination } from "./ListPagination";
-import { listPage } from "../../lib/list-page";
+import { compactPageNumbers, listPage } from "../../lib/list-page";
 
 afterEach(cleanup);
+
+it("keeps compact page links valid at the beginning, middle and end", async () => {
+  expect(compactPageNumbers(1, 7)).toEqual([1, 2, "ellipsis", 7]);
+  expect(compactPageNumbers(4, 7)).toEqual([1, "ellipsis", 4, "ellipsis", 7]);
+  expect(compactPageNumbers(7, 7)).toEqual([1, "ellipsis", 6, 7]);
+  expect(compactPageNumbers(1, 1)).toEqual([1]);
+  expect(compactPageNumbers(1, 2)).toEqual([1, 2]);
+  const onPage = vi.fn();
+  const props = { label: "Numbered pages", page: 1, pageCount: 7, hasNext: true, onPrevious: vi.fn(), onNext: vi.fn(), onPage };
+  const view = render(<ListPagination {...props} />);
+  expect(screen.getByRole("button", { name: "Go to page 1" })).toHaveAttribute("aria-current", "page");
+  expect(screen.queryByRole("button", { name: "Go to page 5" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Go to page 7" }));
+  expect(onPage).toHaveBeenCalledWith(7);
+  view.rerender(<ListPagination {...props} pending />);
+  for (const button of screen.getAllByRole("button")) expect(button).toBeDisabled();
+});
 
 it("clamps a local page after filtering, removal and empty results", () => {
   const records = Array.from({ length: 21 }, (_, index) => index);

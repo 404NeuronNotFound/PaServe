@@ -1,3 +1,5 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
+import { useNumberedHistory } from "../../features/orders/useNumberedHistory";
 import { ListPagination } from "../../components/paserve/ListPagination";
 import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { OrderCard } from "../../components/paserve/OrderCard";
@@ -70,19 +72,17 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
     search,
     filters,
     hasFilters,
-    cursors,
-    setCursors,
     applySearch,
     applyFilters,
     clearAll,
     resetVersion,
   } = useOrderListSearch();
   const [now, setNow] = useState(Date.now);
-  const cursor = cursors[cursors.length - 1];
+  const paging = useNumberedHistory(JSON.stringify([search, filters, resetVersion]));
   const query = useQuery({
-    queryKey: activeOrdersKey(userId, shopId, cursor, search, filters),
+    queryKey: [...activeOrdersKey(userId, shopId, null, search, filters), ...paging.key],
     queryFn: ({ signal }) =>
-      getActiveOrders(shopId, cursor, signal, search, filters),
+      paging.load((request) => getActiveOrders(shopId, null, signal, search, filters, request)),
     enabled: role === "OWNER",
     retry: false,
     networkMode: "always",
@@ -102,10 +102,8 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
       </InlineMessage>
     );
   const orders = query.isSuccess ? query.data.orders : [];
-  const refresh = () => {
-    if (cursor) setCursors([null]);
-    else void query.refetch();
-  };
+  const refresh = paging.refresh;
+  const page = query.data?.pagination?.page ?? paging.page;
   return (
     <section
       className="active-orders-workspace"
@@ -122,6 +120,9 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
       </OrderPageHeader>
       {query.isSuccess && orders.length > 0 && (
         <ActiveOrdersPulse orders={orders} />
+      )}
+      {query.isSuccess && query.data.pagination?.hasNew && (
+        <InlineMessage tone="info">New orders available. <RefreshButton label="Show new orders" onClick={refresh} pending={query.isFetching} /></InlineMessage>
       )}
       <div className="owner-order-tools">
         <OrderSearch key={`search:${resetVersion}`} search={search} onSearch={applySearch} />
@@ -144,7 +145,7 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
       {query.isSuccess && (
         <>
           <p className="active-orders-result" role="status">
-            Page {cursors.length} · {orders.length}{" "}
+            Page {page} · {orders.length}{" "}
             {orders.length === 1 ? "active order" : "active orders"} on this
             page
           </p>
@@ -153,22 +154,22 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
               <FiShoppingBag aria-hidden="true" />
               <h2>
                 {search || hasFilters
-                  ? cursor
+                  ? (page > 1)
                     ? "No matching orders on this page"
                     : "No matching orders"
-                  : cursor
+                  : (page > 1)
                     ? "No active orders on this page"
                     : "No active orders right now"}
               </h2>
               <p>
                 {search || hasFilters
                   ? "Try another search or adjust or clear the filters."
-                  : cursor
+                  : (page > 1)
                     ? "Orders may have been fulfilled. Go back or refresh to start again."
                     : "New orders will appear here while they await confirmation, payment, preparation, or fulfillment."}
               </p>
-              <OrderEmptyActions filtered={Boolean(search || hasFilters)} paged={Boolean(cursor)}
-                pending={query.isFetching} onReset={clearAll} onRefresh={() => void query.refetch()} />
+              <OrderEmptyActions filtered={Boolean(search || hasFilters)} paged={Boolean((page > 1))}
+                pending={query.isFetching} onReset={clearAll} onRefresh={refresh} />
             </div>
           ) : (
             <ul
@@ -234,14 +235,13 @@ function ActiveOrdersWorkspace({ userId }: { userId: string }) {
       <ListPagination
         label="Active orders pagination"
         className="active-orders-pagination"
-        page={cursors.length}
-        hasNext={Boolean(query.isSuccess && query.data.nextCursor)}
+        page={page}
+        pageCount={query.isSuccess ? query.data.pagination?.pageCount : undefined}
+        hasNext={Boolean(query.isSuccess && query.data.pagination && page < query.data.pagination.pageCount)}
         pending={query.isFetching}
-        onPrevious={() => setCursors((values) => values.slice(0, -1))}
-        onNext={() => {
-          if (query.isSuccess && query.data.nextCursor)
-            setCursors((values) => [...values, query.data.nextCursor]);
-        }}
+        onPage={paging.go}
+        onPrevious={() => paging.go(page - 1)}
+        onNext={() => paging.go(page + 1)}
       />
     </section>
   );

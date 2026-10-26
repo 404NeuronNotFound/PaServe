@@ -1,3 +1,11 @@
+/** Keep first, current (or second), and last pages reachable in a narrow footer. */
+export function compactPageNumbers(page: number, pageCount: number): (number | "ellipsis")[] {
+  const pages = [...new Set([1, Math.max(2, Math.min(page, pageCount - 1)), pageCount])]
+    .filter((number) => number <= pageCount);
+  return pages.flatMap((number, index): (number | "ellipsis")[] =>
+    index > 0 && number - pages[index - 1] > 1 ? ["ellipsis", number] : [number]);
+}
+
 /** Page already-filtered records. Clamp after refresh/removal, including empty lists. */
 export function listPage<T>(records: readonly T[], requestedPage: number, pageSize: number) {
   const size = Math.max(1, Math.floor(pageSize));

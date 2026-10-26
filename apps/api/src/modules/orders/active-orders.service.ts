@@ -1,3 +1,9 @@
+import {
+  parseHistoryPaging,
+  readHistoryPage,
+  type HistoryPagingQuery,
+} from './history-pagination.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { ActiveOrdersResponse } from '@paserve/contracts';
 import { isUUID } from 'class-validator';
@@ -20,7 +26,9 @@ export class ActiveOrdersService {
     cursor?: unknown,
     search?: unknown,
     filters?: unknown,
+    pagingQuery: HistoryPagingQuery = {},
   ): Promise<ActiveOrdersResponse> {
+    const paging = parseHistoryPaging(pagingQuery, cursor);
     const access = shopPermissionWhere(
       actorId,
       shopId,
@@ -58,7 +66,7 @@ export class ActiveOrdersService {
     }
     // Repeat live authorization even for empty lists, then scope the read itself.
     await this.members.requireOwner(actorId, shopId);
-    const saved = await this.prisma.order.findMany({
+    const args = {
       where: {
         shopId,
         shop: access,
@@ -102,8 +110,21 @@ export class ActiveOrdersService {
         createdAt: true,
         updatedAt: true,
       },
-    });
-    const orders = saved.slice(0, 25).map((order) => ({
+    } satisfies Prisma.OrderFindManyArgs;
+    const numbered = paging
+      ? await readHistoryPage(
+          this.prisma,
+          paging,
+          args.where,
+          { createdAt: { lte: paging.snapshot } },
+          (tx, where, skip, take) =>
+            tx.order.findMany({ ...args, where, skip, take }),
+        )
+      : undefined;
+    const saved = numbered
+      ? numbered.saved
+      : await this.prisma.order.findMany(args);
+    const orders = saved.slice(0, paging ? 12 : 25).map((order) => ({
       ...order,
       status: order.status as ActiveOrdersResponse['orders'][number]['status'],
       paymentStatus:
@@ -118,8 +139,9 @@ export class ActiveOrdersService {
     const last = orders.at(-1);
     return {
       orders,
+      ...(numbered ? { pagination: numbered.pagination } : {}),
       nextCursor:
-        saved.length > 25 && last
+        !paging && saved.length > 25 && last
           ? Buffer.from(JSON.stringify([last.createdAt, last.id])).toString(
               'base64url',
             )

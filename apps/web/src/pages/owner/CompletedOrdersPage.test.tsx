@@ -78,6 +78,25 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+it("announces newer history without moving records until the user refreshes", async () => {
+  const snapshot = "2026-10-17T00:00:00.000Z";
+  let hasNew = false;
+  vi.mocked(getCompletedOrders).mockImplementation(async () => ({
+    ...summary(), pagination: { page: 1, pageSize: 12, pageCount: 1, total: 1, snapshot, hasNew },
+  }));
+  const { client } = setup();
+  await screen.findByText("ORD-000042");
+  hasNew = true;
+  await act(() => client.invalidateQueries({ queryKey: ["owner-orders"] }));
+  expect(await screen.findByText("New orders available.")).toBeVisible();
+  expect(screen.getByText("ORD-000042")).toBeVisible();
+  expect(getCompletedOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 1, snapshot });
+  hasNew = false;
+  fireEvent.click(screen.getByRole("button", { name: "Show new orders" }));
+  await waitFor(() => expect(screen.queryByText("New orders available.")).not.toBeInTheDocument());
+  expect(getCompletedOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 1 });
+});
+
 it("shows fulfilled history, saved table/amount, recorded payment and Manila completion time", async () => {
   setup();
   expect(await screen.findByText("ORD-000042")).toBeVisible();
@@ -144,44 +163,36 @@ it("shows an empty history with no next page", async () => {
   expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
   expect(screen.getByText("₱0.00")).toBeVisible();
 });
-it("pages Next/Previous and restarts at the first page on refresh", async () => {
-  vi.mocked(getCompletedOrders).mockImplementation(async (_shop, cursor) =>
-    cursor
-      ? { orders: [], nextCursor: null }
-      : { ...summary(), nextCursor: "next" },
-  );
+it("jumps to numbered history pages and keeps the server snapshot until refresh", async () => {
+  const snapshot = "2026-10-17T00:00:00.000Z";
+  vi.mocked(getCompletedOrders).mockImplementation(async (_shop, _cursor, _signal, _search, _filters, request) => {
+    const page = request?.page ?? 1;
+    return {
+      orders: Array.from({ length: page === 4 ? 1 : 12 }, (_, index) => ({
+        ...summary().orders[0], id: `order-${page}-${index}`,
+        orderNumber: `ORD-${String(page * 100 + index + 1).padStart(6, "0")}`,
+      })),
+      nextCursor: null,
+      pagination: { page, pageCount: 4, pageSize: 12, total: 37, snapshot, hasNew: false },
+    };
+  });
   setup();
-  await screen.findByText("ORD-000042");
+  await screen.findByText("ORD-000101");
+  fireEvent.click(screen.getByRole("button", { name: "Go to page 4" }));
+  await screen.findByText("ORD-000401");
+  expect(screen.queryByText("ORD-000101")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  expect(getCompletedOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 4, snapshot });
+  fireEvent.click(screen.getByRole("button", { name: "Go to page 1" }));
+  await screen.findByText("ORD-000101");
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
-  await screen.findByText("No completed orders on this page");
-  expect(getCompletedOrders).toHaveBeenLastCalledWith(
-    "a",
-    "next",
-    expect.any(AbortSignal),
-    "",
-    {},
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Previous" }));
-  await screen.findByText("ORD-000042");
-  expect(getCompletedOrders).toHaveBeenLastCalledWith(
-    "a",
-    null,
-    expect.any(AbortSignal),
-    "",
-    {},
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Next" }));
-  await screen.findByText("No completed orders on this page");
+  await screen.findByText("ORD-000201");
+  expect(getCompletedOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 2, snapshot });
   fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-  await screen.findByText("ORD-000042");
-  expect(getCompletedOrders).toHaveBeenLastCalledWith(
-    "a",
-    null,
-    expect.any(AbortSignal),
-    "",
-    {},
-  );
+  await screen.findByText("ORD-000101");
+  expect(getCompletedOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 1 });
 });
+
 it("refreshes history automatically when another order is fulfilled", async () => {
   vi.useFakeTimers();
   try {
@@ -241,6 +252,7 @@ it("resets history and paging on shop, account and role changes", async () => {
       expect.any(AbortSignal),
       "",
       {},
+      { page: 1 },
     ),
   );
   view.client.setQueryData(currentUserKey, {

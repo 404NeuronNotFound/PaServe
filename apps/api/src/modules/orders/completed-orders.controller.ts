@@ -24,6 +24,7 @@ export class CompletedOrdersController {
       cursor,
       search,
       ownerOrderFiltersFromQuery(query),
+      { page: query.page, snapshot: query.snapshot },
     );
   }
 }

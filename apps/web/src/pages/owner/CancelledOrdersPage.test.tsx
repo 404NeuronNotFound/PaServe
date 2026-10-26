@@ -133,44 +133,36 @@ it("shows an empty history with no next page", async () => {
   expect(await screen.findByText("No rejected orders yet")).toBeVisible();
   expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
 });
-it("pages Next/Previous and restarts at the first page on refresh", async () => {
-  vi.mocked(getCancelledOrders).mockImplementation(async (_shop, cursor) =>
-    cursor
-      ? { orders: [], nextCursor: null }
-      : { ...summary(), nextCursor: "next" },
-  );
+it("jumps to numbered history pages and keeps the server snapshot until refresh", async () => {
+  const snapshot = "2026-10-17T00:00:00.000Z";
+  vi.mocked(getCancelledOrders).mockImplementation(async (_shop, _cursor, _signal, _search, _filters, request) => {
+    const page = request?.page ?? 1;
+    return {
+      orders: Array.from({ length: page === 4 ? 1 : 12 }, (_, index) => ({
+        ...summary().orders[0], id: `order-${page}-${index}`,
+        orderNumber: `ORD-${String(page * 100 + index + 1).padStart(6, "0")}`,
+      })),
+      nextCursor: null,
+      pagination: { page, pageCount: 4, pageSize: 12, total: 37, snapshot, hasNew: false },
+    };
+  });
   setup();
-  await screen.findByText("ORD-000042");
+  await screen.findByText("ORD-000101");
+  fireEvent.click(screen.getByRole("button", { name: "Go to page 4" }));
+  await screen.findByText("ORD-000401");
+  expect(screen.queryByText("ORD-000101")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  expect(getCancelledOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 4, snapshot });
+  fireEvent.click(screen.getByRole("button", { name: "Go to page 1" }));
+  await screen.findByText("ORD-000101");
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
-  await screen.findByText("No rejected orders on this page");
-  expect(getCancelledOrders).toHaveBeenLastCalledWith(
-    "a",
-    "next",
-    expect.any(AbortSignal),
-    "",
-    {},
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Previous" }));
-  await screen.findByText("ORD-000042");
-  expect(getCancelledOrders).toHaveBeenLastCalledWith(
-    "a",
-    null,
-    expect.any(AbortSignal),
-    "",
-    {},
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Next" }));
-  await screen.findByText("No rejected orders on this page");
+  await screen.findByText("ORD-000201");
+  expect(getCancelledOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 2, snapshot });
   fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-  await screen.findByText("ORD-000042");
-  expect(getCancelledOrders).toHaveBeenLastCalledWith(
-    "a",
-    null,
-    expect.any(AbortSignal),
-    "",
-    {},
-  );
+  await screen.findByText("ORD-000101");
+  expect(getCancelledOrders).toHaveBeenLastCalledWith("a", null, expect.any(AbortSignal), "", {}, { page: 1 });
 });
+
 it("refreshes history automatically when an order is rejected", async () => {
   vi.useFakeTimers();
   try {

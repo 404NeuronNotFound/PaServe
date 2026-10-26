@@ -9,6 +9,48 @@
   font-variant-numeric: tabular-nums;
 }
 .management-pagination > span { color: var(--color-muted); }
+.management-pagination button { min-width: 44px; min-height: 44px; }
+.management-pagination button[aria-current="page"] {
+  background: var(--color-secondary);
+  border-color: var(--color-text);
+  font-weight: 700;
+}
+.pagination-page-numbers { display: flex; align-items: center; justify-content: center; gap: 3px; }
+.pagination-page-numbers button { padding: 10px; }
+.pagination-ellipsis { width: 12px; flex-shrink: 0; text-align: center; color: var(--color-muted); }
+.management-pagination.management-pagination {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+.management-pagination > button {
+  grid-row: 1;
+  justify-self: start;
+}
+.management-pagination > button:last-child {
+  grid-column: 3;
+  justify-self: end;
+}
+.management-pagination > .pagination-page-numbers {
+  grid-column: 2;
+  grid-row: 1;
+}
+.management-pagination > span {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  text-align: center;
+}
+@media screen and (max-width: 760px) {
+  .management-pagination.management-pagination {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 8px 4px;
+  }
+  .management-pagination > button { grid-row: 1; padding: 10px; justify-content: center; }
+  .management-pagination > button:last-child { grid-column: 3; }
+  .management-pagination .pagination-button-label { display: none; }
+  .management-pagination > span { grid-row: 2; grid-column: 1 / -1; text-align: center; }
+  .management-pagination .pagination-page-numbers { grid-row: 1; grid-column: 2; }
+}
 .management-filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
@@ -51,7 +93,7 @@
 .ui-table tbody tr:focus-within { background: var(--color-secondary); }
 @media print {
   .ui-table thead th { position: static; }
-  .management-pagination, .management-filters { display: none; }
+  .management-pagination.management-pagination, .management-filters { display: none; }
 }
 @media (forced-colors: active) {
   .ui-table tbody tr:focus-within { outline: 1px solid Highlight; }

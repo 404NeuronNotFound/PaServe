@@ -1,3 +1,5 @@
+import { RefreshButton } from "../../components/feedback/RefreshButton";
+import { useNumberedHistory } from "../../features/orders/useNumberedHistory";
 import { StatusBadge } from "../../components/paserve/StatusBadge";
 import { ListPagination } from "../../components/paserve/ListPagination";
 import { OrderCard } from "../../components/paserve/OrderCard";
@@ -55,18 +57,16 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
     search,
     filters,
     hasFilters,
-    cursors,
-    setCursors,
     applySearch,
     applyFilters,
     clearAll,
     resetVersion,
   } = useOrderListSearch();
-  const cursor = cursors[cursors.length - 1];
+  const paging = useNumberedHistory(JSON.stringify([search, filters, resetVersion]));
   const query = useQuery({
-    queryKey: completedOrdersKey(userId, shopId, cursor, search, filters),
+    queryKey: [...completedOrdersKey(userId, shopId, null, search, filters), ...paging.key],
     queryFn: ({ signal }) =>
-      getCompletedOrders(shopId, cursor, signal, search, filters),
+      paging.load((request) => getCompletedOrders(shopId, null, signal, search, filters, request)),
     enabled: role === "OWNER",
     retry: false,
     networkMode: "always",
@@ -82,10 +82,8 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
       </InlineMessage>
     );
   const orders = query.isSuccess ? query.data.orders : [];
-  const refresh = () => {
-    if (cursor) setCursors([null]);
-    else void query.refetch();
-  };
+  const refresh = paging.refresh;
+  const page = query.data?.pagination?.page ?? paging.page;
   return (
     <section
       className="active-orders-workspace"
@@ -100,6 +98,9 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
       >
         Review fulfilled orders with their saved totals and payment records.
       </OrderPageHeader>
+      {query.isSuccess && query.data.pagination?.hasNew && (
+        <InlineMessage tone="info">New orders available. <RefreshButton label="Show new orders" onClick={refresh} pending={query.isFetching} /></InlineMessage>
+      )}
       <div className="owner-order-tools">
         <OrderSearch key={`search:${resetVersion}`} search={search} onSearch={applySearch} />
         <OrderFilters
@@ -127,7 +128,7 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
         <>
           <div className="completed-orders-summary">
             <p className="active-orders-result" role="status">
-              Page {cursors.length} · {orders.length}{" "}
+              Page {page} · {orders.length}{" "}
               {orders.length === 1 ? "completed order" : "completed orders"} on
               this page
             </p>
@@ -145,22 +146,22 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
               <FiArchive aria-hidden="true" />
               <h2>
                 {search || hasFilters
-                  ? cursor
+                  ? (page > 1)
                     ? "No matching orders on this page"
                     : "No matching orders"
-                  : cursor
+                  : (page > 1)
                     ? "No completed orders on this page"
                     : "No completed orders yet"}
               </h2>
               <p>
                 {search || hasFilters
                   ? "Try another search or adjust or clear the filters."
-                  : cursor
+                  : (page > 1)
                     ? "Go back or refresh to start again."
                     : "Orders appear here after your team confirms pickup or table service. Payment alone does not mark an order fulfilled."}
               </p>
-              <OrderEmptyActions filtered={Boolean(search || hasFilters)} paged={Boolean(cursor)}
-                pending={query.isFetching} onReset={clearAll} onRefresh={() => void query.refetch()} />
+              <OrderEmptyActions filtered={Boolean(search || hasFilters)} paged={Boolean((page > 1))}
+                pending={query.isFetching} onReset={clearAll} onRefresh={refresh} />
             </div>
           ) : (
             <ul
@@ -230,14 +231,13 @@ function CompletedOrdersWorkspace({ userId }: { userId: string }) {
       <ListPagination
         label="Completed orders pagination"
         className="active-orders-pagination"
-        page={cursors.length}
-        hasNext={Boolean(query.isSuccess && query.data.nextCursor)}
+        page={page}
+        pageCount={query.isSuccess ? query.data.pagination?.pageCount : undefined}
+        hasNext={Boolean(query.isSuccess && query.data.pagination && page < query.data.pagination.pageCount)}
         pending={query.isFetching}
-        onPrevious={() => setCursors((values) => values.slice(0, -1))}
-        onNext={() => {
-          if (query.isSuccess && query.data.nextCursor)
-            setCursors((values) => [...values, query.data.nextCursor]);
-        }}
+        onPage={paging.go}
+        onPrevious={() => paging.go(page - 1)}
+        onNext={() => paging.go(page + 1)}
       />
     </section>
   );

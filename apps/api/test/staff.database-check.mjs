@@ -89,6 +89,11 @@ try {
     'utf8',
   );
   await setup.query(notificationsSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
+  const enabledNotificationsSql = await readFile(new URL(
+    '../prisma/migrations/20261026120000_account_access_enabled_notification/migration.sql',
+    import.meta.url,
+  ), 'utf8');
+  await setup.query(enabledNotificationsSql.replace(/^\s*(BEGIN|COMMIT);\s*$/gm, ''));
   const ownerId = randomUUID();
   const userId = randomUUID();
   const otherUser = randomUUID();
@@ -529,6 +534,7 @@ try {
       data: { disabledAt: new Date() },
     }),
   );
+  const enabledNoticesBefore = await prisma.accountNotification.count({ where: { recipientUserId: userId, shopId, kind: 'ENABLED' } });
   await setup.query(
     `ALTER TABLE ${q('staff_audit_events')} ADD CONSTRAINT test_enable_audit_failure CHECK (action <> 'ENABLED') NOT VALID`,
   );
@@ -539,10 +545,18 @@ try {
     (await prisma.shopMember.findUnique({ where: { id: member.id } }))
       .disabledAt,
   );
+  assert.equal(await prisma.accountNotification.count({ where: { recipientUserId: userId, shopId, kind: 'ENABLED' } }), enabledNoticesBefore);
   await setup.query(
     `ALTER TABLE ${q('staff_audit_events')} DROP CONSTRAINT test_enable_audit_failure`,
   );
   await staff.setAccess(ownerId, shopId, member.id, { isEnabled: true });
+  assert.equal(await prisma.accountNotification.count({ where: { recipientUserId: userId, shopId, kind: 'ENABLED', readAt: null } }), enabledNoticesBefore + 1);
+  const restoredNotice = (await inbox.list(userId)).notifications.find((n) => n.kind === 'ENABLED');
+  assert.equal(restoredNotice.shopId, shopId);
+  assert.equal(restoredNotice.role, 'KITCHEN');
+  assert.ok(restoredNotice.actorName);
+  await staff.setAccess(ownerId, shopId, member.id, { isEnabled: true });
+  assert.equal(await prisma.accountNotification.count({ where: { recipientUserId: userId, shopId, kind: 'ENABLED' } }), enabledNoticesBefore + 1);
   assert.equal(
     (
       await access.requirePermission(

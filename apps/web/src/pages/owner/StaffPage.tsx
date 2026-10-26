@@ -369,12 +369,12 @@ function StaffWorkspace({ userId }: { userId: string }) {
   if (memberSort !== "roster") members.sort((a, b) =>
     memberSort === "role" ? a.role.localeCompare(b.role) || a.email.localeCompare(b.email) :
       memberSort === "email-desc" ? b.email.localeCompare(a.email) : a.email.localeCompare(b.email));
-  const memberResults = listPage(members, memberPage, 10);
+  const memberResults = listPage(members, memberPage, 12);
   const invitations = query.data.invitations.filter((invitation) =>
     `${invitation.email} ${invitation.role} ${invitation.role === "KITCHEN" ? "barista" : ""}`
       .toLowerCase().includes(invitationSearch.trim().toLowerCase()) &&
     (!invitationStatus || invitation.status === invitationStatus));
-  const invitationResults = listPage(invitations, invitationPage, 10);
+  const invitationResults = listPage(invitations, invitationPage, 12);
   const hasMemberFilters = Boolean(search || accessFilter);
   const hasInvitationFilters = Boolean(invitationSearch || invitationStatus);
   const pendingCount = query.data.invitations.filter(
@@ -584,7 +584,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 </li>
               ))}
             </ul>
-            {query.data.members.length > 10 && <ListPagination label="Shop members pagination" page={memberResults.page} pageCount={memberResults.pageCount}
+            {query.data.members.length > 12 && <ListPagination label="Shop members pagination" page={memberResults.page} pageCount={memberResults.pageCount} onPage={setMemberPage}
               hasNext={memberResults.hasNext} pending={busy}
               onPrevious={() => setMemberPage(memberResults.page - 1)} onNext={() => setMemberPage(memberResults.page + 1)} />}
             {!members.length && (
@@ -704,7 +704,7 @@ function StaffWorkspace({ userId }: { userId: string }) {
                 ))}
               </ul>
             )}
-            {query.data.invitations.length > 10 && <ListPagination label="Invitations pagination" page={invitationResults.page} pageCount={invitationResults.pageCount}
+            {query.data.invitations.length > 12 && <ListPagination label="Invitations pagination" page={invitationResults.page} pageCount={invitationResults.pageCount} onPage={setInvitationPage}
               hasNext={invitationResults.hasNext} pending={busy}
               onPrevious={() => setInvitationPage(invitationResults.page - 1)} onNext={() => setInvitationPage(invitationResults.page + 1)} />}
           </section>

@@ -1,3 +1,5 @@
+import { useNumberedHistory } from "../../features/orders/useNumberedHistory";
+import { ListPagination } from "../../components/paserve/ListPagination";
 import { dineInServiceLabel, type DineInServiceType } from "@paserve/contracts";
 import { RefreshButton } from "../../components/feedback/RefreshButton";
 import { Input } from "../../components/ui/input";
@@ -31,7 +33,6 @@ import {
   FiShoppingBag,
   FiSearch,
   FiX,
-  FiChevronLeft,
   FiChevronRight,
 } from "react-icons/fi";
 import type {
@@ -145,8 +146,7 @@ function NewOrders() {
   const [distanceView, setDistanceView] = useState(false);
   const view = views[state];
   const [history, setHistory] = useState<HistoryFilters>({ limit: 12 });
-  const [cursors, setCursors] = useState<(string | null)[]>([null]);
-  const historyCursor = cursors[cursors.length - 1];
+  const paging = useNumberedHistory(JSON.stringify(history));
   const [selected, setSelected] = useState<
     PreparationQueueResponse["orders"][number] | null
   >(null);
@@ -165,18 +165,12 @@ function NewOrders() {
       user.id,
       shopId,
       state,
-      ...(state === "COMPLETED" ? [history, historyCursor] : []),
+      ...(state === "COMPLETED" ? [history, ...paging.key] : []),
     ],
-    initialPageParam:
-      state === "COMPLETED" ? historyCursor : (null as string | null),
-    queryFn: ({ pageParam, signal }) =>
-      getPreparationQueue(
-        shopId,
-        pageParam,
-        signal,
-        state,
-        state === "COMPLETED" ? history : undefined,
-      ),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) => state === "COMPLETED"
+      ? paging.load((request) => getPreparationQueue(shopId, null, signal, state, { ...history, ...request }))
+      : getPreparationQueue(shopId, pageParam, signal, state),
     getNextPageParam: (page) => page.nextCursor,
     retry: false,
     gcTime: 0,
@@ -185,6 +179,9 @@ function NewOrders() {
     refetchOnWindowFocus: "always",
     refetchInterval: 15_000,
   });
+  const historyPagination = queue.data?.pages[0].pagination;
+  const historyPage = historyPagination?.page ?? paging.page;
+  const refreshQueue = () => state === "COMPLETED" ? paging.refresh() : void queue.refetch();
   const status = isAxiosError(queue.error)
     ? queue.error.response?.status
     : undefined;
@@ -237,7 +234,7 @@ function NewOrders() {
           <RefreshButton label="Refresh orders"
             title={queue.isFetching ? "Refreshing orders" : "Refresh orders"}
             disabled={queue.isFetching}
-            onClick={() => void queue.refetch()}
+            onClick={refreshQueue}
             pending={queue.isFetching}
           />
         </div>
@@ -310,7 +307,7 @@ function NewOrders() {
         <HistorySearch
           onApply={(filters) => {
             setHistory({ ...filters, limit: 12 });
-            setCursors([null]);
+
           }}
         />
       </div>
@@ -368,15 +365,15 @@ function NewOrders() {
               : view.empty}
           </p>
           <div className="empty-state-actions">
-            {state === "COMPLETED" && (history.search || history.from || history.to || historyCursor) ? (
+            {state === "COMPLETED" && (history.search || history.from || history.to || (historyPage > 1)) ? (
               <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => {
-                setHistory({ limit: 12 }); setCursors([null]);
+                setHistory({ limit: 12 }); paging.refresh();
               }}>Reset history filters</Button>
             ) : state !== "QUEUED" ? (
               <Button variant="outline" size="inherit" type="button" className="secondary-button" onClick={() => setState("QUEUED")}>View queued orders</Button>
             ) : (
               <RefreshButton label="Check for new orders" disabled={queue.isFetching}
-                onClick={() => void queue.refetch()} pending={queue.isFetching} />
+                onClick={refreshQueue} pending={queue.isFetching} />
             )}
           </div>
         </div>
@@ -449,40 +446,16 @@ function NewOrders() {
           ))}
         </ol>
       )}
+      {state === "COMPLETED" && queue.isSuccess && historyPagination?.hasNew && (
+        <InlineMessage tone="info">New completed orders available. <RefreshButton label="Show new completed orders" onClick={refreshQueue} pending={queue.isFetching} /></InlineMessage>
+      )}
       {state === "COMPLETED" && (
-        <nav
-          className="kitchen-pagination"
-          aria-label="Completed history pages"
-        >
-          <span role="status">
-            Page {cursors.length} · Up to 12 orders per page
-          </span>
-          <div>
-            <Button variant="outline" size="inherit" type="submit"
-              className="secondary-button"
-              disabled={cursors.length === 1 || queue.isFetching}
-              onClick={() => {
-                setCursors((pages) => pages.slice(0, -1));
-                historyHeading.current?.focus();
-              }}
-            >
-              <FiChevronLeft aria-hidden="true" /> Previous
-            </Button>
-            <Button variant="outline" size="inherit" type="submit"
-              className="secondary-button"
-              disabled={!queue.hasNextPage || queue.isFetching}
-              onClick={() => {
-                setCursors((pages) => [
-                  ...pages,
-                  queue.data?.pages[0].nextCursor ?? null,
-                ]);
-                historyHeading.current?.focus();
-              }}
-            >
-              Next <FiChevronRight aria-hidden="true" />
-            </Button>
-          </div>
-        </nav>
+        <ListPagination label="Completed history pages" className="kitchen-pagination"
+          page={historyPage} pageCount={queue.isSuccess ? historyPagination?.pageCount : undefined}
+          hasNext={Boolean(historyPagination && historyPage < historyPagination.pageCount)} pending={queue.isFetching}
+          onPage={(page) => { paging.go(page); historyHeading.current?.focus(); }}
+          onPrevious={() => { paging.go(historyPage - 1); historyHeading.current?.focus(); }}
+          onNext={() => { paging.go(historyPage + 1); historyHeading.current?.focus(); }} />
       )}
       {selected && state === "COMPLETED" && (
         <TicketDetails

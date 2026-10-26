@@ -396,7 +396,7 @@ it("groups products by category and opens reorder for that category only", async
   await waitFor(() => expect(trigger).toHaveFocus());
 });
 it("paginates a large menu and resets pagination when searching", async () => {
-  const products = Array.from({ length: 17 }, (_, index) => ({
+  const products = Array.from({ length: 25 }, (_, index) => ({
     ...product,
     id: `p-${index}`,
     name: `Drink ${index}`,
@@ -408,9 +408,9 @@ it("paginates a large menu and resets pagination when searching", async () => {
   const user = userEvent.setup();
   await screen.findByRole("heading", { name: "Drink 0" });
   expect(
-    screen.queryByRole("heading", { name: "Drink 8" }),
+    screen.queryByRole("heading", { name: "Drink 12" }),
   ).not.toBeInTheDocument();
-  expect(screen.getByText("Showing 1–8 of 17 products")).toBeInTheDocument();
+  expect(screen.getByText("Showing 1–12 of 25 products")).toBeInTheDocument();
   await user.click(
     screen.getByRole("button", { name: "Go to product page 2" }),
   );
@@ -418,12 +418,12 @@ it("paginates a large menu and resets pagination when searching", async () => {
     screen.getByRole("button", { name: "Go to product page 2" }),
   ).toHaveAttribute("aria-current", "page");
   expect(screen.getByRole("heading", { name: "Your menu" })).toHaveFocus();
-  expect(screen.getByRole("heading", { name: "Drink 8" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Drink 12" })).toBeInTheDocument();
   expect(
     screen.queryByRole("heading", { name: "Drink 0" }),
   ).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Next product page" }));
-  expect(screen.getByRole("heading", { name: "Drink 16" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Drink 24" })).toBeInTheDocument();
   expect(
     screen.getByRole("button", { name: "Next product page" }),
   ).toBeDisabled();
@@ -439,8 +439,8 @@ it("paginates a large menu and resets pagination when searching", async () => {
   const modal = within(
     screen.getByRole("dialog", { name: "Reorder products" }),
   );
-  expect(modal.getAllByRole("listitem")).toHaveLength(17);
-  expect(modal.getByText("Drink 16")).toBeInTheDocument();
+  expect(modal.getAllByRole("listitem")).toHaveLength(25);
+  expect(modal.getByText("Drink 24")).toBeInTheDocument();
 });
 it("combines category and status filters and recovers from no matches", async () => {
   vi.mocked(listProducts).mockResolvedValue({
@@ -1811,7 +1811,7 @@ it("separates archived products and resets filters when switching views", async 
 
 it("keeps numbered navigation valid as a large menu approaches its last page", async () => {
   vi.mocked(listProducts).mockResolvedValue({
-    products: Array.from({ length: 49 }, (_, index) => ({
+    products: Array.from({ length: 73 }, (_, index) => ({
       ...product,
       id: `large-${index}`,
       name: `Item ${index}`,
@@ -1826,12 +1826,16 @@ it("keeps numbered navigation valid as a large menu approaches its last page", a
     screen.getByRole("button", { name: "Previous product page" }),
   ).toBeDisabled();
   await user.click(
-    screen.getByRole("button", { name: "Go to product page 5" }),
+    screen.getByRole("button", { name: "Go to product page 2" }),
   );
+  expect(screen.queryByRole("button", { name: "Go to product page 5" })).not.toBeInTheDocument();
+  expect(screen.getByText("…")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Next product page" }));
+  expect(screen.getByRole("button", { name: "Go to product page 3" })).toHaveAttribute("aria-current", "page");
   await user.click(
     screen.getByRole("button", { name: "Go to product page 7" }),
   );
-  expect(screen.getByRole("heading", { name: "Item 48" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Item 72" })).toBeInTheDocument();
   expect(
     screen.getByRole("button", { name: "Next product page" }),
   ).toBeDisabled();
@@ -1844,7 +1848,7 @@ it("keeps numbered navigation valid as a large menu approaches its last page", a
   await user.click(
     screen.getByRole("button", { name: "Previous product page" }),
   );
-  expect(screen.getByRole("heading", { name: "Item 40" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Item 60" })).toBeInTheDocument();
 });
 
 it("clears a saved photo through Save changes without accepting a replacement URL", async () => {

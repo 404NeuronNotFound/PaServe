@@ -1,3 +1,4 @@
+import { ListPagination } from "../../components/paserve/ListPagination";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -44,6 +45,12 @@ function content(n: AccountNotification) {
         title: "Your role changed",
         text: `Your role at ${n.shopName} changed from ${roleName(n.previousRole)} to ${roleName(n.role)}.`,
         icon: FiShield,
+      };
+    case "ENABLED":
+      return {
+        title: "Shop access restored",
+        text: `${n.actorName} restored your access to ${n.shopName} as ${roleName(n.role)}.`,
+        icon: FiCheck,
       };
     case "DISABLED":
       return {
@@ -263,27 +270,11 @@ export function NotificationsPage() {
               })}
             </ul>
             {(cursors.length > 0 || query.data.nextCursor) && (
-              <nav
-                className="notifications-pagination"
-                aria-label="Notification pages"
-              >
-                <Button
-                  variant="outline"
-                  disabled={busy || !cursors.length}
-                  onClick={() => setCursors((c) => c.slice(0, -1))}
-                >
-                  Newer
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={busy || !query.data.nextCursor}
-                  onClick={() =>
-                    setCursors((c) => [...c, query.data!.nextCursor!])
-                  }
-                >
-                  Older
-                </Button>
-              </nav>
+              <ListPagination label="Notification pages" className="notifications-pagination"
+                page={cursors.length + 1} hasNext={Boolean(query.data.nextCursor)} pending={busy}
+                previousLabel="Newer" nextLabel="Older"
+                onPrevious={() => setCursors((c) => c.slice(0, -1))}
+                onNext={() => setCursors((c) => [...c, query.data!.nextCursor!])} />
             )}
           </>
         )}

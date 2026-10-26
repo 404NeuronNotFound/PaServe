@@ -83,7 +83,7 @@ export interface AcceptStaffInvitationResponse {
   role: StaffRole;
 }
 
-export type AccountNotificationKind = "INVITED" | "ROLE_CHANGED" | "REMOVED" | "DISABLED" | "ACCEPTED" | "DECLINED";
+export type AccountNotificationKind = "INVITED" | "ROLE_CHANGED" | "REMOVED" | "DISABLED" | "ENABLED" | "ACCEPTED" | "DECLINED";
 export interface AccountNotification {
   id: string;
   kind: AccountNotificationKind;
@@ -154,7 +154,22 @@ export interface ActiveOrderSummary {
   updatedAt: string;
 }
 
+export interface HistoryPageRequest {
+  page: number;
+  snapshot?: string;
+}
+
+export interface HistoryPagination {
+  page: number;
+  pageSize: 12;
+  pageCount: number;
+  total: number;
+  snapshot: string;
+  hasNew: boolean;
+}
+
 export interface ActiveOrdersResponse {
+  pagination?: HistoryPagination;
   orders: ActiveOrderSummary[];
   nextCursor: string | null;
 }
@@ -248,6 +263,7 @@ export interface CompletedOrderSummary {
 }
 
 export interface CompletedOrdersResponse {
+  pagination?: HistoryPagination;
   orders: CompletedOrderSummary[];
   nextCursor: string | null;
 }
@@ -273,6 +289,7 @@ export interface CancelledOrderSummary {
 }
 
 export interface CancelledOrdersResponse {
+  pagination?: HistoryPagination;
   orders: CancelledOrderSummary[];
   nextCursor: string | null;
 }
@@ -1256,6 +1273,7 @@ export interface OrderPreparationReceipt {
   queuedAt: string;
 }
 export interface PreparationQueueResponse {
+  pagination?: HistoryPagination;
   orders: Array<{
     id: string;
     shopId: string;

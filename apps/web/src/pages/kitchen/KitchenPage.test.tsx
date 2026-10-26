@@ -892,20 +892,18 @@ const historyTicket = (
   completedAt: "2026-10-15T01:20:00.000Z",
   completedBy: "staff",
 });
+const numberedHistory = (page = 1): PreparationQueueResponse => ({
+  orders: page === 2 ? [historyTicket("done-2", "ORD-000041")] : [
+    historyTicket(), ...Array.from({ length: 11 }, (_, index) => historyTicket(`extra-${index}`, `ORD-${String(100 + index).padStart(6, "0")}`)),
+  ],
+  nextCursor: null,
+  pagination: { page, pageSize: 12, pageCount: 2, total: 13, snapshot: "2026-10-16T00:00:00.000Z", hasNew: false },
+});
 it("replaces completed pages rather than appending and can return to the first page", async () => {
   setup();
   await screen.findByRole("article");
   vi.mocked(api.get).mockImplementation(async (_url, config) => ({
-    data: {
-      orders: [
-        (config?.params as { cursor?: string } | undefined)?.cursor
-          ? historyTicket("done-2", "ORD-000041")
-          : historyTicket(),
-      ],
-      nextCursor: (config?.params as { cursor?: string } | undefined)?.cursor
-        ? null
-        : "page2",
-    },
+    data: numberedHistory((config?.params as { page?: number } | undefined)?.page ?? 1),
   }));
   await userEvent.click(screen.getByRole("button", { name: "Completed" }));
   await screen.findByText("ORD-000042");
@@ -917,7 +915,7 @@ it("replaces completed pages rather than appending and can return to the first p
   expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
   expect(api.get).toHaveBeenLastCalledWith(
     "/shops/shop-a/preparation/completed",
-    expect.objectContaining({ params: { limit: 12, cursor: "page2" } }),
+    expect.objectContaining({ params: { limit: 12, page: 2, snapshot: "2026-10-16T00:00:00.000Z" } }),
   );
   const reads = vi.mocked(api.get).mock.calls.length;
   act(() =>
@@ -933,7 +931,7 @@ it("replaces completed pages rather than appending and can return to the first p
   );
   expect(api.get).toHaveBeenLastCalledWith(
     "/shops/shop-a/preparation/completed",
-    expect.objectContaining({ params: { limit: 12, cursor: "page2" } }),
+    expect.objectContaining({ params: { limit: 12, page: 2, snapshot: "2026-10-16T00:00:00.000Z" } }),
   );
   expect(screen.getByText("ORD-000041")).toBeInTheDocument();
   expect(screen.queryByText("ORD-000042")).not.toBeInTheDocument();
@@ -943,9 +941,7 @@ it("replaces completed pages rather than appending and can return to the first p
 it("searches the whole completed history and resets pagination and filters", async () => {
   setup();
   await screen.findByRole("article");
-  vi.mocked(api.get).mockResolvedValue({
-    data: { orders: [historyTicket()], nextCursor: "page2" },
-  });
+  vi.mocked(api.get).mockImplementation(async (_url, config) => ({ data: numberedHistory((config?.params as { page?: number } | undefined)?.page ?? 1) }));
   await userEvent.click(screen.getByRole("button", { name: "Completed" }));
   await screen.findByText("ORD-000042");
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -967,7 +963,7 @@ it("searches the whole completed history and resets pagination and filters", asy
   expect(api.get).toHaveBeenLastCalledWith(
     "/shops/shop-a/preparation/completed",
     expect.objectContaining({
-      params: { limit: 12, search: "000099", from, to },
+      params: { limit: 12, page: 1, search: "000099", from, to },
     }),
   );
   expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
@@ -975,7 +971,7 @@ it("searches the whole completed history and resets pagination and filters", asy
   await waitFor(() =>
     expect(api.get).toHaveBeenLastCalledWith(
       "/shops/shop-a/preparation/completed",
-      expect.objectContaining({ params: { limit: 12 } }),
+      expect.objectContaining({ params: { limit: 12, page: 1 } }),
     ),
   );
   expect(screen.getByLabelText("Order number")).toHaveValue("");
@@ -1023,7 +1019,7 @@ it("allows returning to a previous history page after the next request fails", a
   setup();
   await screen.findByRole("article");
   vi.mocked(api.get).mockResolvedValue({
-    data: { orders: [historyTicket()], nextCursor: "page2" },
+    data: numberedHistory(),
   });
   await userEvent.click(screen.getByRole("button", { name: "Completed" }));
   await screen.findByText("ORD-000042");
@@ -1049,7 +1045,7 @@ it("keeps applied history filters visible when switching preparation views", asy
   await waitFor(() =>
     expect(api.get).toHaveBeenLastCalledWith(
       "/shops/shop-a/preparation/completed",
-      expect.objectContaining({ params: { limit: 12, search: "000042" } }),
+      expect.objectContaining({ params: { limit: 12, page: 1, search: "000042" } }),
     ),
   );
 });

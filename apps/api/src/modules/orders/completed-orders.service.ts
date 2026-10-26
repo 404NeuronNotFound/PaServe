@@ -1,4 +1,10 @@
 import {
+  parseHistoryPaging,
+  readHistoryPage,
+  type HistoryPagingQuery,
+} from './history-pagination.js';
+import { Prisma } from '../../generated/prisma/client.js';
+import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -27,7 +33,9 @@ export class CompletedOrdersService {
     cursor?: unknown,
     search?: unknown,
     filters?: unknown,
+    pagingQuery: HistoryPagingQuery = {},
   ): Promise<CompletedOrdersResponse> {
+    const paging = parseHistoryPaging(pagingQuery, cursor);
     const access = shopPermissionWhere(
       actorId,
       shopId,
@@ -64,7 +72,7 @@ export class CompletedOrdersService {
       }
     }
     await this.members.requireOwner(actorId, shopId);
-    const saved = await this.prisma.order.findMany({
+    const args = {
       where: {
         shopId,
         shop: access,
@@ -110,42 +118,58 @@ export class CompletedOrdersService {
         paidAt: true,
         completedAt: true,
       },
-    });
-    const orders = saved.slice(0, 25).map((order): CompletedOrderSummary => {
-      const method = order.paymentMethod;
-      if (
-        !order.completedAt ||
-        !order.paidAt ||
-        order.paidAt < order.createdAt ||
-        order.completedAt < order.paidAt ||
-        (method !== 'CASH' &&
-          method !== 'GCASH_MANUAL' &&
-          method !== 'CARD_MANUAL' &&
-          method !== 'OTHER')
-      ) {
-        throw new ConflictException({
-          code: 'COMPLETED_ORDER_UNAVAILABLE',
-          message: 'The saved completed order could not be loaded.',
-        });
-      }
-      return {
-        ...order,
-        status: 'CONFIRMED',
-        paymentStatus: 'PAID',
-        preparationStatus: 'COMPLETED',
-        paymentMethod: method,
-        currency: 'PHP',
-        totalPrice: order.totalPrice.toFixed(2),
-        createdAt: order.createdAt.toISOString(),
-        paidAt: order.paidAt.toISOString(),
-        completedAt: order.completedAt.toISOString(),
-      };
-    });
+    } satisfies Prisma.OrderFindManyArgs;
+    const numbered = paging
+      ? await readHistoryPage(
+          this.prisma,
+          paging,
+          args.where,
+          { completedAt: { lte: paging.snapshot } },
+          (tx, where, skip, take) =>
+            tx.order.findMany({ ...args, where, skip, take }),
+        )
+      : undefined;
+    const saved = numbered
+      ? numbered.saved
+      : await this.prisma.order.findMany(args);
+    const orders = saved
+      .slice(0, paging ? 12 : 25)
+      .map((order): CompletedOrderSummary => {
+        const method = order.paymentMethod;
+        if (
+          !order.completedAt ||
+          !order.paidAt ||
+          order.paidAt < order.createdAt ||
+          order.completedAt < order.paidAt ||
+          (method !== 'CASH' &&
+            method !== 'GCASH_MANUAL' &&
+            method !== 'CARD_MANUAL' &&
+            method !== 'OTHER')
+        ) {
+          throw new ConflictException({
+            code: 'COMPLETED_ORDER_UNAVAILABLE',
+            message: 'The saved completed order could not be loaded.',
+          });
+        }
+        return {
+          ...order,
+          status: 'CONFIRMED',
+          paymentStatus: 'PAID',
+          preparationStatus: 'COMPLETED',
+          paymentMethod: method,
+          currency: 'PHP',
+          totalPrice: order.totalPrice.toFixed(2),
+          createdAt: order.createdAt.toISOString(),
+          paidAt: order.paidAt.toISOString(),
+          completedAt: order.completedAt.toISOString(),
+        };
+      });
     const last = orders.at(-1);
     return {
       orders,
+      ...(numbered ? { pagination: numbered.pagination } : {}),
       nextCursor:
-        saved.length > 25 && last
+        !paging && saved.length > 25 && last
           ? Buffer.from(JSON.stringify([last.completedAt, last.id])).toString(
               'base64url',
             )

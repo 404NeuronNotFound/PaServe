@@ -14,6 +14,7 @@ export class PreparationQueueController {
     @Query('from') from: string | undefined,
     @Query('to') to: string | undefined,
     @Query('limit') limit: string | undefined,
+    @Query() paging: Record<string, unknown>,
     @Query('cursor') cursor: string | undefined,
     @Req() request: ShopMemberRequest,
     @Res({ passthrough: true }) response: Response,
@@ -24,7 +25,7 @@ export class PreparationQueueController {
       request.shopMembership.shopId,
       cursor,
       'COMPLETED',
-      { search, from, to, limit },
+      { search, from, to, limit, page: paging.page, snapshot: paging.snapshot },
     );
   }
   @Get('ready')

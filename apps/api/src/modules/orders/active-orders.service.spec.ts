@@ -33,6 +33,51 @@ describe('Owner active orders', () => {
     findMany.mockResolvedValue([]);
   });
 
+  it('jumps directly to the last numbered page using matching scoped counts and a fixed cutoff', async () => {
+    const snapshot = '2026-10-17T00:00:00.000Z';
+    const count = vi.fn().mockResolvedValue(37);
+    const findFirst = vi.fn().mockResolvedValue({ id: 'new-order' });
+    const tx = { order: { count, findMany, findFirst } };
+    const transaction = vi.fn(
+      async (read: (db: typeof tx) => Promise<unknown>) => read(tx),
+    );
+    const pagedService = new ActiveOrdersService(
+      { ...tx, $transaction: transaction } as unknown as PrismaService,
+      { requireOwner } as unknown as ShopMembersService,
+    );
+    findMany.mockResolvedValue([row()]);
+    const result = await pagedService.list(
+      actorId,
+      shopId,
+      undefined,
+      '000042',
+      {},
+      { page: '99', snapshot },
+    );
+    expect(result.pagination).toEqual({
+      page: 4,
+      pageCount: 4,
+      pageSize: 12,
+      total: 37,
+      snapshot,
+      hasNew: true,
+    });
+    expect(result.nextCursor).toBeNull();
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 36, take: 12 }),
+    );
+    const predicate = count.mock.calls[0][0].where;
+    expect(predicate.AND[0]).toMatchObject({
+      shopId,
+      shop: { id: shopId, isActive: true },
+    });
+    expect(findMany.mock.calls[0][0].where).toEqual(predicate);
+    expect(JSON.stringify(predicate)).toContain(snapshot);
+    expect(JSON.stringify(predicate)).toContain('000042');
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'RepeatableRead',
+    });
+  });
   it('uses bounded oldest-first pages, immutable time/ID cursors, and live owner/shop predicates', async () => {
     const rows = Array.from({ length: 26 }, row).sort((a, b) =>
       a.id.localeCompare(b.id),
