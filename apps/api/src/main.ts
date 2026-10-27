@@ -28,7 +28,13 @@ async function bootstrap() {
     ],
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  // Use loopback behind a colocated edge, or a private container/network interface.
+  // An unset address retains the hosting platform's existing bind behavior.
+  if (process.env.API_BIND_ADDRESS) {
+    await app.listen(process.env.PORT ?? 3000, process.env.API_BIND_ADDRESS);
+  } else {
+    await app.listen(process.env.PORT ?? 3000);
+  }
 }
 
 bootstrap().catch(() => {

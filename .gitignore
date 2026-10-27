@@ -7,3 +7,6 @@ dist
 
 # Per-computer certificates for local phone camera testing.
 .local-https/
+
+# Downloaded local test binaries and disposable edge test prefixes.
+.local-tools/
