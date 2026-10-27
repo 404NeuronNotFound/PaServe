@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError, AxiosHeaders } from "axios";
 import { RegistrationForm } from "./RegistrationForm";
 import { registerAccount } from "../api/register";
+import { REGISTRATION_ACKNOWLEDGEMENT } from "@paserve/contracts";
 
 vi.mock("../api/register", () => ({ registerAccount: vi.fn() }));
 const register = vi.mocked(registerAccount);
@@ -105,17 +106,13 @@ describe("Registration form", () => {
   });
   it("submits only normalized email and password and clears password fields", async () => {
     const result = {
-      user: {
-        id: "user-id",
-        email: "owner@example.com",
-        createdAt: "2026-10-08T00:00:00.000Z",
-      },
+      message: REGISTRATION_ACKNOWLEDGEMENT,
     };
     register.mockResolvedValue(result);
     const { user, success } = setup();
     await fill(user);
     await user.click(screen.getByRole("button", { name: /create account/i }));
-    await waitFor(() => expect(success).toHaveBeenCalledWith(result));
+    await waitFor(() => expect(success).toHaveBeenCalledWith(result, "owner@example.com"));
     expect(register.mock.calls[0]?.[0]).toEqual({
       email: "owner@example.com",
       password: "a long test passphrase",
@@ -123,11 +120,11 @@ describe("Registration form", () => {
     expect(screen.getByLabelText("Password", { exact: true })).toHaveValue("");
     expect(screen.getByLabelText("Confirm password")).toHaveValue("");
   });
-  it("displays duplicate email feedback from the backend", async () => {
+  it("shows retry guidance for throttling without account-existence feedback", async () => {
     const error = new AxiosError("Conflict");
     error.response = {
-      data: { code: "EMAIL_ALREADY_EXISTS" },
-      status: 409,
+      data: { code: "RATE_LIMIT_EXCEEDED" },
+      status: 429,
       statusText: "Conflict",
       headers: {},
       config: { headers: new AxiosHeaders() },
@@ -137,10 +134,10 @@ describe("Registration form", () => {
     await fill(user);
     await user.click(screen.getByRole("button", { name: /create account/i }));
     expect(
-      await screen.findByText("An account with this email already exists."),
+      await screen.findByText("Too many registration attempts. Please wait and try again."),
     ).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByLabelText("Email address")).toHaveFocus(),
+      expect(screen.getByRole("alert")).toHaveFocus(),
     );
   });
   it("blocks duplicate submissions while a request is pending", async () => {
@@ -166,11 +163,7 @@ describe("Registration form", () => {
       "Creating your account. Please wait.",
     );
     finish({
-      user: {
-        id: "user-id",
-        email: "owner@example.com",
-        createdAt: "2026-10-08T00:00:00.000Z",
-      },
+      message: REGISTRATION_ACKNOWLEDGEMENT,
     });
     await waitFor(() => expect(success).toHaveBeenCalled());
   });

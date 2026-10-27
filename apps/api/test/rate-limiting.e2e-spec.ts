@@ -133,6 +133,9 @@ describe('rate limiting admission and recovery', () => {
     for (const [route, policy] of Object.entries(expected))
       expect(routes.get(route), route).toBe(policy);
     expect(routes.get('GET')).toBeUndefined();
+    // Password recovery is absent, not an unprotected feature. A future endpoint
+    // must explicitly extend the abuse policies/tests before this scope can change.
+    expect([...routes.keys()].filter((route) => /auth\/.*(?:forgot|reset)/i.test(route))).toEqual([]);
   });
   it.each([
     ['/api/v1/menu/cafe/orders/' + id + '/tracking-session', 'post', 30, 401],
@@ -272,9 +275,9 @@ describe('rate limiting admission and recovery', () => {
         .set('X-PaServe-Client', 'web')
         .set('Cookie', `${REFRESH_COOKIE}=invalid`)
         .send({});
-    for (let index = 0; index < 30; index++) await attempt().expect(401);
+    for (let index = 0; index < 10; index++) await attempt().expect(401);
     await attempt().expect(429);
-    expect(refresh).toHaveBeenCalledTimes(30);
+    expect(refresh).toHaveBeenCalledTimes(10);
   });
   it('shares staff verification budgets across QR aliases and order IDs', async () => {
     const paths = [

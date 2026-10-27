@@ -45,15 +45,13 @@ try {
             email,
             password: 'Real workflow audit fixture passphrase',
           };
-          const registered = await http('post', '/auth/register')
-            .send(credentials)
-            .expect(201);
+          await http('post', '/auth/register').send(credentials).expect(201);
           const login = await http('post', '/auth/login')
             .set('X-PaServe-Client', 'web')
             .send(credentials)
             .expect(200);
           const token = login.body.accessToken;
-          const userId = registered.body.user.id;
+          const userId = login.body.user.id;
           const shop = (
             await http('post', '/shops', token)
               .send({ name: `Audit cafe ${marker}` })

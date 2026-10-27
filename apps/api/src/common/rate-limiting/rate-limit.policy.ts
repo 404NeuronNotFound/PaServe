@@ -28,6 +28,27 @@ export const RATE_LIMITS = {
   orderAction: { limit: 120, aggregate: 360, shop: true },
 } as const;
 export type RateLimitPolicy = keyof typeof RATE_LIMITS;
+// Additional rolling windows for public authentication. Do not trust body/account
+// hints on refresh: it has no validated account identity before token verification.
+export const AUTH_RATE_WINDOWS: Partial<
+  Record<
+    RateLimitPolicy,
+    readonly { scope: string; limit: number; ttl: number }[]
+  >
+> = {
+  login: [
+    { scope: 'burst', limit: 5, ttl: 10_000 },
+    { scope: 'sustained', limit: 50, ttl: 15 * 60_000 },
+  ],
+  register: [
+    { scope: 'burst', limit: 2, ttl: 10_000 },
+    { scope: 'sustained', limit: 20, ttl: 15 * 60_000 },
+  ],
+  refresh: [
+    { scope: 'burst', limit: 10, ttl: 10_000 },
+    { scope: 'sustained', limit: 180, ttl: 15 * 60_000 },
+  ],
+};
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 /** Admission control only; all authentication and domain guards still apply. */
 export const RateLimit = (policy: RateLimitPolicy) =>

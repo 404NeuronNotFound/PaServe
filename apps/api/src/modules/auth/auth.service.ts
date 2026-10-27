@@ -12,7 +12,10 @@ import type {
 } from '@paserve/contracts';
 import { argon2id, hash, verify } from 'argon2';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { SESSION_LIMITS } from '@paserve/contracts';
+import {
+  SESSION_LIMITS,
+  REGISTRATION_ACKNOWLEDGEMENT,
+} from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
 import { AuthRepository } from './auth.repository.js';
 import type { RegisterDto } from './dto/register.dto.js';
@@ -36,11 +39,14 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto) {
+    // Both paths wait for startup hash preparation; missing accounts do not take
+    // a separate first-request path and always perform password verification.
+    const dummyHash = await this.dummyHash;
     const account = await this.repository.findLoginAccount(
       dto.email.trim().toLowerCase(),
     );
     const matches = await verify(
-      account?.passwordHash ?? (await this.dummyHash),
+      account?.passwordHash ?? dummyHash,
       dto.password,
     );
     if (!account || !matches || !account.isActive) {
@@ -248,30 +254,11 @@ export class AuthService {
 
   async register(dto: RegisterDto): Promise<RegisterResponse> {
     const email = dto.email.trim().toLowerCase();
-    if (await this.repository.findAccountByEmail(email)) {
-      throw this.emailConflict();
-    }
-
+    // Always hash, then perform the same conflict-safe INSERT. No account-existence
+    // fast path, user details, or duplicate-specific response is exposed publicly.
     const passwordHash = await hash(dto.password, { type: argon2id });
-    try {
-      const user = await this.repository.createAccount(email, passwordHash);
-      return {
-        user: {
-          id: user.id,
-          email: user.email,
-          createdAt: user.createdAt.toISOString(),
-        },
-      };
-    } catch (error: unknown) {
-      // The unique index is authoritative when simultaneous requests race.
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw this.emailConflict();
-      }
-      throw error;
-    }
+    await this.repository.createAccount(email, passwordHash);
+    return { message: REGISTRATION_ACKNOWLEDGEMENT };
   }
 
   private emailConflict(): ConflictException {

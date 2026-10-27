@@ -228,11 +228,11 @@ function JoinInvitation({ shopId, token }: { shopId: string; token: string }) {
           {error && <InlineMessage tone="info">{error}</InlineMessage>}
           {register ? (
             <RegistrationForm
-              onSuccess={({ user }) => {
-                setRegisteredEmail(user.email);
+              onSuccess={(result, submittedEmail) => {
+                setRegisteredEmail(submittedEmail);
                 setRegister(false);
                 setError(
-                  "Your account is ready. Sign in below to accept the invitation.",
+                  result.message,
                 );
               }}
             />

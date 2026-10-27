@@ -9,7 +9,7 @@ describe('Atomic account updates', () => {
   };
   const prisma = {
     $transaction: vi.fn(),
-    user: { update: vi.fn(), updateMany: vi.fn() },
+    user: { update: vi.fn(), updateMany: vi.fn(), createMany: vi.fn() },
   };
   let repository: AuthRepository;
   beforeEach(async () => {
@@ -21,6 +21,18 @@ describe('Atomic account updates', () => {
       providers: [AuthRepository, { provide: PrismaService, useValue: prisma }],
     }).compile();
     repository = module.get(AuthRepository);
+  });
+  it('ignores duplicate registration atomically without overwriting existing credentials', async () => {
+    prisma.user.createMany.mockResolvedValue({ count: 0 });
+    await expect(
+      repository.createAccount('owner@example.com', 'new-hash'),
+    ).resolves.toEqual({ count: 0 });
+    expect(prisma.user.createMany).toHaveBeenCalledWith({
+      data: { email: 'owner@example.com', passwordHash: 'new-hash' },
+      skipDuplicates: true,
+    });
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
   });
   it('conditions credential writes on the live identity, session and verified hash, then revokes every session atomically', async () => {
     tx.user.updateMany.mockResolvedValue({ count: 1 });

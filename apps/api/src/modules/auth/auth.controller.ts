@@ -8,6 +8,7 @@ import {
   Req,
   Res,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
@@ -27,6 +28,7 @@ import {
 } from './guards/jwt-auth.guard.js';
 import { AuthOriginGuard } from './guards/auth-origin.guard.js';
 import { REFRESH_COOKIE, invalidSession } from './tokens.service.js';
+import { AuthWorkInterceptor } from './auth-abuse-protection.js';
 
 function refreshCookie(request: Request): string | undefined {
   const entry = request.headers.cookie
@@ -50,6 +52,7 @@ export class AuthController {
 
   @Post('register')
   @RateLimit('register')
+  @UseInterceptors(AuthWorkInterceptor)
   register(@Body() dto: RegisterDto) {
     return this.auth.register(dto);
   }
@@ -58,6 +61,7 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(AuthOriginGuard)
   @RateLimit('login')
+  @UseInterceptors(AuthWorkInterceptor)
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) response: Response,
@@ -144,6 +148,7 @@ export class AuthController {
   }
 
   @Post('email')
+  @UseInterceptors(AuthWorkInterceptor)
   @HttpCode(204)
   @RateLimit('accountUpdate')
   @UseGuards(AuthOriginGuard, JwtAuthGuard)
@@ -161,6 +166,7 @@ export class AuthController {
   }
 
   @Post('password')
+  @UseInterceptors(AuthWorkInterceptor)
   @HttpCode(204)
   @RateLimit('accountUpdate')
   @UseGuards(AuthOriginGuard, JwtAuthGuard)

@@ -96,7 +96,7 @@ describe('API security headers', () => {
     check(response.headers);
   });
   it('preserves CSP, security headers and Retry-After on rate-limit errors', async () => {
-    for (let n = 0; n < 5; n++)
+    for (let n = 0; n < 2; n++)
       await request(app.getHttpServer())
         .post('/api/v1/auth/register')
         .send({})

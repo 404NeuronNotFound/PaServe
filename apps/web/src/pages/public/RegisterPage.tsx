@@ -1,35 +1,34 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FiCheckCircle } from "react-icons/fi";
-import type { RegisteredUser } from "@paserve/contracts";
+import type { RegisterResponse } from "@paserve/contracts";
 import { AuthLayout } from "../../components/layout/AuthLayout";
 import { RegistrationForm } from "../../features/auth/components/RegistrationForm";
-import { feedback } from "../../app/stores/feedback";
 
 export function RegisterPage() {
-  const [user, setUser] = useState<RegisteredUser | null>(null);
+  const [result, setResult] = useState<RegisterResponse | null>(null);
   const successHeading = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    document.title = user
-      ? "Account created · PaServe"
+    document.title = result
+      ? "Registration received · PaServe"
       : "Create your account · PaServe";
-    if (user) successHeading.current?.focus();
-  }, [user]);
+    if (result) successHeading.current?.focus();
+  }, [result]);
 
   return (
     <AuthLayout
       headingId="registration-heading"
       skipLabel="Skip to account creation"
     >
-      {user ? (
+      {result ? (
         <div className="registration-success" role="status">
           <FiCheckCircle className="success-icon" aria-hidden="true" />
           <h1 ref={successHeading} tabIndex={-1} id="registration-heading">
-            Account created.
+            Registration received.
           </h1>
           <p>
-            Your PaServe account is ready for <strong>{user.email}</strong>.
+            {result.message}
           </p>
           <p>
             <Link to="/login">Sign in to continue</Link>
@@ -44,8 +43,7 @@ export function RegisterPage() {
           </p>
           <RegistrationForm
             onSuccess={(result) => {
-              setUser(result.user);
-              feedback.toast("Your account is ready.");
+              setResult(result);
             }}
           />
           <p className="account-note">

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { AxiosError, AxiosHeaders } from "axios";
 import { JoinShopPage } from "./JoinShopPage";
+import { REGISTRATION_ACKNOWLEDGEMENT, type RegisterResponse } from "@paserve/contracts";
 import { getCurrentUser, logoutAccount } from "../../features/auth/api/session";
 import {
   acceptInvitation,
@@ -36,9 +37,9 @@ vi.mock("../../features/auth/components/RegistrationForm", () => ({
   RegistrationForm: ({
     onSuccess,
   }: {
-    onSuccess: (result: { user: { email: string } }) => void;
+    onSuccess: (result: RegisterResponse, submittedEmail: string) => void;
   }) => (
-    <button onClick={() => onSuccess({ user: { email: "staff@example.com" } })}>
+    <button onClick={() => onSuccess({ message: REGISTRATION_ACKNOWLEDGEMENT }, "staff@example.com")}>
       Register account
     </button>
   ),

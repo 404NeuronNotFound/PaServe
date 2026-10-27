@@ -15,8 +15,11 @@ export interface RegisteredUser {
   createdAt: string;
 }
 
+export const REGISTRATION_ACKNOWLEDGEMENT =
+  "Your registration request has been processed. Try signing in with your details. If you already have an account, use your existing password.";
+
 export interface RegisterResponse {
-  user: RegisteredUser;
+  message: string;
 }
 
 export interface LoginRequest {

@@ -19,7 +19,7 @@ import {
 export function RegistrationForm({
   onSuccess,
 }: {
-  onSuccess: (result: RegisterResponse) => void;
+  onSuccess: (result: RegisterResponse, submittedEmail: string) => void;
 }) {
   const [fields, setFields] = useState<RegistrationFields>({
     email: "",
@@ -88,22 +88,17 @@ export function RegistrationForm({
     }
     submitting.current = true;
     try {
+      const submittedEmail = fields.email.trim().toLowerCase();
       const result = await mutation.mutateAsync({
-        email: fields.email.trim().toLowerCase(),
+        email: submittedEmail,
         password: fields.password,
       });
       setFields({ email: "", password: "", confirmPassword: "" });
       mutation.reset();
       navigationGuard.release();
-      onSuccess(result);
+      onSuccess(result, submittedEmail);
     } catch (error: unknown) {
       if (
-        isAxiosError<ApiErrorResponse>(error) &&
-        error.response?.data?.code === "EMAIL_ALREADY_EXISTS"
-      ) {
-        setErrors({ email: "An account with this email already exists." });
-        pendingFocus.current = "email";
-      } else if (
         isAxiosError<ApiErrorResponse>(error) &&
         error.response?.data?.code === "VALIDATION_ERROR"
       ) {
@@ -117,7 +112,9 @@ export function RegistrationForm({
       } else {
         pendingFocus.current = "form";
         setFormError(
-          isAxiosError(error) && (!error.response || (error.response.status ?? 0) >= 500)
+          isAxiosError(error) && error.response?.status === 429
+            ? "Too many registration attempts. Please wait and try again."
+            : isAxiosError(error) && (!error.response || (error.response.status ?? 0) >= 500)
             ? "We couldn’t confirm account creation. Check your connection, then try signing in with these details before registering again."
             : "We couldn’t create your account. Please try again.",
         );

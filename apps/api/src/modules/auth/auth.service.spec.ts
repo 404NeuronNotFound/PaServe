@@ -1,9 +1,8 @@
 import { Test } from '@nestjs/testing';
-import { ConflictException } from '@nestjs/common';
+import { REGISTRATION_ACKNOWLEDGEMENT } from '@paserve/contracts';
 import { verify } from 'argon2';
 import { AuthService } from './auth.service.js';
 import { AuthRepository } from './auth.repository.js';
-import { Prisma } from '../../generated/prisma/client.js';
 import { TokensService } from './tokens.service.js';
 
 describe('AuthService registration', () => {
@@ -43,45 +42,24 @@ describe('AuthService registration', () => {
       email: ' Owner@Example.com ',
       password,
     });
-    expect(result).toEqual({
-      user: {
-        id: 'user-id',
-        email: 'owner@example.com',
-        createdAt: '2026-10-08T00:00:00.000Z',
-      },
-    });
+    expect(result).toEqual({ message: REGISTRATION_ACKNOWLEDGEMENT });
     expect(JSON.stringify(result)).not.toContain(password);
     expect(JSON.stringify(result)).not.toContain('passwordHash');
   });
 
-  it('rejects an existing email before creating an account', async () => {
-    repository.findAccountByEmail.mockResolvedValue({ id: 'existing-user' });
+  it('hashes and returns the same acknowledgement when the conflict-safe insert creates nothing', async () => {
+    repository.createAccount.mockResolvedValue({ count: 0 });
     await expect(
       service.register({
         email: 'owner@example.com',
         password: 'a long passphrase',
       }),
-    ).rejects.toBeInstanceOf(ConflictException);
-    expect(repository.createAccount).not.toHaveBeenCalled();
-  });
-
-  it('maps a concurrent database unique violation to 409', async () => {
-    repository.createAccount.mockRejectedValue(
-      new Prisma.PrismaClientKnownRequestError('Unique constraint', {
-        code: 'P2002',
-        clientVersion: '7.10.0',
-        meta: { target: ['email'] },
-      }),
+    ).resolves.toEqual({ message: REGISTRATION_ACKNOWLEDGEMENT });
+    expect(repository.createAccount).toHaveBeenCalledWith(
+      'owner@example.com',
+      expect.stringMatching(/^\$argon2id\$/),
     );
-    await expect(
-      service.register({
-        email: 'owner@example.com',
-        password: 'a long passphrase',
-      }),
-    ).rejects.toMatchObject({
-      response: { code: 'EMAIL_ALREADY_EXISTS' },
-      status: 409,
-    });
+    expect(repository.findAccountByEmail).not.toHaveBeenCalled();
   });
 
   it('preserves unrelated failures for generic error handling', async () => {

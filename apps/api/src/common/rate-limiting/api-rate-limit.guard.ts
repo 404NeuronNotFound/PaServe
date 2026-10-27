@@ -9,6 +9,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import {
   RATE_LIMIT_POLICY,
+  AUTH_RATE_WINDOWS,
   RATE_LIMITS,
   RATE_LIMIT_WINDOW_MS,
   type RateLimitPolicy,
@@ -28,8 +29,9 @@ export class ApiRateLimitGuard extends ThrottlerGuard {
     // Use Express's trust-aware IP, including the library's IPv6 /64 normalization.
     // Never key on unverified authorization, cookies, tokens or body/header shop hints.
     const tracker = await this.getTracker(request);
-    const buckets: { scope: string; limit: number }[] = [
-      { scope: 'all', limit: policy.aggregate },
+    const buckets: { scope: string; limit: number; ttl: number }[] = [
+      { scope: 'all', limit: policy.aggregate, ttl: RATE_LIMIT_WINDOW_MS },
+      ...(AUTH_RATE_WINDOWS[name] ?? []),
     ];
     if (policy.shop) {
       const target = request.params.shopId ?? request.params.shopSlug;
@@ -40,7 +42,11 @@ export class ApiRateLimitGuard extends ThrottlerGuard {
             ? target.toLowerCase()
             : target
           : 'missing';
-      buckets.push({ scope: `shop:${shop}`, limit: policy.limit });
+      buckets.push({
+        scope: `shop:${shop}`,
+        limit: policy.limit,
+        ttl: RATE_LIMIT_WINDOW_MS,
+      });
     }
     for (const bucket of buckets) {
       const key = createHash('sha256')
@@ -52,7 +58,7 @@ export class ApiRateLimitGuard extends ThrottlerGuard {
       // lockout with every rejected retry. Check the aggregate before allocating shop buckets.
       const result = await this.storageService.increment(
         key,
-        RATE_LIMIT_WINDOW_MS,
+        bucket.ttl,
         bucket.limit,
         0,
         'default',

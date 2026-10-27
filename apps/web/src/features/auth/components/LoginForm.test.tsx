@@ -90,7 +90,7 @@ it("offers persistent sign-in only when the user selects a personal device", asy
   await waitFor(() => expect(login.mock.calls[0]?.[0]).toMatchObject({ keepSignedIn: true }));
 });
 
-it.each([401, 429, 500])(
+it.each([401, 429, 500, 503])(
   "shows recoverable feedback for HTTP %s without exposing diagnostics",
   async (status) => {
     const error = new AxiosError("private diagnostic");

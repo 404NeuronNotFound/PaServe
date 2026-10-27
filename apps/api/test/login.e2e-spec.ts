@@ -1,6 +1,7 @@
 import { resetRateLimits } from './rate-limit-test-utils.js';
 import { Test } from '@nestjs/testing';
-import type { INestApplication } from '@nestjs/common';
+import { Logger, type INestApplication } from '@nestjs/common';
+import { performance } from 'node:perf_hooks';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ApiRateLimitGuard } from '../src/common/rate-limiting/api-rate-limit.guard.js';
@@ -275,10 +276,43 @@ describe('Login and session HTTP flow', () => {
         })
         .expect(401);
       expect(response.body.code).toBe('INVALID_CREDENTIALS');
+      expect(response.body.message).toBe(
+        'Email or password is incorrect, or the account is unavailable.',
+      );
       expect(response.headers['set-cookie']).toBeUndefined();
       expect(repository.createSession).not.toHaveBeenCalled();
     },
   );
+
+  it('keeps a sustained failed-login flood free of application logs and database writes', async () => {
+    vi.spyOn(performance, 'now').mockReturnValue(performance.now());
+    const logging = ['error', 'warn', 'log', 'debug', 'verbose'].map((method) =>
+      vi
+        .spyOn(Logger.prototype, method as 'error')
+        .mockImplementation(() => {}),
+    );
+    try {
+      for (let i = 0; i < 200; i++) {
+        repository.findLoginAccount.mockResolvedValue(i % 2 ? account : null);
+        const response = await request(app.getHttpServer())
+          .post('/api/v1/auth/login')
+          .set('X-PaServe-Client', 'web')
+          .send({
+            email: `failure-${i}@example.com`,
+            password: 'incorrect passphrase',
+          });
+        expect([401, 429]).toContain(response.status);
+      }
+      expect(repository.findLoginAccount).toHaveBeenCalledTimes(10);
+      expect(repository.createSession).not.toHaveBeenCalled();
+      expect(repository.rotateSession).not.toHaveBeenCalled();
+      expect(repository.revokeSession).not.toHaveBeenCalled();
+      expect(sessions.size).toBe(0);
+      for (const spy of logging) expect(spy).not.toHaveBeenCalled();
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
 
   it.each([
     { email: 'invalid', password },
@@ -613,7 +647,7 @@ it('limits repeated sign-in attempts before querying accounts', async () => {
   app.setGlobalPrefix('api/v1');
   await app.init();
   try {
-    for (let attempt = 0; attempt < 10; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .set('X-PaServe-Client', 'web')

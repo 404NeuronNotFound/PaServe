@@ -28,21 +28,23 @@ try {
           email: ` ${email.toUpperCase()} `,
           password,
         });
-        assert.deepEqual(Object.keys(registered.user).sort(), [
-          'createdAt',
-          'email',
-          'id',
-        ]);
-        assert.equal(registered.user.email, email);
+        assert.deepEqual(Object.keys(registered), ['message']);
         const account = await tx.user.findUniqueOrThrow({
-          where: { id: registered.user.id },
+          where: { email },
         });
         assert.match(account.passwordHash, /^\$argon2id\$/);
         assert.equal(await verify(account.passwordHash, password), true);
-        await assert.rejects(
-          auth.register({ email: email.toUpperCase(), password }),
-          (error) => error.status === 409,
+        assert.deepEqual(
+          await auth.register({
+            email: email.toUpperCase(),
+            password: 'a different submitted password',
+          }),
+          registered,
         );
+        const unchanged = await tx.user.findUniqueOrThrow({
+          where: { id: account.id },
+        });
+        assert.equal(unchanged.passwordHash, account.passwordHash);
         await assert.rejects(
           auth.login({ email, password: 'incorrect password' }),
           invalidSession,
@@ -118,7 +120,7 @@ try {
   );
   assert.equal(await prisma.user.count({ where: { email } }), 0);
   console.log(
-    'Authentication PostgreSQL checks passed: normalized registration, Argon2id hashing, duplicate/wrong-password denial, rotation/replay and concurrent reuse revocation, logout, inactive accounts, safe profiles and RLS. All fixtures rolled back.',
+    'Authentication PostgreSQL checks passed: normalized registration, Argon2id hashing, duplicate acknowledgement with unchanged credentials, wrong-password denial, rotation/replay and concurrent reuse revocation, logout, inactive accounts, safe profiles and RLS. All fixtures rolled back.',
   );
 } finally {
   await prisma.$disconnect();

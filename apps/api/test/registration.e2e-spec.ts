@@ -7,6 +7,7 @@ import { AppModule } from '../src/app.module.js';
 import { AuthRepository } from '../src/modules/auth/auth.repository.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { ApiRateLimitGuard } from '../src/common/rate-limiting/api-rate-limit.guard.js';
+import { REGISTRATION_ACKNOWLEDGEMENT } from '@paserve/contracts';
 
 describe('POST /api/v1/auth/register', () => {
   let app: INestApplication<App>;
@@ -49,13 +50,7 @@ describe('POST /api/v1/auth/register', () => {
       .post('/api/v1/auth/register')
       .send({ ...input, email: ' Owner@Example.com ' })
       .expect(201);
-    expect(response.body).toEqual({
-      user: {
-        id: 'user-id',
-        email: input.email,
-        createdAt: '2026-10-08T00:00:00.000Z',
-      },
-    });
+    expect(response.body).toEqual({ message: REGISTRATION_ACKNOWLEDGEMENT });
     expect(repository.createAccount).toHaveBeenCalledWith(
       input.email,
       expect.stringMatching(/^\$argon2id\$/),
@@ -88,18 +83,18 @@ describe('POST /api/v1/auth/register', () => {
     expect(response.text).not.toContain(input.password);
   });
 
-  it('returns a consistent 409 for duplicate email', async () => {
-    repository.findAccountByEmail.mockResolvedValue({ id: 'existing' });
+  it('returns the identical acknowledgement without revealing duplicate emails', async () => {
+    repository.createAccount.mockResolvedValue({ count: 0 });
     const response = await request(app.getHttpServer())
       .post('/api/v1/auth/register')
       .send(input)
-      .expect(409);
-    expect(response.body).toMatchObject({
-      statusCode: 409,
-      code: 'EMAIL_ALREADY_EXISTS',
-      fieldErrors: { email: expect.any(Array) },
-    });
-    expect(repository.createAccount).not.toHaveBeenCalled();
+      .expect(201);
+    expect(response.body).toEqual({ message: REGISTRATION_ACKNOWLEDGEMENT });
+    expect(repository.createAccount).toHaveBeenCalledWith(
+      input.email,
+      expect.stringMatching(/^\$argon2id\$/),
+    );
+    expect(repository.findAccountByEmail).not.toHaveBeenCalled();
   });
 
   it('keeps unexpected database details out of responses', async () => {
@@ -141,7 +136,7 @@ it('throttles registration before querying accounts or hashing passwords', async
   app.setGlobalPrefix('api/v1');
   await app.init();
   try {
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       await request(app.getHttpServer())
         .post('/api/v1/auth/register')
         .send({})

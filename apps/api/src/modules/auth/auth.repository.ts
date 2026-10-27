@@ -76,9 +76,11 @@ export class AuthRepository {
   }
 
   createAccount(email: string, passwordHash: string) {
-    return this.prisma.user.create({
+    // ON CONFLICT DO NOTHING preserves existing credentials and avoids both
+    // duplicate-specific errors and aborting an enclosing PostgreSQL transaction.
+    return this.prisma.user.createMany({
       data: { email, passwordHash },
-      select: { id: true, email: true, createdAt: true },
+      skipDuplicates: true,
     });
   }
 
