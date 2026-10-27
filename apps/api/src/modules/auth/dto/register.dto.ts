@@ -6,9 +6,16 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class RegisterDto implements RegisterRequest {
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2048)
+  challengeToken?: string;
+
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )

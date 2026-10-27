@@ -10,6 +10,8 @@ import type { ApiErrorResponse, LoginResponse } from "@paserve/contracts";
 import { REGISTRATION_LIMITS } from "@paserve/contracts";
 import { loginAccount } from "../api/session";
 import { InlineMessage } from "../../../components/feedback/InlineMessage";
+import { BotChallenge } from "./BotChallenge";
+import { useBotChallenge } from "./useBotChallenge";
 
 export function LoginForm({
   onSuccess,
@@ -19,6 +21,7 @@ export function LoginForm({
   initialEmail?: string;
 }) {
   const [email, setEmail] = useState(initialEmail);
+  const challenge = useBotChallenge();
   const [password, setPassword] = useState("");
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -60,6 +63,7 @@ export function LoginForm({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current) return;
+    if (challenge.required && !challenge.token) return;
     touched.current = { email: true, password: true };
     const nextErrors = {
       email: emailError(email),
@@ -77,12 +81,17 @@ export function LoginForm({
         email: email.trim().toLowerCase(),
         password,
         keepSignedIn,
+        ...(challenge.token ? { challengeToken: challenge.token } : {}),
       });
       setPassword("");
       mutation.reset();
       onSuccess(result);
     } catch (error: unknown) {
-      if (
+      const challengeMessage = challenge.handleError(error);
+      if (challengeMessage) {
+        setFormError(challengeMessage);
+        pendingFocus.current = "form";
+      } else if (
         isAxiosError<ApiErrorResponse>(error) &&
         error.response?.status === 400
       ) {
@@ -113,6 +122,7 @@ export function LoginForm({
       }
       mutation.reset();
     } finally {
+      challenge.resetToken();
       submitting.current = false;
     }
   }
@@ -227,11 +237,12 @@ export function LoginForm({
             {formError}
           </InlineMessage>
         )}
+        {challenge.required && <BotChallenge key={challenge.version} action="login" onToken={challenge.onToken} />}
         <Button variant="default" size="inherit"
           aria-busy={mutation.isPending}
           className="primary-button"
           type="submit"
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || (challenge.required && !challenge.token)}
         >
           {mutation.isPending ? "Signing in…" : "Sign in"}
           {mutation.isPending ? (

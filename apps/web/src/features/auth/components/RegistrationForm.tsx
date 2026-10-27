@@ -10,6 +10,8 @@ import type { ApiErrorResponse, RegisterResponse } from "@paserve/contracts";
 import { REGISTRATION_LIMITS } from "@paserve/contracts";
 import { registerAccount } from "../api/register";
 import { InlineMessage } from "../../../components/feedback/InlineMessage";
+import { BotChallenge } from "./BotChallenge";
+import { useBotChallenge } from "./useBotChallenge";
 import {
   validateRegistration,
   type RegistrationErrors,
@@ -26,6 +28,7 @@ export function RegistrationForm({
     password: "",
     confirmPassword: "",
   });
+  const challenge = useBotChallenge();
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [formError, setFormError] = useState("");
   const [showPasswords, setShowPasswords] = useState(false);
@@ -76,6 +79,7 @@ export function RegistrationForm({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current) return;
+    if (challenge.required && !challenge.token) return;
     const nextErrors = validateRegistration(fields);
     touched.current = { email: true, password: true, confirmPassword: true };
     setErrors(nextErrors);
@@ -92,13 +96,18 @@ export function RegistrationForm({
       const result = await mutation.mutateAsync({
         email: submittedEmail,
         password: fields.password,
+        ...(challenge.token ? { challengeToken: challenge.token } : {}),
       });
       setFields({ email: "", password: "", confirmPassword: "" });
       mutation.reset();
       navigationGuard.release();
       onSuccess(result, submittedEmail);
     } catch (error: unknown) {
-      if (
+      const challengeMessage = challenge.handleError(error);
+      if (challengeMessage) {
+        setFormError(challengeMessage);
+        pendingFocus.current = "form";
+      } else if (
         isAxiosError<ApiErrorResponse>(error) &&
         error.response?.data?.code === "VALIDATION_ERROR"
       ) {
@@ -121,6 +130,7 @@ export function RegistrationForm({
       }
       mutation.reset();
     } finally {
+      challenge.resetToken();
       submitting.current = false;
     }
   }
@@ -214,11 +224,12 @@ export function RegistrationForm({
           />
         </FormField>
         {formError && <InlineMessage ref={formErrorRef} tabIndex={-1}>{formError}</InlineMessage>}
+        {challenge.required && <BotChallenge key={challenge.version} action="register" onToken={challenge.onToken} />}
         <Button variant="default" size="inherit"
           aria-busy={mutation.isPending}
           className="primary-button"
           type="submit"
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || (challenge.required && !challenge.token)}
         >
           {mutation.isPending ? "Creating account…" : "Create account"}
           {mutation.isPending ? (

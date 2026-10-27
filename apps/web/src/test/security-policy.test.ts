@@ -18,6 +18,14 @@ function directives(policy: string): Record<string, string[]> {
   );
 }
 describe("frontend deployment security policy", () => {
+  it("permits only the configured challenge origin for scripts and frames without weakening other directives", () => {
+    const csp = directives(frontendSecurity({ ...env, VITE_TURNSTILE_SITE_KEY: "real-public-site-key" }).headers["Content-Security-Policy"]);
+    expect(csp["script-src"]).toEqual(["'self'", "https://challenges.cloudflare.com"]);
+    expect(csp["frame-src"]).toEqual(["https://challenges.cloudflare.com"]);
+    expect(csp["frame-ancestors"]).toEqual(["'none'"]);
+    expect(csp["script-src-attr"]).toEqual(["'none'"]);
+    expect(() => frontendSecurity({ ...env, VITE_TURNSTILE_SITE_KEY: "1x00000000000000000000AA" })).toThrow(/testing keys/);
+  });
   it("allows only same-origin scripts and configured network/media origins in production", () => {
     const security = frontendSecurity(env);
     const csp = directives(security.headers["Content-Security-Policy"]);

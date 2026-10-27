@@ -119,6 +119,14 @@ export function frontendSecurity(
     "worker-src": development ? ["blob:"] : ["'none'"],
     "manifest-src": ["'self'"],
   };
+  // Lazy authentication challenge only; no inline-script or wildcard allowance.
+  if (env.VITE_TURNSTILE_SITE_KEY?.trim()) {
+    if (production && /^[123]x0{10}/u.test(env.VITE_TURNSTILE_SITE_KEY.trim())) throw new Error("Turnstile testing keys are not allowed in release builds.");
+    directives["script-src"].push("https://challenges.cloudflare.com");
+    directives["frame-src"] = [
+      ...(development ? ["'self'"] : []), "https://challenges.cloudflare.com",
+    ];
+  }
   const serialize = (meta = false) =>
     Object.entries(directives)
       .filter(([name]) => !meta || name !== "frame-ancestors")

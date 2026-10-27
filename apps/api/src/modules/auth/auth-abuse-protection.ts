@@ -10,8 +10,9 @@ import { ConfigService } from '@nestjs/config';
 import { createHmac, randomBytes } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import type { Request, Response } from 'express';
-import { defer, finalize } from 'rxjs';
+import { defer, finalize, mergeMap, tap } from 'rxjs';
 import { RATE_LIMIT_POLICY } from '../../common/rate-limiting/rate-limit.policy.js';
+import { BotChallengeService } from './bot-challenge.service.js';
 
 const WINDOW_MS = 60_000;
 const ACCOUNT_ATTEMPTS = 20;
@@ -120,21 +121,41 @@ export class AuthAbuseProtection implements OnApplicationShutdown {
 
 @Injectable()
 export class AuthWorkInterceptor implements NestInterceptor {
-  constructor(private readonly protection: AuthAbuseProtection) {}
+  constructor(
+    private readonly protection: AuthAbuseProtection,
+    private readonly challenge: BotChallengeService,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler) {
     const http = context.switchToHttp();
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
     // Policy metadata avoids relying on method names, URL spelling or query strings.
+    const policy: unknown = Reflect.getMetadata(
+      RATE_LIMIT_POLICY,
+      context.getHandler(),
+    );
+    const risk = this.challenge.assess(request, policy);
     const email: unknown =
-      Reflect.getMetadata(RATE_LIMIT_POLICY, context.getHandler()) === 'login'
+      policy === 'login'
         ? (request.body as { email?: unknown } | undefined)?.email
         : undefined;
-    return defer(() => {
-      const release = this.protection.acquire(response, email);
-      // finalize covers validation errors, thrown handlers and normal completion.
-      return defer(() => next.handle()).pipe(finalize(release));
-    });
+    const token: unknown = (
+      request.body as { challengeToken?: unknown } | undefined
+    )?.challengeToken;
+    return defer(() => this.challenge.check(risk, token, response)).pipe(
+      mergeMap(() => {
+        const release = this.protection.acquire(response, email);
+        this.challenge.started(risk);
+        // finalize covers validation errors, thrown handlers and normal completion.
+        return defer(() => next.handle()).pipe(
+          tap({
+            next: () => this.challenge.succeeded(risk),
+            error: (error: unknown) => this.challenge.failed(risk, error),
+          }),
+          finalize(release),
+        );
+      }),
+    );
   }
 }

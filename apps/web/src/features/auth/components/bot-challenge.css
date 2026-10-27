@@ -1,0 +1,10 @@
+.bot-challenge {
+  display: grid;
+  gap: var(--spacing-3);
+  min-width: 0;
+  padding-block: var(--spacing-3);
+  color: var(--color-text);
+}
+.bot-challenge p { margin: 0; overflow-wrap: anywhere; }
+.bot-challenge > div { max-width: 100%; }
+.bot-challenge button { min-height: var(--control-target-min); justify-self: start; }

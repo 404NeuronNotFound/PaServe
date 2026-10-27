@@ -1,5 +1,5 @@
-import { beforeEach, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError, AxiosHeaders } from "axios";
@@ -33,6 +33,56 @@ async function fill(user: ReturnType<typeof userEvent.setup>) {
 }
 beforeEach(() => {
   vi.resetAllMocks();
+});
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+
+it("loads a challenge only when requested, preserves inputs, and sends a proof on manual retry", async () => {
+  vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "test-site-key");
+  let options!: Parameters<NonNullable<Window["turnstile"]>["render"]>[1];
+  const renderWidget = vi.fn((_element: HTMLElement, value: typeof options) => { options = value; return "login-widget"; });
+  vi.stubGlobal("turnstile", { render: renderWidget, remove: vi.fn() });
+  const error = new AxiosError("Challenge");
+  error.response = { status: 403, statusText: "Forbidden", headers: {}, config: { headers: new AxiosHeaders() }, data: { code: "BOT_CHALLENGE_REQUIRED" } };
+  login.mockRejectedValueOnce(error).mockResolvedValueOnce(session);
+  const { user, success } = setup();
+  expect(screen.queryByRole("group", { name: "Security check" })).toBeNull();
+  expect(renderWidget).not.toHaveBeenCalled();
+  await fill(user);
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  expect(await screen.findByRole("group", { name: "Security check" })).toBeInTheDocument();
+  await waitFor(() => expect(renderWidget).toHaveBeenCalledOnce());
+  expect(screen.getByLabelText("Password")).toHaveValue("  test passphrase  ");
+  expect(screen.getByRole("button", { name: "Sign in" })).toBeDisabled();
+  expect(login).toHaveBeenCalledOnce();
+  act(() => options.callback("login-proof"));
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  await waitFor(() => expect(success).toHaveBeenCalledWith(session));
+  expect(login.mock.calls.at(-1)?.[0]).toMatchObject({ challengeToken: "login-proof", email: "owner@example.com" });
+  expect(login.mock.calls[0][0]).not.toHaveProperty("challengeToken");
+});
+
+it("does not reuse a proof after a failed attempt or resubmit automatically on challenge expiry", async () => {
+  vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "test-site-key");
+  const configurations: Parameters<NonNullable<Window["turnstile"]>["render"]>[1][] = [];
+  vi.stubGlobal("turnstile", { render: vi.fn((_element: HTMLElement, value: typeof configurations[number]) => { configurations.push(value); return "widget"; }), remove: vi.fn() });
+  const error = new AxiosError("Challenge");
+  error.response = { status: 403, statusText: "Forbidden", headers: {}, config: { headers: new AxiosHeaders() }, data: { code: "BOT_CHALLENGE_REQUIRED" } };
+  const invalid = new AxiosError("Invalid");
+  invalid.response = { ...error.response, status: 401, data: { code: "INVALID_CREDENTIALS" } };
+  login.mockRejectedValueOnce(error).mockRejectedValueOnce(invalid);
+  const { user } = setup();
+  await fill(user);
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  await waitFor(() => expect(configurations).toHaveLength(1));
+  act(() => configurations[0].callback("one-proof"));
+  act(() => configurations[0]["expired-callback"]());
+  expect(screen.getByRole("button", { name: "Sign in" })).toBeDisabled();
+  expect(login).toHaveBeenCalledOnce();
+  act(() => configurations[0].callback("fresh-proof"));
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  await waitFor(() => expect(configurations).toHaveLength(2));
+  expect(screen.getByRole("button", { name: "Sign in" })).toBeDisabled();
+  expect(login).toHaveBeenCalledTimes(2);
 });
 it("explains a sign-in connection failure while preserving the credentials for retry", async () => {
   login.mockRejectedValueOnce(new AxiosError("private network diagnostic", "ERR_NETWORK"));

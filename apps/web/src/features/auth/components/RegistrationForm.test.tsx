@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError, AxiosHeaders } from "axios";
@@ -9,6 +9,7 @@ import { REGISTRATION_ACKNOWLEDGEMENT } from "@paserve/contracts";
 
 vi.mock("../api/register", () => ({ registerAccount: vi.fn() }));
 const register = vi.mocked(registerAccount);
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 function setup() {
   const success = vi.fn();
@@ -35,6 +36,29 @@ async function fill(
 describe("Registration form", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+  it("escalates only on the server challenge response and keeps registration data for manual retry", async () => {
+    vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "test-site-key");
+    let options!: Parameters<NonNullable<Window["turnstile"]>["render"]>[1];
+    const renderWidget = vi.fn((_element: HTMLElement, value: typeof options) => { options = value; return "registration-widget"; });
+    vi.stubGlobal("turnstile", { render: renderWidget, remove: vi.fn() });
+    const error = new AxiosError("Challenge");
+    error.response = { status: 403, statusText: "Forbidden", headers: {}, config: { headers: new AxiosHeaders() }, data: { code: "BOT_CHALLENGE_REQUIRED" } };
+    const result = { message: REGISTRATION_ACKNOWLEDGEMENT };
+    register.mockRejectedValueOnce(error).mockResolvedValueOnce(result);
+    const { user, success } = setup();
+    expect(screen.queryByRole("group", { name: "Security check" })).toBeNull();
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    await waitFor(() => expect(renderWidget).toHaveBeenCalledOnce());
+    expect(options.action).toBe("register");
+    expect(screen.getByLabelText("Confirm password")).toHaveValue("a long test passphrase");
+    expect(screen.getByRole("button", { name: "Create account" })).toBeDisabled();
+    act(() => options.callback("registration-proof"));
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    await waitFor(() => expect(success).toHaveBeenCalledWith(result, "owner@example.com"));
+    expect(register.mock.calls.at(-1)?.[0]).toMatchObject({ challengeToken: "registration-proof" });
+    expect(register).toHaveBeenCalledTimes(2);
   });
   it("explains an unknown creation outcome without automatically registering again", async () => {
     register.mockRejectedValueOnce(new AxiosError("private network diagnostic", "ERR_NETWORK"));

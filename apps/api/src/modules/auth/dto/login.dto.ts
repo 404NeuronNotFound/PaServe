@@ -12,6 +12,12 @@ import {
 
 export class LoginDto implements LoginRequest {
   @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2048)
+  challengeToken?: string;
+
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsBoolean()
   keepSignedIn?: boolean;
 

@@ -3,6 +3,7 @@ import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { ConfigService } from '@nestjs/config';
 import { AuthAbuseProtection } from './auth-abuse-protection.js';
+import { BotChallengeService } from './bot-challenge.service.js';
 import { RateLimitingModule } from '../../common/rate-limiting/rate-limiting.module.js';
 
 describe('AuthController', () => {
@@ -13,6 +14,7 @@ describe('AuthController', () => {
       imports: [RateLimitingModule],
       controllers: [AuthController],
       providers: [
+        BotChallengeService,
         AuthAbuseProtection,
         { provide: AuthService, useValue: { register: vi.fn() } },
         ConfigService,
