@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import type { ApiErrorResponse, OrderPriceChange } from '@paserve/contracts';
 import { OrderPriceChangedException } from '../http/order-price-changed.exception.js';
+import { PasswordCapacityException } from '../http/password-capacity.exception.js';
 import type { Response } from 'express';
 
 @Catch()
@@ -22,6 +23,10 @@ export class ApiExceptionFilter implements ExceptionFilter {
       message: 'Something went wrong. Please try again.',
     };
     if (exception instanceof HttpException) {
+      if (exception instanceof PasswordCapacityException) {
+        response.setHeader('Retry-After', exception.retryAfter);
+        response.setHeader('Cache-Control', 'no-store');
+      }
       const payload = exception.getResponse();
       const fields =
         typeof payload === 'object' && payload !== null

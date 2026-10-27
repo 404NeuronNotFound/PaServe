@@ -8,6 +8,7 @@ import { TokensService } from './tokens.service.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 import { AuthOriginGuard } from './guards/auth-origin.guard.js';
 import { BotChallengeService } from './bot-challenge.service.js';
+import { PasswordHashService } from './password-hash.service.js';
 import {
   AuthAbuseProtection,
   AuthWorkInterceptor,
@@ -17,6 +18,7 @@ import {
   imports: [DatabaseModule, JwtModule.register({})],
   controllers: [AuthController],
   providers: [
+    PasswordHashService,
     BotChallengeService,
     AuthAbuseProtection,
     AuthWorkInterceptor,

@@ -10,8 +10,8 @@ import type {
   LoginResponse,
   CurrentUser,
 } from '@paserve/contracts';
-import { argon2id, hash, verify } from 'argon2';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import { PasswordHashService } from './password-hash.service.js';
 import {
   SESSION_LIMITS,
   REGISTRATION_ACKNOWLEDGEMENT,
@@ -29,23 +29,20 @@ import { TokensService, invalidSession } from './tokens.service.js';
 
 @Injectable()
 export class AuthService {
-  private readonly dummyHash = hash(randomBytes(32).toString('hex'), {
-    type: argon2id,
-  });
-
   constructor(
     private readonly repository: AuthRepository,
     private readonly tokens: TokensService,
+    private readonly passwords: PasswordHashService,
   ) {}
 
   async login(dto: LoginDto) {
     // Both paths wait for startup hash preparation; missing accounts do not take
     // a separate first-request path and always perform password verification.
-    const dummyHash = await this.dummyHash;
+    const dummyHash = await this.passwords.dummyHash();
     const account = await this.repository.findLoginAccount(
       dto.email.trim().toLowerCase(),
     );
-    const matches = await verify(
+    const matches = await this.passwords.verify(
       account?.passwordHash ?? dummyHash,
       dto.password,
     );
@@ -183,7 +180,9 @@ export class AuthService {
       claims.sid,
     );
     if (!account) throw invalidSession();
-    if (!(await verify(account.passwordHash, dto.currentPassword))) {
+    if (
+      !(await this.passwords.verify(account.passwordHash, dto.currentPassword))
+    ) {
       throw new BadRequestException({
         code: 'CURRENT_PASSWORD_INCORRECT',
         message: 'Your current password is incorrect.',
@@ -203,12 +202,12 @@ export class AuthService {
       // login using the previous address at the conditional session write.
       data = {
         email,
-        passwordHash: await hash(dto.currentPassword, { type: argon2id }),
+        passwordHash: await this.passwords.hash(dto.currentPassword),
       };
     } else {
-      if (await verify(account.passwordHash, dto.password))
+      if (await this.passwords.verify(account.passwordHash, dto.password))
         throw new BadRequestException('Choose a different password.');
-      data = { passwordHash: await hash(dto.password, { type: argon2id }) };
+      data = { passwordHash: await this.passwords.hash(dto.password) };
     }
     try {
       await this.repository.changeCredentials(
@@ -256,7 +255,7 @@ export class AuthService {
     const email = dto.email.trim().toLowerCase();
     // Always hash, then perform the same conflict-safe INSERT. No account-existence
     // fast path, user details, or duplicate-specific response is exposed publicly.
-    const passwordHash = await hash(dto.password, { type: argon2id });
+    const passwordHash = await this.passwords.hash(dto.password);
     await this.repository.createAccount(email, passwordHash);
     return { message: REGISTRATION_ACKNOWLEDGEMENT };
   }

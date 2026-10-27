@@ -4,6 +4,8 @@ import { verify } from 'argon2';
 import { AuthService } from './auth.service.js';
 import { AuthRepository } from './auth.repository.js';
 import { TokensService } from './tokens.service.js';
+import { PasswordHashService } from './password-hash.service.js';
+import { ConfigService } from '@nestjs/config';
 
 describe('AuthService registration', () => {
   const repository = { findAccountByEmail: vi.fn(), createAccount: vi.fn() };
@@ -15,6 +17,8 @@ describe('AuthService registration', () => {
     const module = await Test.createTestingModule({
       providers: [
         AuthService,
+        PasswordHashService,
+        ConfigService,
         { provide: AuthRepository, useValue: repository },
         { provide: TokensService, useValue: {} },
       ],

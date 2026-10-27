@@ -89,7 +89,9 @@ describe('Login and session HTTP flow', () => {
       .compile();
     app = module.createNestApplication();
     app.setGlobalPrefix('api/v1');
-    await app.init();
+    // A stable listener avoids Supertest repeatedly opening/closing the server
+    // while the concurrent flood scenario is in progress.
+    await app.listen(0, '127.0.0.1');
   });
   afterAll(async () => {
     await app.close();
@@ -292,16 +294,23 @@ describe('Login and session HTTP flow', () => {
         .mockImplementation(() => {}),
     );
     try {
-      for (let i = 0; i < 200; i++) {
-        repository.findLoginAccount.mockResolvedValue(i % 2 ? account : null);
-        const response = await request(app.getHttpServer())
-          .post('/api/v1/auth/login')
-          .set('X-PaServe-Client', 'web')
-          .send({
-            email: `failure-${i}@example.com`,
-            password: 'incorrect passphrase',
-          });
-        expect([401, 429]).toContain(response.status);
+      for (let offset = 0; offset < 200; offset += 20) {
+        repository.findLoginAccount.mockResolvedValue(
+          (offset / 20) % 2 ? account : null,
+        );
+        const responses = await Promise.all(
+          Array.from({ length: 20 }, (_value, index) =>
+            request(app.getHttpServer())
+              .post('/api/v1/auth/login')
+              .set('X-PaServe-Client', 'web')
+              .send({
+                email: `failure-${offset + index}@example.com`,
+                password: 'incorrect passphrase',
+              }),
+          ),
+        );
+        for (const response of responses)
+          expect([401, 429]).toContain(response.status);
       }
       expect(repository.findLoginAccount).toHaveBeenCalledTimes(10);
       expect(repository.createSession).not.toHaveBeenCalled();

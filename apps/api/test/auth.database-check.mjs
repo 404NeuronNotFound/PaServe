@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../dist/database/prisma.service.js';
 import { AuthRepository } from '../dist/modules/auth/auth.repository.js';
 import { AuthService } from '../dist/modules/auth/auth.service.js';
+import { PasswordHashService } from '../dist/modules/auth/password-hash.service.js';
 import { TokensService } from '../dist/modules/auth/tokens.service.js';
 
 const prisma = new PrismaService();
@@ -23,6 +24,7 @@ try {
         const auth = new AuthService(
           new AuthRepository(tx),
           new TokensService(new JwtService(), new ConfigService()),
+          new PasswordHashService(new ConfigService()),
         );
         const registered = await auth.register({
           email: ` ${email.toUpperCase()} `,

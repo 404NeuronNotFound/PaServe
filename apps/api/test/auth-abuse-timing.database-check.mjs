@@ -7,6 +7,8 @@ import { performance } from 'node:perf_hooks';
 import { PrismaService } from '../dist/database/prisma.service.js';
 import { AuthRepository } from '../dist/modules/auth/auth.repository.js';
 import { AuthService } from '../dist/modules/auth/auth.service.js';
+import { PasswordHashService } from '../dist/modules/auth/password-hash.service.js';
+import { ConfigService } from '@nestjs/config';
 
 const prisma = new PrismaService();
 const marker = randomUUID();
@@ -28,7 +30,11 @@ try {
   await assert.rejects(
     prisma.$transaction(
       async (tx) => {
-        const auth = new AuthService(new AuthRepository(tx), {});
+        const auth = new AuthService(
+          new AuthRepository(tx),
+          {},
+          new PasswordHashService(new ConfigService()),
+        );
         const acknowledgement = await auth.register({ email, password });
         const before = await tx.user.findUniqueOrThrow({ where: { email } });
         const missing = `missing-${marker}@example.invalid`;
