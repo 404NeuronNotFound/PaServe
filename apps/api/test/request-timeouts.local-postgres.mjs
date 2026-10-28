@@ -11,7 +11,7 @@ import { createServer } from 'node:net';
 const execute = promisify(execFile);
 const suite = process.argv[2] ?? 'timeouts';
 assert.ok(
-  ['timeouts', 'idempotency', 'pooling', 'indexing'].includes(suite),
+  ['timeouts', 'idempotency', 'pooling', 'indexing', 'tenants'].includes(suite),
   'Choose a supported local database suite.',
 );
 const apiRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -122,7 +122,9 @@ try {
           ? '../../artifacts/performance/idempotency-postgres-local.json'
           : suite === 'indexing'
             ? '../../artifacts/performance/database-indexing-local.json'
-            : '../../artifacts/performance/database-pooling-local.json',
+            : suite === 'tenants'
+              ? '../../artifacts/performance/tenant-query-performance-local.json'
+              : '../../artifacts/performance/database-pooling-local.json',
     ),
     ...(suite !== 'timeouts'
       ? {
@@ -146,7 +148,9 @@ try {
           ? 'test/idempotency.database-check.mjs'
           : suite === 'indexing'
             ? 'test/database-indexing.database-check.mjs'
-            : 'test/database-pooling.database-check.mjs',
+            : suite === 'tenants'
+              ? 'test/tenant-performance.database-check.mjs'
+              : 'test/database-pooling.database-check.mjs',
     ],
     {
       cwd: apiRoot,

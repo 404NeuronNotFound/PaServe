@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import type { HistoryPagination } from '@paserve/contracts';
 import type { PrismaService } from '../../database/prisma.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
@@ -49,6 +50,13 @@ export async function readHistoryPage<T>(
     take: number,
   ) => Promise<T[]>,
 ): Promise<{ saved: T[]; pagination: HistoryPagination }> {
+  // Counts and "has new" probes must never silently become cross-shop scans
+  // when a future caller omits or broadens the tenant predicate.
+  if (typeof where.shopId !== 'string' || !isUUID(where.shopId))
+    throw new BadRequestException({
+      code: 'INVALID_TENANT_CONTEXT',
+      message: 'A valid shop context is required.',
+    });
   return prisma.$transaction(
     async (tx) => {
       const frozenWhere = { AND: [where, cutoff] };

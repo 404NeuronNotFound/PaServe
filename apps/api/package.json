@@ -23,6 +23,7 @@
     "test:idempotency:postgres": "node test/request-timeouts.local-postgres.mjs idempotency",
     "test:pooling:postgres": "node test/request-timeouts.local-postgres.mjs pooling",
     "test:indexing:postgres": "node test/request-timeouts.local-postgres.mjs indexing",
+    "test:tenant-performance:postgres": "node test/request-timeouts.local-postgres.mjs tenants",
     "test:timeouts:supabase": "vitest run --config vitest.config.e2e.ts test/supabase-latency.e2e-spec.ts",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
