@@ -8,6 +8,7 @@ import { ApiAdmissionGuard } from '../load-shedding/api-admission.guard.js';
 import { ApiWorkInterceptor } from '../load-shedding/api-work.interceptor.js';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ApiRateLimitGuard } from './api-rate-limit.guard.js';
+import { RequestDeadlineService } from '../http/request-deadline.service.js';
 
 @Global()
 @Module({
@@ -18,6 +19,7 @@ import { ApiRateLimitGuard } from './api-rate-limit.guard.js';
   ],
   providers: [
     ApiCapacityService,
+    RequestDeadlineService,
     CriticalAccessService,
     { provide: APP_GUARD, useClass: ApiAdmissionGuard },
     { provide: APP_INTERCEPTOR, useClass: ApiWorkInterceptor },

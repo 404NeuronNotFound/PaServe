@@ -26,6 +26,7 @@ import type {
   ChangePasswordDto,
 } from './dto/update-account.dto.js';
 import { TokensService, invalidSession } from './tokens.service.js';
+import { throwIfRequestAborted } from '../../common/http/request-context.js';
 
 @Injectable()
 export class AuthService {
@@ -46,6 +47,7 @@ export class AuthService {
       account?.passwordHash ?? dummyHash,
       dto.password,
     );
+    throwIfRequestAborted();
     if (!account || !matches || !account.isActive) {
       throw new UnauthorizedException({
         code: 'INVALID_CREDENTIALS',
@@ -66,6 +68,7 @@ export class AuthService {
       keepSignedIn,
     );
     try {
+      throwIfRequestAborted();
       await this.repository.createSession(
         sessionId,
         account.id,
@@ -210,6 +213,7 @@ export class AuthService {
       data = { passwordHash: await this.passwords.hash(dto.password) };
     }
     try {
+      throwIfRequestAborted();
       await this.repository.changeCredentials(
         claims.sub,
         claims.sid,
@@ -256,6 +260,7 @@ export class AuthService {
     // Always hash, then perform the same conflict-safe INSERT. No account-existence
     // fast path, user details, or duplicate-specific response is exposed publicly.
     const passwordHash = await this.passwords.hash(dto.password);
+    throwIfRequestAborted();
     await this.repository.createAccount(email, passwordHash);
     return { message: REGISTRATION_ACKNOWLEDGEMENT };
   }

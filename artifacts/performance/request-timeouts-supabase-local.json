@@ -1,0 +1,104 @@
+{
+  "pass": true,
+  "scope": "real-sdk-local-http-no-live-provider",
+  "requestDeadlineMs": 400,
+  "dependencyDeadlineMs": 10000,
+  "checks": [
+    {
+      "kind": "logo",
+      "scenario": "delayed-success",
+      "elapsedMs": 161,
+      "pass": true
+    },
+    {
+      "kind": "banner",
+      "scenario": "delayed-success",
+      "elapsedMs": 91,
+      "pass": true
+    },
+    {
+      "kind": "product",
+      "scenario": "delayed-success",
+      "elapsedMs": 96,
+      "pass": true
+    },
+    {
+      "kind": "logo",
+      "scenario": "stalled-headers",
+      "elapsedMs": 546,
+      "pass": true
+    },
+    {
+      "kind": "banner",
+      "scenario": "stalled-headers",
+      "elapsedMs": 521,
+      "pass": true
+    },
+    {
+      "kind": "product",
+      "scenario": "stalled-headers",
+      "elapsedMs": 509,
+      "pass": true
+    },
+    {
+      "kind": "logo",
+      "scenario": "stalled-body",
+      "elapsedMs": 522,
+      "pass": true
+    },
+    {
+      "kind": "banner",
+      "scenario": "stalled-body",
+      "elapsedMs": 518,
+      "pass": true
+    },
+    {
+      "kind": "product",
+      "scenario": "stalled-body",
+      "elapsedMs": 500,
+      "pass": true
+    },
+    {
+      "kind": "logo",
+      "scenario": "connection-reset",
+      "elapsedMs": 125,
+      "pass": true
+    },
+    {
+      "kind": "banner",
+      "scenario": "connection-reset",
+      "elapsedMs": 118,
+      "pass": true
+    },
+    {
+      "kind": "product",
+      "scenario": "connection-reset",
+      "elapsedMs": 115,
+      "pass": true
+    },
+    {
+      "kind": "logo",
+      "scenario": "client-disconnect",
+      "elapsedMs": 65,
+      "pass": true
+    },
+    {
+      "kind": "logo",
+      "scenario": "dependency-timeout-without-context",
+      "elapsedMs": 10063,
+      "pass": true
+    },
+    {
+      "kind": "banner",
+      "scenario": "dependency-timeout-without-context",
+      "elapsedMs": 10064,
+      "pass": true
+    },
+    {
+      "kind": "product",
+      "scenario": "dependency-timeout-without-context",
+      "elapsedMs": 10068,
+      "pass": true
+    }
+  ]
+}

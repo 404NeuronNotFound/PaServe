@@ -1,0 +1,71 @@
+{
+  "pass": true,
+  "serverVersion": "17.11",
+  "scope": "disposable-loopback-postgres-no-application-data",
+  "productionDefaults": {
+    "pool": {
+      "statement_timeout": 10000,
+      "lock_timeout": 3000,
+      "idle_in_transaction_session_timeout": 15000,
+      "connectionTimeoutMillis": 3000
+    },
+    "transactionOptions": {
+      "maxWait": 3000,
+      "timeout": 30000
+    }
+  },
+  "acceleratedPolicy": {
+    "pool": {
+      "statement_timeout": 250,
+      "lock_timeout": 100,
+      "idle_in_transaction_session_timeout": 300,
+      "connectionTimeoutMillis": 1000
+    },
+    "transactionOptions": {
+      "maxWait": 3000,
+      "timeout": 400
+    }
+  },
+  "checks": [
+    {
+      "name": "production-default-adapter-settings-reach-postgres",
+      "pass": true,
+      "elapsedMs": 388
+    },
+    {
+      "name": "statement-is-cancelled-and-connection-recovers",
+      "pass": true,
+      "elapsedMs": 451
+    },
+    {
+      "name": "pool-checkout-wait-is-bounded",
+      "pass": true,
+      "elapsedMs": 1017
+    },
+    {
+      "name": "lock-contention-is-cancelled-and-recovers",
+      "pass": true,
+      "elapsedMs": 243
+    },
+    {
+      "name": "idle-transaction-session-is-terminated",
+      "pass": true,
+      "elapsedMs": 399
+    },
+    {
+      "name": "cancelled-transaction-rolls-back-and-session-recovers",
+      "pass": true,
+      "elapsedMs": 270
+    },
+    {
+      "name": "prisma-statement-timeout-is-classified-and-recovers",
+      "pass": true,
+      "elapsedMs": 403
+    },
+    {
+      "name": "prisma-interactive-transaction-lifetime-is-bounded",
+      "pass": true,
+      "elapsedMs": 450
+    }
+  ]
+}

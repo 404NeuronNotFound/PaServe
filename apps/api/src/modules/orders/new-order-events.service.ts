@@ -4,6 +4,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { boundedFetch } from '../../common/http/request-context.js';
 import {
   createClient,
   type RealtimeChannel,
@@ -75,7 +76,10 @@ export class NewOrderEventsService implements OnModuleDestroy {
       this.client = createClient(
         this.config.getOrThrow<string>('SUPABASE_URL'),
         this.config.getOrThrow<string>('SUPABASE_SERVICE_ROLE_KEY'),
-        { auth: { persistSession: false, autoRefreshToken: false } },
+        {
+          auth: { persistSession: false, autoRefreshToken: false },
+          global: { fetch: boundedFetch },
+        },
       );
     }
     let entry = this.subscriptions.get(topic);

@@ -22,6 +22,7 @@ import {
   READINESS_CAPACITY,
   CriticalAccessService,
 } from './critical-capacity.js';
+import { RequestDeadlineService } from '../http/request-deadline.service.js';
 
 const livenessKey = Symbol('paserve:liveness');
 /** Only for a constant-time endpoint that never accesses dependencies. */
@@ -33,6 +34,7 @@ export class ApiAdmissionGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly capacity: ApiCapacityService,
     private readonly criticalAccess: CriticalAccessService,
+    private readonly deadlines: RequestDeadlineService,
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -74,6 +76,23 @@ export class ApiAdmissionGuard implements CanActivate {
     request[REQUEST_WORK] = admission;
     response.once('finish', close);
     response.once('close', close);
+    admission.startDeadline(
+      this.deadlines.forRequest(request.method, policy, workload === 'health'),
+      (error) => {
+        if (response.destroyed || response.writableEnded) return;
+        if (response.headersSent) {
+          response.end();
+          return;
+        }
+        response.setHeader('Cache-Control', 'no-store');
+        response
+          .status(error.getStatus())
+          .json({
+            statusCode: error.getStatus(),
+            ...(error.getResponse() as object),
+          });
+      },
+    );
     if (response.destroyed || response.writableEnded) admission.close();
     return true;
   }

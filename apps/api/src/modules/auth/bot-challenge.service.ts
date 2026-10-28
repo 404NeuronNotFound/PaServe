@@ -8,6 +8,7 @@ import { normalizeIp } from '@nestjs/throttler';
 import { createHmac, randomBytes } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import type { Request, Response } from 'express';
+import { boundedFetch } from '../../common/http/request-context.js';
 
 type Action = 'login' | 'register';
 type Risk = { action: Action; ip: string; account?: string };
@@ -175,7 +176,7 @@ export class BotChallengeService implements OnApplicationShutdown {
     this.used.set(digest, now + 300_000);
     let result: Record<string, unknown>;
     try {
-      const reply = await fetch(
+      const reply = await boundedFetch(
         'https://challenges.cloudflare.com/turnstile/v0/siteverify',
         {
           method: 'POST',

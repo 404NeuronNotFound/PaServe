@@ -37,6 +37,7 @@ export class ShopLogoProcessor {
         animated: true,
       });
       const metadata = await image.metadata();
+      image.timeout({ seconds: 5 });
       if (
         metadata.format !== format ||
         !metadata.width ||

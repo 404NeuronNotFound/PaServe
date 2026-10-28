@@ -10,6 +10,8 @@ import type { ApiErrorResponse, OrderPriceChange } from '@paserve/contracts';
 import { OrderPriceChangedException } from '../http/order-price-changed.exception.js';
 import { PasswordCapacityException } from '../http/password-capacity.exception.js';
 import { ApiOverloadedException } from '../http/api-overloaded.exception.js';
+import { RequestTimeoutException } from '../http/request-timeout.exception.js';
+import { databaseTimeoutKind } from '../../database/database-timeout-error.js';
 import type { Response } from 'express';
 
 @Catch()
@@ -20,12 +22,18 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<Response>();
     // Disconnected callers must not trigger a second write or error-log storm.
     if (response.destroyed || response.writableEnded) return;
+    if (response.headersSent) {
+      response.end();
+      return;
+    }
     let body: ApiErrorResponse & Partial<OrderPriceChange> = {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       code: 'INTERNAL_SERVER_ERROR',
       message: 'Something went wrong. Please try again.',
     };
     if (exception instanceof HttpException) {
+      if (exception instanceof RequestTimeoutException)
+        response.setHeader('Cache-Control', 'no-store');
       if (
         exception instanceof PasswordCapacityException ||
         exception instanceof ApiOverloadedException
@@ -54,6 +62,16 @@ export class ApiExceptionFilter implements ExceptionFilter {
         body.totalPrice = exception.priceChange.totalPrice;
         body.items = exception.priceChange.items;
       }
+    } else if (databaseTimeoutKind(exception)) {
+      const busy = databaseTimeoutKind(exception) === 'busy';
+      response.setHeader('Cache-Control', 'no-store');
+      if (busy) response.setHeader('Retry-After', 1);
+      body = {
+        statusCode: busy ? 503 : 504,
+        code: busy ? 'DATABASE_BUSY' : 'DEPENDENCY_TIMEOUT',
+        message:
+          'The request could not finish. Check its outcome before trying again.',
+      };
     } else if (
       exception instanceof Error &&
       'type' in exception &&

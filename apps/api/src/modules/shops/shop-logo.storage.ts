@@ -4,6 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { boundedFetch } from '../../common/http/request-context.js';
 import { isStorageConflict } from '../../common/storage/upload-errors.js';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
@@ -27,6 +28,7 @@ export class ShopLogoStorage {
           message: 'Logo uploads are unavailable. Please try again later.',
         });
       this.client = createClient(url, key, {
+        global: { fetch: boundedFetch },
         auth: { persistSession: false, autoRefreshToken: false },
       });
     }

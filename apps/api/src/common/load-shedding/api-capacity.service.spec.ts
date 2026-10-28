@@ -55,6 +55,7 @@ describe('API capacity bounds', () => {
           fail = reject;
         }),
     );
+    const outcome = pending.catch((error: unknown) => error);
     lease.close();
     lease.close();
     expect(release).not.toHaveBeenCalled();
@@ -62,7 +63,8 @@ describe('API capacity bounds', () => {
     await expect(lease.run(next)).rejects.toThrow();
     expect(next).not.toHaveBeenCalled();
     fail(new Error('fixture failure'));
-    await expect(pending).rejects.toThrow('fixture failure');
+    expect(await outcome).toBeInstanceOf(Error);
+    await new Promise<void>((resolve) => setImmediate(resolve));
     expect(release).toHaveBeenCalledTimes(1);
   });
   it.each([

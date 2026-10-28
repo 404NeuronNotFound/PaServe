@@ -5,12 +5,14 @@ import { AppModule } from './app.module.js';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { configureRequestBody } from './common/http/request-body.js';
 import { frontendOrigins } from './common/http/frontend-origins.js';
+import { configureServerTimeouts } from './common/http/server-timeouts.js';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   configureSecurityHeaders(app);
   configureTrustedProxy(app);
   configureRequestBody(app);
+  configureServerTimeouts(app);
 
   app.setGlobalPrefix('api/v1');
 
