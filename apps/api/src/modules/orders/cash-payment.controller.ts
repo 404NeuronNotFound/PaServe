@@ -1,3 +1,4 @@
+import { CriticalCapacity } from '../../common/load-shedding/critical-capacity.js';
 import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Body,
@@ -20,6 +21,7 @@ import { OtherPaymentDto } from './other-payment.dto.js';
 import { CreatePaymentDto } from './create-payment.dto.js';
 import { LookupOrderNumberDto } from './order-number-lookup.dto.js';
 
+@CriticalCapacity()
 @Controller('shops/:shopId/orders')
 @RateLimit('orderAction')
 export class CashPaymentController {

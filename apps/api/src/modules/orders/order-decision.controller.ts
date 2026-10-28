@@ -1,3 +1,4 @@
+import { CriticalCapacity } from '../../common/load-shedding/critical-capacity.js';
 import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Body,
@@ -18,6 +19,7 @@ import {
 } from './order-number-lookup.dto.js';
 import { OrderDecisionService } from './order-decision.service.js';
 
+@CriticalCapacity()
 @Controller('shops/:shopId/orders')
 @RateLimit('orderAction')
 export class OrderDecisionController {

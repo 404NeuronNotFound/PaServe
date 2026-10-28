@@ -16,6 +16,7 @@ import {
   type TenantResourceKind,
 } from './tenant-resources.repository.js';
 import { TenantResourcesService } from './tenant-resources.service.js';
+import { trackRequestWork } from '../../common/load-shedding/request-work.js';
 
 const resourceKey = 'paserve:shop-resource';
 type ResourcePolicy = { kind: TenantResourceKind; parameter: string };
@@ -48,11 +49,13 @@ export class ShopResourceGuard implements CanActivate {
       });
     const shopId = request.params.shopId;
     const resourceId = request.params[policy.parameter];
-    const result = await this.resources.requireResource(
-      request.user.id,
-      typeof shopId === 'string' ? shopId : '',
-      policy.kind,
-      typeof resourceId === 'string' ? resourceId : '',
+    const result = await trackRequestWork(request, () =>
+      this.resources.requireResource(
+        request.user.id,
+        typeof shopId === 'string' ? shopId : '',
+        policy.kind,
+        typeof resourceId === 'string' ? resourceId : '',
+      ),
     );
     request.shopMembership = result.membership;
     request.shopResource = result.resource;

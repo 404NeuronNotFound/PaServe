@@ -1,3 +1,4 @@
+import { CriticalCapacity } from '../../common/load-shedding/critical-capacity.js';
 import {
   BadRequestException,
   Body,
@@ -13,6 +14,7 @@ import { Permissions } from '../shop-members/decorators/permissions.decorator.js
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { PreparationReadyService } from './preparation-ready.service.js';
 
+@CriticalCapacity()
 @Controller('shops/:shopId/orders')
 export class PreparationReadyController {
   constructor(private readonly preparation: PreparationReadyService) {}

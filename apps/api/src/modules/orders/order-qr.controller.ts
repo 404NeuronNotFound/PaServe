@@ -1,3 +1,4 @@
+import { CriticalCapacity } from '../../common/load-shedding/critical-capacity.js';
 import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import {
   Body,
@@ -15,6 +16,7 @@ import { OrderQrService } from './order-qr.service.js';
 import { VerifyOrderQrDto } from './verify-order-qr.dto.js';
 import { LookupOrderNumberDto } from './order-number-lookup.dto.js';
 
+@CriticalCapacity()
 @Controller('shops/:shopId/orders')
 @RateLimit('staffVerification')
 export class OrderQrController {

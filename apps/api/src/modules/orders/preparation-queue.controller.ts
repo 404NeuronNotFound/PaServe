@@ -1,3 +1,4 @@
+import { CriticalCapacity } from '../../common/load-shedding/critical-capacity.js';
 import { Controller, Get, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
@@ -29,6 +30,7 @@ export class PreparationQueueController {
     );
   }
   @Get('ready')
+  @CriticalCapacity()
   @Permissions('shop.preparation.queue.read')
   ready(
     @Query('cursor') cursor: string | undefined,
@@ -45,6 +47,7 @@ export class PreparationQueueController {
   }
 
   @Get('queue')
+  @CriticalCapacity()
   @Permissions('shop.preparation.queue.read')
   list(
     @Query('cursor') cursor: string | undefined,
@@ -59,6 +62,7 @@ export class PreparationQueueController {
     );
   }
   @Get('preparing')
+  @CriticalCapacity()
   @Permissions('shop.preparation.queue.read')
   preparing(
     @Query('cursor') cursor: string | undefined,

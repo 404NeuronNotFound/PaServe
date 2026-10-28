@@ -9,6 +9,7 @@ import {
 import type { ApiErrorResponse, OrderPriceChange } from '@paserve/contracts';
 import { OrderPriceChangedException } from '../http/order-price-changed.exception.js';
 import { PasswordCapacityException } from '../http/password-capacity.exception.js';
+import { ApiOverloadedException } from '../http/api-overloaded.exception.js';
 import type { Response } from 'express';
 
 @Catch()
@@ -17,13 +18,18 @@ export class ApiExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
+    // Disconnected callers must not trigger a second write or error-log storm.
+    if (response.destroyed || response.writableEnded) return;
     let body: ApiErrorResponse & Partial<OrderPriceChange> = {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       code: 'INTERNAL_SERVER_ERROR',
       message: 'Something went wrong. Please try again.',
     };
     if (exception instanceof HttpException) {
-      if (exception instanceof PasswordCapacityException) {
+      if (
+        exception instanceof PasswordCapacityException ||
+        exception instanceof ApiOverloadedException
+      ) {
         response.setHeader('Retry-After', exception.retryAfter);
         response.setHeader('Cache-Control', 'no-store');
       }

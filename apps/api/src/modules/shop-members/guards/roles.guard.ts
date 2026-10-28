@@ -10,6 +10,7 @@ import { invalidSession } from '../../auth/tokens.service.js';
 import { ShopMembersService } from '../shop-members.service.js';
 import type { ShopMemberRequest } from './shop-membership.guard.js';
 import { SHOP_ROLES_KEY } from '../roles.metadata.js';
+import { trackRequestWork } from '../../../common/load-shedding/request-work.js';
 
 /** Always resolves live membership for :shopId; never trusts cached role claims. */
 @Injectable()
@@ -36,9 +37,11 @@ export class RolesGuard implements CanActivate {
         message: 'This action has no valid shop-role policy.',
       });
     const shopId = request.params.shopId;
-    const membership = await this.memberships.requireMembership(
-      request.user.id,
-      typeof shopId === 'string' ? shopId : '',
+    const membership = await trackRequestWork(request, () =>
+      this.memberships.requireMembership(
+        request.user.id,
+        typeof shopId === 'string' ? shopId : '',
+      ),
     );
     if (!roles.includes(membership.role)) {
       const ownerOnly = roles.length === 1 && roles[0] === 'OWNER';

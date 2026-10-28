@@ -1,15 +1,29 @@
 import { Global, Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+import { CriticalAccessService } from '../load-shedding/critical-capacity.js';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ApiCapacityService } from '../load-shedding/api-capacity.service.js';
+import { ApiAdmissionGuard } from '../load-shedding/api-admission.guard.js';
+import { ApiWorkInterceptor } from '../load-shedding/api-work.interceptor.js';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ApiRateLimitGuard } from './api-rate-limit.guard.js';
 
 @Global()
 @Module({
-  imports: [ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }])],
+  imports: [
+    ConfigModule,
+    JwtModule.register({}),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+  ],
   providers: [
+    ApiCapacityService,
+    CriticalAccessService,
+    { provide: APP_GUARD, useClass: ApiAdmissionGuard },
+    { provide: APP_INTERCEPTOR, useClass: ApiWorkInterceptor },
     ApiRateLimitGuard,
     { provide: APP_GUARD, useExisting: ApiRateLimitGuard },
   ],
-  exports: [ApiRateLimitGuard, ThrottlerModule],
+  exports: [ApiRateLimitGuard, ThrottlerModule, ApiCapacityService],
 })
 export class RateLimitingModule {}
