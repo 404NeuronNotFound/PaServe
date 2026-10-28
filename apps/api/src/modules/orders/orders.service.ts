@@ -1,5 +1,6 @@
 import { OrderPriceChangedException } from '../../common/http/order-price-changed.exception.js';
 import { createHash } from 'node:crypto';
+import { isUUID } from 'class-validator';
 import {
   BadRequestException,
   ConflictException,
@@ -41,6 +42,7 @@ export class OrdersService {
   async create(slug: string, dto: CreateOrderDto): Promise<CreatedGuestOrder> {
     if (
       !dto ||
+      !isUUID(dto.requestId, '4') ||
       !Array.isArray(dto.items) ||
       !dto.items.length ||
       dto.items.length > ORDER_INPUT_LIMITS.linesMax ||
@@ -57,9 +59,10 @@ export class OrdersService {
         code: 'VALIDATION_ERROR',
         message: 'Provide valid order items and order mode.',
       });
+    const requestId = dto.requestId.toLowerCase();
     const mode = dto.mode ?? 'DINE_IN';
     const serviceType =
-      mode === 'DINE_IN' ? dto.serviceType ?? 'TABLE_SERVICE' : null;
+      mode === 'DINE_IN' ? (dto.serviceType ?? 'TABLE_SERVICE') : null;
     const unavailable = () =>
       new NotFoundException({
         code: mode === 'TAKEOUT' ? 'SHOP_NOT_AVAILABLE' : 'TABLE_NOT_AVAILABLE',
@@ -202,11 +205,10 @@ export class OrdersService {
           >`SELECT "id", "isActive", "acceptingOrders", "dineInServiceMode", "name", "displayName", "address", "phone", "contactEmail", "website" FROM "shops" WHERE "slug" = ${slug} FOR UPDATE`;
           const shop = shops[0];
           if (!shop) throw unavailable();
-          const saved = await tx.order.findUnique({
-            where: {
-              shopId_requestId: { shopId: shop.id, requestId: dto.requestId },
-            },
-          });
+          // Uses the SQL-maintained expression index and also finds historical
+          // mixed-case UUID keys without rewriting their receipt or timestamps.
+          const [saved] = await tx.$queryRaw<Order[]>`SELECT * FROM orders
+            WHERE "shopId" = ${shop.id} AND lower("requestId") = ${requestId} LIMIT 1`;
           if (saved) return response(saved, tx);
           if (!shop.isActive) throw unavailable();
           if (
@@ -217,7 +219,8 @@ export class OrdersService {
           )
             throw new ConflictException({
               code: 'SERVICE_TYPE_NOT_AVAILABLE',
-              message: 'This dine-in service option is no longer available. Refresh the menu and review your order again.',
+              message:
+                'This dine-in service option is no longer available. Refresh the menu and review your order again.',
             });
           if (!shop.acceptingOrders)
             throw new ConflictException({
@@ -305,7 +308,7 @@ export class OrdersService {
             data: {
               shopId: shop.id,
               tableId: table?.id ?? null,
-              requestId: dto.requestId,
+              requestId,
               requestHash: hash,
               mode,
               serviceType,

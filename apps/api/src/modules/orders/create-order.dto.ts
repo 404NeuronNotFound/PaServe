@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -35,6 +35,9 @@ export class CreateOrderDto {
   reviewedTotal?: string;
 
   @IsUUID('4')
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.toLowerCase() : value,
+  )
   requestId!: string;
 
   @ValidateIf((_object, value) => value !== undefined)

@@ -77,6 +77,20 @@ async function placeOrder(name: string) {
   const submit = screen.queryByRole("button", { name });
   if (submit) await userEvent.click(submit);
 }
+it("sends one request for a double-click and keeps its ID after a lost response", async () => {
+  let reject!: (error: Error) => void;
+  vi.mocked(api.post).mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+  render(<CustomerOrder shopSlug="cafe" />);
+  await userEvent.click(screen.getByRole("button", { name: "Review order" }));
+  await userEvent.dblClick(screen.getByRole("button", { name: "Place pickup order" }));
+  expect(api.post).toHaveBeenCalledOnce();
+  const original = vi.mocked(api.post).mock.calls[0][1];
+  await act(async () => { reject(new Error("Lost response")); });
+  vi.mocked(api.post).mockResolvedValueOnce(response);
+  await userEvent.click(screen.getByRole("button", { name: "Confirm previous order" }));
+  expect(api.post).toHaveBeenCalledTimes(2);
+  expect(vi.mocked(api.post).mock.calls[1][1]).toEqual(original);
+});
 it("defaults a tableless cart to pickup and submits without table fields", async () => {
   vi.mocked(api.post).mockResolvedValue(response);
   render(<CustomerOrder shopSlug="cafe" />);

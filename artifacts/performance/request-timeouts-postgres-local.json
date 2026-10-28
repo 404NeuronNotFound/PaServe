@@ -30,42 +30,42 @@
     {
       "name": "production-default-adapter-settings-reach-postgres",
       "pass": true,
-      "elapsedMs": 388
+      "elapsedMs": 144
     },
     {
       "name": "statement-is-cancelled-and-connection-recovers",
       "pass": true,
-      "elapsedMs": 451
+      "elapsedMs": 347
     },
     {
       "name": "pool-checkout-wait-is-bounded",
       "pass": true,
-      "elapsedMs": 1017
+      "elapsedMs": 1014
     },
     {
       "name": "lock-contention-is-cancelled-and-recovers",
       "pass": true,
-      "elapsedMs": 243
+      "elapsedMs": 180
     },
     {
       "name": "idle-transaction-session-is-terminated",
       "pass": true,
-      "elapsedMs": 399
+      "elapsedMs": 338
     },
     {
       "name": "cancelled-transaction-rolls-back-and-session-recovers",
       "pass": true,
-      "elapsedMs": 270
+      "elapsedMs": 267
     },
     {
       "name": "prisma-statement-timeout-is-classified-and-recovers",
       "pass": true,
-      "elapsedMs": 403
+      "elapsedMs": 333
     },
     {
       "name": "prisma-interactive-transaction-lifetime-is-bounded",
       "pass": true,
-      "elapsedMs": 450
+      "elapsedMs": 449
     }
   ]
 }

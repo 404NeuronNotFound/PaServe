@@ -9,6 +9,11 @@ import { randomBytes } from 'node:crypto';
 import { createServer } from 'node:net';
 
 const execute = promisify(execFile);
+const suite = process.argv[2] ?? 'timeouts';
+assert.ok(
+  ['timeouts', 'idempotency'].includes(suite),
+  'Choose a supported local database suite.',
+);
 const apiRoot = fileURLToPath(new URL('..', import.meta.url));
 const toolsRoot = resolve(apiRoot, '../../.local-tools');
 const binaryRoot =
@@ -111,17 +116,35 @@ try {
     TIMEOUT_DB_LOCAL_FIXTURE: 'true',
     TIMEOUT_DB_REPORT: resolve(
       apiRoot,
-      '../../artifacts/performance/request-timeouts-postgres-local.json',
+      suite === 'timeouts'
+        ? '../../artifacts/performance/request-timeouts-postgres-local.json'
+        : '../../artifacts/performance/idempotency-postgres-local.json',
     ),
+    ...(suite === 'idempotency'
+      ? {
+          NODE_ENV: 'test',
+          JWT_ACCESS_SECRET:
+            'fixture-only-idempotency-access-secret-at-least-32-characters',
+          JWT_REFRESH_SECRET:
+            'fixture-only-idempotency-refresh-secret-at-least-32-characters',
+          AUTH_BOT_CHALLENGE_ENABLED: 'false',
+          SUPABASE_URL: 'http://127.0.0.1:1',
+          SUPABASE_SERVICE_ROLE_KEY: 'fixture-only-no-live-provider',
+        }
+      : {}),
   };
   const result = await execute(
     process.execPath,
-    ['test/request-timeouts.database-check.mjs'],
+    [
+      suite === 'timeouts'
+        ? 'test/request-timeouts.database-check.mjs'
+        : 'test/idempotency.database-check.mjs',
+    ],
     {
       cwd: apiRoot,
       env,
       windowsHide: true,
-      timeout: 30_000,
+      timeout: suite === 'timeouts' ? 30_000 : 90_000,
       maxBuffer: 1024 * 1024,
     },
   );

@@ -20,6 +20,7 @@
     "test:hash-capacity": "node test/password-capacity.benchmark.mjs",
     "test:hash-login-flood": "node --test test/password-login-flood.metrics.test.mjs && node test/password-login-flood.mjs",
     "test:timeouts:postgres": "node test/request-timeouts.local-postgres.mjs",
+    "test:idempotency:postgres": "node test/request-timeouts.local-postgres.mjs idempotency",
     "test:timeouts:supabase": "vitest run --config vitest.config.e2e.ts test/supabase-latency.e2e-spec.ts",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",

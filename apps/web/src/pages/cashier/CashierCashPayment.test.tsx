@@ -101,6 +101,20 @@ it("offers printing only after loading a saved paid receipt", async () => {
   expect(screen.queryByLabelText("Print layout")).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "View receipt" })).not.toBeInTheDocument();
 });
+it("sends one payment operation when its confirmation is double-clicked", async () => {
+  let finish!: (value: typeof paid) => void;
+  vi.mocked(collectCashPayment).mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+  const { user } = await setup();
+  await user.type(screen.getByLabelText("Amount received (PHP)"), "200");
+  await user.click(screen.getByRole("button", { name: "Record cash payment" }));
+  const dialog = await screen.findByRole("dialog");
+  await user.dblClick(within(dialog).getByRole("button", { name: "Record cash payment" }));
+  expect(collectCashPayment).toHaveBeenCalledOnce();
+  const requestId = vi.mocked(collectCashPayment).mock.calls[0][2].requestId;
+  await act(async () => { finish({ ...paid, payment: { ...paid.payment, requestId } }); });
+  expect(await screen.findByRole("button", { name: "View receipt" })).toBeEnabled();
+  expect(collectCashPayment).toHaveBeenCalledOnce();
+});
 it("unlocks View receipt only after the payment save succeeds, and returns to the payment summary", async () => {
   let resolvePayment!: (value: typeof paid) => void;
   vi.mocked(collectCashPayment).mockImplementation(() => new Promise((resolve) => { resolvePayment = resolve; }));

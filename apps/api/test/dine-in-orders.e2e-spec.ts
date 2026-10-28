@@ -35,11 +35,16 @@ describe('dine-in order submission', () => {
   const product = vi.fn();
   const submittedProducts = vi.fn();
   const saved = vi.fn();
+  const requestLookup = vi.fn(async (...args: unknown[]) => {
+    const result: unknown = await saved(...args);
+    return result ? [result] : [];
+  });
   const create = vi.fn();
   const createItems = vi.fn();
   const readItems = vi.fn();
   const tx = {
-    $queryRaw: raw,
+    $queryRaw: (query: TemplateStringsArray, ...values: unknown[]) =>
+      query.join('').includes('lower("requestId")') ? requestLookup(query, ...values) : raw(query, ...values),
     shop: { findFirst: vi.fn(), update: vi.fn() },
     product: { findFirst: product, findMany: submittedProducts },
     order: { findUnique: saved, create },
@@ -77,6 +82,7 @@ describe('dine-in order submission', () => {
       ])
       .mockResolvedValueOnce([{ id: 'table-a', number: 'Patio 4' }]);
     saved.mockReset().mockResolvedValue(null);
+    requestLookup.mockClear();
     let persistedLines: Record<string, unknown>[] = [];
     createItems
       .mockReset()
@@ -131,6 +137,18 @@ describe('dine-in order submission', () => {
   });
   const post = (body: unknown = payload()) =>
     request(app.getHttpServer()).post('/api/v1/menu/cafe/orders').send(body);
+  it('normalizes UUID request identity and replays legacy mixed-case keys without another order', async () => {
+    const requestId = 'aabbccdd-1111-4111-8111-aabbccddeeff';
+    const first = await post({ ...payload(), requestId: requestId.toUpperCase() }).expect(201);
+    expect(create.mock.calls[0][0].data.requestId).toBe(requestId);
+    saved.mockResolvedValue({ ...create.mock.results[0].value, requestId: requestId.toUpperCase() });
+    raw.mockResolvedValueOnce([{ id: 'shop-a', isActive: true, acceptingOrders: true }]);
+    const replay = await post({ ...payload(), requestId }).expect(201);
+    expect(replay.body).toEqual(first.body);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(tx.shop.update).toHaveBeenCalledTimes(1);
+    expect(requestLookup.mock.calls[1].slice(1)).toEqual(['shop-a', requestId]);
+  });
   it.each(['TABLE_SERVICE', 'COUNTER_PICKUP'] as const)(
     'saves %s independently of dine-in mode and table context', async (serviceType) => {
       const result = await post({ ...payload(), mode: 'DINE_IN', serviceType }).expect(201);
@@ -650,9 +668,8 @@ describe('dine-in order submission', () => {
     expect(raw.mock.calls[0][0].join('?')).toContain(
       '"website" FROM "shops" WHERE "slug" = ? FOR UPDATE',
     );
-    expect(saved).toHaveBeenCalledWith({
-      where: { shopId_requestId: { shopId: 'shop-a', requestId: id } },
-    });
+    expect(requestLookup.mock.calls[0].slice(1)).toEqual(['shop-a', id]);
+    expect((requestLookup.mock.calls[0][0] as TemplateStringsArray).join('?')).toContain('"shopId" = ? AND lower("requestId") = ?');
     expect(create.mock.calls[0][0].data.shopId).toBe('shop-a');
   });
   it.each(['BadSlug', 'cafe_', 'a'.repeat(101)])(

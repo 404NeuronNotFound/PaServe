@@ -1593,6 +1593,14 @@ describe('Cash collection', () => {
     expect(replay.body).toEqual(first.body);
     expect(updateOrder).toHaveBeenCalledTimes(1);
   });
+  it('treats UUID letter case as the same payment and preserves the historical paid record', async () => {
+    const first = await collect({ requestId: requestId.toUpperCase() }).expect(200);
+    saved.paymentRequestId = requestId.toUpperCase();
+    const replay = await collect().expect(200);
+    expect(replay.body).toEqual(first.body);
+    expect(saved.paymentRequestId).toBe(requestId.toUpperCase());
+    expect(updateOrder).toHaveBeenCalledTimes(1);
+  });
   it.each([
     { requestId: '08c6dcb9-a03f-45a7-ae1e-ec326ad980a5' },
     { amountReceived: '300.00' },

@@ -175,6 +175,8 @@ model Order {
   @@unique([id, shopId])
   @@unique([shopId, requestId])
   @@unique([shopId, paymentRequestId])
+  // SQL also maintains lower(requestId)/lower(paymentRequestId) unique indexes
+  // per shop (20261028090000_idempotency_key_identity). Preserve both indexes.
   @@unique([shopId, orderNumber])
   @@index([shopId, tableId, createdAt])
   @@index([shopId, preparationStatus, queuedAt, id])

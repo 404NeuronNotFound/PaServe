@@ -154,7 +154,7 @@ export class CashPaymentService {
       payment = {
         method: saved.paymentMethod as
           'CASH' | 'GCASH_MANUAL' | 'CARD_MANUAL' | 'OTHER',
-        requestId: saved.paymentRequestId,
+        requestId: saved.paymentRequestId.toLowerCase(),
         amountReceived: saved.amountReceived.toFixed(2),
         changeDue: saved.changeDue.toFixed(2),
         paidAt: saved.paidAt.toISOString(),
@@ -328,6 +328,7 @@ export class CashPaymentService {
         message:
           'A valid reviewed order and payment confirmation are required.',
       });
+    const requestId = dto.requestId.toLowerCase();
     const roles = confirmation ? CREATE_PAYMENT_ROLES : CASH_PAYMENT_ROLES;
     const access = shopAccessWhere(actorId, shopId, roles);
     try {
@@ -378,7 +379,7 @@ export class CashPaymentService {
             throw this.unavailable();
           if (review.payment) {
             if (
-              review.payment.requestId === dto.requestId &&
+              review.payment.requestId === requestId &&
               review.payment.method === method &&
               (review.payment.reference ?? null) === reference &&
               (review.payment.description ?? null) === description &&
@@ -438,7 +439,7 @@ export class CashPaymentService {
               paymentMethod: method,
               paymentReference: reference,
               paymentDescription: description,
-              paymentRequestId: dto.requestId,
+              paymentRequestId: requestId,
               paymentReviewVersion: dto.reviewVersion,
               amountReceived: amount,
               changeDue: amount.minus(total),
