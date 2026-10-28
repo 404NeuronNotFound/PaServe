@@ -9,6 +9,7 @@ import { configureServerTimeouts } from './common/http/server-timeouts.js';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.enableShutdownHooks(['SIGTERM', 'SIGINT']);
   configureSecurityHeaders(app);
   configureTrustedProxy(app);
   configureRequestBody(app);

@@ -1,0 +1,204 @@
+{
+  "pass": true,
+  "scope": "disposable-postgres-real-prisma-pools-and-http",
+  "remainingApplicationConnections": 0,
+  "pools": [
+    {
+      "policy": {
+        "max": 2,
+        "maxWaiting": 1,
+        "idleTimeoutMillis": 5000,
+        "maxLifetimeSeconds": 30,
+        "declaredProcesses": 2,
+        "connectionBudget": 4
+      },
+      "state": "closed",
+      "total": 0,
+      "idle": 0,
+      "waiting": 0,
+      "pendingCheckouts": 0,
+      "generations": 2,
+      "connected": 6,
+      "acquired": 44,
+      "released": 44,
+      "removed": 6,
+      "rejected": 9,
+      "acquisitionFailures": 2,
+      "idleErrors": 1,
+      "peakTotal": 2,
+      "peakWaiting": 1,
+      "peakPendingCheckouts": 2
+    },
+    {
+      "policy": {
+        "max": 2,
+        "maxWaiting": 1,
+        "idleTimeoutMillis": 5000,
+        "maxLifetimeSeconds": 30,
+        "declaredProcesses": 2,
+        "connectionBudget": 4
+      },
+      "state": "closed",
+      "total": 0,
+      "idle": 0,
+      "waiting": 0,
+      "pendingCheckouts": 0,
+      "generations": 1,
+      "connected": 2,
+      "acquired": 2,
+      "released": 2,
+      "removed": 2,
+      "rejected": 0,
+      "acquisitionFailures": 0,
+      "idleErrors": 0,
+      "peakTotal": 2,
+      "peakWaiting": 0,
+      "peakPendingCheckouts": 0
+    },
+    {
+      "policy": {
+        "max": 2,
+        "maxWaiting": 1,
+        "idleTimeoutMillis": 5000,
+        "maxLifetimeSeconds": 30,
+        "declaredProcesses": 2,
+        "connectionBudget": 4
+      },
+      "state": "closed",
+      "total": 0,
+      "idle": 0,
+      "waiting": 0,
+      "pendingCheckouts": 0,
+      "generations": 1,
+      "connected": 2,
+      "acquired": 3,
+      "released": 3,
+      "removed": 2,
+      "rejected": 5,
+      "acquisitionFailures": 0,
+      "idleErrors": 0,
+      "peakTotal": 2,
+      "peakWaiting": 1,
+      "peakPendingCheckouts": 1
+    },
+    {
+      "policy": {
+        "max": 1,
+        "maxWaiting": 0,
+        "idleTimeoutMillis": 100,
+        "maxLifetimeSeconds": 30,
+        "declaredProcesses": 2,
+        "connectionBudget": 4
+      },
+      "state": "closed",
+      "total": 0,
+      "idle": 0,
+      "waiting": 0,
+      "pendingCheckouts": 0,
+      "generations": 1,
+      "connected": 2,
+      "acquired": 2,
+      "released": 2,
+      "removed": 2,
+      "rejected": 1,
+      "acquisitionFailures": 0,
+      "idleErrors": 0,
+      "peakTotal": 1,
+      "peakWaiting": 0,
+      "peakPendingCheckouts": 0
+    },
+    {
+      "policy": {
+        "max": 1,
+        "maxWaiting": 0,
+        "idleTimeoutMillis": 5000,
+        "maxLifetimeSeconds": 1,
+        "declaredProcesses": 2,
+        "connectionBudget": 4
+      },
+      "state": "closed",
+      "total": 0,
+      "idle": 0,
+      "waiting": 0,
+      "pendingCheckouts": 0,
+      "generations": 1,
+      "connected": 2,
+      "acquired": 2,
+      "released": 2,
+      "removed": 2,
+      "rejected": 0,
+      "acquisitionFailures": 0,
+      "idleErrors": 0,
+      "peakTotal": 1,
+      "peakWaiting": 0,
+      "peakPendingCheckouts": 0
+    }
+  ],
+  "checks": [
+    {
+      "name": "lazy-client-creates-no-idle-connection-before-first-query",
+      "pass": true,
+      "elapsedMs": 9
+    },
+    {
+      "name": "cold-concurrent-queries-create-one-bounded-pool",
+      "pass": true,
+      "elapsedMs": 432
+    },
+    {
+      "name": "sequential-tenant-queries-reuse-one-connection-and-preserve-scope",
+      "pass": true,
+      "elapsedMs": 243
+    },
+    {
+      "name": "HTTP-requests-share-the-singleton-pool-across-tenants",
+      "pass": true,
+      "elapsedMs": 182
+    },
+    {
+      "name": "saturated-pool-bounds-connections-and-waiters-with-retryable-HTTP-503",
+      "pass": true,
+      "elapsedMs": 436
+    },
+    {
+      "name": "SQL-errors-and-transaction-rollback-return-their-checkouts",
+      "pass": true,
+      "elapsedMs": 11
+    },
+    {
+      "name": "idle-backend-failure-is-observed-and-pool-recovers",
+      "pass": true,
+      "elapsedMs": 94
+    },
+    {
+      "name": "two-client-pools-stay-within-the-declared-combined-budget",
+      "pass": true,
+      "elapsedMs": 106
+    },
+    {
+      "name": "disconnect-closes-owned-pool-and-reconnect-keeps-queue-bounds",
+      "pass": true,
+      "elapsedMs": 542
+    },
+    {
+      "name": "application-shutdown-disposes-all-owned-connections",
+      "pass": true,
+      "elapsedMs": 40
+    },
+    {
+      "name": "idle-connections-are-reaped-without-a-minimum-prewarm",
+      "pass": true,
+      "elapsedMs": 224
+    },
+    {
+      "name": "zero-waiting-policy-sheds-busy-checkouts-and-recovers",
+      "pass": true,
+      "elapsedMs": 75
+    },
+    {
+      "name": "lifetime-expiry-does-not-kill-an-in-use-transaction",
+      "pass": true,
+      "elapsedMs": 1309
+    }
+  ]
+}

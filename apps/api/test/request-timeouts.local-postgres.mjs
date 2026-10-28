@@ -11,7 +11,7 @@ import { createServer } from 'node:net';
 const execute = promisify(execFile);
 const suite = process.argv[2] ?? 'timeouts';
 assert.ok(
-  ['timeouts', 'idempotency'].includes(suite),
+  ['timeouts', 'idempotency', 'pooling'].includes(suite),
   'Choose a supported local database suite.',
 );
 const apiRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -118,9 +118,11 @@ try {
       apiRoot,
       suite === 'timeouts'
         ? '../../artifacts/performance/request-timeouts-postgres-local.json'
-        : '../../artifacts/performance/idempotency-postgres-local.json',
+        : suite === 'idempotency'
+          ? '../../artifacts/performance/idempotency-postgres-local.json'
+          : '../../artifacts/performance/database-pooling-local.json',
     ),
-    ...(suite === 'idempotency'
+    ...(suite !== 'timeouts'
       ? {
           NODE_ENV: 'test',
           JWT_ACCESS_SECRET:
@@ -138,7 +140,9 @@ try {
     [
       suite === 'timeouts'
         ? 'test/request-timeouts.database-check.mjs'
-        : 'test/idempotency.database-check.mjs',
+        : suite === 'idempotency'
+          ? 'test/idempotency.database-check.mjs'
+          : 'test/database-pooling.database-check.mjs',
     ],
     {
       cwd: apiRoot,

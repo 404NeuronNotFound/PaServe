@@ -10,6 +10,8 @@ export default defineConfig({
     seed: "pnpm seed",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Runtime uses DATABASE_URL (provider pooler where appropriate); migrations
+    // can use a separate direct/session URL without changing runtime traffic.
+    url: process.env["DIRECT_DATABASE_URL"]?.trim() || process.env["DATABASE_URL"],
   },
 });

@@ -18,6 +18,10 @@
   through spread request bodies. Do not expose another tenant's resource existence.
 - Preserve RLS and revoked anon/authenticated browser table privileges for
   shops, memberships, categories and products. NestJS owns access today.
+- Preserve the SQL-maintained per-shop unique indexes on lower(requestId) and
+  lower(paymentRequestId) from `20261028090000_idempotency_key_identity`. Prisma
+  cannot model these expression indexes. Never rewrite immutable paid receipt
+  fields to normalize historical keys or silently merge colliding operations.
 - Preserve the SQL-maintained `products_price_nonnegative` CHECK constraint
   from migration `20261010050000_product_price_constraint`. Keep product prices
   as Decimal(10,2), accept exact decimal strings and serialize with two places.

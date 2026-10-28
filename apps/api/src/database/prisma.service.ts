@@ -1,10 +1,12 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '../generated/prisma/client.js';
-import { PrismaPg } from '@prisma/adapter-pg';
 import { databaseTimeouts } from './database-timeouts.js';
+import { BoundedPgAdapter } from './bounded-pg.adapter.js';
+import { databasePoolPolicy } from './database-pool.policy.js';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleDestroy {
+  private readonly poolAdapter: BoundedPgAdapter;
   constructor() {
     const connectionString = process.env.DATABASE_URL;
 
@@ -13,15 +15,24 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
     }
 
     const deadlines = databaseTimeouts(process.env);
-    const adapter = new PrismaPg({
-      connectionString,
-      ...deadlines.pool,
-    });
+    const adapter = new BoundedPgAdapter(
+      {
+        connectionString,
+        ...deadlines.pool,
+      },
+      databasePoolPolicy(process.env),
+    );
 
     super({
       adapter,
       transactionOptions: deadlines.transactionOptions,
     });
+    this.poolAdapter = adapter;
+  }
+
+  /** Internal aggregate metrics only; never exposes pool options/credentials. */
+  databasePoolSnapshot() {
+    return this.poolAdapter.snapshot();
   }
 
   async onModuleDestroy() {
