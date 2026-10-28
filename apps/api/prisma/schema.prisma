@@ -179,6 +179,7 @@ model Order {
   // per shop (20261028090000_idempotency_key_identity). Preserve both indexes.
   @@unique([shopId, orderNumber])
   @@index([shopId, tableId, createdAt])
+  @@index([shopId, status, createdAt, id], map: "orders_shop_status_created_idx")
   @@index([shopId, preparationStatus, queuedAt, id])
   @@index([shopId, preparationStatus, completedAt, id])
   @@map("orders")
@@ -321,6 +322,7 @@ model Product {
   @@unique([id, shopId])
   @@index([shopId])
   @@index([categoryId])
+  @@index([shopId, categoryId, isArchived, sortOrder, createdAt, id], map: "products_shop_category_sort_idx")
   @@map("products")
 }
 
