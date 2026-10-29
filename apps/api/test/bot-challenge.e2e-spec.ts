@@ -115,13 +115,17 @@ describe('progressive authentication challenge HTTP boundary', () => {
     await post(1).expect(200);
     expect(provider).toHaveBeenCalledOnce();
   });
-  it('uses normalized account failures across trusted IPs', async () => {
+  it('uses distributed normalized-account risk only for sources that failed, leaving the victim challenge-free', async () => {
     for (let i = 1; i <= 5; i++) {
       now += 2000;
       await post(i, ' OWNER@example.test ').expect(401);
     }
-    await post(10).expect(403);
+    await post(1).expect(403);
     expect(login).toHaveBeenCalledTimes(5);
+    login.mockResolvedValueOnce(success);
+    await post(10).expect(200);
+    await post(2).expect(403);
+    expect(provider).not.toHaveBeenCalled();
     await post(11, 'different@example.test').expect(401);
   });
   it('does not let untrusted forwarding headers reset challenge risk', async () => {
@@ -180,15 +184,15 @@ describe('progressive authentication challenge HTTP boundary', () => {
           );
         }),
     );
-    const first = post(10, 'owner@example.test', 'pending-one').then(
+    const first = post(1, 'owner@example.test', 'pending-one').then(
       (reply) => reply,
     );
-    const second = post(11, 'owner@example.test', 'pending-two').then(
+    const second = post(2, 'owner@example.test', 'pending-two').then(
       (reply) => reply,
     );
     try {
       await vi.waitFor(() => expect(finish).toHaveLength(2));
-      await post(12, 'owner@example.test', 'overflow').expect(503);
+      await post(3, 'owner@example.test', 'overflow').expect(503);
       expect(login).toHaveBeenCalledTimes(5);
       login.mockResolvedValue(success);
       await post(20, 'clean@example.test').expect(200);

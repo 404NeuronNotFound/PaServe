@@ -8,6 +8,11 @@ import pg from 'pg';
 import { LoadMonitor, assertLoadMonitoring } from './load-monitor.mjs';
 import { runLoadSearchWorker } from './load-search.worker.mjs';
 import { validateRampResponse } from './load-ramp.client-workload.mjs';
+import { evaluateLoginFlood } from './login-flood.metrics.mjs';
+import {
+  loginFloodProfile,
+  loginFloodSource,
+} from './login-flood.workload.mjs';
 import {
   rampProfile,
   rampDiagnosticProfile,
@@ -87,11 +92,22 @@ async function main() {
   let monitor;
   let monitoring;
   let reportWritten = false;
+  const isLoginFlood = process.env.LOAD_LOGIN_FLOOD === '1';
+  const floodCounters = {
+    targetAccountReads: 0,
+    peers: { attacker: 0, legitimate: 0, other: 0 },
+  };
+  const floodPeerSources = new Set();
   try {
     phase = 'migrations';
     await db.connect();
     monitor = new LoadMonitor({
-      maxSamples: process.env.LOAD_FIXTURE_RAMP === '1' ? 1080 : 480,
+      intervalMs: isLoginFlood ? 100 : 500,
+      maxSamples: isLoginFlood
+        ? 2400
+        : process.env.LOAD_FIXTURE_RAMP === '1'
+          ? 1080
+          : 480,
       client: new pg.Client({
         connectionString: database.href,
         application_name: 'paserve-load-monitor',
@@ -105,6 +121,7 @@ async function main() {
               pool: app.get(PrismaService).databasePoolSnapshot(),
               capacity: app.get(ApiCapacityService).snapshot(),
               fairness: app.get(TrafficFairnessService).snapshot(),
+              passwords: app.get(PasswordHashService).snapshot(),
             }
           : null,
     });
@@ -167,6 +184,29 @@ async function main() {
     configureTrustedProxy(app, '');
     configureRequestBody(app);
     configureServerTimeouts(app);
+    app.use((req, _res, next) => {
+      if (
+        isLoginFlood &&
+        phase === 'login-flood-attack' &&
+        req.method === 'POST' &&
+        req.url === '/api/v1/auth/login'
+      ) {
+        const ip = req.socket.remoteAddress;
+        const botSource = Array.from(
+          { length: loginFloodProfile.clients },
+          (_, i) => loginFloodSource(i),
+        ).includes(ip);
+        if (botSource) floodPeerSources.add(ip);
+        floodCounters.peers[
+          botSource
+            ? 'attacker'
+            : ['127.0.0.3', '127.0.0.4', '127.0.0.5', '127.0.0.6'].includes(ip)
+              ? 'legitimate'
+              : 'other'
+        ]++;
+      }
+      next();
+    });
     app.setGlobalPrefix('api/v1');
     const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
     app.use(LOAD_MARKER_PATH, (req, res) => {
@@ -287,9 +327,79 @@ async function main() {
     }
     const dataset = await inspectLoadDataset(db, shops, plan);
     await db.query('ANALYZE');
+    let floodFixture, floodBefore;
+    if (isLoginFlood) {
+      const actors = [];
+      for (const [i, role] of ['OWNER', 'CASHIER', 'OWNER'].entries()) {
+        const user = await prisma.user.findUniqueOrThrow({
+          where: { id: shops[i].actors[role] },
+          select: { id: true, email: true },
+        });
+        actors.push({
+          ...user,
+          password,
+          role,
+          shopId: shops[i].id,
+          slug: shops[i].slug,
+        });
+      }
+      const attacker = await prisma.user.findUniqueOrThrow({
+        where: { id: shops[0].actors.ADMIN },
+        select: { id: true, email: true, passwordHash: true, updatedAt: true },
+      });
+      floodFixture = {
+        actors,
+        attacker: { id: attacker.id, email: attacker.email },
+        missingEmail: `missing-${runId}@load.example.test`,
+      };
+      floodBefore = {
+        attacker,
+        users: await prisma.user.count(),
+        hashes: app.get(PasswordHashService).snapshot().verifyJobs,
+        external: blockedExternalCalls,
+        victim: await prisma.user.findUniqueOrThrow({
+          where: { id: actors[0].id },
+          select: { email: true, passwordHash: true, isActive: true },
+        }),
+      };
+      const { AuthRepository } =
+        await import('../dist/modules/auth/auth.repository.js');
+      const repository = app.get(AuthRepository);
+      const find = repository.findLoginAccount.bind(repository);
+      repository.findLoginAccount = (email) => {
+        if ([actors[0].email].includes(email.trim().toLowerCase()))
+          floodCounters.targetAccountReads++;
+        return find(email);
+      };
+    }
     await prisma.$disconnect();
     phase = 'optional-search';
     let search;
+    let floodWorkload, loginFlood;
+    if (isLoginFlood) {
+      credentialsFile = join(root, 'load-accounts.json');
+      await writeFile(credentialsFile, JSON.stringify(floodFixture), {
+        mode: 0o600,
+        flag: 'wx',
+      });
+      floodWorkload = await runLoadSearchWorker(
+        {
+          ...clientEnv,
+          LOAD_LOGIN_FLOOD: '1',
+          LOAD_ACCOUNTS_FILE: credentialsFile,
+          LOAD_REPORT: resolve(
+            dirname(process.env.TIMEOUT_DB_REPORT),
+            'login-flood-workload-local.json',
+          ),
+        },
+        {
+          deadlineMs: 60000,
+          onStage: (stage) => {
+            phase = stage.phase;
+          },
+        },
+      );
+    }
     const isRamp = process.env.LOAD_FIXTURE_RAMP === '1';
     const isDiagnostic = process.env.LOAD_RAMP_DIAGNOSTIC === '1';
     const profile = isDiagnostic ? rampDiagnosticProfile : rampProfile;
@@ -349,9 +459,46 @@ async function main() {
     assertLoadMonitoring(monitoring, {
       search: process.env.LOAD_FIXTURE_SEARCH === '1',
     });
+    if (isLoginFlood) {
+      await prisma.$connect();
+      const attacker = await prisma.user.findUniqueOrThrow({
+        where: { id: floodFixture.attacker.id },
+        select: { id: true, email: true, passwordHash: true, updatedAt: true },
+      });
+      loginFlood = evaluateLoginFlood(floodWorkload, monitoring, {
+        ...floodCounters,
+        distinctAttackSources: floodPeerSources.size,
+        victimUnchanged:
+          JSON.stringify(
+            await prisma.user.findUniqueOrThrow({
+              where: { id: floodFixture.actors[0].id },
+              select: { email: true, passwordHash: true, isActive: true },
+            }),
+          ) === JSON.stringify(floodBefore.victim),
+        victimSessionRows: await prisma.authSession.count({
+          where: { userId: floodFixture.actors[0].id },
+        }),
+        hashVerifyJobs:
+          app.get(PasswordHashService).snapshot().verifyJobs -
+          floodBefore.hashes,
+        attackerSessions: await prisma.authSession.count({
+          where: { userId: attacker.id },
+        }),
+        attackerUnchanged:
+          JSON.stringify(attacker) === JSON.stringify(floodBefore.attacker),
+        usersUnchanged: (await prisma.user.count()) === floodBefore.users,
+        sessionRows: await prisma.authSession.count(),
+        revokedRows: await prisma.authSession.count({
+          where: { revokedAt: { not: null } },
+        }),
+        externalCallsDuringWorkload:
+          blockedExternalCalls - floodBefore.external,
+      });
+    }
     const ramp = isRamp ? summarizeRamp(search, monitoring, profile) : null;
     const report = {
-      pass: ramp ? ramp.pass : true,
+      pass: loginFlood ? loginFlood.pass : ramp ? ramp.pass : true,
+      loginFlood,
       ramp,
       runId,
       environment: 'disposable-development',

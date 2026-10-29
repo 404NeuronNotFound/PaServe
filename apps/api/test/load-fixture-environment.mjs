@@ -22,6 +22,7 @@ export function loadFixtureEnvironment(
     search = false,
     ramp = false,
     diagnostic = false,
+    loginFlood = false,
   },
 ) {
   const database = new URL(databaseUrl);
@@ -52,11 +53,13 @@ export function loadFixtureEnvironment(
     LOAD_FIXTURE_SEARCH: search ? '1' : '0',
     LOAD_FIXTURE_RAMP: ramp ? '1' : '0',
     LOAD_RAMP_DIAGNOSTIC: diagnostic ? '1' : '0',
+    LOAD_LOGIN_FLOOD: loginFlood ? '1' : '0',
     LOAD_DATASET_PROFILE: dataset.profile,
     JWT_ACCESS_SECRET: randomBytes(32).toString('hex'),
     JWT_REFRESH_SECRET: randomBytes(32).toString('hex'),
-    AUTH_BOT_CHALLENGE_ENABLED: 'false',
-    TURNSTILE_SECRET_KEY: '',
+    AUTH_BOT_CHALLENGE_ENABLED: loginFlood ? 'true' : 'false',
+    TURNSTILE_SECRET_KEY: loginFlood ? randomBytes(32).toString('hex') : '',
+    TURNSTILE_HOSTNAMES: loginFlood ? 'localhost' : '',
     FRONTEND_ORIGINS: 'http://127.0.0.1',
     TRUSTED_PROXIES: '',
     SUPABASE_URL: 'http://127.0.0.1:1',

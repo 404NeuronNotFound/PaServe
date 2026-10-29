@@ -11,7 +11,12 @@ import type { Request, Response } from 'express';
 import { boundedFetch } from '../../common/http/request-context.js';
 
 type Action = 'login' | 'register';
-type Risk = { action: Action; ip: string; account?: string };
+type Risk = {
+  action: Action;
+  ip: string;
+  account?: string;
+  sourceAccount?: string;
+};
 const RISK_TTL = 15 * 60_000;
 const MAX_RISK_KEYS = 20_000;
 const MAX_TOKENS = 2000;
@@ -65,14 +70,23 @@ export class BotChallengeService implements OnApplicationShutdown {
       return undefined;
     const email: unknown = (request.body as { email?: unknown } | undefined)
       ?.email;
+    const ip = normalizeIp(
+      request.ip ?? request.socket.remoteAddress ?? 'unknown',
+    );
+    const account =
+      policy === 'login' && typeof email === 'string' && email.length <= 512
+        ? email.trim().toLowerCase()
+        : undefined;
     return {
       action: policy,
-      ip: this.digest(
-        `${policy}:ip:${normalizeIp(request.ip ?? request.socket.remoteAddress ?? 'unknown')}`,
-      ),
+      ip: this.digest(`${policy}:ip:${ip}`),
       account:
-        policy === 'login' && typeof email === 'string' && email.length <= 512
-          ? this.digest(`login:account:${email.trim().toLowerCase()}`)
+        account !== undefined
+          ? this.digest(`login:account:${account}`)
+          : undefined,
+      sourceAccount:
+        account !== undefined
+          ? this.digest(JSON.stringify(['login:source-account', ip, account]))
           : undefined,
     };
   }
@@ -107,7 +121,7 @@ export class BotChallengeService implements OnApplicationShutdown {
   succeeded(risk?: Risk) {
     if (risk?.action !== 'login') return;
     this.risks.delete(risk.ip);
-    if (risk.account) this.risks.delete(risk.account);
+    if (risk.sourceAccount) this.risks.delete(risk.sourceAccount);
   }
 
   failed(risk: Risk | undefined, error: unknown) {
@@ -119,6 +133,7 @@ export class BotChallengeService implements OnApplicationShutdown {
       return;
     this.increment(risk.ip);
     if (risk.account) this.increment(risk.account);
+    if (risk.sourceAccount) this.increment(risk.sourceAccount);
   }
 
   private required(risk: Risk) {
@@ -126,8 +141,12 @@ export class BotChallengeService implements OnApplicationShutdown {
     return (
       (this.risks.get(risk.ip)?.hits ?? 0) >=
         (risk.action === 'login' ? 3 : 2) ||
-      (risk.account && (this.risks.get(risk.account)?.hits ?? 0) >= 5) ||
-      this.risks.size >= MAX_RISK_KEYS
+      // An attacker-controlled email alone must never gate a clean victim.
+      // Aggregate account risk only escalates a source that already failed it.
+      (risk.account &&
+        (this.risks.get(risk.account)?.hits ?? 0) >= 5 &&
+        risk.sourceAccount &&
+        (this.risks.get(risk.sourceAccount)?.hits ?? 0) > 0)
     );
   }
 

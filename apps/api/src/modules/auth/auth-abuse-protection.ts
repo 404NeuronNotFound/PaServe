@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { createHmac, randomBytes } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import type { Request, Response } from 'express';
+import { normalizeIp } from '@nestjs/throttler';
 import { defer, finalize, mergeMap, tap } from 'rxjs';
 import { RATE_LIMIT_POLICY } from '../../common/rate-limiting/rate-limit.policy.js';
 import { BotChallengeService } from './bot-challenge.service.js';
@@ -51,7 +52,11 @@ export class AuthAbuseProtection implements OnApplicationShutdown {
     return parsed;
   }
 
-  acquire(response: Response, loginEmail?: unknown): () => void {
+  acquire(
+    response: Response,
+    loginEmail?: unknown,
+    sourceIp = 'unknown',
+  ): () => void {
     response.setHeader('Cache-Control', 'no-store');
     const now = performance.now();
     this.tokens = Math.min(
@@ -70,7 +75,12 @@ export class AuthAbuseProtection implements OnApplicationShutdown {
     // Unvalidated bodies cannot allocate arbitrary-sized keys. Never retain email/password.
     if (typeof loginEmail === 'string' && loginEmail.length <= 512) {
       const key = createHmac('sha256', this.salt)
-        .update(loginEmail.trim().toLowerCase())
+        .update(
+          JSON.stringify([
+            normalizeIp(sourceIp),
+            loginEmail.trim().toLowerCase(),
+          ]),
+        )
         .digest('hex');
       for (const [expiredKey, entry] of this.accounts) {
         if (entry.expires > now) break;
@@ -80,8 +90,12 @@ export class AuthAbuseProtection implements OnApplicationShutdown {
       if (previous && previous.hits >= ACCOUNT_ATTEMPTS) {
         this.reject(response, Math.ceil((previous.expires - now) / 1000));
       }
-      if (!previous && this.accounts.size >= MAX_ACCOUNTS)
-        this.reject(response, 1);
+      // Bounded oldest-entry eviction avoids turning metadata exhaustion into
+      // a global account lockout. IP/global/hash admission remains enforced.
+      if (!previous && this.accounts.size >= MAX_ACCOUNTS) {
+        const oldest = this.accounts.keys().next().value;
+        if (oldest !== undefined) this.accounts.delete(oldest);
+      }
       this.accounts.set(
         key,
         previous
@@ -145,7 +159,11 @@ export class AuthWorkInterceptor implements NestInterceptor {
     )?.challengeToken;
     return defer(() => this.challenge.check(risk, token, response)).pipe(
       mergeMap(() => {
-        const release = this.protection.acquire(response, email);
+        const release = this.protection.acquire(
+          response,
+          email,
+          request.ip ?? request.socket.remoteAddress ?? 'unknown',
+        );
         this.challenge.started(risk);
         // finalize covers validation errors, thrown handlers and normal completion.
         return defer(() => next.handle()).pipe(

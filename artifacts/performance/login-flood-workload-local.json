@@ -1,0 +1,6086 @@
+{
+  "version": 2,
+  "profile": {
+    "version": 2,
+    "durationMs": 30000,
+    "clients": 24,
+    "firstFailureSpacingMs": 1000,
+    "repeatAfterMs": 5000,
+    "perClientEveryMs": 1000,
+    "loginP95Ms": 1000,
+    "probeP95Ms": 500
+  },
+  "environment": "disposable-development",
+  "startedAt": "2026-10-29T10:10:13.135Z",
+  "baseline": [
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 122.9828,
+      "attackOffsetMs": null
+    },
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 70.80130000000003,
+      "attackOffsetMs": null
+    },
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 69.84219999999999,
+      "attackOffsetMs": null
+    }
+  ],
+  "legitimate": [
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 115.62829999999985,
+      "attackOffsetMs": 2008.7766000000001
+    },
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 123.97819999999956,
+      "attackOffsetMs": 11023.1093
+    },
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 127.57949999999983,
+      "attackOffsetMs": 20016.1021
+    }
+  ],
+  "recovery": [
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 72.31949999999779,
+      "attackOffsetMs": 30003.8653
+    },
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 68.04089999999997,
+      "attackOffsetMs": 30076.1927
+    },
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 68.45379999999932,
+      "attackOffsetMs": 30144.2402
+    }
+  ],
+  "attack": [
+    {
+      "client": 0,
+      "priming": true,
+      "attackOffsetMs": 13.453399999999988,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 68.64300000000003
+    },
+    {
+      "client": 1,
+      "priming": true,
+      "attackOffsetMs": 1013.8921,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 69.39649999999983
+    },
+    {
+      "client": 2,
+      "priming": true,
+      "attackOffsetMs": 2005.6547999999998,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 111.91900000000032
+    },
+    {
+      "client": 3,
+      "priming": true,
+      "attackOffsetMs": 3013.8249,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 67.11189999999988
+    },
+    {
+      "client": 4,
+      "priming": true,
+      "attackOffsetMs": 4013.8522999999996,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 69.94740000000002
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 5014.8868999999995,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 9.329500000000735
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 5015.6336,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 9.535499999999956
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 5016.2334,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.244300000000294
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 5018.1572,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.963700000000244
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 5019.051,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.977399999999761
+    },
+    {
+      "client": 5,
+      "priming": true,
+      "attackOffsetMs": 5013.9225,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 86.4982
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 6006.926,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 7.970699999999852
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 6007.7045,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.294499999999971
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 6008.4329,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 9.04489999999987
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 6009.2081,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 9.102300000000469
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 6009.8336,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.097600000000057
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 6010.4528,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.011700000000019
+    },
+    {
+      "client": 6,
+      "priming": true,
+      "attackOffsetMs": 6005.664,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 80.65520000000015
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 7014.513,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 7.066100000000006
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 7015.0713,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 7.534900000000562
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 7015.582,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.069899999999507
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 7016.1006,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.69170000000031
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 7016.6168,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 9.488400000000183
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 7017.0989,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 9.948300000000017
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 7017.57,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.497199999999793
+    },
+    {
+      "client": 7,
+      "priming": true,
+      "attackOffsetMs": 7013.6143,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 77.95550000000003
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 8016.889800000001,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.678899999998976
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 8017.5321,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.803499999999985
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 8018.0959,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.431000000000495
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 8018.741599999999,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.874499999999898
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 8019.445900000001,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.299399999999878
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 8020.230600000001,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.626999999998588
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 8021.045099999999,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.844900000000052
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 8021.861800000001,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.049599999998463
+    },
+    {
+      "client": 8,
+      "priming": true,
+      "attackOffsetMs": 8014.190699999999,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 122.38709999999992
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 9015.3929,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.00459999999839
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 9015.9425,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.048200000001088
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 9016.453,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.181800000000294
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 9016.9049,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.897399999999834
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 9017.3371,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 9.73319999999876
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 9017.7827,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.499100000000908
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 9018.2412,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.669700000000375
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 9018.9039,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.734599999999773
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 9019.72,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.210500000001048
+    },
+    {
+      "client": 9,
+      "priming": true,
+      "attackOffsetMs": 9014.0282,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 82.134399999999
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 10006.1139,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.278800000000047
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 10006.7266,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.098700000000463
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 10007.2459,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.378899999999703
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 10007.7569,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 6,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.418099999998958
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 10008.2036,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 8.75039999999899
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 10008.6587,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 9.125
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 10009.1171,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 9.947100000001228
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 10009.5607,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.213599999999133
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 10010.0053,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.90689999999995
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 10010.6621,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.402000000000044
+    },
+    {
+      "client": 10,
+      "priming": true,
+      "attackOffsetMs": 10004.7664,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 82.73519999999917
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 11016.672199999999,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.59820000000036
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 11017.3053,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.324800000000323
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 11017.8416,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.69000000000051
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 11018.3903,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.77180000000044
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 11019.2013,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.751599999999598
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 11019.9059,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.817000000000917
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 11020.4566,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.80869999999959
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 11021.1826,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.583000000000538
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 11021.9399,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.030500000000757
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 11022.571,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.39259999999922
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 11023.7716,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.91530000000057
+    },
+    {
+      "client": 11,
+      "priming": true,
+      "attackOffsetMs": 11013.3977,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 129.67439999999988
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 12014.5495,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 9.353100000000268
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 12015.1924,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 9.64849999999933
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 12015.6766,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.035499999999956
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 12016.1336,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.254300000000512
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 12016.5517,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.327499999999418
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 12017.1167,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.774499999999534
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 12017.6724,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.956100000001243
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 12018.2181,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.954200000000128
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 12018.9436,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.089599999999336
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 12019.6319,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.349099999999453
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 12020.251,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.272899999999936
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 12020.7829,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.0687999999991
+    },
+    {
+      "client": 12,
+      "priming": true,
+      "attackOffsetMs": 12013.5615,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 83.1298999999999
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 13014.2652,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.11239999999998
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 13015.146,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.026499999999942
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 13015.7153,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 10.982900000000882
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 13016.4301,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.0020999999997
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 13017,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.34649999999965
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 13017.486,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.695599999999104
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 13017.9346,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.178200000000288
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 13018.5802,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.148600000000442
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 13019.3545,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.288900000001377
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 13020.0083,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.51640000000043
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 13020.5538,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.670799999999872
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 13021.123,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.543499999999767
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 13021.6952,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.770699999999124
+    },
+    {
+      "client": 13,
+      "priming": true,
+      "attackOffsetMs": 13013.3268,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 86.94419999999991
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 14008.9133,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.707899999999427
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 14009.6555,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.68449999999939
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 14010.217,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.013100000000122
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 14010.8299,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.042599999998856
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 14011.6207,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.946100000001024
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 14012.9417,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.33770000000004
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 14014.1064,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.761999999998807
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 14015.082,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.713200000000143
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 14015.9776,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.063599999999497
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 14016.634,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.337999999999738
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 14017.1703,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.30040000000008
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 14017.6869,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.594599999998536
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 14018.4284,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.17949999999837
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 14019.4331,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 21.00330000000031
+    },
+    {
+      "client": 14,
+      "priming": true,
+      "attackOffsetMs": 14005.4331,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 166.65929999999935
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 15014.4798,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.78690000000097
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 15015.1253,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.691500000000815
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 15015.6089,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.657100000000355
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 15016.0937,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.620600000000195
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 15016.5613,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.600000000000364
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 15017.0023,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.595699999999852
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 15017.4413,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.60019999999895
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 15018.0935,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.830399999998917
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 15018.947,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.564300000000003
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 15019.6311,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.500500000000102
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 15020.1438,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.451900000000023
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 15020.6247,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.703599999998914
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 15021.1649,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.255100000000311
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 15021.6612,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.809499999999389
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 15022.1054,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.317699999999604
+    },
+    {
+      "client": 15,
+      "priming": true,
+      "attackOffsetMs": 15013.2506,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 85.72140000000036
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 16014.3802,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.725599999999758
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 16015.1619,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.412900000001173
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 16015.886,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.312599999999293
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 16016.5901,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.96020000000135
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 16017.0329,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 11.990499999999884
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 16017.4558,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.072400000000926
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 16017.9641,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.17580000000089
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 16018.717,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.511399999999412
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 16019.4305,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.627399999999398
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 16020.0136,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.97860000000037
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 16020.5161,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.125
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 16021.0626,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.350200000000768
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 16021.6099,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.519500000000335
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 16022.1226,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.205500000000029
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 16022.5747,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.196100000001024
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 16023.0681,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.669099999999162
+    },
+    {
+      "client": 16,
+      "priming": true,
+      "attackOffsetMs": 16013.3449,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 87.23660000000018
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 17014.103,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.33390000000145
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 17014.8213,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.17699999999968
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 17015.4446,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.203400000002148
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 17015.9237,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.269800000001851
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 17016.3997,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.356599999999162
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 17016.9194,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.273400000001857
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 17017.647,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.254499999999098
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 17018.503,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.275900000000547
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 17019.2769,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.97559999999794
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 17019.8857,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.866000000001804
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 17020.4343,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.777699999998731
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 17020.9711,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.689900000001217
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 17021.5301,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.140999999999622
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 17022.1811,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.513299999998708
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 17022.7465,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.573399999997491
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 17023.2599,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.87619999999879
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 17023.7779,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.14559999999983
+    },
+    {
+      "client": 17,
+      "priming": true,
+      "attackOffsetMs": 17013.203,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 99.80679999999847
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 18005.2611,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.345499999999447
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 18006.0542,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.202900000000227
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 18006.7615,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.195899999998801
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 18007.3746,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.282900000001973
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 18007.9711,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.285299999999552
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 18008.4184,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.327800000002753
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 18008.8757,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.30159999999887
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 18009.4296,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.17410000000018
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 18010.0004,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.065899999997782
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 18010.549,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.818600000002334
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 18011.2798,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.594600000000355
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 18012.1168,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.349900000001071
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 18012.8072,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.505799999998999
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 18013.3895,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.899199999999837
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 18013.8864,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 12.882300000001123
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 18014.3607,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.127000000000407
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 18014.7811,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.533400000000256
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 18015.3362,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.04649999999674
+    },
+    {
+      "client": 18,
+      "priming": true,
+      "attackOffsetMs": 18004.2426,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 93.34629999999743
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 19005.3596,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.3762999999999
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 19005.9942,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.450699999997596
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 19006.5674,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.546300000001793
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 19007.2364,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 41,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.80949999999939
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 19007.8642,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.244800000000396
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 19008.512,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.268800000001647
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 19009.0668,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.431300000000192
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 19009.4987,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.724099999999453
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 19009.9582,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.04490000000078
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 19010.5727,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.12169999999969
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 19011.7851,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.587899999998626
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 19012.8466,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.16319999999905
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 19013.5518,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.026599999997416
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 19014.2623,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.587000000003172
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 19014.893,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.000599999999395
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 19015.6927,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.37159999999858
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 19016.7475,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.572699999996985
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 19017.5014,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.061499999999796
+    },
+    {
+      "client": 18,
+      "priming": false,
+      "attackOffsetMs": 19018.6977,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.33599999999933
+    },
+    {
+      "client": 19,
+      "priming": true,
+      "attackOffsetMs": 19004.3128,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 113.27739999999903
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 20006.3157,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.92320000000109
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 20006.7587,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.836699999999837
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 20007.2063,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.833499999997002
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 20007.642,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 40,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.814800000000105
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 20008.11,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.954200000000128
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 20008.6873,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.26589999999851
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 20009.2427,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.118399999999383
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 20009.7473,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.015900000002148
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 20010.2549,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 41,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.971699999998236
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 20010.8742,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.795200000000477
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 20011.7712,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.712200000001758
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 20012.4585,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.170900000000984
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 20013.0291,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.88839999999982
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 20013.5376,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 21.46610000000146
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 20013.999,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 22.704900000000634
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 20014.4346,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 23.712100000000646
+    },
+    {
+      "client": 18,
+      "priming": false,
+      "attackOffsetMs": 20014.8745,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 25.147399999998015
+    },
+    {
+      "client": 19,
+      "priming": false,
+      "attackOffsetMs": 20015.3419,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 26.34150000000227
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 20016.8663,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 28.941799999996874
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 20017.4775,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 29.40099999999802
+    },
+    {
+      "client": 20,
+      "priming": true,
+      "attackOffsetMs": 20004.2325,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 119.1839
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 21005.3569,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.542499999999563
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 21005.884,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.476100000003498
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 21006.4102,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.47240000000238
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 21006.9317,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 39,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.3237999999983
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 21007.3787,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.295999999998457
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 21007.8457,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.148299999997107
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 21008.2711,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.187199999996665
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 21008.6898,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.106599999999162
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 21009.1155,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 40,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.123400000000402
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 21009.5767,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 41,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.241500000000087
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 21010.0397,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.60570000000007
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 21010.479,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.630700000001525
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 21011.0387,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.488399999998364
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 21011.8137,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.4333000000006
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 21012.5849,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.316100000000006
+    },
+    {
+      "client": 18,
+      "priming": false,
+      "attackOffsetMs": 21013.186,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.585599999998522
+    },
+    {
+      "client": 19,
+      "priming": false,
+      "attackOffsetMs": 21013.6651,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.191900000001624
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 21014.1266,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.249500000001717
+    },
+    {
+      "client": 20,
+      "priming": false,
+      "attackOffsetMs": 21014.6793,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.509699999998702
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 21015.6436,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.725000000002183
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 21016.1627,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.534199999998236
+    },
+    {
+      "client": 21,
+      "priming": true,
+      "attackOffsetMs": 21004.2436,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 119.0785999999971
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 22005.5455,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.763899999998102
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 22006.233,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.794799999999668
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 22006.7553,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 38,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.720499999999447
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 22007.2407,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 41,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.533400000000256
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 22007.6949,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.612300000000687
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 22008.1459,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.871699999999691
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 22008.5466,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.23909999999887
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 22008.9752,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 39,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.627199999998993
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 22009.38,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 40,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.971299999997427
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 22009.8197,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.199000000000524
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 22010.283,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.252800000002026
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 22010.883,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.219900000000052
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 22011.5728,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.05109999999695
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 22012.3187,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.01919999999882
+    },
+    {
+      "client": 18,
+      "priming": false,
+      "attackOffsetMs": 22013.002,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.45339999999851
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 22013.6822,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.375299999999697
+    },
+    {
+      "client": 20,
+      "priming": false,
+      "attackOffsetMs": 22014.2689,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.25749999999971
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 22014.7361,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.50170000000071
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 22015.1645,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.72780000000057
+    },
+    {
+      "client": 21,
+      "priming": false,
+      "attackOffsetMs": 22015.6046,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.892600000002858
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 22016.0559,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.023700000001554
+    },
+    {
+      "client": 19,
+      "priming": false,
+      "attackOffsetMs": 22016.7291,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.134900000000926
+    },
+    {
+      "client": 22,
+      "priming": true,
+      "attackOffsetMs": 22004.5172,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 98.51929999999993
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 23004.9804,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.4416999999994
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 23005.6617,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.30449999999837
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 23006.198,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 37,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.47569999999905
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 23006.7047,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 40,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.4178000000029
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 23007.2205,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.391200000001845
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 23007.732,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.769899999999325
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 23008.2289,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.708700000002864
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 23008.7261,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 38,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.814699999998993
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 23009.2341,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 39,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.7570999999989
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 23009.7438,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.675999999999476
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 23010.4232,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.444499999997788
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 23011.1275,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.432400000001508
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 23011.8852,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.07419999999911
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 23012.5466,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.848599999997532
+    },
+    {
+      "client": 18,
+      "priming": false,
+      "attackOffsetMs": 23013.1399,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.69590000000244
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 23013.718,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.54899999999907
+    },
+    {
+      "client": 20,
+      "priming": false,
+      "attackOffsetMs": 23014.2124,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.009500000000116
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 23014.7034,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.375200000002224
+    },
+    {
+      "client": 21,
+      "priming": false,
+      "attackOffsetMs": 23015.236,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.744199999997363
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 23015.6626,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 41,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.83520000000135
+    },
+    {
+      "client": 19,
+      "priming": false,
+      "attackOffsetMs": 23016.1314,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.151700000002165
+    },
+    {
+      "client": 22,
+      "priming": false,
+      "attackOffsetMs": 23016.5484,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.524199999999837
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 23018.6441,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.1420999999973
+    },
+    {
+      "client": 23,
+      "priming": true,
+      "attackOffsetMs": 23003.5669,
+      "status": "401",
+      "code": "INVALID_CREDENTIALS",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 108.28729999999996
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 24004.0255,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.221300000001065
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 24005.1114,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.486499999999069
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 24005.9272,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 36,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.33810000000085
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 24006.6583,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 39,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.10399999999936
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 24007.1836,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.318299999998999
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 24007.6445,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.384200000000419
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 24008.087,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.448800000001938
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 24008.466,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 37,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.62619999999879
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 24008.9158,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 38,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.714700000000448
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 24009.4287,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.323199999998906
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 24009.8852,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.517100000000937
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 24010.2932,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.736700000001292
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 24010.8999,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.708599999998114
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 24011.732,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.452499999999418
+    },
+    {
+      "client": 18,
+      "priming": false,
+      "attackOffsetMs": 24012.4258,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.265699999999924
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 24013.0097,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.288300000000163
+    },
+    {
+      "client": 20,
+      "priming": false,
+      "attackOffsetMs": 24013.4379,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.874100000000908
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 24013.882,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.93659999999727
+    },
+    {
+      "client": 21,
+      "priming": false,
+      "attackOffsetMs": 24014.3333,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.83350000000064
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 24014.7195,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 40,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.153000000002066
+    },
+    {
+      "client": 19,
+      "priming": false,
+      "attackOffsetMs": 24015.1144,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.77400000000125
+    },
+    {
+      "client": 22,
+      "priming": false,
+      "attackOffsetMs": 24015.529,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.49279999999999
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 24016.0142,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.8295999999973
+    },
+    {
+      "client": 23,
+      "priming": false,
+      "attackOffsetMs": 24016.4924,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.76390000000174
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 25004.0008,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 40,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.938899999997375
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 25005.2096,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 41,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.909700000000157
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 25006.0591,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 35,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.6720000000023
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 25006.7816,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 38,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.717000000000553
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 25007.461,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.7515999999996
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 25008.2284,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.922600000001694
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 25008.9869,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 19.16860000000088
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 25009.7008,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 36,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.95020000000295
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 25010.3664,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 37,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.706099999999424
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 25011.3708,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.22559999999794
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 25012.454,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.51719999999841
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 25013.1768,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.21089999999822
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 25013.7458,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.159299999999348
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 25014.2645,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.561499999999796
+    },
+    {
+      "client": 18,
+      "priming": false,
+      "attackOffsetMs": 25014.7691,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.753099999998085
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 25015.2735,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.140800000001036
+    },
+    {
+      "client": 20,
+      "priming": false,
+      "attackOffsetMs": 25015.7579,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.53610000000117
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 25016.3308,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.82289999999921
+    },
+    {
+      "client": 21,
+      "priming": false,
+      "attackOffsetMs": 25016.8887,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.170099999999366
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 25017.4615,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 39,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.247999999999593
+    },
+    {
+      "client": 22,
+      "priming": false,
+      "attackOffsetMs": 25018.2701,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 20.873399999996764
+    },
+    {
+      "client": 23,
+      "priming": false,
+      "attackOffsetMs": 25019.017,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 21.48199999999997
+    },
+    {
+      "client": 19,
+      "priming": false,
+      "attackOffsetMs": 25020.9391,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 22.82170000000042
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 25021.3701,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 23.285899999998946
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 26012.5115,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 40,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.312799999999697
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 26013.3964,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 34,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.60149999999703
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 26014.0165,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 37,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.573499999998603
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 26014.6435,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.37590000000273
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 26015.1244,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 41,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.44970000000103
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 26015.5254,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.4249000000018
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 26015.9245,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 35,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.563399999999092
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 26016.3706,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 36,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.573600000003353
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 26017.0423,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.513199999997596
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 26018.8302,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.67529999999897
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 26019.8215,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.3524000000034
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 26020.5081,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.96980000000258
+    },
+    {
+      "client": 18,
+      "priming": false,
+      "attackOffsetMs": 26021.1923,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.84860000000117
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 26021.8153,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.871100000000297
+    },
+    {
+      "client": 20,
+      "priming": false,
+      "attackOffsetMs": 26022.2897,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.10649999999805
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 26022.8503,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.997200000001612
+    },
+    {
+      "client": 21,
+      "priming": false,
+      "attackOffsetMs": 26023.3739,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.874800000001414
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 26023.88,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 38,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.761599999997998
+    },
+    {
+      "client": 22,
+      "priming": false,
+      "attackOffsetMs": 26024.7388,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.920099999999366
+    },
+    {
+      "client": 23,
+      "priming": false,
+      "attackOffsetMs": 26025.4384,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.16240000000107
+    },
+    {
+      "client": 19,
+      "priming": false,
+      "attackOffsetMs": 26026.0314,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.310600000000704
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 26026.4454,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.547999999998865
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 26027.7067,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 39,
+      "noStore": true,
+      "noSession": true,
+      "ms": 21.6066000000028
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 26028.2157,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 23.28570000000036
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 27003.4949,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 39,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.04229999999734
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 27004.4704,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 33,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.474400000002788
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 27005.3445,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 36,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.360000000000582
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 27006.2085,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.207699999999022
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 27006.8685,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 40,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.028399999999237
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 27007.5034,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.803099999997357
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 27008.1131,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 34,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.57220000000234
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 27008.674899999998,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 35,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.396700000001147
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 27009.0787,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.637100000003556
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 27009.4741,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.830500000000029
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 27009.8394,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 13.884900000000926
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 27010.2486,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 51,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.531300000002375
+    },
+    {
+      "client": 18,
+      "priming": false,
+      "attackOffsetMs": 27010.7394,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.524199999999837
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 27011.2067,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.58599999999933
+    },
+    {
+      "client": 20,
+      "priming": false,
+      "attackOffsetMs": 27011.8067,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.523999999997613
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 27012.3477,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.63300000000163
+    },
+    {
+      "client": 21,
+      "priming": false,
+      "attackOffsetMs": 27012.7821,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.047699999999168
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 27013.2064,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 37,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.172300000001997
+    },
+    {
+      "client": 22,
+      "priming": false,
+      "attackOffsetMs": 27013.6249,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.132100000002538
+    },
+    {
+      "client": 23,
+      "priming": false,
+      "attackOffsetMs": 27013.9878,
+      "status": "403",
+      "code": "BOT_CHALLENGE_REQUIRED",
+      "retryAfter": 0,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.565200000000914
+    },
+    {
+      "client": 19,
+      "priming": false,
+      "attackOffsetMs": 27014.3581,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.796399999999267
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 27014.718,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.291300000000774
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 27015.0941,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 38,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.72019999999975
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 27015.4781,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.79330000000118
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 28003.7083,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 38,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.671500000000378
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 28004.7398,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 32,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.869200000001001
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 28005.3342,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 35,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.927199999998265
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 28005.7981,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.658299999999144
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 28006.2565,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 39,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.532200000001467
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 28006.6835,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.443699999999808
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 28007.1697,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 33,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.538400000001275
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 28007.6705,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 34,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.441899999997986
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 28008.1151,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 41,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.518599999999424
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 28008.5749,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.56590000000142
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 28009.0504,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.57760000000053
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 28009.5438,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.682799999998679
+    },
+    {
+      "client": 18,
+      "priming": false,
+      "attackOffsetMs": 28009.9864,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 14.814599999997881
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 28010.6,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.611100000001898
+    },
+    {
+      "client": 20,
+      "priming": false,
+      "attackOffsetMs": 28011.3646,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.199099999997998
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 28012.0428,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 15.804400000000896
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 28012.5548,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 36,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.641599999999016
+    },
+    {
+      "client": 22,
+      "priming": false,
+      "attackOffsetMs": 28013.1685,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.317699999999604
+    },
+    {
+      "client": 23,
+      "priming": false,
+      "attackOffsetMs": 28014.053,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 5,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.06750000000102
+    },
+    {
+      "client": 19,
+      "priming": false,
+      "attackOffsetMs": 28014.5745,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.66660000000047
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 28015.0218,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.807400000001508
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 28015.4539,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 37,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.64760000000024
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 28015.8975,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.583200000000943
+    },
+    {
+      "client": 21,
+      "priming": false,
+      "attackOffsetMs": 28016.3747,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 18.254399999997986
+    },
+    {
+      "client": 6,
+      "priming": false,
+      "attackOffsetMs": 29005.1807,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 37,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.871499999997468
+    },
+    {
+      "client": 0,
+      "priming": false,
+      "attackOffsetMs": 29006.5288,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 31,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.88249999999971
+    },
+    {
+      "client": 3,
+      "priming": false,
+      "attackOffsetMs": 29007.2217,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 34,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.529900000001362
+    },
+    {
+      "client": 9,
+      "priming": false,
+      "attackOffsetMs": 29007.8701,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 40,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.491699999998673
+    },
+    {
+      "client": 7,
+      "priming": false,
+      "attackOffsetMs": 29008.6419,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 38,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.460900000001857
+    },
+    {
+      "client": 12,
+      "priming": false,
+      "attackOffsetMs": 29009.3976,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 43,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.95349999999962
+    },
+    {
+      "client": 1,
+      "priming": false,
+      "attackOffsetMs": 29010.2919,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 32,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.902600000001257
+    },
+    {
+      "client": 2,
+      "priming": false,
+      "attackOffsetMs": 29010.965,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 33,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.718700000001263
+    },
+    {
+      "client": 8,
+      "priming": false,
+      "attackOffsetMs": 29011.6175,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 39,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.50330000000031
+    },
+    {
+      "client": 10,
+      "priming": false,
+      "attackOffsetMs": 29012.1515,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 41,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.4304000000011
+    },
+    {
+      "client": 15,
+      "priming": false,
+      "attackOffsetMs": 29012.575,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 46,
+      "noStore": true,
+      "noSession": true,
+      "ms": 17.119200000001
+    },
+    {
+      "client": 17,
+      "priming": false,
+      "attackOffsetMs": 29013.1089,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 48,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.913300000000163
+    },
+    {
+      "client": 18,
+      "priming": false,
+      "attackOffsetMs": 29013.609,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 49,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.533500000001368
+    },
+    {
+      "client": 14,
+      "priming": false,
+      "attackOffsetMs": 29014.0521,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 45,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.343699999997625
+    },
+    {
+      "client": 20,
+      "priming": false,
+      "attackOffsetMs": 29014.4123,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 1,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.18210000000181
+    },
+    {
+      "client": 13,
+      "priming": false,
+      "attackOffsetMs": 29014.7582,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 44,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.026600000001054
+    },
+    {
+      "client": 4,
+      "priming": false,
+      "attackOffsetMs": 29015.1004,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 35,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.416300000000774
+    },
+    {
+      "client": 22,
+      "priming": false,
+      "attackOffsetMs": 29015.4418,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 3,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.71600000000035
+    },
+    {
+      "client": 23,
+      "priming": false,
+      "attackOffsetMs": 29015.7894,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 4,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.79519999999684
+    },
+    {
+      "client": 19,
+      "priming": false,
+      "attackOffsetMs": 29016.1321,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 50,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.953600000000733
+    },
+    {
+      "client": 11,
+      "priming": false,
+      "attackOffsetMs": 29016.4787,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 42,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.948899999999412
+    },
+    {
+      "client": 5,
+      "priming": false,
+      "attackOffsetMs": 29016.8274,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 36,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.95260000000053
+    },
+    {
+      "client": 16,
+      "priming": false,
+      "attackOffsetMs": 29017.3122,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 47,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.82170000000042
+    },
+    {
+      "client": 21,
+      "priming": false,
+      "attackOffsetMs": 29018.1254,
+      "status": "429",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "retryAfter": 2,
+      "noStore": true,
+      "noSession": true,
+      "ms": 16.359599999999773
+    }
+  ],
+  "probes": [
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 19.11869999999999
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 50.409500000000094
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 52.68229999999994
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 15.197099999999978
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.639099999999985
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 57.67809999999997
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.3431999999999107
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 46.763000000000034
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 2.3454000000000406
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 20.55450000000019
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 23.926600000000235
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 27.241799999999785
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 28.666000000000167
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 30.030099999999948
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 30.620100000000093
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 13.047199999999975
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 11.572500000000218
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 10.896799999999985
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 9.778700000000299
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 10.768500000000131
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 12.296400000000176
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 12.875300000000152
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 13.228000000000065
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 13.751000000000204
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 5.350199999999859
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 7.909500000000207
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 7.2072000000002845
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 22.742700000000696
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 24.548500000000786
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 26.005600000000413
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 17.054799999999886
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 17.626400000000103
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 19.28350000000046
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 8.013100000000122
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 7.22189999999955
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 5.51720000000023
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 9.07629999999972
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 10.638200000000325
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 12.23279999999977
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 10.970699999999852
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 11.487599999999475
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.6518000000005486
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 11.728100000000268
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.086099999999533
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 2.2214999999996508
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 33.21140000000014
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 36.33420000000115
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 38.558899999999994
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 23.634000000000015
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 24.355899999998655
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 25.63969999999972
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 13.367700000000696
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 10.919099999999162
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 9.094300000000658
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 7.834500000000844
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 9.514999999999418
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 10.163699999999153
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 8.764100000000326
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 8.881900000000314
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 9.917099999998754
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 4.700600000000122
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.4932000000007974
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 2.3744000000006054
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 36.28479999999945
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 39.02099999999882
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 41.381499999999505
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 30.165200000001278
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 30.606300000001283
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 32.341200000000754
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 12.005699999999706
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 11.941499999998996
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 9.173300000000381
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 10.064900000001217
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 10.821900000000824
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 12.294800000001487
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 9.792500000001382
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 11.285400000000664
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.7986000000000786
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 11.880100000000311
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.2929000000003725
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 2.422900000001391
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 42.48189999999886
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 44.776600000001054
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 47.21949999999924
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 19.865700000000288
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 21.895699999999124
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 6.735500000000684
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 22.650100000000748
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 5.577900000000227
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.2613000000001193
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 9.120500000000902
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 10.011500000000524
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 11.02599999999984
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 7.619599999999991
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 8.206000000000131
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.027800000001662
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 9.218000000000757
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.176900000000387
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 1.8544000000001688
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 26.953699999998207
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 29.50760000000082
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 31.524599999997008
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 19.5625
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 22.702900000000227
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 24.7400000000016
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 12.09979999999996
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 7.180199999998877
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 4.295300000001589
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 10.573100000001432
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 12.350399999999354
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 13.499500000001717
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 11.112300000000687
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 10.066500000000815
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 9.99829999999929
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.463500000001659
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 2.6425000000017462
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 1.8377000000000407
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 56.699900000003254
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 59.37989999999991
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 63.162899999999354
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 22.72019999999975
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 27.003499999998894
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 10.524799999999232
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 28.871799999997165
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 8.737700000001496
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 5.009399999999005
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 7.458099999999831
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 8.115099999999074
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 9.402200000000448
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 10.63470000000234
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 10.808600000000297
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 11.267499999998108
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 4.296099999999569
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.4284000000006927
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 2.4760000000023865
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 27.836999999999534
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 29.742099999999482
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 31.842499999998836
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 17.98149999999805
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 19.107399999997142
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 20.73990000000049
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 9.273099999998522
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 7.486000000000786
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 4.955799999999726
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 8.738000000001193
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 9.987999999997555
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 11.612300000000687
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 12.18159999999989
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 12.663000000000466
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 12.833800000000338
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 5.669099999999162
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 4.201199999999517
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.428200000002107
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 28.189800000000105
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 29.20379999999932
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 30.382399999998597
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 8.622400000000198
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 8.709900000001653
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 9.22950000000128
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 4.214299999999639
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.453799999999319
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 1.99210000000312
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 8.970000000001164
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 10.410100000000966
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 10.930499999998574
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 9.978800000000774
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 10.010999999998603
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 10.587400000000343
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.933499999999185
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 2.3620000000009895
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 4.426800000001094
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 34.843300000000454
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 35.645300000000134
+    },
+    {
+      "kind": "session",
+      "status": "200",
+      "ok": true,
+      "ms": 36.389899999998306
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 7.957800000000134
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 8.011800000000221
+    },
+    {
+      "kind": "menu",
+      "status": "200",
+      "ok": true,
+      "ms": 8.386199999997189
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 3.5908999999992375
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 2.5428000000028987
+    },
+    {
+      "kind": "health",
+      "status": "200",
+      "ok": true,
+      "ms": 1.4570999999996275
+    }
+  ],
+  "sharedSource": [
+    {
+      "status": "429",
+      "ok": false,
+      "ms": 22.89389999999912,
+      "attackOffsetMs": 25020.4277
+    }
+  ],
+  "victimDuring": [
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 121.86390000000029,
+      "attackOffsetMs": 8022.5545999999995
+    },
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 114.51750000000175,
+      "attackOffsetMs": 21015.1772
+    },
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 87.8035000000018,
+      "attackOffsetMs": 27015.862399999998
+    }
+  ],
+  "victimFreshSource": [
+    {
+      "status": "200",
+      "ok": true,
+      "ms": 104.66509999999835,
+      "attackOffsetMs": 25019.7069
+    }
+  ],
+  "missedAttack": 0,
+  "missedProbes": 0,
+  "sessionsCreated": 13,
+  "sessionsRevoked": 13,
+  "baselineElapsedMs": 263.72090000000003,
+  "attackElapsedMs": 30003.6515,
+  "recoveryElapsedMs": 208.84770000000208,
+  "finishedAt": "2026-10-29T10:10:43.660Z",
+  "metrics": {
+    "baseline": {
+      "requests": 3,
+      "successes": 3,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 11.38,
+      "p50Ms": 71,
+      "p95Ms": 123,
+      "p99Ms": 123,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 3
+      }
+    },
+    "legitimate": {
+      "requests": 3,
+      "successes": 3,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 0.1,
+      "p50Ms": 124,
+      "p95Ms": 128,
+      "p99Ms": 128,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 3
+      }
+    },
+    "recovery": {
+      "requests": 3,
+      "successes": 3,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 14.36,
+      "p50Ms": 68,
+      "p95Ms": 72,
+      "p99Ms": 72,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 3
+      }
+    },
+    "victimDuring": {
+      "requests": 3,
+      "successes": 3,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 0.1,
+      "p50Ms": 115,
+      "p95Ms": 122,
+      "p99Ms": 122,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 3
+      }
+    },
+    "victimFreshSource": {
+      "requests": 1,
+      "successes": 1,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 0.03,
+      "p50Ms": 105,
+      "p95Ms": 105,
+      "p99Ms": 105,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 1
+      }
+    },
+    "attack": {
+      "requests": 434,
+      "successes": 0,
+      "failures": 434,
+      "errorRate": 1,
+      "requestsPerSecond": 14.46,
+      "p50Ms": null,
+      "p95Ms": null,
+      "p99Ms": null,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "401": 24,
+        "403": 100,
+        "429": 310
+      }
+    },
+    "probes": {
+      "requests": 180,
+      "successes": 180,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 6,
+      "p50Ms": 11,
+      "p95Ms": 42,
+      "p99Ms": 59,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 180
+      }
+    }
+  }
+}

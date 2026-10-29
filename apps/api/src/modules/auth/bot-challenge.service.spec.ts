@@ -79,7 +79,7 @@ describe('progressive challenge policy and server verification', () => {
     });
     expect(provider).not.toHaveBeenCalled();
   });
-  it('normalizes distributed account failures and IPv6 subnets', async () => {
+  it('challenges failed sources for an attacked account while leaving clean victims and IPv6 normalization intact', async () => {
     for (let i = 1; i <= 5; i++)
       service.failed(
         service.assess(
@@ -91,6 +91,21 @@ describe('progressive challenge policy and server verification', () => {
     await expect(
       service.check(
         service.assess(request('192.0.2.99'), 'login'),
+        undefined,
+        response,
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      service.check(
+        service.assess(request('192.0.2.1'), 'login'),
+        undefined,
+        response,
+      ),
+    ).rejects.toMatchObject({ status: 403 });
+    service.succeeded(service.assess(request('192.0.2.99'), 'login'));
+    await expect(
+      service.check(
+        service.assess(request('192.0.2.1'), 'login'),
         undefined,
         response,
       ),
@@ -110,6 +125,28 @@ describe('progressive challenge policy and server verification', () => {
         response,
       ),
     ).rejects.toMatchObject({ status: 403 });
+  });
+  it('does not challenge clean victims merely because risk tracking is full', async () => {
+    const abusive = suspicious();
+    const risks = Reflect.get(service, 'risks') as Map<
+      string,
+      { hits: number; expires: number }
+    >;
+    for (let i = risks.size; i < 20_000; i++)
+      risks.set(`synthetic-${i}`, { hits: 1, expires: 900_000 });
+    const clean = service.assess(
+      request('192.0.2.99', 'victim@example.test'),
+      'login',
+    );
+    await expect(
+      service.check(clean, undefined, response),
+    ).resolves.toBeUndefined();
+    service.failed(clean, new UnauthorizedException());
+    expect(risks.size).toBe(20_000);
+    await expect(
+      service.check(abusive, undefined, response),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(provider).not.toHaveBeenCalled();
   });
   it('escalates repeated registration equally without looking up accounts', async () => {
     const risk = service.assess(request(), 'register');

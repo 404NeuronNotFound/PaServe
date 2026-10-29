@@ -71,6 +71,33 @@ describe('authentication resource admission', () => {
     },
   );
 
+  it('does not spend a victim source budget when other sources target the same normalized account', () => {
+    for (let i = 0; i < 24; i++) {
+      now = i * 1100;
+      protection.acquire(
+        response,
+        i % 2 ? ' OWNER@Test.com ' : 'owner@test.com',
+        `192.0.2.${i + 1}`,
+      )();
+    }
+    expect(() =>
+      protection.acquire(response, 'owner@test.com', '192.0.2.99')(),
+    ).not.toThrow();
+  });
+
+  it('keeps account/source metadata bounded without rejecting a new victim when it fills', () => {
+    const accounts = Reflect.get(protection, 'accounts') as Map<
+      string,
+      { hits: number; expires: number }
+    >;
+    for (let i = 0; i < 10_000; i++)
+      accounts.set(`synthetic-${i}`, { hits: 20, expires: 60000 });
+    expect(() =>
+      protection.acquire(response, 'victim@test.com', '192.0.2.99')(),
+    ).not.toThrow();
+    expect(accounts.size).toBe(10_000);
+  });
+
   it('does not store raw account identifiers or passwords', () => {
     protection.acquire(response, 'private@example.com')();
     const state = JSON.stringify([...Reflect.get(protection, 'accounts')]);

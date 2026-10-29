@@ -53,7 +53,7 @@ describe('login flood isolation', () => {
       .set('X-PaServe-Client', 'web')
       .send({ email, password: 'a long valid password' });
 
-  it('throttles distributed attempts on a normalized account before authentication and expires the limit', async () => {
+  it('keeps normalized-account enforcement source-scoped so distributed failures cannot block a clean victim', async () => {
     for (let i = 1; i <= 20; i++) {
       now = i * 1100;
       await attempt(
@@ -61,11 +61,20 @@ describe('login flood isolation', () => {
         i % 2 ? ' OWNER@example.com ' : 'owner@example.com',
       ).expect(401);
     }
-    const blocked = await attempt(21).expect(429);
-    expect(blocked.body.code).toBe('RATE_LIMIT_EXCEEDED');
-    expect(blocked.headers['cache-control']).toBe('no-store');
-    expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
-    expect(login).toHaveBeenCalledTimes(20);
+    await attempt(21).expect(401);
+    expect(login).toHaveBeenCalledTimes(21);
+    login.mockResolvedValueOnce({
+      refreshToken: 'synthetic-victim-refresh',
+      expiresAt: new Date(Date.now() + 60000),
+      keepSignedIn: false,
+      response: {
+        accessToken: 'synthetic-victim-access',
+        user: { id: 'victim' },
+      },
+    });
+    const victim = await attempt(99).expect(200);
+    expect(victim.body.user.id).toBe('victim');
+    expect(victim.headers['set-cookie']).toBeDefined();
     await attempt(22, 'another@example.com').expect(401);
     now = 62_000;
     await attempt(23).expect(401);

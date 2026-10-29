@@ -23,6 +23,7 @@ const isolatedLoad = [
   'load-search',
   'load-ramp',
   'load-ramp-diagnostic',
+  'load-login-flood',
 ].includes(suite);
 const shutdown = new AbortController();
 const interrupt = () => {
@@ -49,6 +50,7 @@ assert.ok(
     'load-search',
     'load-ramp',
     'load-ramp-diagnostic',
+    'load-login-flood',
   ].includes(suite),
   'Choose a supported local database suite.',
 );
@@ -91,7 +93,7 @@ let removed = false;
 let loadSucceeded = false;
 const loadReport = resolve(
   apiRoot,
-  `../../artifacts/performance/load-environment${suite === 'load-search' ? '-search' : suite === 'load-ramp' ? '-ramp' : suite === 'load-ramp-diagnostic' ? '-ramp-diagnostic' : ''}-local.json`,
+  `../../artifacts/performance/load-environment${suite === 'load-search' ? '-search' : suite === 'load-ramp' ? '-ramp' : suite === 'load-ramp-diagnostic' ? '-ramp-diagnostic' : suite === 'load-login-flood' ? '-login-flood' : ''}-local.json`,
 );
 async function cleanup() {
   if (initialized) {
@@ -222,6 +224,7 @@ try {
             search: suite === 'load-search',
             ramp: suite.startsWith('load-ramp'),
             diagnostic: suite === 'load-ramp-diagnostic',
+            loginFlood: suite === 'load-login-flood',
           })
         : env,
       windowsHide: true,
