@@ -19,6 +19,7 @@ describe('public menu visibility', () => {
         shop: { findFirst: findShop },
         product: { findMany: findProducts },
         category: { findMany: findCategories },
+        menuCacheState: { findUnique: async () => null },
       })
       .compile();
     app = module.createNestApplication();

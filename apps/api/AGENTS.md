@@ -18,6 +18,10 @@
   through spread request bodies. Do not expose another tenant's resource existence.
 - Preserve RLS and revoked anon/authenticated browser table privileges for
   shops, memberships, categories and products. NestJS owns access today.
+- Preserve the internal `menu_cache_versions` table, its RLS/browser revocations,
+  and statement-level product/category invalidation triggers. Catalog writes
+  must advance the affected shops' versions in the same transaction. Never
+  cache permissions, payment/order state, quotes or table checkout proofs there.
 - Preserve the SQL-maintained per-shop unique indexes on lower(requestId) and
   lower(paymentRequestId) from `20261028090000_idempotency_key_identity`. Prisma
   cannot model these expression indexes. Never rewrite immutable paid receipt

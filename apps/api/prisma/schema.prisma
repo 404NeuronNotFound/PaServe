@@ -82,8 +82,17 @@ model Shop {
   orders     Order[]
   staffInvitations StaffInvitation[]
   staffAuditEvents StaffAuditEvent[]
+  menuCacheState MenuCacheState?
 
   @@map("shops")
+}
+
+// Internal server-only invalidation state, maintained by SQL statement triggers.
+model MenuCacheState {
+  shopId String @id
+  version String @default(dbgenerated("gen_random_uuid()::text"))
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  @@map("menu_cache_versions")
 }
 
 model RestaurantTable {
