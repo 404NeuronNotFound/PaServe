@@ -14,6 +14,7 @@ describe('tenant-scoped category creation', () => {
   const shopId = '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e';
   const other = '55b18d73-f2fb-4fe6-bb1c-30cf385c3b24';
   const findUnique = vi.fn(),
+    findCategories = vi.fn(),
     update = vi.fn(),
     findFirst = vi.fn(),
     currentUser = vi.fn();
@@ -32,7 +33,11 @@ describe('tenant-scoped category creation', () => {
       .overrideProvider(AuthService)
       .useValue({ currentUser })
       .overrideProvider(PrismaService)
-      .useValue({ shopMember: { findUnique }, shop: { update, findFirst } })
+      .useValue({
+        shopMember: { findUnique },
+        shop: { update, findFirst },
+        category: { findMany: findCategories },
+      })
       .compile();
     app = module.createNestApplication();
     app.setGlobalPrefix('api/v1');
@@ -44,6 +49,7 @@ describe('tenant-scoped category creation', () => {
   beforeEach(() => {
     resetRateLimits(app);
     vi.resetAllMocks();
+    findCategories.mockResolvedValue([category]);
     role = 'OWNER';
     active = true;
     currentUser.mockResolvedValue({ id: userId });
@@ -180,8 +186,9 @@ describe('tenant-scoped category creation', () => {
       .set('Authorization', 'Bearer valid')
       .expect(200);
     expect(response.body.categories).toHaveLength(1);
-    expect(findFirst.mock.calls[0][0].select.categories.where).toEqual({
-      shopId,
+    expect(findCategories.mock.calls[0][0]).toMatchObject({
+      where: { shopId, shop: { id: shopId, isActive: true } },
+      take: 101,
     });
     findFirst.mockResolvedValue(null);
     await request(app.getHttpServer())

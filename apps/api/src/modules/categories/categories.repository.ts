@@ -8,6 +8,10 @@ import {
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
+import {
+  collectionPage,
+  type CollectionQuery,
+} from '../../common/http/collection-page.js';
 
 const roles = rolesForShopPermissions('shop.menu.manage');
 const categorySelect = {
@@ -37,6 +41,7 @@ export class CategoriesRepository {
           select: {
             categories: {
               where: { shopId },
+              take: 501,
               select: { id: true },
               orderBy: [
                 { sortOrder: 'asc' },
@@ -79,6 +84,7 @@ export class CategoriesRepository {
           select: {
             categories: {
               where: { shopId },
+              take: 500,
               select: categorySelect,
               orderBy: [
                 { sortOrder: 'asc' },
@@ -138,18 +144,25 @@ export class CategoriesRepository {
       select: categorySelect,
     });
   }
-  list(userId: string, shopId: string) {
+  async list(userId: string, shopId: string, query: CollectionQuery = {}) {
+    const page = collectionPage(query, `categories:${shopId}`);
     // Parent scope repeats live authorization and distinguishes lost access from an empty menu.
-    return this.prisma.shop.findFirst({
-      where: shopAccessWhere(userId, shopId, roles),
-      select: {
-        categories: {
-          where: { shopId },
-          select: categorySelect,
-          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
-        },
-      },
-    });
+    const access = shopAccessWhere(userId, shopId, roles);
+    if (
+      !(await this.prisma.shop.findFirst({
+        where: access,
+        select: { id: true },
+      }))
+    )
+      return null;
+    return {
+      categories: await this.prisma.category.findMany({
+        where: { shopId, shop: access, ...page.where },
+        take: page.take,
+        select: categorySelect,
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+      }),
+    };
   }
   create(userId: string, shopId: string, name: string, slug: string) {
     // The conditional parent write and child creation run atomically; no client tenant assignment.

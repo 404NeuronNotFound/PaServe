@@ -14,6 +14,10 @@ import { isTransactionConflict } from '../../database/transaction-conflict.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import { CategoriesRepository } from './categories.repository.js';
 import { categorySlug } from './category-slug.js';
+import {
+  collectionPage,
+  type CollectionQuery,
+} from '../../common/http/collection-page.js';
 import type { CreateCategoryDto } from './create-category.dto.js';
 import type { UpdateCategoryDto } from './update-category.dto.js';
 import { TenantResourcesService } from '../tenancy/tenant-resources.service.js';
@@ -64,7 +68,8 @@ export class CategoriesService {
       if (isTransactionConflict(error))
         throw new ConflictException({
           code: 'CATEGORY_ORDER_CHANGED',
-          message: 'The menu changed while saving. Refresh before saving again.',
+          message:
+            'The menu changed while saving. Refresh before saving again.',
         });
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') throw lostAccess();
@@ -193,12 +198,19 @@ export class CategoriesService {
       throw error;
     }
   }
-  async list(userId: string, shopId: string): Promise<CategoriesResponse> {
+  async list(
+    userId: string,
+    shopId: string,
+    query: CollectionQuery = {},
+  ): Promise<CategoriesResponse> {
+    const page = collectionPage(query, `categories:${shopId}`);
     await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
-    const result = await this.repository.list(userId, shopId);
+    const result = await this.repository.list(userId, shopId, query);
     if (!result) throw lostAccess();
+    const { items, nextCursor } = page.finish(result.categories);
     return {
-      categories: result.categories.map((category) => ({
+      nextCursor,
+      categories: items.map((category) => ({
         ...category,
         createdAt: category.createdAt.toISOString(),
       })),

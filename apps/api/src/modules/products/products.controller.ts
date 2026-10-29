@@ -4,6 +4,7 @@ import {
   Body,
   Post,
   Get,
+  Query,
   Patch,
   Req,
   Res,
@@ -19,6 +20,7 @@ import type { Response } from 'express';
 import { Permissions } from '../shop-members/decorators/permissions.decorator.js';
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { ProductsService } from './products.service.js';
+import type { ProductPageQuery } from './product-page.js';
 import { CreateProductDto } from './create-product.dto.js';
 import { UpdateProductDto } from './update-product.dto.js';
 import { ProductArchiveDto } from './product-archive.dto.js';
@@ -194,8 +196,9 @@ export class ProductsController {
   list(
     @Req() req: ShopMemberRequest,
     @Res({ passthrough: true }) res: Response,
+    @Query() query: ProductPageQuery,
   ) {
     res.setHeader('Cache-Control', 'no-store');
-    return this.products.list(req.user.id, req.shopMembership.shopId);
+    return this.products.list(req.user.id, req.shopMembership.shopId, query);
   }
 }

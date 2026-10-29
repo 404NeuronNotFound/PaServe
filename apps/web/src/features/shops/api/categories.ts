@@ -8,6 +8,7 @@ import type {
   ReorderCategoriesRequest,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
+import { collectPages } from "../../../lib/api/collection-pages";
 import "../../auth/api/session";
 export const categoriesKey = (userId: string, shopId: string) =>
   ["categories", userId, shopId] as const;
@@ -46,12 +47,11 @@ export async function listCategories(
   shopId: string,
   signal?: AbortSignal,
 ): Promise<CategoriesResponse> {
-  return (
-    await api.get<CategoriesResponse>(
-      `/shops/${encodeURIComponent(shopId)}/categories`,
-      { signal },
-    )
-  ).data;
+  const categories=await collectPages(async cursor=>{
+    const {data}=await api.get<CategoriesResponse>(`/shops/${encodeURIComponent(shopId)}/categories`,{signal,...(cursor?{params:{cursor}}:{})});
+    return {items:data.categories,nextCursor:data.nextCursor};
+  },signal);
+  return {categories};
 }
 export async function updateCategory(
   shopId: string,

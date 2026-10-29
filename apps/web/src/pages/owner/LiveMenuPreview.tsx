@@ -3,7 +3,7 @@ import { Button } from "../../components/ui/button";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { PublicMenuResponse } from "@paserve/contracts";
-import { api } from "../../lib/api/client";
+import { loadMenuPages } from "../../lib/api/collection-pages";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { PublicMenuView } from "../public/PublicMenuView";
 import { MenuSkeleton } from "../../components/feedback/LoadingSkeleton";
@@ -25,13 +25,7 @@ export function LiveMenuPreview({
   const [width, setWidth] = useState<"phone" | "desktop">("phone");
   const menu = useQuery({
     queryKey: ["public-menu", membership.shop.slug],
-    queryFn: async ({ signal }) =>
-      (
-        await api.get<PublicMenuResponse>(
-          `/menu/${encodeURIComponent(membership.shop.slug)}`,
-          { signal },
-        )
-      ).data,
+    queryFn: ({ signal }) => loadMenuPages(`/menu/${encodeURIComponent(membership.shop.slug)}`,signal),
     enabled: membership.role === "OWNER",
     retry: false,
     staleTime: 0,

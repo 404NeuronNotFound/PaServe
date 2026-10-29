@@ -15,6 +15,7 @@ import type {
   ReorderFeaturedProductsRequest,
 } from "@paserve/contracts";
 import { api } from "../../../lib/api/client";
+import { collectPages } from "../../../lib/api/collection-pages";
 import "../../auth/api/session";
 export const productsKey = (userId: string, shopId: string) =>
   ["products", userId, shopId] as const;
@@ -137,12 +138,11 @@ export async function listProducts(
   shopId: string,
   signal?: AbortSignal,
 ): Promise<ProductsResponse> {
-  return (
-    await api.get<ProductsResponse>(
-      `/shops/${encodeURIComponent(shopId)}/products`,
-      { signal },
-    )
-  ).data;
+  const products=await collectPages(async cursor=>{
+    const {data}=await api.get<ProductsResponse>(`/shops/${encodeURIComponent(shopId)}/products`,{signal,...(cursor?{params:{cursor}}:{})});
+    return {items:data.products,nextCursor:data.nextCursor};
+  },signal);
+  return {products};
 }
 export async function createProduct(
   shopId: string,

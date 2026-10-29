@@ -200,6 +200,7 @@ it("keeps menus scoped to the selected shop on shop switches", async () => {
   ).not.toBeInTheDocument();
   expect(api.get).toHaveBeenLastCalledWith("/menu/other", {
     signal: expect.any(AbortSignal),
+    timeout: 15_000,
   });
 });
 it("shows recovery on refresh failure instead of claiming cached data is current", async () => {

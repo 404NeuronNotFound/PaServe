@@ -8,6 +8,7 @@ import {
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { shopAccessWhere } from '../tenancy/shop-scope.js';
+import { productPage, type ProductPageQuery } from './product-page.js';
 import type { ProductStatus } from '@paserve/contracts';
 
 const roles = rolesForShopPermissions('shop.menu.manage');
@@ -81,6 +82,7 @@ export class ProductsRepository {
           select: {
             products: {
               where: scope,
+              take: 501,
               select: { id: true },
               orderBy,
             },
@@ -123,6 +125,7 @@ export class ProductsRepository {
           select: {
             products: {
               where: scope,
+              take: 500,
               select: productSelect,
               orderBy,
             },
@@ -317,16 +320,23 @@ export class ProductsRepository {
       select,
     });
   }
-  list(userId: string, shopId: string) {
-    return this.prisma.shop.findFirst({
-      where: shopAccessWhere(userId, shopId, roles),
-      select: {
-        products: {
-          where: { shopId },
-          select: productSelect,
-          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
-        },
-      },
-    });
+  async list(userId: string, shopId: string, query: ProductPageQuery = {}) {
+    const page = productPage(query, shopId);
+    const access = shopAccessWhere(userId, shopId, roles);
+    if (
+      !(await this.prisma.shop.findFirst({
+        where: access,
+        select: { id: true },
+      }))
+    )
+      return null;
+    return {
+      products: await this.prisma.product.findMany({
+        where: { shopId, shop: access, ...page.where },
+        take: page.take,
+        select: productSelect,
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+      }),
+    };
   }
 }

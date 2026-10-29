@@ -15,6 +15,10 @@ import { TenantResourcesRepository } from '../dist/modules/tenancy/tenant-resour
 import { ActiveOrdersService } from '../dist/modules/orders/active-orders.service.js';
 import { CancelledOrdersService } from '../dist/modules/orders/cancelled-orders.service.js';
 import { ProductsRepository } from '../dist/modules/products/products.repository.js';
+import { ProductsService } from '../dist/modules/products/products.service.js';
+import { CategoriesService } from '../dist/modules/categories/categories.service.js';
+import { TenantResourcesService } from '../dist/modules/tenancy/tenant-resources.service.js';
+import { PublicMenuController } from '../dist/modules/categories/public-menu.controller.js';
 import { CategoriesRepository } from '../dist/modules/categories/categories.repository.js';
 import { PublicMenuRepository } from '../dist/modules/categories/public-menu.repository.js';
 import { PublicProductRepository } from '../dist/modules/products/public-product.repository.js';
@@ -617,6 +621,243 @@ try {
     },
     rawSamples: samples,
   };
+  const resourceService = new TenantResourcesService(members, resources);
+  const productService = new ProductsService(
+    products,
+    members,
+    resourceService,
+  );
+  const categoryService = new CategoriesService(
+    categories,
+    members,
+    resourceService,
+  );
+  const menuController = new PublicMenuController(menu, {}, {});
+  const res = { setHeader() {} };
+  let productPages = 0,
+    categoryPages = 0,
+    menuPagesRead = 0;
+  const pagingPlans = [];
+  const explainPage = async (name, read, relation, expectedIndex) => {
+    events.length = 0;
+    captureQueries = true;
+    try {
+      await read();
+    } finally {
+      captureQueries = false;
+    }
+    const event = events.find((event) =>
+      event.query.includes(`FROM "public"."${relation}"`),
+    );
+    assert.ok(event, `${name}: expected captured page SQL`);
+    const result = (
+      await setup.query(
+        'EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ' + event.query,
+        JSON.parse(event.params),
+      )
+    ).rows[0]['QUERY PLAN'][0];
+    const indexes = Array.isArray(expectedIndex)
+      ? expectedIndex
+      : [expectedIndex];
+    assert.equal(
+      result.Plan['Node Type'],
+      'Limit',
+      `${name}: PostgreSQL must enforce pagination, not Prisma in-memory slicing`,
+    );
+    if (!indexes.some((index) => JSON.stringify(result).includes(index)))
+      console.error(
+        JSON.stringify(
+          {
+            name,
+            sql: event.query,
+            params: JSON.parse(event.params),
+            plan: result,
+          },
+          null,
+          2,
+        ),
+      );
+    assert.ok(
+      indexes.some((index) => JSON.stringify(result).includes(index)),
+      `${name}: expected a matching tenant index`,
+    );
+    pagingPlans.push({
+      name,
+      sql: event.query,
+      params: JSON.parse(event.params),
+      plan: result,
+    });
+  };
+  await setup.query(
+    `INSERT INTO categories(id,"shopId",name,slug,"sortOrder","createdAt","updatedAt")
+    SELECT gen_random_uuid()::text,$1,'Paging category '||n,'paging-category-'||n,0,timestamp '2026-01-01',now() FROM generate_series(1,1000) n`,
+    [large.id],
+  );
+  // Category selectivity needs other tenants too: a table containing almost
+  // exclusively one shop is legitimately cheaper to scan/sort in PostgreSQL.
+  const backgroundShop = await prisma.shop.create({
+    data: { name: 'Background catalog', slug: 'paging-background' },
+  });
+  await setup.query(
+    `INSERT INTO categories(id,"shopId",name,slug,"sortOrder","createdAt","updatedAt")
+    SELECT gen_random_uuid()::text,$1,'Background '||n,'background-'||n,n%100,timestamp '2026-01-01',now() FROM generate_series(1,20000) n`,
+    [backgroundShop.id],
+  );
+  await analyze();
+  await check(
+    'catalog first and filtered pages use measured tenant indexes',
+    async () => {
+      await explainPage(
+        'products first page',
+        () => productService.list(actor, large.id, { limit: '25' }),
+        'products',
+        'products_shop_page_idx',
+      );
+      await explainPage(
+        'products category and archive filter',
+        () =>
+          productService.list(actor, large.id, {
+            limit: '25',
+            categoryId: large.category.id,
+            isArchived: 'false',
+          }),
+        'products',
+        ['products_shop_category_sort_idx', 'products_shop_page_idx'],
+      );
+      await explainPage(
+        'categories first page',
+        () => categoryService.list(actor, large.id, { limit: '25' }),
+        'categories',
+        'categories_shop_page_idx',
+      );
+    },
+  );
+  await check(
+    'all 20000 products traverse bounded pages without gaps or duplicate identities',
+    async () => {
+      const ids = new Set();
+      let cursor;
+      do {
+        const page = await productService.list(actor, large.id, { cursor });
+        assert.ok(page.products.length <= 100);
+        for (const row of page.products) {
+          assert.equal(row.shopId, large.id);
+          assert.ok(!ids.has(row.id));
+          ids.add(row.id);
+        }
+        cursor = page.nextCursor ?? undefined;
+        productPages++;
+        assert.ok(productPages <= 200);
+      } while (cursor);
+      assert.equal(ids.size, 20000);
+      assert.equal(productPages, 200);
+    },
+  );
+  await check(
+    'category timestamp and sort ties traverse deterministically',
+    async () => {
+      const ids = new Set();
+      let cursor;
+      do {
+        const page = await categoryService.list(actor, large.id, {
+          cursor,
+          limit: '100',
+        });
+        assert.ok(page.categories.length <= 100);
+        for (const row of page.categories) {
+          assert.equal(row.shopId, large.id);
+          assert.ok(!ids.has(row.id));
+          ids.add(row.id);
+        }
+        cursor = page.nextCursor ?? undefined;
+        categoryPages++;
+        assert.ok(categoryPages <= 11);
+      } while (cursor);
+      assert.equal(ids.size, 1001);
+    },
+  );
+  await check(
+    'public menu independently pages product and category facets without truncation',
+    async () => {
+      const productIds = new Set(),
+        categoryIds = new Set();
+      let productsCursor, categoriesCursor;
+      do {
+        const page = await menuController.read(large.slug, res, {
+          productsCursor,
+          categoriesCursor,
+        });
+        assert.ok(page.products.length <= 100);
+        assert.ok(page.categories.length <= 100);
+        assert.ok(page.featuredProducts.length <= 100);
+        for (const row of page.products) {
+          assert.ok(!productIds.has(row.id));
+          productIds.add(row.id);
+        }
+        for (const row of page.categories) {
+          assert.ok(!categoryIds.has(row.id));
+          categoryIds.add(row.id);
+        }
+        productsCursor = page.nextProductsCursor ?? 'end';
+        categoriesCursor = page.nextCategoriesCursor ?? 'end';
+        menuPagesRead++;
+        assert.ok(menuPagesRead <= 200);
+      } while (productsCursor !== 'end' || categoriesCursor !== 'end');
+      assert.equal(productIds.size, 20000);
+      assert.equal(categoryIds.size, 1001);
+    },
+  );
+  await check(
+    'deep catalog cursors and foreign/changed-filter cursors stay bounded and scoped',
+    async () => {
+      const rows = await prisma.product.findMany({
+        where: { shopId: large.id },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+        skip: 19900,
+        take: 2,
+      });
+      const { productPage } =
+        await import('../dist/modules/products/product-page.js');
+      const cursor = productPage({ limit: '1' }, large.id).finish(
+        rows,
+      ).nextCursor;
+      const deep = await productService.list(actor, large.id, {
+        cursor,
+        limit: '100',
+      });
+      assert.equal(deep.products.length, 99);
+      assert.equal(deep.nextCursor, null);
+      await explainPage(
+        'products deep page',
+        () => productService.list(actor, large.id, { cursor, limit: '100' }),
+        'products',
+        'products_shop_page_idx',
+      );
+      await assert.rejects(productService.list(actor, small.id, { cursor }), {
+        status: 400,
+      });
+      await assert.rejects(
+        productService.list(actor, large.id, { cursor, status: 'HIDDEN' }),
+        { status: 400 },
+      );
+      const empty = await productService.list(actor, large.id, {
+        status: 'HIDDEN',
+      });
+      assert.equal(empty.products.length, 0);
+      assert.equal(empty.nextCursor, null);
+    },
+  );
+  const pagination = {
+    pass: true,
+    maximumPageSize: 100,
+    backgroundTenantCategories: 20000,
+    productPages,
+    categoryPages,
+    menuPages: menuPagesRead,
+    productsTraversed: 20000,
+    categoriesTraversed: 1001,
+    pagingPlans,
+  };
   await check('live membership removal stops subsequent reads', async () => {
     await prisma.shopMember.delete({
       where: { userId_shopId: { userId: actor, shopId: small.id } },
@@ -648,6 +889,7 @@ try {
     before: compact(before),
     after: compact(after),
     concurrency,
+    pagination,
     limitations:
       'Actual repository/service SQL with bounded runtime adapter. Pending/rejected data only. Mixed-load budgets are local regression checks, not production HTTP SLOs or proof of fairness at arbitrary saturation. Does not establish all-query coverage or paid/report throughput.',
   };

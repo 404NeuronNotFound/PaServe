@@ -583,6 +583,7 @@ export interface CreateCategoryResponse {
 }
 export interface CategoriesResponse {
   categories: MenuCategory[];
+  nextCursor?: string | null;
 }
 export interface UpdateCategoryRequest {
   name?: string;
@@ -829,6 +830,7 @@ export interface ReorderFeaturedProductsRequest {
 }
 export interface ProductsResponse {
   products: MenuProduct[];
+  nextCursor?: string | null;
 }
 export const PRODUCT_REORDER_MAX = 500;
 export interface ReorderProductsRequest {
@@ -845,6 +847,8 @@ export interface SetCategoryVisibilityRequest {
   expectedVisibility: boolean;
 }
 export interface PublicMenuResponse {
+  nextProductsCursor?: string | null;
+  nextCategoriesCursor?: string | null;
   /** Resolved by the server for a public table link; never an authorization token. */
   table?: PublicTableContext;
   featuredProducts: PublicMenuResponse["products"];

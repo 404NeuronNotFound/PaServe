@@ -5,8 +5,7 @@ import { ErrorState } from "../../components/feedback/ErrorState";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import type { PublicMenuResponse } from "@paserve/contracts";
-import { api } from "../../lib/api/client";
+import { loadMenuPages } from "../../lib/api/collection-pages";
 import "./public-menu.css";
 import { PublicMenuView } from "./PublicMenuView";
 import { useMenuAvailability } from "../../features/products/useMenuAvailability";
@@ -46,13 +45,7 @@ function PublicMenuSession({
     queryKey: code
       ? ["public-menu", shopSlug, "table", code]
       : ["public-menu", shopSlug],
-    queryFn: async ({ signal }) =>
-      (
-        await api.get<PublicMenuResponse>(
-          `/menu/${encodeURIComponent(shopSlug)}${code ? `/table/${encodeURIComponent(code)}` : ""}`,
-          { signal, timeout: 15_000 },
-        )
-      ).data,
+    queryFn: ({ signal }) => loadMenuPages(`/menu/${encodeURIComponent(shopSlug)}${code ? `/table/${encodeURIComponent(code)}` : ""}`, signal),
     retry: false,
     // Only public pickup display data gets a short warm cache. Table resolution
     // still validates immediately; quotes and checkout remain authoritative.

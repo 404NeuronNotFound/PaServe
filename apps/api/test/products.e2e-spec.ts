@@ -24,6 +24,7 @@ describe('tenant-scoped product creation', () => {
     shopRead = vi.fn(),
     currentUser = vi.fn();
   const productRead = vi.fn(),
+    productMany = vi.fn(),
     productWrite = vi.fn();
   const uploadImage = vi.fn(),
     removeImage = vi.fn();
@@ -58,7 +59,11 @@ describe('tenant-scoped product creation', () => {
         shopMember: { findUnique: membership },
         shop: { update: shopWrite, findFirst: shopRead },
         category: { update: categoryWrite, findFirst: categoryRead },
-        product: { findFirst: productRead, update: productWrite },
+        product: {
+          findFirst: productRead,
+          findMany: productMany,
+          update: productWrite,
+        },
       })
       .overrideProvider(ProductImageStorage)
       .useValue({ upload: uploadImage, remove: removeImage })
@@ -93,6 +98,7 @@ describe('tenant-scoped product creation', () => {
         : null,
     );
     shopWrite.mockResolvedValue({ products: [product] });
+    productMany.mockResolvedValue([product]);
     categoryWrite.mockResolvedValue({ products: [{ ...product, categoryId }] });
     shopRead.mockResolvedValue({ products: [product] });
     productRead.mockImplementation(async ({ where }) =>
@@ -1049,14 +1055,31 @@ describe('tenant-scoped product creation', () => {
     expect(res.body.products[0].price).toBe('12.50');
     const query = shopRead.mock.calls[0][0];
     expect(query.where.id).toBe(shopId);
-    expect(query.select.products.where).toEqual({ shopId });
-    expect(query.select.products.orderBy).toEqual([
+    expect(productMany.mock.calls[0][0].where).toMatchObject({
+      shopId,
+      shop: { id: shopId, isActive: true },
+    });
+    expect(productMany.mock.calls[0][0].take).toBe(101);
+    expect(productMany.mock.calls[0][0].orderBy).toEqual([
       { sortOrder: 'asc' },
       { createdAt: 'asc' },
       { id: 'asc' },
     ]);
     shopRead.mockResolvedValue(null);
     await get().expect(403);
+  });
+  it.each(['0', '101', '1000000', '1.5', '01'])(
+    'rejects invalid collection page size %s before catalog reads',
+    async (limit) => {
+      await get().query({ limit }).expect(400);
+      expect(shopRead).not.toHaveBeenCalled();
+    },
+  );
+  it('applies the requested server page bound', async () => {
+    await get().query({ limit: '1' }).expect(200);
+    expect(productMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 2 }),
+    );
   });
   it.each([
     'https://example.com/missing.webp',

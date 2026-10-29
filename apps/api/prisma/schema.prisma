@@ -290,6 +290,7 @@ model Category {
   // Supports the additional SQL product/category tenant foreign key.
   @@unique([id, shopId])
   @@index([shopId])
+  @@index([shopId, sortOrder, createdAt, id], map: "categories_shop_page_idx")
   @@map("categories")
 }
 
@@ -322,6 +323,7 @@ model Product {
   @@unique([id, shopId])
   @@index([shopId])
   @@index([categoryId])
+  @@index([shopId, sortOrder, createdAt, id], map: "products_shop_page_idx")
   @@index([shopId, categoryId, isArchived, sortOrder, createdAt, id], map: "products_shop_category_sort_idx")
   @@map("products")
 }

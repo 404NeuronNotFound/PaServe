@@ -16,6 +16,7 @@ import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import { TenantResourcesService } from '../tenancy/tenant-resources.service.js';
 import type { CreateProductDto } from './create-product.dto.js';
 import { productSlug } from './product-slug.js';
+import { productPage, type ProductPageQuery } from './product-page.js';
 import type { UpdateProductDto } from './update-product.dto.js';
 import type { ProductCreateData } from './products.repository.js';
 import type { ProductArchiveDto } from './product-archive.dto.js';
@@ -418,16 +419,23 @@ export class ProductsService {
       throw error;
     }
   }
-  async list(userId: string, shopId: string): Promise<ProductsResponse> {
+  async list(
+    userId: string,
+    shopId: string,
+    query: ProductPageQuery = {},
+  ): Promise<ProductsResponse> {
+    const page = productPage(query, shopId);
     await this.members.requirePermission(userId, shopId, 'shop.menu.manage');
-    const result = await this.repository.list(userId, shopId);
+    const result = await this.repository.list(userId, shopId, query);
     if (!result)
       throw new ForbiddenException({
         code: 'SHOP_PERMISSION_REQUIRED',
         message: 'Your menu management access is no longer available.',
       });
+    const { items, nextCursor } = page.finish(result.products);
     return {
-      products: result.products.map((product) => ({
+      nextCursor,
+      products: items.map((product) => ({
         ...product,
         price: product.price.toFixed(2),
         createdAt: product.createdAt.toISOString(),

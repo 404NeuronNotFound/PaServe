@@ -11,7 +11,9 @@ import { TableContextService } from '../src/modules/tables/table-context.service
 describe('public table menus', () => {
   let app: INestApplication<App>;
   const findTable = vi.fn(),
-    findShop = vi.fn();
+    findShop = vi.fn(),
+    findProducts = vi.fn(),
+    findCategories = vi.fn();
   const code = 't_9dd21e8326b440b2a73f22d4f16c038a';
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
@@ -19,6 +21,8 @@ describe('public table menus', () => {
       .useValue({
         restaurantTable: { findFirst: findTable },
         shop: { findFirst: findShop },
+        product: { findMany: findProducts },
+        category: { findMany: findCategories },
       })
       .compile();
     app = module.createNestApplication();
@@ -31,6 +35,8 @@ describe('public table menus', () => {
   beforeEach(() => {
     resetRateLimits(app);
     vi.resetAllMocks();
+    findProducts.mockResolvedValue([]);
+    findCategories.mockResolvedValue([]);
     findTable.mockImplementation(async ({ where }) =>
       where.shop.slug === 'cafe' && [code, 'T12'].includes(where.code)
         ? { code: where.code, number: 'Patio 4', shop: { slug: 'cafe' } }
@@ -84,8 +90,18 @@ describe('public table menus', () => {
         isActive: true,
         tables: { some: { shopId: 'shop-a', code: token, isActive: true } },
       });
-      expect(findShop.mock.calls[1][0].select.products.where.shopId).toBe(
-        'shop-a',
+      expect(findProducts).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 101,
+          where: expect.objectContaining({
+            shopId: 'shop-a',
+            shop: expect.objectContaining({
+              tables: {
+                some: { shopId: 'shop-a', code: token, isActive: true },
+              },
+            }),
+          }),
+        }),
       );
     },
   );

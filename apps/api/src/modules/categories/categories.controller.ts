@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Query,
   Post,
   Patch,
   Delete,
@@ -14,6 +15,7 @@ import { Permissions } from '../shop-members/decorators/permissions.decorator.js
 import type { ShopMemberRequest } from '../shop-members/guards/shop-membership.guard.js';
 import { CreateCategoryDto } from './create-category.dto.js';
 import { CategoriesService } from './categories.service.js';
+import type { CollectionQuery } from '../../common/http/collection-page.js';
 import { UpdateCategoryDto } from './update-category.dto.js';
 import { EmptyDto } from '../auth/dto/empty.dto.js';
 import { CategoryVisibilityDto } from './category-visibility.dto.js';
@@ -85,9 +87,10 @@ export class CategoriesController {
   list(
     @Req() req: ShopMemberRequest,
     @Res({ passthrough: true }) res: Response,
+    @Query() query: CollectionQuery,
   ) {
     res.setHeader('Cache-Control', 'no-store');
-    return this.categories.list(req.user.id, req.shopMembership.shopId);
+    return this.categories.list(req.user.id, req.shopMembership.shopId, query);
   }
   @Post()
   create(

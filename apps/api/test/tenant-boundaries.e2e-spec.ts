@@ -46,7 +46,7 @@ describe('Real-route tenant boundaries', () => {
   const storage = { upload: vi.fn(), remove: vi.fn(), removePrevious: vi.fn() };
   const db = {
     shop: { findFirst: vi.fn(), update: vi.fn() },
-    product: { findFirst: vi.fn(), update: vi.fn() },
+    product: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     order: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
@@ -167,6 +167,9 @@ describe('Real-route tenant boundaries', () => {
     db.product.findFirst.mockImplementation(
       async ({ where }) => products.find((row) => matches(row, where)) ?? null,
     );
+    db.product.findMany.mockImplementation(async ({ where, take }) =>
+      products.filter((row) => matches(row, where)).slice(0, take),
+    );
     db.order.findFirst.mockImplementation(
       async ({ where }) => orders.find((row) => matches(row, where)) ?? null,
     );
@@ -198,11 +201,7 @@ describe('Real-route tenant boundaries', () => {
     db.$transaction.mockImplementation(async (work) => work(db));
     db.$queryRaw.mockResolvedValue([{ id: 'locked' }]);
   });
-  function call(
-    method: HttpMethod,
-    path: string,
-    actor: string,
-  ) {
+  function call(method: HttpMethod, path: string, actor: string) {
     return request(app.getHttpServer())
       [method](`/api/v1/shops/${path}`)
       .set('Authorization', `Bearer ${actor}`);
@@ -257,7 +256,7 @@ describe('Real-route tenant boundaries', () => {
     it.each(routes)(
       'blocks foreign shop %s %s before business queries',
       async (method, path) => {
-          await call(method as HttpMethod, `${foreign.shop}/${path}`, own.actor)
+        await call(method as HttpMethod, `${foreign.shop}/${path}`, own.actor)
           .set('X-Shop-Id', own.shop)
           .query({ shopId: own.shop, role: 'OWNER' })
           .expect(404);
@@ -319,11 +318,13 @@ describe('Real-route tenant boundaries', () => {
           }),
         }),
       );
-      expect(db.shop.findFirst).toHaveBeenCalledWith(
+      expect(db.product.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          select: expect.objectContaining({
-            products: expect.objectContaining({ where: { shopId: own.shop } }),
+          where: expect.objectContaining({
+            shopId: own.shop,
+            shop: expect.objectContaining({ id: own.shop, isActive: true }),
           }),
+          take: 101,
         }),
       );
     });
