@@ -237,7 +237,8 @@ export class OrdersService {
             table = tables[0];
             if (!table) throw unavailable();
           }
-          // Resolve all product identities in the validated tenant before pricing any line.
+          // Keep the existing early all-identity availability check. This is
+          // one bounded query, independent of the number of submitted lines.
           const productIds = [
             ...new Set(dto.items.map((item) => item.productId)),
           ];
@@ -259,23 +260,11 @@ export class OrdersService {
               message:
                 'This product is unavailable. Refresh the menu and update your cart before ordering again.',
             });
-          const items = [];
-          for (const item of dto.items)
-            items.push(
-              copyPriceSnapshot(
-                await this.products.quote(
-                  slug,
-                  item.productId,
-                  {
-                    variantIds: [...item.variantIds],
-                    addOnIds: [...item.addOnIds],
-                    quantity: item.quantity,
-                    ...(item.notes !== undefined ? { notes: item.notes } : {}),
-                  },
-                  tx,
-                ),
-              ),
-            );
+          // Batch product/options reads inside this same serializable checkout
+          // transaction. Every selected identity remains bound to the live shop.
+          const items = (
+            await this.products.quoteMany(slug, dto.items, tx)
+          ).map(copyPriceSnapshot);
           const subtotal = items.reduce(
             (sum, item) => sum.plus(item.totalPrice),
             new Prisma.Decimal(0),

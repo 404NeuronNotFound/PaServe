@@ -23,6 +23,12 @@ import { CategoriesRepository } from '../dist/modules/categories/categories.repo
 import { PublicMenuRepository } from '../dist/modules/categories/public-menu.repository.js';
 import { PublicProductRepository } from '../dist/modules/products/public-product.repository.js';
 import { readHistoryPage } from '../dist/modules/orders/history-pagination.js';
+import { PublicProductService } from '../dist/modules/products/public-product.service.js';
+import { OrdersService } from '../dist/modules/orders/orders.service.js';
+import { OrderTokenService } from '../dist/modules/orders/order-token.service.js';
+import { TableContextService } from '../dist/modules/tables/table-context.service.js';
+import { ConfigService } from '@nestjs/config';
+import { completeNPlusOne } from './n-plus-one-completion.check.mjs';
 
 assert.ok(
   process.env.TIMEOUT_DB_LOCAL_FIXTURE === 'true' &&
@@ -858,6 +864,348 @@ try {
     categoriesTraversed: 1001,
     pagingPlans,
   };
+  // N+1 verification measures real Prisma SELECT round trips, not mock calls.
+  const pricing = new PublicProductService(publicProduct);
+  const config = new ConfigService();
+  const checkout = new OrdersService(
+    prisma,
+    pricing,
+    new TableContextService(config),
+    new OrderTokenService(config),
+  );
+  const selected = await prisma.product.findMany({
+    where: { shopId: large.id },
+    take: 100,
+    orderBy: { id: 'asc' },
+    select: { id: true },
+  });
+  const choices = selected.map((product) => ({
+    productId: product.id,
+    groupId: randomUUID(),
+    variantId: randomUUID(),
+  }));
+  const addon = await prisma.addOn.create({
+    data: { shopId: large.id, name: 'N1 extra', priceAdjustment: '0.25' },
+  });
+  await prisma.productOptionGroup.createMany({
+    data: choices.map((choice) => ({
+      id: choice.groupId,
+      shopId: large.id,
+      productId: choice.productId,
+      name: 'N1 size',
+      isRequired: true,
+    })),
+  });
+  await prisma.productVariant.createMany({
+    data: choices.map((choice) => ({
+      id: choice.variantId,
+      shopId: large.id,
+      productId: choice.productId,
+      optionGroupId: choice.groupId,
+      name: 'Regular',
+      priceAdjustment: '0.75',
+    })),
+  });
+  await prisma.productAddOn.createMany({
+    data: choices.map((choice) => ({
+      shopId: large.id,
+      productId: choice.productId,
+      addOnId: addon.id,
+    })),
+  });
+  await prisma.shop.update({
+    where: { id: large.id },
+    data: { lastOrderNumber: 100000n },
+  });
+  const lines = choices.map((choice, i) => ({
+    productId: choice.productId,
+    quantity: 1,
+    variantIds: [choice.variantId],
+    addOnIds: [addon.id],
+    notes: `Line ${i + 1}`,
+  }));
+  const queryMeasurements = [];
+  const checkoutSamples = [];
+  const measured = async (name, size, read) => {
+    events.length = 0;
+    captureQueries = true;
+    try {
+      const result = await read();
+      const selectEvents = events.filter((event) =>
+        /^(SELECT|WITH)\b/i.test(event.query.trim()),
+      );
+      if (name === 'batched quotes') {
+        const reads = selectEvents.filter((event) =>
+          event.query.includes('FROM "public"."products"'),
+        );
+        assert.ok(reads.length > 0);
+        for (const event of reads) {
+          const projection = event.query.slice(
+            0,
+            event.query.indexOf(' FROM '),
+          );
+          for (const field of [
+            'imageUrl',
+            'description',
+            'slug',
+            'categoryId',
+            'isFeatured',
+            'featuredSortOrder',
+            'sortOrder',
+          ])
+            assert.ok(
+              !projection.includes(`"${field}"`),
+              'Pricing query loaded an unused display column',
+            );
+        }
+      }
+      if (
+        [
+          'payment pending review',
+          'payment paid receipt',
+          'payment lookup over paid dataset',
+        ].includes(name)
+      ) {
+        for (const event of selectEvents) {
+          const projection = event.query.slice(
+            0,
+            event.query.indexOf(' FROM '),
+          );
+          for (const field of [
+            'paymentReviewVersion',
+            'qrTokenNonce',
+            'qrTokenExpiresAt',
+            'qrTokenRevokedAt',
+          ])
+            assert.ok(
+              !projection.includes(`"${field}"`),
+              'Number-based payment review loaded unused credential/version columns',
+            );
+        }
+      }
+      queryMeasurements.push({
+        name,
+        size,
+        selects: selectEvents.length,
+        statements: events.length,
+      });
+      return result;
+    } finally {
+      captureQueries = false;
+      events.length = 0;
+    }
+  };
+  await check(
+    'batched modifier pricing matches individual quotes with constant SELECT counts at 1/10/100 lines',
+    async () => {
+      for (const size of [1, 10, 100]) {
+        const input = lines.slice(0, size);
+        const legacy = await measured('individual quotes', size, async () => {
+          const quotes = [];
+          for (const { productId, ...selection } of input)
+            quotes.push(
+              await pricing.quote(large.slug, productId, selection, prisma),
+            );
+          return quotes;
+        });
+        const batch = await measured('batched quotes', size, () =>
+          pricing.quoteMany(large.slug, input, prisma),
+        );
+        assert.deepEqual(batch, legacy);
+      }
+      const counts = queryMeasurements
+        .filter((sample) => sample.name === 'batched quotes')
+        .map((sample) => sample.selects);
+      assert.ok(counts[0] > 0);
+      assert.equal(new Set(counts).size, 1);
+      assert.ok(
+        queryMeasurements.find(
+          (sample) =>
+            sample.name === 'individual quotes' && sample.size === 100,
+        ).selects >
+          counts[0] * 50,
+      );
+    },
+  );
+  await check(
+    'full checkout and receipt reads keep constant SELECT counts as distinct order lines grow',
+    async () => {
+      for (const size of [1, 10, 100]) {
+        const result = await measured('checkout', size, () =>
+          checkout.create(large.slug, {
+            requestId: randomUUID(),
+            mode: 'TAKEOUT',
+            items: lines.slice(0, size),
+            reviewedTotal: (11 * size).toFixed(2),
+          }),
+        );
+        assert.equal(result.order.items.length, size);
+        checkoutSamples.push(result.order);
+        assert.equal(result.order.totalPrice, (11 * size).toFixed(2));
+        assert.deepEqual(
+          result.order.items.map((item) => item.productId),
+          lines.slice(0, size).map((line) => line.productId),
+        );
+      }
+      const counts = queryMeasurements
+        .filter((sample) => sample.name === 'checkout')
+        .map((sample) => sample.selects);
+      assert.ok(counts[0] > 0);
+      assert.equal(new Set(counts).size, 1);
+    },
+  );
+  await check(
+    'repeated product lines keep separate quantities and notes while reusing one batch read',
+    async () => {
+      const input = Array.from({ length: 100 }, (_, i) => ({
+        ...lines[0],
+        quantity: (i % 2) + 1,
+        notes: `Separate ${i}`,
+      }));
+      const quotes = await measured('repeated-product quotes', 100, () =>
+        pricing.quoteMany(large.slug, input, prisma),
+      );
+      assert.equal(quotes.length, 100);
+      assert.equal(quotes[0].totalPrice, '11.00');
+      assert.equal(quotes[1].totalPrice, '22.00');
+      assert.deepEqual(
+        quotes.map((q) => q.notes),
+        input.map((line) => line.notes),
+      );
+      assert.equal(
+        queryMeasurements.at(-1).selects,
+        queryMeasurements.find(
+          (sample) => sample.name === 'batched quotes' && sample.size === 1,
+        ).selects,
+      );
+    },
+  );
+  await check(
+    'batch pricing rejects cross-product modifiers and foreign-shop products without partial orders',
+    async () => {
+      const before = await prisma.order.count({ where: { shopId: large.id } });
+      await assert.rejects(
+        checkout.create(large.slug, {
+          requestId: randomUUID(),
+          mode: 'TAKEOUT',
+          items: [lines[0], { ...lines[1], variantIds: lines[0].variantIds }],
+        }),
+        { status: 400 },
+      );
+      await assert.rejects(
+        checkout.create(large.slug, {
+          requestId: randomUUID(),
+          mode: 'TAKEOUT',
+          items: [lines[0], { ...lines[1], productId: small.product.id }],
+        }),
+        { status: 404 },
+      );
+      assert.equal(
+        await prisma.order.count({ where: { shopId: large.id } }),
+        before,
+      );
+    },
+  );
+  await check(
+    'batch data is fresh after price and modifier availability updates',
+    async () => {
+      await prisma.product.update({
+        where: { id: lines[0].productId, shopId: large.id },
+        data: { price: '12.50' },
+      });
+      const fresh = await pricing.quoteMany(large.slug, [lines[0]], prisma);
+      assert.equal(fresh[0].totalPrice, '13.50');
+      await prisma.productOptionGroup.update({
+        where: { id: choices[0].groupId },
+        data: { isAvailable: false },
+      });
+      await assert.rejects(pricing.quoteMany(large.slug, [lines[0]], prisma), {
+        status: 400,
+      });
+      await prisma.productOptionGroup.update({
+        where: { id: choices[0].groupId },
+        data: { isAvailable: true },
+      });
+    },
+  );
+  await check(
+    'catalog relation queries stay constant as returned page sizes grow',
+    async () => {
+      for (const size of [1, 25, 100]) {
+        const page = await measured('management product page', size, () =>
+          productService.list(actor, large.id, { limit: String(size) }),
+        );
+        assert.equal(page.products.length, size);
+        const publicPage = await measured('public menu page', size, () =>
+          menuController.read(large.slug, res, { limit: String(size) }),
+        );
+        assert.equal(publicPage.products.length, size);
+      }
+      for (const name of ['management product page', 'public menu page'])
+        assert.equal(
+          new Set(
+            queryMeasurements
+              .filter((sample) => sample.name === name)
+              .map((sample) => sample.selects),
+          ).size,
+          1,
+        );
+    },
+  );
+  await check(
+    'owner order feed queries stay constant as returned rows grow',
+    async () => {
+      for (const [from, to, size] of [
+        [1, 10, 1],
+        [11, 100, 10],
+        [101, 250, 25],
+      ]) {
+        await seed(empty, from, to, 0);
+        const page = await measured('active order feed', size, () =>
+          active.list(actor, empty.id),
+        );
+        assert.equal(page.orders.length, size);
+        assert.ok(page.orders.every((order) => order.shopId === empty.id));
+      }
+      assert.equal(
+        new Set(
+          queryMeasurements
+            .filter((sample) => sample.name === 'active order feed')
+            .map((sample) => sample.selects),
+        ).size,
+        1,
+      );
+    },
+  );
+  const completion = await completeNPlusOne({
+    prisma,
+    setup,
+    actor,
+    large,
+    empty,
+    pricing,
+    productService,
+    menuController,
+    res,
+    active,
+    lines,
+    checkoutSamples,
+    measured,
+    queryMeasurements,
+    check,
+    seed,
+  });
+  const nPlusOne = {
+    pass: true,
+    leanProjectionVerified: true,
+    ...completion,
+    quoteAndCheckoutLineCounts: [1, 10, 100],
+    catalogPageSizes: [1, 25, 100],
+    orderFeedRows: [1, 10, 25],
+    queryMeasurements,
+    limitations:
+      'SELECT round trips and total Prisma statements, not PostgreSQL trigger-internal work or O(1) CPU/row transfer. No mock query-count assertions; no production SQL logging enabled.',
+  };
   await check('live membership removal stops subsequent reads', async () => {
     await prisma.shopMember.delete({
       where: { userId_shopId: { userId: actor, shopId: small.id } },
@@ -890,6 +1238,7 @@ try {
     after: compact(after),
     concurrency,
     pagination,
+    nPlusOne,
     limitations:
       'Actual repository/service SQL with bounded runtime adapter. Pending/rejected data only. Mixed-load budgets are local regression checks, not production HTTP SLOs or proof of fairness at arbitrary saturation. Does not establish all-query coverage or paid/report throughput.',
   };

@@ -16,7 +16,7 @@ describe('internal selection pricing add-on limit', () => {
       }),
     );
     const repository = {
-      read: vi.fn().mockResolvedValue({
+      readPricing: vi.fn().mockResolvedValue({
         id: 'product',
         name: 'Coffee',
         price: new Prisma.Decimal('10.00'),

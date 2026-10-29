@@ -7,97 +7,97 @@
     {
       "kind": "logo",
       "scenario": "delayed-success",
-      "elapsedMs": 161,
+      "elapsedMs": 102,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "delayed-success",
-      "elapsedMs": 93,
+      "elapsedMs": 65,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "delayed-success",
-      "elapsedMs": 87,
+      "elapsedMs": 59,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "stalled-headers",
-      "elapsedMs": 494,
+      "elapsedMs": 497,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "stalled-headers",
-      "elapsedMs": 518,
+      "elapsedMs": 481,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "stalled-headers",
-      "elapsedMs": 495,
+      "elapsedMs": 485,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "stalled-body",
-      "elapsedMs": 501,
+      "elapsedMs": 497,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "stalled-body",
-      "elapsedMs": 503,
+      "elapsedMs": 481,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "stalled-body",
-      "elapsedMs": 517,
+      "elapsedMs": 481,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "connection-reset",
-      "elapsedMs": 129,
+      "elapsedMs": 79,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "connection-reset",
-      "elapsedMs": 97,
+      "elapsedMs": 75,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "connection-reset",
-      "elapsedMs": 107,
+      "elapsedMs": 78,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "client-disconnect",
-      "elapsedMs": 35,
+      "elapsedMs": 32,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "dependency-timeout-without-context",
-      "elapsedMs": 10049,
+      "elapsedMs": 10015,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "dependency-timeout-without-context",
-      "elapsedMs": 10047,
+      "elapsedMs": 10018,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "dependency-timeout-without-context",
-      "elapsedMs": 10049,
+      "elapsedMs": 10019,
       "pass": true
     }
   ]

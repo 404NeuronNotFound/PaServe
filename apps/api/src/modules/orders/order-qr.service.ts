@@ -156,9 +156,9 @@ export class OrderQrService {
         totalPrice: true,
         tableNumber: true,
         shopDetailsSnapshot: true,
-        qrTokenNonce: true,
-        qrTokenExpiresAt: true,
-        qrTokenRevokedAt: true,
+        qrTokenNonce: 'qrToken' in reference,
+        qrTokenExpiresAt: 'qrToken' in reference,
+        qrTokenRevokedAt: 'qrToken' in reference,
         orderItems: {
           where: {
             shopId,

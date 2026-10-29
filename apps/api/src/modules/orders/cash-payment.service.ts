@@ -88,13 +88,11 @@ export class CashPaymentService {
         shop: shopAccessWhere(actorId, shopId, CASH_PAYMENT_ROLES),
       },
       select: {
-        id: true,
         status: true,
         orderNumber: true,
         paymentStatus: true,
         paymentMethod: true,
         paymentRequestId: true,
-        paymentReviewVersion: true,
         paymentReference: true,
         paymentDescription: true,
         amountReceived: true,

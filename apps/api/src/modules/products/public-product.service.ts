@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import {
   ADD_ON_LIMITS,
+  ORDER_INPUT_LIMITS,
   isValidProductSelection,
   PRODUCT_CURRENCY,
   normalizeCustomerNote,
@@ -14,6 +15,21 @@ import {
 import { Prisma } from '../../generated/prisma/client.js';
 import { PublicProductRepository } from './public-product.repository.js';
 import type { ProductSelectionDto } from './public-product.dto.js';
+
+type PricingDetails = {
+  product: Pick<
+    PublicProductDetailsResponse['product'],
+    'name' | 'price' | 'isOrderable'
+  >;
+  optionGroups: Array<
+    Pick<
+      PublicProductDetailsResponse['optionGroups'][number],
+      'id' | 'isRequired'
+    >
+  >;
+  variants: PublicProductDetailsResponse['variants'];
+  addOns: PublicProductDetailsResponse['addOns'];
+};
 
 const unavailable = () =>
   new NotFoundException({
@@ -40,11 +56,12 @@ export class PublicProductService {
     productId: string,
     db?: Prisma.TransactionClient,
   ): Promise<PublicProductDetailsResponse> {
-    const { optionGroups, variants, addOns, ...product } = await this.read(
-      slug,
-      productId,
-      db,
-    );
+    return this.serializeDetails(await this.read(slug, productId, db));
+  }
+  private serializeDetails(
+    record: NonNullable<Awaited<ReturnType<PublicProductRepository['read']>>>,
+  ): PublicProductDetailsResponse {
+    const { optionGroups, variants, addOns, ...product } = record;
     return {
       product: {
         id: product.id,
@@ -90,7 +107,81 @@ export class PublicProductService {
         code: 'PRODUCT_SELECTION_INVALID',
         message: 'Choose valid quantities, options and notes for this product.',
       });
-    const details = await this.details(slug, productId, db);
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 100)
+      throw unavailable();
+    const record = await this.repository.readPricing(slug, productId, db);
+    if (!record) throw unavailable();
+    return this.quoteDetails(this.serializePricing(record), productId, dto);
+  }
+
+  async quoteMany(
+    slug: string,
+    lines: Array<ProductSelectionDto & { productId: string }>,
+    db?: Prisma.TransactionClient,
+  ): Promise<ProductSelectionQuoteResponse[]> {
+    if (
+      !Array.isArray(lines) ||
+      !lines.length ||
+      lines.length > ORDER_INPUT_LIMITS.linesMax ||
+      lines.some((line) => !line || !isValidProductSelection(line))
+    )
+      throw new BadRequestException({
+        code: 'PRODUCT_SELECTION_INVALID',
+        message:
+          'Choose valid quantities, options and notes for these products.',
+      });
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 100)
+      throw unavailable();
+    const records = await this.repository.readMany(
+      slug,
+      [...new Set(lines.map((line) => line.productId))],
+      db,
+    );
+    const details = new Map(
+      records.map((record) => [record.id, this.serializePricing(record)]),
+    );
+    // Request-local data only. Repeated products may have different selections,
+    // quantities and notes; reprice every line without additional database reads.
+    return lines.map((line) => {
+      const detail = details.get(line.productId);
+      if (!detail) throw unavailable();
+      return this.quoteDetails(detail, line.productId, line);
+    });
+  }
+
+  private serializePricing(
+    record: Awaited<ReturnType<PublicProductRepository['readMany']>>[number],
+  ): PricingDetails {
+    return {
+      product: {
+        name: record.name,
+        price: record.price.toFixed(2),
+        isOrderable: record.status === 'AVAILABLE',
+      },
+      optionGroups: record.optionGroups.map((group) => ({
+        id: group.id,
+        isRequired: group.isRequired,
+      })),
+      variants: record.variants.map((variant) => ({
+        id: variant.id,
+        optionGroupId: variant.optionGroupId,
+        name: variant.name,
+        isDefault: variant.isDefault,
+        priceAdjustment: variant.priceAdjustment.toFixed(2),
+      })),
+      addOns: record.addOns.map(({ addOn }) => ({
+        id: addOn.id,
+        name: addOn.name,
+        priceAdjustment: addOn.priceAdjustment.toFixed(2),
+      })),
+    };
+  }
+
+  private quoteDetails(
+    details: PricingDetails,
+    productId: string,
+    dto: ProductSelectionDto,
+  ): ProductSelectionQuoteResponse {
     if (!details.product.isOrderable) throw unavailable();
     const invalid = () =>
       new BadRequestException({

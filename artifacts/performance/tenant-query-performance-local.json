@@ -85,6 +85,54 @@
       "pass": true
     },
     {
+      "name": "batched modifier pricing matches individual quotes with constant SELECT counts at 1/10/100 lines",
+      "pass": true
+    },
+    {
+      "name": "full checkout and receipt reads keep constant SELECT counts as distinct order lines grow",
+      "pass": true
+    },
+    {
+      "name": "repeated product lines keep separate quantities and notes while reusing one batch read",
+      "pass": true
+    },
+    {
+      "name": "batch pricing rejects cross-product modifiers and foreign-shop products without partial orders",
+      "pass": true
+    },
+    {
+      "name": "batch data is fresh after price and modifier availability updates",
+      "pass": true
+    },
+    {
+      "name": "catalog relation queries stay constant as returned page sizes grow",
+      "pass": true
+    },
+    {
+      "name": "owner order feed queries stay constant as returned rows grow",
+      "pass": true
+    },
+    {
+      "name": "real payment review, settlement and receipt queries stay constant at 1/10/100 lines",
+      "pass": true
+    },
+    {
+      "name": "dashboard and paid-order lookups keep fixed query budgets over 1/10/100/500 completed records",
+      "pass": true
+    },
+    {
+      "name": "500 catalog and menu records traverse bounded pages with fixed per-page budgets",
+      "pass": true
+    },
+    {
+      "name": "500 quote records use bounded batches and oversized single requests do no database work",
+      "pass": true
+    },
+    {
+      "name": "500 order-feed rows retain a fixed read budget per chronological page",
+      "pass": true
+    },
+    {
       "name": "live membership removal stops subsequent reads",
       "pass": true
     }
@@ -92,18 +140,18 @@
   "before": [
     {
       "name": "active first page",
-      "elapsedMs": 54.90060000000017,
+      "elapsedMs": 60.269000000000005,
       "queryCount": 4,
       "plans": [
         {
           "sql": "SELECT \"public\".\"shop_members\".\"id\", \"public\".\"shop_members\".\"shopId\", \"public\".\"shop_members\".\"role\"::text, \"public\".\"shop_members\".\"disabledAt\", \"public\".\"shop_members\".\"userId\" FROM \"public\".\"shop_members\" WHERE ((\"public\".\"shop_members\".\"userId\" = $1 AND \"public\".\"shop_members\".\"shopId\" = $2) AND 1=1) LIMIT $3 OFFSET $4",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "1",
             "0"
           ],
-          "executionMs": 0.034,
+          "executionMs": 0.03,
           "buffers": 3,
           "nodes": [
             {
@@ -124,10 +172,10 @@
         {
           "sql": "SELECT \"public\".\"users\".\"id\", \"public\".\"users\".\"isActive\" FROM \"public\".\"users\" WHERE \"public\".\"users\".\"id\" = $1 OFFSET $2",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "0"
           ],
-          "executionMs": 0.02,
+          "executionMs": 0.022,
           "buffers": 1,
           "nodes": [
             {
@@ -142,10 +190,10 @@
         {
           "sql": "SELECT \"public\".\"shops\".\"id\", \"public\".\"shops\".\"name\", \"public\".\"shops\".\"slug\", \"public\".\"shops\".\"isActive\", \"public\".\"shops\".\"logoUrl\" FROM \"public\".\"shops\" WHERE \"public\".\"shops\".\"id\" = $1 OFFSET $2",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "0"
           ],
-          "executionMs": 0.022,
+          "executionMs": 0.019,
           "buffers": 1,
           "nodes": [
             {
@@ -160,10 +208,10 @@
         {
           "sql": "SELECT \"public\".\"orders\".\"id\", \"public\".\"orders\".\"shopId\", \"public\".\"orders\".\"orderNumber\", \"public\".\"orders\".\"mode\"::text, \"public\".\"orders\".\"serviceType\"::text, \"public\".\"orders\".\"tableNumber\", \"public\".\"orders\".\"status\", \"public\".\"orders\".\"paymentStatus\", \"public\".\"orders\".\"preparationStatus\", \"public\".\"orders\".\"currency\", \"public\".\"orders\".\"totalPrice\", \"public\".\"orders\".\"createdAt\", \"public\".\"orders\".\"updatedAt\" FROM \"public\".\"orders\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"orders\".\"shopId\") WHERE (\"public\".\"orders\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" = CAST($5::text AS \"public\".\"ShopRole\") AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"orders\".\"status\" IN ($7,$8) AND \"public\".\"orders\".\"completedAt\" IS NULL AND (\"public\".\"orders\".\"preparationStatus\" IS NULL OR \"public\".\"orders\".\"preparationStatus\" IN ($9,$10,$11))) ORDER BY \"public\".\"orders\".\"createdAt\" ASC, \"public\".\"orders\".\"id\" ASC LIMIT $12 OFFSET $13",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             true,
             "PENDING_CONFIRMATION",
@@ -174,7 +222,7 @@
             "26",
             "0"
           ],
-          "executionMs": 0.137,
+          "executionMs": 0.142,
           "buffers": 21,
           "nodes": [
             {
@@ -248,18 +296,18 @@
     },
     {
       "name": "rejected first page",
-      "elapsedMs": 11.770400000000109,
+      "elapsedMs": 12.111000000000104,
       "queryCount": 4,
       "plans": [
         {
           "sql": "SELECT \"public\".\"shop_members\".\"id\", \"public\".\"shop_members\".\"shopId\", \"public\".\"shop_members\".\"role\"::text, \"public\".\"shop_members\".\"disabledAt\", \"public\".\"shop_members\".\"userId\" FROM \"public\".\"shop_members\" WHERE ((\"public\".\"shop_members\".\"userId\" = $1 AND \"public\".\"shop_members\".\"shopId\" = $2) AND 1=1) LIMIT $3 OFFSET $4",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "1",
             "0"
           ],
-          "executionMs": 0.024,
+          "executionMs": 0.025,
           "buffers": 1,
           "nodes": [
             {
@@ -280,10 +328,10 @@
         {
           "sql": "SELECT \"public\".\"users\".\"id\", \"public\".\"users\".\"isActive\" FROM \"public\".\"users\" WHERE \"public\".\"users\".\"id\" = $1 OFFSET $2",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "0"
           ],
-          "executionMs": 0.019,
+          "executionMs": 0.026,
           "buffers": 1,
           "nodes": [
             {
@@ -298,10 +346,10 @@
         {
           "sql": "SELECT \"public\".\"shops\".\"id\", \"public\".\"shops\".\"name\", \"public\".\"shops\".\"slug\", \"public\".\"shops\".\"isActive\", \"public\".\"shops\".\"logoUrl\" FROM \"public\".\"shops\" WHERE \"public\".\"shops\".\"id\" = $1 OFFSET $2",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "0"
           ],
-          "executionMs": 0.032,
+          "executionMs": 0.016,
           "buffers": 1,
           "nodes": [
             {
@@ -316,10 +364,10 @@
         {
           "sql": "SELECT \"public\".\"orders\".\"id\", \"public\".\"orders\".\"shopId\", \"public\".\"orders\".\"orderNumber\", \"public\".\"orders\".\"mode\"::text, \"public\".\"orders\".\"serviceType\"::text, \"public\".\"orders\".\"tableNumber\", \"public\".\"orders\".\"status\", \"public\".\"orders\".\"paymentStatus\", \"public\".\"orders\".\"preparationStatus\", \"public\".\"orders\".\"currency\", \"public\".\"orders\".\"totalPrice\", \"public\".\"orders\".\"createdAt\", \"public\".\"orders\".\"decidedAt\", \"public\".\"orders\".\"decidedBy\", \"public\".\"orders\".\"rejectionReason\" FROM \"public\".\"orders\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"orders\".\"shopId\") WHERE (\"public\".\"orders\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" = CAST($5::text AS \"public\".\"ShopRole\") AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"orders\".\"status\" = $7 AND \"public\".\"orders\".\"paymentStatus\" = $8 AND \"public\".\"orders\".\"preparationStatus\" IS NULL AND \"public\".\"orders\".\"completedAt\" IS NULL AND \"public\".\"orders\".\"currency\" = $9) ORDER BY \"public\".\"orders\".\"createdAt\" DESC, \"public\".\"orders\".\"id\" DESC LIMIT $10 OFFSET $11",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             true,
             "REJECTED",
@@ -328,7 +376,7 @@
             "26",
             "0"
           ],
-          "executionMs": 0.085,
+          "executionMs": 0.121,
           "buffers": 9,
           "nodes": [
             {
@@ -396,14 +444,14 @@
     },
     {
       "name": "rejected numbered page and count",
-      "elapsedMs": 20.39319999999998,
+      "elapsedMs": 23.27500000000009,
       "queryCount": 6,
       "plans": [
         {
           "sql": "SELECT \"public\".\"shop_members\".\"id\", \"public\".\"shop_members\".\"shopId\", \"public\".\"shop_members\".\"role\"::text, \"public\".\"shop_members\".\"disabledAt\", \"public\".\"shop_members\".\"userId\" FROM \"public\".\"shop_members\" WHERE ((\"public\".\"shop_members\".\"userId\" = $1 AND \"public\".\"shop_members\".\"shopId\" = $2) AND 1=1) LIMIT $3 OFFSET $4",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "1",
             "0"
           ],
@@ -428,10 +476,10 @@
         {
           "sql": "SELECT \"public\".\"users\".\"id\", \"public\".\"users\".\"isActive\" FROM \"public\".\"users\" WHERE \"public\".\"users\".\"id\" = $1 OFFSET $2",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "0"
           ],
-          "executionMs": 0.024,
+          "executionMs": 0.02,
           "buffers": 1,
           "nodes": [
             {
@@ -446,10 +494,10 @@
         {
           "sql": "SELECT \"public\".\"shops\".\"id\", \"public\".\"shops\".\"name\", \"public\".\"shops\".\"slug\", \"public\".\"shops\".\"isActive\", \"public\".\"shops\".\"logoUrl\" FROM \"public\".\"shops\" WHERE \"public\".\"shops\".\"id\" = $1 OFFSET $2",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "0"
           ],
-          "executionMs": 0.033,
+          "executionMs": 0.02,
           "buffers": 1,
           "nodes": [
             {
@@ -464,20 +512,20 @@
         {
           "sql": "SELECT COUNT(*) AS \"_count$_all\" FROM (SELECT \"public\".\"orders\".\"id\" FROM \"public\".\"orders\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"orders\".\"shopId\") WHERE (\"public\".\"orders\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" = CAST($5::text AS \"public\".\"ShopRole\") AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"orders\".\"status\" = $7 AND \"public\".\"orders\".\"paymentStatus\" = $8 AND \"public\".\"orders\".\"preparationStatus\" IS NULL AND \"public\".\"orders\".\"completedAt\" IS NULL AND \"public\".\"orders\".\"currency\" = $9 AND (\"public\".\"orders\".\"decidedAt\" <= $10 OR (\"public\".\"orders\".\"decidedAt\" IS NULL AND \"public\".\"orders\".\"createdAt\" <= $11))) OFFSET $12) AS \"sub\"",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             true,
             "REJECTED",
             "UNPAID",
             "PHP",
-            "2026-10-29T02:35:26.045Z",
-            "2026-10-29T02:35:26.045Z",
+            "2026-10-29T03:17:57.682Z",
+            "2026-10-29T03:17:57.682Z",
             "0"
           ],
-          "executionMs": 0.232,
+          "executionMs": 0.366,
           "buffers": 20,
           "nodes": [
             {
@@ -544,21 +592,21 @@
         {
           "sql": "SELECT \"public\".\"orders\".\"id\", \"public\".\"orders\".\"shopId\", \"public\".\"orders\".\"orderNumber\", \"public\".\"orders\".\"mode\"::text, \"public\".\"orders\".\"serviceType\"::text, \"public\".\"orders\".\"tableNumber\", \"public\".\"orders\".\"status\", \"public\".\"orders\".\"paymentStatus\", \"public\".\"orders\".\"preparationStatus\", \"public\".\"orders\".\"currency\", \"public\".\"orders\".\"totalPrice\", \"public\".\"orders\".\"createdAt\", \"public\".\"orders\".\"decidedAt\", \"public\".\"orders\".\"decidedBy\", \"public\".\"orders\".\"rejectionReason\" FROM \"public\".\"orders\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"orders\".\"shopId\") WHERE (\"public\".\"orders\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" = CAST($5::text AS \"public\".\"ShopRole\") AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"orders\".\"status\" = $7 AND \"public\".\"orders\".\"paymentStatus\" = $8 AND \"public\".\"orders\".\"preparationStatus\" IS NULL AND \"public\".\"orders\".\"completedAt\" IS NULL AND \"public\".\"orders\".\"currency\" = $9 AND (\"public\".\"orders\".\"decidedAt\" <= $10 OR (\"public\".\"orders\".\"decidedAt\" IS NULL AND \"public\".\"orders\".\"createdAt\" <= $11))) ORDER BY \"public\".\"orders\".\"createdAt\" DESC, \"public\".\"orders\".\"id\" DESC LIMIT $12 OFFSET $13",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             true,
             "REJECTED",
             "UNPAID",
             "PHP",
-            "2026-10-29T02:35:26.045Z",
-            "2026-10-29T02:35:26.045Z",
+            "2026-10-29T03:17:57.682Z",
+            "2026-10-29T03:17:57.682Z",
             "12",
             "12"
           ],
-          "executionMs": 0.091,
+          "executionMs": 0.092,
           "buffers": 9,
           "nodes": [
             {
@@ -625,21 +673,21 @@
         {
           "sql": "SELECT \"public\".\"orders\".\"id\" FROM \"public\".\"orders\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"orders\".\"shopId\") WHERE (\"public\".\"orders\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" = CAST($5::text AS \"public\".\"ShopRole\") AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"orders\".\"status\" = $7 AND \"public\".\"orders\".\"paymentStatus\" = $8 AND \"public\".\"orders\".\"preparationStatus\" IS NULL AND \"public\".\"orders\".\"completedAt\" IS NULL AND \"public\".\"orders\".\"currency\" = $9 AND (NOT (\"public\".\"orders\".\"decidedAt\" <= $10 OR (\"public\".\"orders\".\"decidedAt\" IS NULL AND \"public\".\"orders\".\"createdAt\" <= $11)))) LIMIT $12 OFFSET $13",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             true,
             "REJECTED",
             "UNPAID",
             "PHP",
-            "2026-10-29T02:35:26.045Z",
-            "2026-10-29T02:35:26.045Z",
+            "2026-10-29T03:17:57.682Z",
+            "2026-10-29T03:17:57.682Z",
             "1",
             "0"
           ],
-          "executionMs": 0.16,
+          "executionMs": 0.196,
           "buffers": 20,
           "nodes": [
             {
@@ -707,15 +755,15 @@
     },
     {
       "name": "product list",
-      "elapsedMs": 7.668300000000045,
+      "elapsedMs": 9.10200000000009,
       "queryCount": 2,
       "plans": [
         {
           "sql": "SELECT \"public\".\"shops\".\"id\" FROM \"public\".\"shops\" WHERE (\"public\".\"shops\".\"id\" = $1 AND \"public\".\"shops\".\"isActive\" = $2 AND EXISTS(SELECT \"t0\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t0\" LEFT JOIN \"public\".\"users\" AS \"j1\" ON (\"j1\".\"id\") = (\"t0\".\"userId\") WHERE (\"t0\".\"userId\" = $3 AND \"t0\".\"disabledAt\" IS NULL AND \"t0\".\"role\" IN (CAST($4::text AS \"public\".\"ShopRole\"),CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\")) AND (\"j1\".\"isActive\" = $7 AND (\"j1\".\"id\" IS NOT NULL)) AND (\"public\".\"shops\".\"id\") = (\"t0\".\"shopId\") AND \"t0\".\"shopId\" IS NOT NULL))) LIMIT $8 OFFSET $9",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             "ADMIN",
             "MANAGER",
@@ -770,10 +818,10 @@
         {
           "sql": "SELECT \"public\".\"products\".\"id\", \"public\".\"products\".\"shopId\", \"public\".\"products\".\"categoryId\", \"public\".\"products\".\"name\", \"public\".\"products\".\"slug\", \"public\".\"products\".\"description\", \"public\".\"products\".\"price\", \"public\".\"products\".\"imageUrl\", \"public\".\"products\".\"status\"::text, \"public\".\"products\".\"isFeatured\", \"public\".\"products\".\"isArchived\", \"public\".\"products\".\"sortOrder\", \"public\".\"products\".\"featuredSortOrder\", \"public\".\"products\".\"createdAt\" FROM \"public\".\"products\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"products\".\"shopId\") WHERE (\"public\".\"products\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" IN (CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\"),CAST($7::text AS \"public\".\"ShopRole\")) AND (\"j2\".\"isActive\" = $8 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL))) ORDER BY \"public\".\"products\".\"sortOrder\" ASC, \"public\".\"products\".\"createdAt\" ASC, \"public\".\"products\".\"id\" ASC LIMIT $9 OFFSET $10",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             "ADMIN",
             "MANAGER",
@@ -781,7 +829,7 @@
             "101",
             "0"
           ],
-          "executionMs": 0.14,
+          "executionMs": 0.116,
           "buffers": 9,
           "nodes": [
             {
@@ -848,15 +896,15 @@
     },
     {
       "name": "category list",
-      "elapsedMs": 5.475199999999859,
+      "elapsedMs": 6.4444999999998345,
       "queryCount": 2,
       "plans": [
         {
           "sql": "SELECT \"public\".\"shops\".\"id\" FROM \"public\".\"shops\" WHERE (\"public\".\"shops\".\"id\" = $1 AND \"public\".\"shops\".\"isActive\" = $2 AND EXISTS(SELECT \"t0\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t0\" LEFT JOIN \"public\".\"users\" AS \"j1\" ON (\"j1\".\"id\") = (\"t0\".\"userId\") WHERE (\"t0\".\"userId\" = $3 AND \"t0\".\"disabledAt\" IS NULL AND \"t0\".\"role\" IN (CAST($4::text AS \"public\".\"ShopRole\"),CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\")) AND (\"j1\".\"isActive\" = $7 AND (\"j1\".\"id\" IS NOT NULL)) AND (\"public\".\"shops\".\"id\") = (\"t0\".\"shopId\") AND \"t0\".\"shopId\" IS NOT NULL))) LIMIT $8 OFFSET $9",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             "ADMIN",
             "MANAGER",
@@ -864,7 +912,7 @@
             "1",
             "0"
           ],
-          "executionMs": 0.04,
+          "executionMs": 0.041,
           "buffers": 3,
           "nodes": [
             {
@@ -911,10 +959,10 @@
         {
           "sql": "SELECT \"public\".\"categories\".\"id\", \"public\".\"categories\".\"shopId\", \"public\".\"categories\".\"name\", \"public\".\"categories\".\"description\", \"public\".\"categories\".\"slug\", \"public\".\"categories\".\"sortOrder\", \"public\".\"categories\".\"isVisible\", \"public\".\"categories\".\"createdAt\" FROM \"public\".\"categories\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"categories\".\"shopId\") WHERE (\"public\".\"categories\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" IN (CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\"),CAST($7::text AS \"public\".\"ShopRole\")) AND (\"j2\".\"isActive\" = $8 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL))) ORDER BY \"public\".\"categories\".\"sortOrder\" ASC, \"public\".\"categories\".\"createdAt\" ASC, \"public\".\"categories\".\"id\" ASC LIMIT $9 OFFSET $10",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             "ADMIN",
             "MANAGER",
@@ -922,7 +970,7 @@
             "101",
             "0"
           ],
-          "executionMs": 0.05,
+          "executionMs": 0.062,
           "buffers": 4,
           "nodes": [
             {
@@ -989,7 +1037,7 @@
     },
     {
       "name": "public menu",
-      "elapsedMs": 10.498199999999997,
+      "elapsedMs": 12.10200000000009,
       "queryCount": 4,
       "plans": [
         {
@@ -1000,7 +1048,7 @@
             "1",
             "0"
           ],
-          "executionMs": 0.023,
+          "executionMs": 0.027,
           "buffers": 1,
           "nodes": [
             {
@@ -1021,13 +1069,13 @@
         {
           "sql": "SELECT \"public\".\"shops\".\"id\", \"public\".\"shops\".\"name\", \"public\".\"shops\".\"slug\", \"public\".\"shops\".\"description\", \"public\".\"shops\".\"logoUrl\", \"public\".\"shops\".\"bannerUrl\", \"public\".\"shops\".\"primaryColor\", \"public\".\"shops\".\"accentColor\", \"public\".\"shops\".\"menuLayout\"::text, \"public\".\"shops\".\"dineInServiceMode\"::text FROM \"public\".\"shops\" WHERE (\"public\".\"shops\".\"id\" = $1 AND \"public\".\"shops\".\"slug\" = $2 AND \"public\".\"shops\".\"isActive\" = $3) LIMIT $4 OFFSET $5",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "tenant-performance-small",
             true,
             "1",
             "0"
           ],
-          "executionMs": 0.033,
+          "executionMs": 0.045,
           "buffers": 5,
           "nodes": [
             {
@@ -1048,15 +1096,15 @@
         {
           "sql": "SELECT \"public\".\"categories\".\"id\", \"public\".\"categories\".\"name\", \"public\".\"categories\".\"slug\", \"public\".\"categories\".\"description\", \"public\".\"categories\".\"sortOrder\", \"public\".\"categories\".\"createdAt\" FROM \"public\".\"categories\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"categories\".\"shopId\") WHERE (\"public\".\"categories\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"slug\" = $3 AND \"j0\".\"isActive\" = $4 AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"categories\".\"isVisible\" = $5) ORDER BY \"public\".\"categories\".\"sortOrder\" ASC, \"public\".\"categories\".\"createdAt\" ASC, \"public\".\"categories\".\"id\" ASC LIMIT $6 OFFSET $7",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "tenant-performance-small",
             true,
             true,
             "101",
             "0"
           ],
-          "executionMs": 0.045,
+          "executionMs": 0.046,
           "buffers": 2,
           "nodes": [
             {
@@ -1096,19 +1144,19 @@
         {
           "sql": "SELECT \"public\".\"products\".\"id\", \"public\".\"products\".\"createdAt\", \"public\".\"products\".\"categoryId\", \"public\".\"products\".\"name\", \"public\".\"products\".\"slug\", \"public\".\"products\".\"description\", \"public\".\"products\".\"price\", \"public\".\"products\".\"imageUrl\", \"public\".\"products\".\"status\"::text, \"public\".\"products\".\"isFeatured\", \"public\".\"products\".\"featuredSortOrder\", \"public\".\"products\".\"sortOrder\" FROM \"public\".\"products\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"products\".\"shopId\") LEFT JOIN \"public\".\"categories\" AS \"j1\" ON (\"j1\".\"id\") = (\"public\".\"products\".\"categoryId\") WHERE (\"public\".\"products\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"slug\" = $3 AND \"j0\".\"isActive\" = $4 AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"products\".\"isArchived\" = $5 AND \"public\".\"products\".\"status\" IN (CAST($6::text AS \"public\".\"ProductStatus\"),CAST($7::text AS \"public\".\"ProductStatus\")) AND (\"public\".\"products\".\"categoryId\" IS NULL OR (\"j1\".\"shopId\" = $8 AND \"j1\".\"isVisible\" = $9 AND (\"j1\".\"id\" IS NOT NULL)))) ORDER BY \"public\".\"products\".\"sortOrder\" ASC, \"public\".\"products\".\"createdAt\" ASC, \"public\".\"products\".\"id\" ASC LIMIT $10 OFFSET $11",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "tenant-performance-small",
             true,
             false,
             "AVAILABLE",
             "SOLD_OUT",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
             "101",
             "0"
           ],
-          "executionMs": 0.156,
+          "executionMs": 0.125,
           "buffers": 6,
           "nodes": [
             {
@@ -1168,7 +1216,7 @@
     },
     {
       "name": "public product and relations",
-      "elapsedMs": 151.59169999999995,
+      "elapsedMs": 153.93830000000003,
       "queryCount": 6,
       "plans": [
         {
@@ -1179,7 +1227,7 @@
             "1",
             "0"
           ],
-          "executionMs": 0.026,
+          "executionMs": 0.027,
           "buffers": 1,
           "nodes": [
             {
@@ -1200,20 +1248,20 @@
         {
           "sql": "SELECT \"public\".\"products\".\"id\", \"public\".\"products\".\"categoryId\", \"public\".\"products\".\"name\", \"public\".\"products\".\"slug\", \"public\".\"products\".\"description\", \"public\".\"products\".\"price\", \"public\".\"products\".\"imageUrl\", \"public\".\"products\".\"status\"::text, \"public\".\"products\".\"isFeatured\", \"public\".\"products\".\"featuredSortOrder\", \"public\".\"products\".\"sortOrder\", \"public\".\"products\".\"shopId\" FROM \"public\".\"products\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"products\".\"shopId\") LEFT JOIN \"public\".\"categories\" AS \"j1\" ON (\"j1\".\"id\") = (\"public\".\"products\".\"categoryId\") WHERE (\"public\".\"products\".\"id\" = $1 AND \"public\".\"products\".\"shopId\" = $2 AND \"public\".\"products\".\"isArchived\" = $3 AND \"public\".\"products\".\"status\" IN (CAST($4::text AS \"public\".\"ProductStatus\"),CAST($5::text AS \"public\".\"ProductStatus\")) AND (\"j0\".\"id\" = $6 AND \"j0\".\"slug\" = $7 AND \"j0\".\"isActive\" = $8 AND (\"j0\".\"id\" IS NOT NULL)) AND (\"public\".\"products\".\"categoryId\" IS NULL OR (\"j1\".\"shopId\" = $9 AND \"j1\".\"isVisible\" = $10 AND (\"j1\".\"id\" IS NOT NULL)))) LIMIT $11 OFFSET $12",
           "params": [
-            "da779130-e55f-4843-89a9-99589eeacc2a",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             false,
             "AVAILABLE",
             "SOLD_OUT",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "tenant-performance-small",
             true,
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
             "1",
             "0"
           ],
-          "executionMs": 0.04,
+          "executionMs": 0.062,
           "buffers": 4,
           "nodes": [
             {
@@ -1260,14 +1308,14 @@
         {
           "sql": "SELECT \"public\".\"product_option_groups\".\"id\", \"public\".\"product_option_groups\".\"name\", \"public\".\"product_option_groups\".\"isRequired\", \"public\".\"product_option_groups\".\"productId\", \"public\".\"product_option_groups\".\"shopId\" FROM \"public\".\"product_option_groups\" WHERE ((\"public\".\"product_option_groups\".\"shopId\" = $1 AND \"public\".\"product_option_groups\".\"productId\" = $2 AND \"public\".\"product_option_groups\".\"isAvailable\" = $3) AND \"public\".\"product_option_groups\".\"shopId\" IN ($4) AND \"public\".\"product_option_groups\".\"productId\" IN ($5)) ORDER BY \"public\".\"product_option_groups\".\"sortOrder\" ASC, \"public\".\"product_option_groups\".\"createdAt\" ASC, \"public\".\"product_option_groups\".\"id\" ASC OFFSET $6",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             true,
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             "0"
           ],
-          "executionMs": 0.022,
+          "executionMs": 0.024,
           "buffers": 2,
           "nodes": [
             {
@@ -1289,17 +1337,17 @@
         {
           "sql": "SELECT \"public\".\"product_variants\".\"id\", \"public\".\"product_variants\".\"optionGroupId\", \"public\".\"product_variants\".\"name\", \"public\".\"product_variants\".\"priceAdjustment\", \"public\".\"product_variants\".\"isDefault\", \"public\".\"product_variants\".\"productId\", \"public\".\"product_variants\".\"shopId\" FROM \"public\".\"product_variants\" LEFT JOIN \"public\".\"product_option_groups\" AS \"j2\" ON (\"j2\".\"id\",\"j2\".\"productId\",\"j2\".\"shopId\") = (\"public\".\"product_variants\".\"optionGroupId\",\"public\".\"product_variants\".\"productId\",\"public\".\"product_variants\".\"shopId\") WHERE ((\"public\".\"product_variants\".\"shopId\" = $1 AND \"public\".\"product_variants\".\"productId\" = $2 AND \"public\".\"product_variants\".\"isAvailable\" = $3 AND (\"public\".\"product_variants\".\"optionGroupId\" IS NULL OR (\"j2\".\"shopId\" = $4 AND \"j2\".\"productId\" = $5 AND \"j2\".\"isAvailable\" = $6 AND (\"j2\".\"id\" IS NOT NULL)))) AND \"public\".\"product_variants\".\"shopId\" IN ($7) AND \"public\".\"product_variants\".\"productId\" IN ($8)) ORDER BY \"public\".\"product_variants\".\"sortOrder\" ASC, \"public\".\"product_variants\".\"createdAt\" ASC, \"public\".\"product_variants\".\"id\" ASC OFFSET $9",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             true,
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             true,
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             "0"
           ],
-          "executionMs": 0.033,
+          "executionMs": 0.029,
           "buffers": 2,
           "nodes": [
             {
@@ -1335,15 +1383,15 @@
         {
           "sql": "SELECT \"public\".\"product_add_ons\".\"productId\", \"public\".\"product_add_ons\".\"addOnId\", \"public\".\"product_add_ons\".\"shopId\" FROM \"public\".\"product_add_ons\" LEFT JOIN \"public\".\"add_ons\" AS \"orderby_1\" ON (\"orderby_1\".\"id\",\"orderby_1\".\"shopId\") = (\"public\".\"product_add_ons\".\"addOnId\",\"public\".\"product_add_ons\".\"shopId\") LEFT JOIN \"public\".\"add_ons\" AS \"j3\" ON (\"j3\".\"id\",\"j3\".\"shopId\") = (\"public\".\"product_add_ons\".\"addOnId\",\"public\".\"product_add_ons\".\"shopId\") WHERE ((\"public\".\"product_add_ons\".\"shopId\" = $1 AND \"public\".\"product_add_ons\".\"productId\" = $2 AND (\"j3\".\"shopId\" = $3 AND \"j3\".\"isAvailable\" = $4 AND (\"j3\".\"id\" IS NOT NULL))) AND \"public\".\"product_add_ons\".\"shopId\" IN ($5) AND \"public\".\"product_add_ons\".\"productId\" IN ($6)) ORDER BY \"orderby_1\".\"sortOrder\" ASC, \"public\".\"product_add_ons\".\"addOnId\" ASC OFFSET $7",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             "0"
           ],
-          "executionMs": 0.033,
+          "executionMs": 0.048,
           "buffers": 2,
           "nodes": [
             {
@@ -1401,7 +1449,7 @@
           "params": [
             "0"
           ],
-          "executionMs": 0.01,
+          "executionMs": 0.012,
           "buffers": 0,
           "nodes": [
             {
@@ -1416,22 +1464,22 @@
     },
     {
       "name": "resource lookup",
-      "elapsedMs": 4.997699999999895,
+      "elapsedMs": 4.796000000000049,
       "queryCount": 1,
       "plans": [
         {
           "sql": "SELECT \"public\".\"products\".\"id\", \"public\".\"products\".\"shopId\" FROM \"public\".\"products\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"products\".\"shopId\") WHERE (\"public\".\"products\".\"id\" = $1 AND \"public\".\"products\".\"shopId\" = $2 AND (\"j0\".\"id\" = $3 AND \"j0\".\"isActive\" = $4 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $5 AND \"t1\".\"disabledAt\" IS NULL AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL))) LIMIT $7 OFFSET $8",
           "params": [
-            "da779130-e55f-4843-89a9-99589eeacc2a",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             true,
             "1",
             "0"
           ],
-          "executionMs": 0.05,
+          "executionMs": 0.072,
           "buffers": 5,
           "nodes": [
             {
@@ -1494,18 +1542,18 @@
   "after": [
     {
       "name": "active first page",
-      "elapsedMs": 68.77019999999902,
+      "elapsedMs": 90.93800000000192,
       "queryCount": 4,
       "plans": [
         {
           "sql": "SELECT \"public\".\"shop_members\".\"id\", \"public\".\"shop_members\".\"shopId\", \"public\".\"shop_members\".\"role\"::text, \"public\".\"shop_members\".\"disabledAt\", \"public\".\"shop_members\".\"userId\" FROM \"public\".\"shop_members\" WHERE ((\"public\".\"shop_members\".\"userId\" = $1 AND \"public\".\"shop_members\".\"shopId\" = $2) AND 1=1) LIMIT $3 OFFSET $4",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "1",
             "0"
           ],
-          "executionMs": 0.022,
+          "executionMs": 0.044,
           "buffers": 1,
           "nodes": [
             {
@@ -1526,10 +1574,10 @@
         {
           "sql": "SELECT \"public\".\"users\".\"id\", \"public\".\"users\".\"isActive\" FROM \"public\".\"users\" WHERE \"public\".\"users\".\"id\" = $1 OFFSET $2",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "0"
           ],
-          "executionMs": 0.016,
+          "executionMs": 0.023,
           "buffers": 1,
           "nodes": [
             {
@@ -1544,10 +1592,10 @@
         {
           "sql": "SELECT \"public\".\"shops\".\"id\", \"public\".\"shops\".\"name\", \"public\".\"shops\".\"slug\", \"public\".\"shops\".\"isActive\", \"public\".\"shops\".\"logoUrl\" FROM \"public\".\"shops\" WHERE \"public\".\"shops\".\"id\" = $1 OFFSET $2",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "0"
           ],
-          "executionMs": 0.014,
+          "executionMs": 0.019,
           "buffers": 1,
           "nodes": [
             {
@@ -1562,10 +1610,10 @@
         {
           "sql": "SELECT \"public\".\"orders\".\"id\", \"public\".\"orders\".\"shopId\", \"public\".\"orders\".\"orderNumber\", \"public\".\"orders\".\"mode\"::text, \"public\".\"orders\".\"serviceType\"::text, \"public\".\"orders\".\"tableNumber\", \"public\".\"orders\".\"status\", \"public\".\"orders\".\"paymentStatus\", \"public\".\"orders\".\"preparationStatus\", \"public\".\"orders\".\"currency\", \"public\".\"orders\".\"totalPrice\", \"public\".\"orders\".\"createdAt\", \"public\".\"orders\".\"updatedAt\" FROM \"public\".\"orders\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"orders\".\"shopId\") WHERE (\"public\".\"orders\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" = CAST($5::text AS \"public\".\"ShopRole\") AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"orders\".\"status\" IN ($7,$8) AND \"public\".\"orders\".\"completedAt\" IS NULL AND (\"public\".\"orders\".\"preparationStatus\" IS NULL OR \"public\".\"orders\".\"preparationStatus\" IN ($9,$10,$11))) ORDER BY \"public\".\"orders\".\"createdAt\" ASC, \"public\".\"orders\".\"id\" ASC LIMIT $12 OFFSET $13",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             true,
             "PENDING_CONFIRMATION",
@@ -1576,7 +1624,7 @@
             "26",
             "0"
           ],
-          "executionMs": 0.113,
+          "executionMs": 0.218,
           "buffers": 22,
           "nodes": [
             {
@@ -1644,18 +1692,18 @@
     },
     {
       "name": "rejected first page",
-      "elapsedMs": 7.40099999999984,
+      "elapsedMs": 9.901599999997416,
       "queryCount": 4,
       "plans": [
         {
           "sql": "SELECT \"public\".\"shop_members\".\"id\", \"public\".\"shop_members\".\"shopId\", \"public\".\"shop_members\".\"role\"::text, \"public\".\"shop_members\".\"disabledAt\", \"public\".\"shop_members\".\"userId\" FROM \"public\".\"shop_members\" WHERE ((\"public\".\"shop_members\".\"userId\" = $1 AND \"public\".\"shop_members\".\"shopId\" = $2) AND 1=1) LIMIT $3 OFFSET $4",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "1",
             "0"
           ],
-          "executionMs": 0.024,
+          "executionMs": 0.022,
           "buffers": 1,
           "nodes": [
             {
@@ -1676,10 +1724,10 @@
         {
           "sql": "SELECT \"public\".\"users\".\"id\", \"public\".\"users\".\"isActive\" FROM \"public\".\"users\" WHERE \"public\".\"users\".\"id\" = $1 OFFSET $2",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "0"
           ],
-          "executionMs": 0.017,
+          "executionMs": 0.02,
           "buffers": 1,
           "nodes": [
             {
@@ -1694,10 +1742,10 @@
         {
           "sql": "SELECT \"public\".\"shops\".\"id\", \"public\".\"shops\".\"name\", \"public\".\"shops\".\"slug\", \"public\".\"shops\".\"isActive\", \"public\".\"shops\".\"logoUrl\" FROM \"public\".\"shops\" WHERE \"public\".\"shops\".\"id\" = $1 OFFSET $2",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "0"
           ],
-          "executionMs": 0.021,
+          "executionMs": 0.016,
           "buffers": 1,
           "nodes": [
             {
@@ -1712,10 +1760,10 @@
         {
           "sql": "SELECT \"public\".\"orders\".\"id\", \"public\".\"orders\".\"shopId\", \"public\".\"orders\".\"orderNumber\", \"public\".\"orders\".\"mode\"::text, \"public\".\"orders\".\"serviceType\"::text, \"public\".\"orders\".\"tableNumber\", \"public\".\"orders\".\"status\", \"public\".\"orders\".\"paymentStatus\", \"public\".\"orders\".\"preparationStatus\", \"public\".\"orders\".\"currency\", \"public\".\"orders\".\"totalPrice\", \"public\".\"orders\".\"createdAt\", \"public\".\"orders\".\"decidedAt\", \"public\".\"orders\".\"decidedBy\", \"public\".\"orders\".\"rejectionReason\" FROM \"public\".\"orders\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"orders\".\"shopId\") WHERE (\"public\".\"orders\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" = CAST($5::text AS \"public\".\"ShopRole\") AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"orders\".\"status\" = $7 AND \"public\".\"orders\".\"paymentStatus\" = $8 AND \"public\".\"orders\".\"preparationStatus\" IS NULL AND \"public\".\"orders\".\"completedAt\" IS NULL AND \"public\".\"orders\".\"currency\" = $9) ORDER BY \"public\".\"orders\".\"createdAt\" DESC, \"public\".\"orders\".\"id\" DESC LIMIT $10 OFFSET $11",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             true,
             "REJECTED",
@@ -1724,7 +1772,7 @@
             "26",
             "0"
           ],
-          "executionMs": 0.085,
+          "executionMs": 0.079,
           "buffers": 10,
           "nodes": [
             {
@@ -1792,18 +1840,18 @@
     },
     {
       "name": "rejected numbered page and count",
-      "elapsedMs": 9.652600000001257,
+      "elapsedMs": 16.635999999998603,
       "queryCount": 6,
       "plans": [
         {
           "sql": "SELECT \"public\".\"shop_members\".\"id\", \"public\".\"shop_members\".\"shopId\", \"public\".\"shop_members\".\"role\"::text, \"public\".\"shop_members\".\"disabledAt\", \"public\".\"shop_members\".\"userId\" FROM \"public\".\"shop_members\" WHERE ((\"public\".\"shop_members\".\"userId\" = $1 AND \"public\".\"shop_members\".\"shopId\" = $2) AND 1=1) LIMIT $3 OFFSET $4",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "1",
             "0"
           ],
-          "executionMs": 0.025,
+          "executionMs": 0.041,
           "buffers": 1,
           "nodes": [
             {
@@ -1824,10 +1872,10 @@
         {
           "sql": "SELECT \"public\".\"users\".\"id\", \"public\".\"users\".\"isActive\" FROM \"public\".\"users\" WHERE \"public\".\"users\".\"id\" = $1 OFFSET $2",
           "params": [
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "0"
           ],
-          "executionMs": 0.018,
+          "executionMs": 0.03,
           "buffers": 1,
           "nodes": [
             {
@@ -1842,10 +1890,10 @@
         {
           "sql": "SELECT \"public\".\"shops\".\"id\", \"public\".\"shops\".\"name\", \"public\".\"shops\".\"slug\", \"public\".\"shops\".\"isActive\", \"public\".\"shops\".\"logoUrl\" FROM \"public\".\"shops\" WHERE \"public\".\"shops\".\"id\" = $1 OFFSET $2",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "0"
           ],
-          "executionMs": 0.015,
+          "executionMs": 0.03,
           "buffers": 1,
           "nodes": [
             {
@@ -1860,20 +1908,20 @@
         {
           "sql": "SELECT COUNT(*) AS \"_count$_all\" FROM (SELECT \"public\".\"orders\".\"id\" FROM \"public\".\"orders\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"orders\".\"shopId\") WHERE (\"public\".\"orders\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" = CAST($5::text AS \"public\".\"ShopRole\") AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"orders\".\"status\" = $7 AND \"public\".\"orders\".\"paymentStatus\" = $8 AND \"public\".\"orders\".\"preparationStatus\" IS NULL AND \"public\".\"orders\".\"completedAt\" IS NULL AND \"public\".\"orders\".\"currency\" = $9 AND (\"public\".\"orders\".\"decidedAt\" <= $10 OR (\"public\".\"orders\".\"decidedAt\" IS NULL AND \"public\".\"orders\".\"createdAt\" <= $11))) OFFSET $12) AS \"sub\"",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             true,
             "REJECTED",
             "UNPAID",
             "PHP",
-            "2026-10-29T02:35:26.045Z",
-            "2026-10-29T02:35:26.045Z",
+            "2026-10-29T03:17:57.682Z",
+            "2026-10-29T03:17:57.682Z",
             "0"
           ],
-          "executionMs": 0.221,
+          "executionMs": 0.229,
           "buffers": 26,
           "nodes": [
             {
@@ -1934,21 +1982,21 @@
         {
           "sql": "SELECT \"public\".\"orders\".\"id\", \"public\".\"orders\".\"shopId\", \"public\".\"orders\".\"orderNumber\", \"public\".\"orders\".\"mode\"::text, \"public\".\"orders\".\"serviceType\"::text, \"public\".\"orders\".\"tableNumber\", \"public\".\"orders\".\"status\", \"public\".\"orders\".\"paymentStatus\", \"public\".\"orders\".\"preparationStatus\", \"public\".\"orders\".\"currency\", \"public\".\"orders\".\"totalPrice\", \"public\".\"orders\".\"createdAt\", \"public\".\"orders\".\"decidedAt\", \"public\".\"orders\".\"decidedBy\", \"public\".\"orders\".\"rejectionReason\" FROM \"public\".\"orders\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"orders\".\"shopId\") WHERE (\"public\".\"orders\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" = CAST($5::text AS \"public\".\"ShopRole\") AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"orders\".\"status\" = $7 AND \"public\".\"orders\".\"paymentStatus\" = $8 AND \"public\".\"orders\".\"preparationStatus\" IS NULL AND \"public\".\"orders\".\"completedAt\" IS NULL AND \"public\".\"orders\".\"currency\" = $9 AND (\"public\".\"orders\".\"decidedAt\" <= $10 OR (\"public\".\"orders\".\"decidedAt\" IS NULL AND \"public\".\"orders\".\"createdAt\" <= $11))) ORDER BY \"public\".\"orders\".\"createdAt\" DESC, \"public\".\"orders\".\"id\" DESC LIMIT $12 OFFSET $13",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             true,
             "REJECTED",
             "UNPAID",
             "PHP",
-            "2026-10-29T02:35:26.045Z",
-            "2026-10-29T02:35:26.045Z",
+            "2026-10-29T03:17:57.682Z",
+            "2026-10-29T03:17:57.682Z",
             "12",
             "12"
           ],
-          "executionMs": 0.136,
+          "executionMs": 0.181,
           "buffers": 10,
           "nodes": [
             {
@@ -2015,21 +2063,21 @@
         {
           "sql": "SELECT \"public\".\"orders\".\"id\" FROM \"public\".\"orders\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"orders\".\"shopId\") WHERE (\"public\".\"orders\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" = CAST($5::text AS \"public\".\"ShopRole\") AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"orders\".\"status\" = $7 AND \"public\".\"orders\".\"paymentStatus\" = $8 AND \"public\".\"orders\".\"preparationStatus\" IS NULL AND \"public\".\"orders\".\"completedAt\" IS NULL AND \"public\".\"orders\".\"currency\" = $9 AND (NOT (\"public\".\"orders\".\"decidedAt\" <= $10 OR (\"public\".\"orders\".\"decidedAt\" IS NULL AND \"public\".\"orders\".\"createdAt\" <= $11)))) LIMIT $12 OFFSET $13",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             true,
             "REJECTED",
             "UNPAID",
             "PHP",
-            "2026-10-29T02:35:26.045Z",
-            "2026-10-29T02:35:26.045Z",
+            "2026-10-29T03:17:57.682Z",
+            "2026-10-29T03:17:57.682Z",
             "1",
             "0"
           ],
-          "executionMs": 0.179,
+          "executionMs": 0.345,
           "buffers": 17,
           "nodes": [
             {
@@ -2097,15 +2145,15 @@
     },
     {
       "name": "product list",
-      "elapsedMs": 4.953300000001036,
+      "elapsedMs": 6.797199999997247,
       "queryCount": 2,
       "plans": [
         {
           "sql": "SELECT \"public\".\"shops\".\"id\" FROM \"public\".\"shops\" WHERE (\"public\".\"shops\".\"id\" = $1 AND \"public\".\"shops\".\"isActive\" = $2 AND EXISTS(SELECT \"t0\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t0\" LEFT JOIN \"public\".\"users\" AS \"j1\" ON (\"j1\".\"id\") = (\"t0\".\"userId\") WHERE (\"t0\".\"userId\" = $3 AND \"t0\".\"disabledAt\" IS NULL AND \"t0\".\"role\" IN (CAST($4::text AS \"public\".\"ShopRole\"),CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\")) AND (\"j1\".\"isActive\" = $7 AND (\"j1\".\"id\" IS NOT NULL)) AND (\"public\".\"shops\".\"id\") = (\"t0\".\"shopId\") AND \"t0\".\"shopId\" IS NOT NULL))) LIMIT $8 OFFSET $9",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             "ADMIN",
             "MANAGER",
@@ -2113,7 +2161,7 @@
             "1",
             "0"
           ],
-          "executionMs": 0.036,
+          "executionMs": 0.054,
           "buffers": 3,
           "nodes": [
             {
@@ -2160,10 +2208,10 @@
         {
           "sql": "SELECT \"public\".\"products\".\"id\", \"public\".\"products\".\"shopId\", \"public\".\"products\".\"categoryId\", \"public\".\"products\".\"name\", \"public\".\"products\".\"slug\", \"public\".\"products\".\"description\", \"public\".\"products\".\"price\", \"public\".\"products\".\"imageUrl\", \"public\".\"products\".\"status\"::text, \"public\".\"products\".\"isFeatured\", \"public\".\"products\".\"isArchived\", \"public\".\"products\".\"sortOrder\", \"public\".\"products\".\"featuredSortOrder\", \"public\".\"products\".\"createdAt\" FROM \"public\".\"products\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"products\".\"shopId\") WHERE (\"public\".\"products\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" IN (CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\"),CAST($7::text AS \"public\".\"ShopRole\")) AND (\"j2\".\"isActive\" = $8 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL))) ORDER BY \"public\".\"products\".\"sortOrder\" ASC, \"public\".\"products\".\"createdAt\" ASC, \"public\".\"products\".\"id\" ASC LIMIT $9 OFFSET $10",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             "ADMIN",
             "MANAGER",
@@ -2171,7 +2219,7 @@
             "101",
             "0"
           ],
-          "executionMs": 0.083,
+          "executionMs": 0.072,
           "buffers": 6,
           "nodes": [
             {
@@ -2239,15 +2287,15 @@
     },
     {
       "name": "category list",
-      "elapsedMs": 3.282199999999648,
+      "elapsedMs": 5.778300000001764,
       "queryCount": 2,
       "plans": [
         {
           "sql": "SELECT \"public\".\"shops\".\"id\" FROM \"public\".\"shops\" WHERE (\"public\".\"shops\".\"id\" = $1 AND \"public\".\"shops\".\"isActive\" = $2 AND EXISTS(SELECT \"t0\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t0\" LEFT JOIN \"public\".\"users\" AS \"j1\" ON (\"j1\".\"id\") = (\"t0\".\"userId\") WHERE (\"t0\".\"userId\" = $3 AND \"t0\".\"disabledAt\" IS NULL AND \"t0\".\"role\" IN (CAST($4::text AS \"public\".\"ShopRole\"),CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\")) AND (\"j1\".\"isActive\" = $7 AND (\"j1\".\"id\" IS NOT NULL)) AND (\"public\".\"shops\".\"id\") = (\"t0\".\"shopId\") AND \"t0\".\"shopId\" IS NOT NULL))) LIMIT $8 OFFSET $9",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             "ADMIN",
             "MANAGER",
@@ -2255,7 +2303,7 @@
             "1",
             "0"
           ],
-          "executionMs": 0.039,
+          "executionMs": 0.048,
           "buffers": 3,
           "nodes": [
             {
@@ -2302,10 +2350,10 @@
         {
           "sql": "SELECT \"public\".\"categories\".\"id\", \"public\".\"categories\".\"shopId\", \"public\".\"categories\".\"name\", \"public\".\"categories\".\"description\", \"public\".\"categories\".\"slug\", \"public\".\"categories\".\"sortOrder\", \"public\".\"categories\".\"isVisible\", \"public\".\"categories\".\"createdAt\" FROM \"public\".\"categories\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"categories\".\"shopId\") WHERE (\"public\".\"categories\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" IN (CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\"),CAST($7::text AS \"public\".\"ShopRole\")) AND (\"j2\".\"isActive\" = $8 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL))) ORDER BY \"public\".\"categories\".\"sortOrder\" ASC, \"public\".\"categories\".\"createdAt\" ASC, \"public\".\"categories\".\"id\" ASC LIMIT $9 OFFSET $10",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             "OWNER",
             "ADMIN",
             "MANAGER",
@@ -2313,7 +2361,7 @@
             "101",
             "0"
           ],
-          "executionMs": 0.047,
+          "executionMs": 0.086,
           "buffers": 4,
           "nodes": [
             {
@@ -2380,7 +2428,7 @@
     },
     {
       "name": "public menu",
-      "elapsedMs": 5.961399999998321,
+      "elapsedMs": 9.112599999996746,
       "queryCount": 4,
       "plans": [
         {
@@ -2391,7 +2439,7 @@
             "1",
             "0"
           ],
-          "executionMs": 0.025,
+          "executionMs": 0.028,
           "buffers": 1,
           "nodes": [
             {
@@ -2412,13 +2460,13 @@
         {
           "sql": "SELECT \"public\".\"shops\".\"id\", \"public\".\"shops\".\"name\", \"public\".\"shops\".\"slug\", \"public\".\"shops\".\"description\", \"public\".\"shops\".\"logoUrl\", \"public\".\"shops\".\"bannerUrl\", \"public\".\"shops\".\"primaryColor\", \"public\".\"shops\".\"accentColor\", \"public\".\"shops\".\"menuLayout\"::text, \"public\".\"shops\".\"dineInServiceMode\"::text FROM \"public\".\"shops\" WHERE (\"public\".\"shops\".\"id\" = $1 AND \"public\".\"shops\".\"slug\" = $2 AND \"public\".\"shops\".\"isActive\" = $3) LIMIT $4 OFFSET $5",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "tenant-performance-small",
             true,
             "1",
             "0"
           ],
-          "executionMs": 0.021,
+          "executionMs": 0.028,
           "buffers": 1,
           "nodes": [
             {
@@ -2439,15 +2487,15 @@
         {
           "sql": "SELECT \"public\".\"categories\".\"id\", \"public\".\"categories\".\"name\", \"public\".\"categories\".\"slug\", \"public\".\"categories\".\"description\", \"public\".\"categories\".\"sortOrder\", \"public\".\"categories\".\"createdAt\" FROM \"public\".\"categories\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"categories\".\"shopId\") WHERE (\"public\".\"categories\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"slug\" = $3 AND \"j0\".\"isActive\" = $4 AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"categories\".\"isVisible\" = $5) ORDER BY \"public\".\"categories\".\"sortOrder\" ASC, \"public\".\"categories\".\"createdAt\" ASC, \"public\".\"categories\".\"id\" ASC LIMIT $6 OFFSET $7",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "tenant-performance-small",
             true,
             true,
             "101",
             "0"
           ],
-          "executionMs": 0.036,
+          "executionMs": 0.072,
           "buffers": 2,
           "nodes": [
             {
@@ -2487,19 +2535,19 @@
         {
           "sql": "SELECT \"public\".\"products\".\"id\", \"public\".\"products\".\"createdAt\", \"public\".\"products\".\"categoryId\", \"public\".\"products\".\"name\", \"public\".\"products\".\"slug\", \"public\".\"products\".\"description\", \"public\".\"products\".\"price\", \"public\".\"products\".\"imageUrl\", \"public\".\"products\".\"status\"::text, \"public\".\"products\".\"isFeatured\", \"public\".\"products\".\"featuredSortOrder\", \"public\".\"products\".\"sortOrder\" FROM \"public\".\"products\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"products\".\"shopId\") LEFT JOIN \"public\".\"categories\" AS \"j1\" ON (\"j1\".\"id\") = (\"public\".\"products\".\"categoryId\") WHERE (\"public\".\"products\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"slug\" = $3 AND \"j0\".\"isActive\" = $4 AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"products\".\"isArchived\" = $5 AND \"public\".\"products\".\"status\" IN (CAST($6::text AS \"public\".\"ProductStatus\"),CAST($7::text AS \"public\".\"ProductStatus\")) AND (\"public\".\"products\".\"categoryId\" IS NULL OR (\"j1\".\"shopId\" = $8 AND \"j1\".\"isVisible\" = $9 AND (\"j1\".\"id\" IS NOT NULL)))) ORDER BY \"public\".\"products\".\"sortOrder\" ASC, \"public\".\"products\".\"createdAt\" ASC, \"public\".\"products\".\"id\" ASC LIMIT $10 OFFSET $11",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "tenant-performance-small",
             true,
             false,
             "AVAILABLE",
             "SOLD_OUT",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
             "101",
             "0"
           ],
-          "executionMs": 0.101,
+          "executionMs": 0.094,
           "buffers": 5,
           "nodes": [
             {
@@ -2560,7 +2608,7 @@
     },
     {
       "name": "public product and relations",
-      "elapsedMs": 45.81960000000072,
+      "elapsedMs": 48.01850000000195,
       "queryCount": 6,
       "plans": [
         {
@@ -2571,7 +2619,7 @@
             "1",
             "0"
           ],
-          "executionMs": 0.03,
+          "executionMs": 0.026,
           "buffers": 1,
           "nodes": [
             {
@@ -2592,20 +2640,20 @@
         {
           "sql": "SELECT \"public\".\"products\".\"id\", \"public\".\"products\".\"categoryId\", \"public\".\"products\".\"name\", \"public\".\"products\".\"slug\", \"public\".\"products\".\"description\", \"public\".\"products\".\"price\", \"public\".\"products\".\"imageUrl\", \"public\".\"products\".\"status\"::text, \"public\".\"products\".\"isFeatured\", \"public\".\"products\".\"featuredSortOrder\", \"public\".\"products\".\"sortOrder\", \"public\".\"products\".\"shopId\" FROM \"public\".\"products\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"products\".\"shopId\") LEFT JOIN \"public\".\"categories\" AS \"j1\" ON (\"j1\".\"id\") = (\"public\".\"products\".\"categoryId\") WHERE (\"public\".\"products\".\"id\" = $1 AND \"public\".\"products\".\"shopId\" = $2 AND \"public\".\"products\".\"isArchived\" = $3 AND \"public\".\"products\".\"status\" IN (CAST($4::text AS \"public\".\"ProductStatus\"),CAST($5::text AS \"public\".\"ProductStatus\")) AND (\"j0\".\"id\" = $6 AND \"j0\".\"slug\" = $7 AND \"j0\".\"isActive\" = $8 AND (\"j0\".\"id\" IS NOT NULL)) AND (\"public\".\"products\".\"categoryId\" IS NULL OR (\"j1\".\"shopId\" = $9 AND \"j1\".\"isVisible\" = $10 AND (\"j1\".\"id\" IS NOT NULL)))) LIMIT $11 OFFSET $12",
           "params": [
-            "da779130-e55f-4843-89a9-99589eeacc2a",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             false,
             "AVAILABLE",
             "SOLD_OUT",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             "tenant-performance-small",
             true,
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
             "1",
             "0"
           ],
-          "executionMs": 0.075,
+          "executionMs": 0.043,
           "buffers": 6,
           "nodes": [
             {
@@ -2653,14 +2701,14 @@
         {
           "sql": "SELECT \"public\".\"product_option_groups\".\"id\", \"public\".\"product_option_groups\".\"name\", \"public\".\"product_option_groups\".\"isRequired\", \"public\".\"product_option_groups\".\"productId\", \"public\".\"product_option_groups\".\"shopId\" FROM \"public\".\"product_option_groups\" WHERE ((\"public\".\"product_option_groups\".\"shopId\" = $1 AND \"public\".\"product_option_groups\".\"productId\" = $2 AND \"public\".\"product_option_groups\".\"isAvailable\" = $3) AND \"public\".\"product_option_groups\".\"shopId\" IN ($4) AND \"public\".\"product_option_groups\".\"productId\" IN ($5)) ORDER BY \"public\".\"product_option_groups\".\"sortOrder\" ASC, \"public\".\"product_option_groups\".\"createdAt\" ASC, \"public\".\"product_option_groups\".\"id\" ASC OFFSET $6",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             true,
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             "0"
           ],
-          "executionMs": 0.035,
+          "executionMs": 0.026,
           "buffers": 2,
           "nodes": [
             {
@@ -2682,17 +2730,17 @@
         {
           "sql": "SELECT \"public\".\"product_variants\".\"id\", \"public\".\"product_variants\".\"optionGroupId\", \"public\".\"product_variants\".\"name\", \"public\".\"product_variants\".\"priceAdjustment\", \"public\".\"product_variants\".\"isDefault\", \"public\".\"product_variants\".\"productId\", \"public\".\"product_variants\".\"shopId\" FROM \"public\".\"product_variants\" LEFT JOIN \"public\".\"product_option_groups\" AS \"j2\" ON (\"j2\".\"id\",\"j2\".\"productId\",\"j2\".\"shopId\") = (\"public\".\"product_variants\".\"optionGroupId\",\"public\".\"product_variants\".\"productId\",\"public\".\"product_variants\".\"shopId\") WHERE ((\"public\".\"product_variants\".\"shopId\" = $1 AND \"public\".\"product_variants\".\"productId\" = $2 AND \"public\".\"product_variants\".\"isAvailable\" = $3 AND (\"public\".\"product_variants\".\"optionGroupId\" IS NULL OR (\"j2\".\"shopId\" = $4 AND \"j2\".\"productId\" = $5 AND \"j2\".\"isAvailable\" = $6 AND (\"j2\".\"id\" IS NOT NULL)))) AND \"public\".\"product_variants\".\"shopId\" IN ($7) AND \"public\".\"product_variants\".\"productId\" IN ($8)) ORDER BY \"public\".\"product_variants\".\"sortOrder\" ASC, \"public\".\"product_variants\".\"createdAt\" ASC, \"public\".\"product_variants\".\"id\" ASC OFFSET $9",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             true,
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             true,
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             "0"
           ],
-          "executionMs": 0.038,
+          "executionMs": 0.021,
           "buffers": 2,
           "nodes": [
             {
@@ -2728,15 +2776,15 @@
         {
           "sql": "SELECT \"public\".\"product_add_ons\".\"productId\", \"public\".\"product_add_ons\".\"addOnId\", \"public\".\"product_add_ons\".\"shopId\" FROM \"public\".\"product_add_ons\" LEFT JOIN \"public\".\"add_ons\" AS \"orderby_1\" ON (\"orderby_1\".\"id\",\"orderby_1\".\"shopId\") = (\"public\".\"product_add_ons\".\"addOnId\",\"public\".\"product_add_ons\".\"shopId\") LEFT JOIN \"public\".\"add_ons\" AS \"j3\" ON (\"j3\".\"id\",\"j3\".\"shopId\") = (\"public\".\"product_add_ons\".\"addOnId\",\"public\".\"product_add_ons\".\"shopId\") WHERE ((\"public\".\"product_add_ons\".\"shopId\" = $1 AND \"public\".\"product_add_ons\".\"productId\" = $2 AND (\"j3\".\"shopId\" = $3 AND \"j3\".\"isAvailable\" = $4 AND (\"j3\".\"id\" IS NOT NULL))) AND \"public\".\"product_add_ons\".\"shopId\" IN ($5) AND \"public\".\"product_add_ons\".\"productId\" IN ($6)) ORDER BY \"orderby_1\".\"sortOrder\" ASC, \"public\".\"product_add_ons\".\"addOnId\" ASC OFFSET $7",
           "params": [
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "da779130-e55f-4843-89a9-99589eeacc2a",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
             "0"
           ],
-          "executionMs": 0.044,
+          "executionMs": 0.021,
           "buffers": 2,
           "nodes": [
             {
@@ -2794,7 +2842,7 @@
           "params": [
             "0"
           ],
-          "executionMs": 0.009,
+          "executionMs": 0.013,
           "buffers": 0,
           "nodes": [
             {
@@ -2809,22 +2857,22 @@
     },
     {
       "name": "resource lookup",
-      "elapsedMs": 3.503099999999904,
+      "elapsedMs": 4.070499999997992,
       "queryCount": 1,
       "plans": [
         {
           "sql": "SELECT \"public\".\"products\".\"id\", \"public\".\"products\".\"shopId\" FROM \"public\".\"products\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"products\".\"shopId\") WHERE (\"public\".\"products\".\"id\" = $1 AND \"public\".\"products\".\"shopId\" = $2 AND (\"j0\".\"id\" = $3 AND \"j0\".\"isActive\" = $4 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $5 AND \"t1\".\"disabledAt\" IS NULL AND (\"j2\".\"isActive\" = $6 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL))) LIMIT $7 OFFSET $8",
           "params": [
-            "da779130-e55f-4843-89a9-99589eeacc2a",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
-            "aa965286-7dcd-4f18-8223-0aac9f992c72",
+            "79d2369c-da35-484f-996e-b6d59ad56606",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
+            "69a13e99-ba7e-46d1-9ac8-6b8b8b5d6017",
             true,
-            "e171636a-21f9-405d-98c6-32b5cd6bb760",
+            "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
             true,
             "1",
             "0"
           ],
-          "executionMs": 0.25,
+          "executionMs": 0.193,
           "buffers": 7,
           "nodes": [
             {
@@ -2900,51 +2948,51 @@
         "name": "active first page",
         "baseline": {
           "samples": 40,
-          "p50Ms": 3.9403000000020256,
-          "p95Ms": 6.15650000000096,
-          "p99Ms": 12.14010000000053,
-          "maxMs": 12.14010000000053
+          "p50Ms": 6.556300000000192,
+          "p95Ms": 10.329200000000128,
+          "p99Ms": 17.10900000000038,
+          "maxMs": 17.10900000000038
         },
         "mixed": {
           "samples": 40,
-          "p50Ms": 4.587700000000041,
-          "p95Ms": 8.066600000000108,
-          "p99Ms": 11.600300000000061,
-          "maxMs": 11.600300000000061
+          "p50Ms": 6.904500000000553,
+          "p95Ms": 11.141500000001543,
+          "p99Ms": 12.913700000000972,
+          "maxMs": 12.913700000000972
         }
       },
       {
         "name": "rejected first page",
         "baseline": {
           "samples": 40,
-          "p50Ms": 4.010300000001735,
-          "p95Ms": 6.493700000000899,
-          "p99Ms": 45.631900000000314,
-          "maxMs": 45.631900000000314
+          "p50Ms": 7.013100000000122,
+          "p95Ms": 10.69629999999961,
+          "p99Ms": 63.09200000000055,
+          "maxMs": 63.09200000000055
         },
         "mixed": {
           "samples": 40,
-          "p50Ms": 4.657299999998941,
-          "p95Ms": 9.452800000000934,
-          "p99Ms": 44.6937999999991,
-          "maxMs": 44.6937999999991
+          "p50Ms": 8.45430000000124,
+          "p95Ms": 15.0483000000022,
+          "p99Ms": 180.7671999999984,
+          "maxMs": 180.7671999999984
         }
       },
       {
         "name": "rejected numbered page and count",
         "baseline": {
           "samples": 40,
-          "p50Ms": 8.55029999999897,
-          "p95Ms": 12.306500000000597,
-          "p99Ms": 46.57979999999952,
-          "maxMs": 46.57979999999952
+          "p50Ms": 14.960399999999936,
+          "p95Ms": 19.072100000001228,
+          "p99Ms": 61.08629999999903,
+          "maxMs": 61.08629999999903
         },
         "mixed": {
           "samples": 40,
-          "p50Ms": 10.090100000001257,
-          "p95Ms": 18.003500000000713,
-          "p99Ms": 22.078700000000026,
-          "maxMs": 22.078700000000026
+          "p50Ms": 15.894199999998818,
+          "p95Ms": 26.73990000000049,
+          "p99Ms": 29.085799999997107,
+          "maxMs": 29.085799999997107
         }
       }
     ],
@@ -2952,7 +3000,7 @@
     "largeHistoryRequests": 40,
     "overlappingSmallRequests": 120,
     "simultaneousActiveOrderStatements": 4,
-    "largeP95Ms": 259.71110000000044,
+    "largeP95Ms": 296.7416999999987,
     "isolation": {
       "workers": 4,
       "roundsPerWorker": 25,
@@ -2964,965 +3012,965 @@
       "baseline": [
         {
           "name": "active first page",
-          "elapsedMs": 9.988400000000183
+          "elapsedMs": 13.580399999998917
         },
         {
           "name": "active first page",
-          "elapsedMs": 12.14010000000053
+          "elapsedMs": 17.10900000000038
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 6.352199999999357
+          "elapsedMs": 9.202499999999418
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 12.306500000000597
+          "elapsedMs": 17.422600000001694
         },
         {
           "name": "active first page",
-          "elapsedMs": 5.280200000001059
+          "elapsedMs": 7.705299999997806
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.4526999999998225
+          "elapsedMs": 7.111899999999878
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 9.555199999998877
+          "elapsedMs": 16.087499999997817
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 63.09200000000055
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.492599999999584
+          "elapsedMs": 10.283800000001065
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 45.631900000000314
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 6.403700000000754
+          "elapsedMs": 7.56789999999819
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 12.499299999999494
+          "elapsedMs": 14.689000000002125
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.395300000000134
+          "elapsedMs": 7.47729999999865
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.859900000001289
+          "elapsedMs": 7.778800000000047
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 9.2450000000008
+          "elapsedMs": 61.08629999999903
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 18.669299999997747
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.4605999999985215
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 4.338300000001254
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 46.57979999999952
+          "elapsedMs": 7.415600000000268
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.7836999999999534
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 10.633299999999508
+          "elapsedMs": 10.082699999999022
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 6.493700000000899
+          "elapsedMs": 8.424999999999272
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 10.69629999999961
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 17.180599999999686
         },
         {
           "name": "active first page",
-          "elapsedMs": 5.6362000000008265
+          "elapsedMs": 6.489400000002206
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 9.734099999999671
+          "elapsedMs": 18.85150000000067
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 6.917299999999159
+          "elapsedMs": 7.704100000002654
         },
         {
           "name": "active first page",
-          "elapsedMs": 6.15650000000096
+          "elapsedMs": 10.329200000000128
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.837100000000646
+          "elapsedMs": 6.951100000002043
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 10.584399999999732
+          "elapsedMs": 17.5212999999967
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.390999999999622
+          "elapsedMs": 7.367099999999482
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.98279999999977
+          "elapsedMs": 13.295300000001589
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.381700000001729
+          "elapsedMs": 7.490399999998772
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.847199999998338
+          "elapsedMs": 8.349500000000262
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 5.429699999998775
+          "elapsedMs": 8.267200000002049
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 10.549399999999878
+          "elapsedMs": 18.565899999997782
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.7937999999994645
+          "elapsedMs": 5.749299999999494
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 9.454400000000533
+          "elapsedMs": 15.904999999998836
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.278599999999642
+          "elapsedMs": 5.842599999999948
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.53440000000046
+          "elapsedMs": 10.085399999999936
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 5.243999999998778
+          "elapsedMs": 8.69210000000021
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 10.257899999998699
+          "elapsedMs": 17.384699999998702
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.40940000000046
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 3.577100000000428
+          "elapsedMs": 6.556300000000192
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 9.567600000000311
+          "elapsedMs": 15.881199999999808
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 8.014999999999418
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.298800000000483
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 8.660099999999147
+          "elapsedMs": 7.5362999999997555
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.832400000001144
+          "elapsedMs": 7.695799999997689
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 16.94850000000224
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.003099999999904
+          "elapsedMs": 6.480900000002293
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.48949999999968
+          "elapsedMs": 6.619200000001001
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.656600000000253
+          "elapsedMs": 19.072100000001228
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.6256999999986874
+          "elapsedMs": 10.257900000000518
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 22.17000000000189
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.404000000000451
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 11.304799999999886
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 6.219799999998941
+          "elapsedMs": 10.748700000000099
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.9047000000009575
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 6.248300000001109
+          "elapsedMs": 6.471499999999651
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 7.608200000000579
+          "elapsedMs": 10.822400000000926
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 7.013100000000122
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 12.931400000001304
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.2980999999999767
+          "elapsedMs": 5.542600000000675
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.437000000001717
+          "elapsedMs": 5.916100000002189
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 7.2159000000010565
+          "elapsedMs": 11.979899999998452
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.816899999999805
+          "elapsedMs": 5.792199999999866
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.233799999999974
+          "elapsedMs": 5.546900000001187
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 6.989500000001499
+          "elapsedMs": 11.164400000001478
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.453900000000431
+          "elapsedMs": 5.989699999998265
         },
         {
           "name": "active first page",
-          "elapsedMs": 5.210699999999633
+          "elapsedMs": 7.745599999998376
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.075199999999313
+          "elapsedMs": 7.269000000000233
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.010300000001735
+          "elapsedMs": 6.460699999999633
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.17989999999918
+          "elapsedMs": 10.44629999999961
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.593300000000454
+          "elapsedMs": 11.615200000000186
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.5512000000016997
+          "elapsedMs": 7.513800000000629
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.360499999998865
+          "elapsedMs": 6.691999999999098
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 5.477599999998347
+          "elapsedMs": 5.5011000000013155
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 5.373099999997066
+          "elapsedMs": 5.11699999999837
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.577900000000227
+          "elapsedMs": 15.2983000000022
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.853100000000268
+          "elapsedMs": 16.264400000000023
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.7726999999977124
+          "elapsedMs": 7.311899999996967
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.3579999999965366
+          "elapsedMs": 6.923399999999674
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.696799999997893
+          "elapsedMs": 7.05619999999908
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.766700000000128
+          "elapsedMs": 6.304000000000087
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 7.914800000002288
+          "elapsedMs": 11.444400000000314
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.253700000001118
+          "elapsedMs": 12.513200000001234
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.4187000000019907
+          "elapsedMs": 3.465699999997014
         },
         {
           "name": "active first page",
-          "elapsedMs": 2.959999999999127
+          "elapsedMs": 5.387000000002445
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.5269999999982247
+          "elapsedMs": 4.946200000002136
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.6284000000014203
+          "elapsedMs": 7.249399999996967
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 7.337900000002264
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 7.531399999999849
+          "elapsedMs": 14.198700000000827
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.093899999999849
+          "elapsedMs": 5.668400000002293
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 15.495299999998679
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 6.940499999996973
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.9403000000020256
+          "elapsedMs": 6.113699999998062
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.054299999999785
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 3.9526000000005297
+          "elapsedMs": 6.417300000000978
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 7.6987000000008265
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 7.8796000000002095
+          "elapsedMs": 13.644099999997707
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.198500000002241
+          "elapsedMs": 6.308999999997468
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 14.540000000000873
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 6.508900000000722
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.150999999998021
+          "elapsedMs": 5.593700000001263
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.7224999999998545
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 3.6493999999984226
+          "elapsedMs": 5.5878000000011525
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.55029999999897
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 8.842100000001665
+          "elapsedMs": 11.716300000000047
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.5306000000018685
+          "elapsedMs": 5.595099999998638
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 13.229199999997945
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 7.5208999999995285
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.3140999999995984
+          "elapsedMs": 6.361499999999069
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.696200000002136
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 3.5367000000005646
+          "elapsedMs": 7.473099999999249
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 7.119399999999587
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 6.79149999999936
+          "elapsedMs": 15.903800000000047
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.024700000001758
+          "elapsedMs": 5.985099999998056
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 14.960399999999936
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 7.856200000001991
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.376800000001822
+          "elapsedMs": 7.1921000000002095
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.5882999999994354
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 3.700699999997596
+          "elapsedMs": 5.102500000000873
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 6.688000000001921
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 6.357799999997951
+          "elapsedMs": 11.182000000000698
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.47269999999844
+          "elapsedMs": 6.460900000001857
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 14.61200000000099
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 4.986000000000786
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.6943000000028405
+          "elapsedMs": 8.110899999999674
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.364400000002206
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 3.2576999999982945
+          "elapsedMs": 5.655399999999645
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 6.696799999997893
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 6.686600000000908
+          "elapsedMs": 14.659099999997125
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.5940000000009604
+          "elapsedMs": 5.783599999998842
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 5.4887999999991735
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 15.974200000000565
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.0437999999994645
+          "elapsedMs": 6.229300000002695
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.773300000000745
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 3.430899999999383
+          "elapsedMs": 5.430000000000291
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.353899999998248
+          "elapsedMs": 15.9204000000027
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 7.949100000001636
+          "elapsedMs": 9.970600000000559
         }
       ],
       "mixed": [
         {
           "name": "active first page",
-          "elapsedMs": 6.656300000000556
+          "elapsedMs": 9.799000000002707
         },
         {
           "name": "active first page",
-          "elapsedMs": 8.066600000000108
+          "elapsedMs": 12.913700000000972
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 6.630900000000111
+          "elapsedMs": 9.237699999997858
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 10.933000000000902
+          "elapsedMs": 13.595900000000256
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.995699999999488
+          "elapsedMs": 6.293300000001182
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.77100000000064
+          "elapsedMs": 7.413800000002084
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 9.887000000000626
+          "elapsedMs": 14.058600000000297
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.587700000000041
+          "elapsedMs": 6.2612999999983
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 44.6937999999991
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 6.79490000000078
+          "elapsedMs": 6.480200000001787
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 12.636500000000524
+          "elapsedMs": 16.96480000000156
         },
         {
           "name": "active first page",
-          "elapsedMs": 5.86279999999897
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 14.707600000001548
+          "elapsedMs": 6.32300000000032
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.116899999999077
+          "elapsedMs": 6.938700000002427
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 12.109400000001187
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.51720000000023
+          "elapsedMs": 5.416900000000169
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.6494999999995343
+          "elapsedMs": 4.161599999999453
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.893899999999121
+          "elapsedMs": 14.71099999999933
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.504699999999502
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 10.313500000000204
+          "elapsedMs": 7.982299999999668
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 5.3039000000007945
+          "elapsedMs": 7.124900000002526
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 15.713400000000547
         },
         {
           "name": "active first page",
-          "elapsedMs": 5.040100000000166
+          "elapsedMs": 9.995999999999185
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.8272999999990134
+          "elapsedMs": 180.7671999999984
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 9.743900000001304
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 9.474899999999252
+          "elapsedMs": 27.405099999999948
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 29.085799999997107
         },
         {
           "name": "active first page",
-          "elapsedMs": 6.0393999999996595
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 11.366400000000795
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 4.26260000000002
+          "elapsedMs": 11.141500000001543
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.694999999999709
+          "elapsedMs": 12.813999999998487
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.8253999999997177
+          "elapsedMs": 14.09939999999915
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 14.109300000000076
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 10.417199999999866
+          "elapsedMs": 17.063500000000204
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 16.918000000001484
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.7797000000009575
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 12.167299999999159
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 5.334399999999732
+          "elapsedMs": 8.666300000000774
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.308799999998882
+          "elapsedMs": 7.5186999999968975
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 6.710100000000239
+          "elapsedMs": 7.19289999999819
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 8.773099999998522
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 16.73869999999988
+          "elapsedMs": 17.72769999999946
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 13.272899999999936
         },
         {
           "name": "active first page",
-          "elapsedMs": 7.17029999999977
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 18.6341999999986
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 9.452800000000934
+          "elapsedMs": 6.127800000002026
         },
         {
           "name": "active first page",
-          "elapsedMs": 8.566400000001522
+          "elapsedMs": 5.305000000000291
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 6.180599999999686
+          "elapsedMs": 7.0855999999985215
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 8.748400000000402
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 15.706700000000637
+          "elapsedMs": 16.827499999999418
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 16.27769999999873
         },
         {
           "name": "active first page",
-          "elapsedMs": 5.079400000000533
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 15.61830000000009
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 6.02390000000014
+          "elapsedMs": 7.051400000000285
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.638899999999921
+          "elapsedMs": 8.139599999998609
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.3607000000010885
+          "elapsedMs": 7.651699999998527
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 8.592899999999645
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.022600000000239
+          "elapsedMs": 15.251200000002427
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 14.128700000001118
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.677900000000591
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 9.452699999999822
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 5.226200000000972
+          "elapsedMs": 4.797099999999773
         },
         {
           "name": "active first page",
-          "elapsedMs": 6.341599999999744
+          "elapsedMs": 10.310300000001007
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.125700000000506
+          "elapsedMs": 10.902700000002369
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 10.068299999998999
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 10.090100000001257
+          "elapsedMs": 24.364799999999377
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 20.842000000000553
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.512399999999616
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 9.09610000000066
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 4.078300000001036
+          "elapsedMs": 6.361899999999878
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.000500000000102
+          "elapsedMs": 9.665800000002491
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.422500000000582
+          "elapsedMs": 9.431900000003225
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 7.638500000000931
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.813899999999194
+          "elapsedMs": 25.13590000000113
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 24.177299999999377
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.5833000000002357
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 8.730199999999968
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 3.9138999999995576
+          "elapsedMs": 9.733600000003207
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.466699999999037
+          "elapsedMs": 6.145599999999831
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 5.072699999998804
+          "elapsedMs": 8.969599999996717
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 9.571100000001024
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 11.41059999999925
+          "elapsedMs": 18.11119999999937
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 18.865700000002107
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.9378000000015163
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 10.48160000000098
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 4.657299999998941
+          "elapsedMs": 8.471399999998539
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.352499999999054
+          "elapsedMs": 7.197899999999208
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.227899999999863
+          "elapsedMs": 7.083900000001449
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 7.0327999999972235
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.632700000000114
+          "elapsedMs": 12.724300000001676
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 12.961699999999837
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.085799999998926
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 8.611300000000483
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 3.717500000000655
+          "elapsedMs": 6.191200000001118
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.308899999999994
+          "elapsedMs": 6.016299999999319
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.3752000000004045
+          "elapsedMs": 8.821199999998498
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 9.173899999997957
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 9.566899999999805
+          "elapsedMs": 14.023700000001554
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 18.223400000002584
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.4064999999991414
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 9.537100000001374
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 3.782100000000355
+          "elapsedMs": 5.989999999997963
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.209399999999732
+          "elapsedMs": 6.781399999999849
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.832800000000134
+          "elapsedMs": 8.45430000000124
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 7.51220000000103
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 11.165899999999965
+          "elapsedMs": 13.942399999999907
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 17.75170000000071
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.5781000000006316
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 11.117099999999482
-        },
-        {
-          "name": "rejected first page",
-          "elapsedMs": 4.714899999999034
+          "elapsedMs": 7.462600000002567
         },
         {
           "name": "active first page",
-          "elapsedMs": 6.186800000001313
+          "elapsedMs": 7.607200000002194
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 6.667299999999159
+          "elapsedMs": 10.294600000001083
+        },
+        {
+          "name": "rejected first page",
+          "elapsedMs": 11.214500000001863
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 22.078700000000026
+          "elapsedMs": 15.039600000000064
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 18.003500000000713
+          "elapsedMs": 22.648600000000442
         },
         {
           "name": "active first page",
-          "elapsedMs": 7.468199999999342
+          "elapsedMs": 10.073499999998603
         },
         {
           "name": "active first page",
-          "elapsedMs": 11.600300000000061
+          "elapsedMs": 7.7612000000008265
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 11.6278999999995
+          "elapsedMs": 15.114699999998265
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 6.532900000000154
+          "elapsedMs": 15.0483000000022
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 12.860700000001088
+          "elapsedMs": 26.575000000000728
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 11.622400000000198
+          "elapsedMs": 26.73990000000049
         },
         {
           "name": "active first page",
-          "elapsedMs": 5.183999999999287
+          "elapsedMs": 7.21820000000298
         },
         {
           "name": "active first page",
-          "elapsedMs": 5.246900000000096
+          "elapsedMs": 6.904500000000553
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.667300000000978
+          "elapsedMs": 8.51050000000032
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.927800000001298
+          "elapsedMs": 8.080900000000838
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.400800000001254
+          "elapsedMs": 15.894199999998818
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 15.077000000001135
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.0887000000002445
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 8.828899999998612
+          "elapsedMs": 5.841400000001158
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 4.660799999999654
+          "elapsedMs": 5.210100000000239
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 11.779900000001362
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.446600000001126
+          "elapsedMs": 5.248999999999796
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.639100000000326
+          "elapsedMs": 5.439099999999598
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.843399999999747
+          "elapsedMs": 11.715500000002066
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.3038999999989755
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 8.622199999999793
+          "elapsedMs": 5.003100000001723
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.4724000000005617
+          "elapsedMs": 5.236399999997957
+        },
+        {
+          "name": "rejected numbered page and count",
+          "elapsedMs": 10.847899999997026
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.3021000000007916
+          "elapsedMs": 6.063500000000204
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.2757000000001426
+          "elapsedMs": 7.104600000002392
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.371600000000399
+          "elapsedMs": 17.355600000002596
         },
         {
           "name": "active first page",
-          "elapsedMs": 4.624400000000605
-        },
-        {
-          "name": "rejected numbered page and count",
-          "elapsedMs": 10.225500000000466
+          "elapsedMs": 6.882399999998597
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.2135999999991327
+          "elapsedMs": 6.428500000001804
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.300799999999072
+          "elapsedMs": 13.651200000000244
         },
         {
           "name": "active first page",
-          "elapsedMs": 3.175200000001496
+          "elapsedMs": 6.153500000000349
         },
         {
           "name": "rejected first page",
-          "elapsedMs": 3.4702000000015687
+          "elapsedMs": 7.239900000000489
         },
         {
           "name": "rejected numbered page and count",
-          "elapsedMs": 8.360999999998967
+          "elapsedMs": 13.929000000000087
         }
       ]
     }
@@ -3941,10 +3989,10 @@
         "name": "products first page",
         "sql": "SELECT \"public\".\"products\".\"id\", \"public\".\"products\".\"shopId\", \"public\".\"products\".\"categoryId\", \"public\".\"products\".\"name\", \"public\".\"products\".\"slug\", \"public\".\"products\".\"description\", \"public\".\"products\".\"price\", \"public\".\"products\".\"imageUrl\", \"public\".\"products\".\"status\"::text, \"public\".\"products\".\"isFeatured\", \"public\".\"products\".\"isArchived\", \"public\".\"products\".\"sortOrder\", \"public\".\"products\".\"featuredSortOrder\", \"public\".\"products\".\"createdAt\" FROM \"public\".\"products\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"products\".\"shopId\") WHERE (\"public\".\"products\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" IN (CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\"),CAST($7::text AS \"public\".\"ShopRole\")) AND (\"j2\".\"isActive\" = $8 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL))) ORDER BY \"public\".\"products\".\"sortOrder\" ASC, \"public\".\"products\".\"createdAt\" ASC, \"public\".\"products\".\"id\" ASC LIMIT $9 OFFSET $10",
         "params": [
-          "997bd0bc-c622-40aa-9cf1-5af20059e2a0",
-          "997bd0bc-c622-40aa-9cf1-5af20059e2a0",
+          "567bd77c-5479-4779-a797-a4e915afa338",
+          "567bd77c-5479-4779-a797-a4e915afa338",
           true,
-          "e171636a-21f9-405d-98c6-32b5cd6bb760",
+          "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
           "OWNER",
           "ADMIN",
           "MANAGER",
@@ -3961,8 +4009,8 @@
             "Total Cost": 5.83,
             "Plan Rows": 26,
             "Plan Width": 256,
-            "Actual Startup Time": 0.036,
-            "Actual Total Time": 0.058,
+            "Actual Startup Time": 0.048,
+            "Actual Total Time": 0.076,
             "Actual Rows": 26,
             "Actual Loops": 1,
             "Shared Hit Blocks": 9,
@@ -3986,8 +4034,8 @@
                 "Total Cost": 4165.08,
                 "Plan Rows": 20000,
                 "Plan Width": 256,
-                "Actual Startup Time": 0.036,
-                "Actual Total Time": 0.056,
+                "Actual Startup Time": 0.048,
+                "Actual Total Time": 0.073,
                 "Actual Rows": 26,
                 "Actual Loops": 1,
                 "Inner Unique": false,
@@ -4015,11 +4063,11 @@
                     "Total Cost": 3811.83,
                     "Plan Rows": 20000,
                     "Plan Width": 228,
-                    "Actual Startup Time": 0.013,
-                    "Actual Total Time": 0.023,
+                    "Actual Startup Time": 0.017,
+                    "Actual Total Time": 0.029,
                     "Actual Rows": 26,
                     "Actual Loops": 1,
-                    "Index Cond": "(\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text)",
+                    "Index Cond": "(\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text)",
                     "Rows Removed by Index Recheck": 0,
                     "Shared Hit Blocks": 6,
                     "Shared Read Blocks": 0,
@@ -4066,8 +4114,8 @@
                         "Total Cost": 3.24,
                         "Plan Rows": 1,
                         "Plan Width": 37,
-                        "Actual Startup Time": 0.019,
-                        "Actual Total Time": 0.02,
+                        "Actual Startup Time": 0.023,
+                        "Actual Total Time": 0.025,
                         "Actual Rows": 1,
                         "Actual Loops": 1,
                         "Inner Unique": false,
@@ -4093,11 +4141,11 @@
                             "Total Cost": 1.05,
                             "Plan Rows": 1,
                             "Plan Width": 37,
-                            "Actual Startup Time": 0.009,
-                            "Actual Total Time": 0.01,
+                            "Actual Startup Time": 0.012,
+                            "Actual Total Time": 0.013,
                             "Actual Rows": 1,
                             "Actual Loops": 1,
-                            "Filter": "(\"isActive\" AND (id = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text))",
+                            "Filter": "(\"isActive\" AND (id = '567bd77c-5479-4779-a797-a4e915afa338'::text))",
                             "Rows Removed by Filter": 3,
                             "Shared Hit Blocks": 1,
                             "Shared Read Blocks": 0,
@@ -4120,8 +4168,8 @@
                             "Total Cost": 2.18,
                             "Plan Rows": 2,
                             "Plan Width": 37,
-                            "Actual Startup Time": 0.009,
-                            "Actual Total Time": 0.009,
+                            "Actual Startup Time": 0.011,
+                            "Actual Total Time": 0.012,
                             "Actual Rows": 1,
                             "Actual Loops": 1,
                             "Inner Unique": false,
@@ -4147,11 +4195,11 @@
                                 "Total Cost": 1.02,
                                 "Plan Rows": 1,
                                 "Plan Width": 37,
-                                "Actual Startup Time": 0.004,
-                                "Actual Total Time": 0.004,
+                                "Actual Startup Time": 0.005,
+                                "Actual Total Time": 0.005,
                                 "Actual Rows": 1,
                                 "Actual Loops": 1,
-                                "Filter": "(\"isActive\" AND (id = 'e171636a-21f9-405d-98c6-32b5cd6bb760'::text))",
+                                "Filter": "(\"isActive\" AND (id = 'b10cc777-bcb8-4dc8-8f65-839a74e862b2'::text))",
                                 "Rows Removed by Filter": 0,
                                 "Shared Hit Blocks": 1,
                                 "Shared Read Blocks": 0,
@@ -4175,11 +4223,11 @@
                                 "Total Cost": 1.14,
                                 "Plan Rows": 2,
                                 "Plan Width": 74,
-                                "Actual Startup Time": 0.005,
-                                "Actual Total Time": 0.005,
+                                "Actual Startup Time": 0.006,
+                                "Actual Total Time": 0.006,
                                 "Actual Rows": 1,
                                 "Actual Loops": 1,
-                                "Filter": "((\"disabledAt\" IS NULL) AND (\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text) AND (\"userId\" = 'e171636a-21f9-405d-98c6-32b5cd6bb760'::text) AND (role = ANY (ARRAY[('OWNER'::cstring)::\"ShopRole\", ('ADMIN'::cstring)::\"ShopRole\", ('MANAGER'::cstring)::\"ShopRole\"])))",
+                                "Filter": "((\"disabledAt\" IS NULL) AND (\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text) AND (\"userId\" = 'b10cc777-bcb8-4dc8-8f65-839a74e862b2'::text) AND (role = ANY (ARRAY[('OWNER'::cstring)::\"ShopRole\", ('ADMIN'::cstring)::\"ShopRole\", ('MANAGER'::cstring)::\"ShopRole\"])))",
                                 "Rows Removed by Filter": 1,
                                 "Shared Hit Blocks": 1,
                                 "Shared Read Blocks": 0,
@@ -4214,24 +4262,24 @@
             "Temp Read Blocks": 0,
             "Temp Written Blocks": 0
           },
-          "Planning Time": 0.768,
+          "Planning Time": 0.764,
           "Triggers": [],
-          "Execution Time": 0.093
+          "Execution Time": 0.112
         }
       },
       {
         "name": "products category and archive filter",
         "sql": "SELECT \"public\".\"products\".\"id\", \"public\".\"products\".\"shopId\", \"public\".\"products\".\"categoryId\", \"public\".\"products\".\"name\", \"public\".\"products\".\"slug\", \"public\".\"products\".\"description\", \"public\".\"products\".\"price\", \"public\".\"products\".\"imageUrl\", \"public\".\"products\".\"status\"::text, \"public\".\"products\".\"isFeatured\", \"public\".\"products\".\"isArchived\", \"public\".\"products\".\"sortOrder\", \"public\".\"products\".\"featuredSortOrder\", \"public\".\"products\".\"createdAt\" FROM \"public\".\"products\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"products\".\"shopId\") WHERE (\"public\".\"products\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" IN (CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\"),CAST($7::text AS \"public\".\"ShopRole\")) AND (\"j2\".\"isActive\" = $8 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND \"public\".\"products\".\"categoryId\" = $9 AND \"public\".\"products\".\"isArchived\" = $10) ORDER BY \"public\".\"products\".\"sortOrder\" ASC, \"public\".\"products\".\"createdAt\" ASC, \"public\".\"products\".\"id\" ASC LIMIT $11 OFFSET $12",
         "params": [
-          "997bd0bc-c622-40aa-9cf1-5af20059e2a0",
-          "997bd0bc-c622-40aa-9cf1-5af20059e2a0",
+          "567bd77c-5479-4779-a797-a4e915afa338",
+          "567bd77c-5479-4779-a797-a4e915afa338",
           true,
-          "e171636a-21f9-405d-98c6-32b5cd6bb760",
+          "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
           "OWNER",
           "ADMIN",
           "MANAGER",
           true,
-          "9a29df6b-7595-4652-b8df-4584fcc2ec2f",
+          "72701e32-cc29-44ce-8342-b7d16d3f9f0e",
           false,
           "26",
           "0"
@@ -4245,8 +4293,8 @@
             "Total Cost": 5.9,
             "Plan Rows": 26,
             "Plan Width": 256,
-            "Actual Startup Time": 0.048,
-            "Actual Total Time": 0.069,
+            "Actual Startup Time": 0.054,
+            "Actual Total Time": 0.085,
             "Actual Rows": 26,
             "Actual Loops": 1,
             "Shared Hit Blocks": 9,
@@ -4270,8 +4318,8 @@
                 "Total Cost": 4214.73,
                 "Plan Rows": 19980,
                 "Plan Width": 256,
-                "Actual Startup Time": 0.048,
-                "Actual Total Time": 0.068,
+                "Actual Startup Time": 0.053,
+                "Actual Total Time": 0.082,
                 "Actual Rows": 26,
                 "Actual Loops": 1,
                 "Inner Unique": false,
@@ -4299,13 +4347,13 @@
                     "Total Cost": 3861.83,
                     "Plan Rows": 19980,
                     "Plan Width": 228,
-                    "Actual Startup Time": 0.023,
-                    "Actual Total Time": 0.034,
+                    "Actual Startup Time": 0.026,
+                    "Actual Total Time": 0.042,
                     "Actual Rows": 26,
                     "Actual Loops": 1,
-                    "Index Cond": "(\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text)",
+                    "Index Cond": "(\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text)",
                     "Rows Removed by Index Recheck": 0,
-                    "Filter": "((NOT \"isArchived\") AND (\"categoryId\" = '9a29df6b-7595-4652-b8df-4584fcc2ec2f'::text))",
+                    "Filter": "((NOT \"isArchived\") AND (\"categoryId\" = '72701e32-cc29-44ce-8342-b7d16d3f9f0e'::text))",
                     "Rows Removed by Filter": 0,
                     "Shared Hit Blocks": 6,
                     "Shared Read Blocks": 0,
@@ -4352,8 +4400,8 @@
                         "Total Cost": 3.24,
                         "Plan Rows": 1,
                         "Plan Width": 37,
-                        "Actual Startup Time": 0.02,
-                        "Actual Total Time": 0.021,
+                        "Actual Startup Time": 0.022,
+                        "Actual Total Time": 0.024,
                         "Actual Rows": 1,
                         "Actual Loops": 1,
                         "Inner Unique": false,
@@ -4379,11 +4427,293 @@
                             "Total Cost": 1.05,
                             "Plan Rows": 1,
                             "Plan Width": 37,
-                            "Actual Startup Time": 0.011,
+                            "Actual Startup Time": 0.01,
                             "Actual Total Time": 0.011,
                             "Actual Rows": 1,
                             "Actual Loops": 1,
-                            "Filter": "(\"isActive\" AND (id = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text))",
+                            "Filter": "(\"isActive\" AND (id = '567bd77c-5479-4779-a797-a4e915afa338'::text))",
+                            "Rows Removed by Filter": 3,
+                            "Shared Hit Blocks": 1,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Local Hit Blocks": 0,
+                            "Local Read Blocks": 0,
+                            "Local Dirtied Blocks": 0,
+                            "Local Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0
+                          },
+                          {
+                            "Node Type": "Nested Loop",
+                            "Parent Relationship": "Inner",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Join Type": "Inner",
+                            "Startup Cost": 0,
+                            "Total Cost": 2.18,
+                            "Plan Rows": 2,
+                            "Plan Width": 37,
+                            "Actual Startup Time": 0.011,
+                            "Actual Total Time": 0.012,
+                            "Actual Rows": 1,
+                            "Actual Loops": 1,
+                            "Inner Unique": false,
+                            "Shared Hit Blocks": 2,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Local Hit Blocks": 0,
+                            "Local Read Blocks": 0,
+                            "Local Dirtied Blocks": 0,
+                            "Local Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Plans": [
+                              {
+                                "Node Type": "Seq Scan",
+                                "Parent Relationship": "Outer",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Relation Name": "users",
+                                "Alias": "j2",
+                                "Startup Cost": 0,
+                                "Total Cost": 1.02,
+                                "Plan Rows": 1,
+                                "Plan Width": 37,
+                                "Actual Startup Time": 0.005,
+                                "Actual Total Time": 0.005,
+                                "Actual Rows": 1,
+                                "Actual Loops": 1,
+                                "Filter": "(\"isActive\" AND (id = 'b10cc777-bcb8-4dc8-8f65-839a74e862b2'::text))",
+                                "Rows Removed by Filter": 0,
+                                "Shared Hit Blocks": 1,
+                                "Shared Read Blocks": 0,
+                                "Shared Dirtied Blocks": 0,
+                                "Shared Written Blocks": 0,
+                                "Local Hit Blocks": 0,
+                                "Local Read Blocks": 0,
+                                "Local Dirtied Blocks": 0,
+                                "Local Written Blocks": 0,
+                                "Temp Read Blocks": 0,
+                                "Temp Written Blocks": 0
+                              },
+                              {
+                                "Node Type": "Seq Scan",
+                                "Parent Relationship": "Inner",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Relation Name": "shop_members",
+                                "Alias": "t1",
+                                "Startup Cost": 0,
+                                "Total Cost": 1.14,
+                                "Plan Rows": 2,
+                                "Plan Width": 74,
+                                "Actual Startup Time": 0.006,
+                                "Actual Total Time": 0.006,
+                                "Actual Rows": 1,
+                                "Actual Loops": 1,
+                                "Filter": "((\"disabledAt\" IS NULL) AND (\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text) AND (\"userId\" = 'b10cc777-bcb8-4dc8-8f65-839a74e862b2'::text) AND (role = ANY (ARRAY[('OWNER'::cstring)::\"ShopRole\", ('ADMIN'::cstring)::\"ShopRole\", ('MANAGER'::cstring)::\"ShopRole\"])))",
+                                "Rows Removed by Filter": 1,
+                                "Shared Hit Blocks": 1,
+                                "Shared Read Blocks": 0,
+                                "Shared Dirtied Blocks": 0,
+                                "Shared Written Blocks": 0,
+                                "Local Hit Blocks": 0,
+                                "Local Read Blocks": 0,
+                                "Local Dirtied Blocks": 0,
+                                "Local Written Blocks": 0,
+                                "Temp Read Blocks": 0,
+                                "Temp Written Blocks": 0
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "Planning": {
+            "Shared Hit Blocks": 0,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0
+          },
+          "Planning Time": 0.354,
+          "Triggers": [],
+          "Execution Time": 0.117
+        }
+      },
+      {
+        "name": "categories first page",
+        "sql": "SELECT \"public\".\"categories\".\"id\", \"public\".\"categories\".\"shopId\", \"public\".\"categories\".\"name\", \"public\".\"categories\".\"description\", \"public\".\"categories\".\"slug\", \"public\".\"categories\".\"sortOrder\", \"public\".\"categories\".\"isVisible\", \"public\".\"categories\".\"createdAt\" FROM \"public\".\"categories\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"categories\".\"shopId\") WHERE (\"public\".\"categories\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" IN (CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\"),CAST($7::text AS \"public\".\"ShopRole\")) AND (\"j2\".\"isActive\" = $8 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL))) ORDER BY \"public\".\"categories\".\"sortOrder\" ASC, \"public\".\"categories\".\"createdAt\" ASC, \"public\".\"categories\".\"id\" ASC LIMIT $9 OFFSET $10",
+        "params": [
+          "567bd77c-5479-4779-a797-a4e915afa338",
+          "567bd77c-5479-4779-a797-a4e915afa338",
+          true,
+          "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
+          "OWNER",
+          "ADMIN",
+          "MANAGER",
+          true,
+          "26",
+          "0"
+        ],
+        "plan": {
+          "Plan": {
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Startup Cost": 0.41,
+            "Total Cost": 36.18,
+            "Plan Rows": 26,
+            "Plan Width": 151,
+            "Actual Startup Time": 0.035,
+            "Actual Total Time": 0.062,
+            "Actual Rows": 26,
+            "Actual Loops": 1,
+            "Shared Hit Blocks": 29,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Nested Loop",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Join Type": "Inner",
+                "Startup Cost": 0.41,
+                "Total Cost": 1377.33,
+                "Plan Rows": 1001,
+                "Plan Width": 151,
+                "Actual Startup Time": 0.034,
+                "Actual Total Time": 0.059,
+                "Actual Rows": 26,
+                "Actual Loops": 1,
+                "Inner Unique": false,
+                "Shared Hit Blocks": 29,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "categories_shop_page_idx",
+                    "Relation Name": "categories",
+                    "Alias": "categories",
+                    "Startup Cost": 0.41,
+                    "Total Cost": 1361.57,
+                    "Plan Rows": 1001,
+                    "Plan Width": 151,
+                    "Actual Startup Time": 0.013,
+                    "Actual Total Time": 0.03,
+                    "Actual Rows": 26,
+                    "Actual Loops": 1,
+                    "Index Cond": "(\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text)",
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 26,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0
+                  },
+                  {
+                    "Node Type": "Materialize",
+                    "Parent Relationship": "Inner",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Startup Cost": 0,
+                    "Total Cost": 3.25,
+                    "Plan Rows": 1,
+                    "Plan Width": 37,
+                    "Actual Startup Time": 0.001,
+                    "Actual Total Time": 0.001,
+                    "Actual Rows": 1,
+                    "Actual Loops": 26,
+                    "Shared Hit Blocks": 3,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Nested Loop",
+                        "Parent Relationship": "Outer",
+                        "Parallel Aware": false,
+                        "Async Capable": false,
+                        "Join Type": "Semi",
+                        "Startup Cost": 0,
+                        "Total Cost": 3.24,
+                        "Plan Rows": 1,
+                        "Plan Width": 37,
+                        "Actual Startup Time": 0.018,
+                        "Actual Total Time": 0.019,
+                        "Actual Rows": 1,
+                        "Actual Loops": 1,
+                        "Inner Unique": false,
+                        "Shared Hit Blocks": 3,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Local Hit Blocks": 0,
+                        "Local Read Blocks": 0,
+                        "Local Dirtied Blocks": 0,
+                        "Local Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Seq Scan",
+                            "Parent Relationship": "Outer",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Relation Name": "shops",
+                            "Alias": "j0",
+                            "Startup Cost": 0,
+                            "Total Cost": 1.05,
+                            "Plan Rows": 1,
+                            "Plan Width": 37,
+                            "Actual Startup Time": 0.009,
+                            "Actual Total Time": 0.01,
+                            "Actual Rows": 1,
+                            "Actual Loops": 1,
+                            "Filter": "(\"isActive\" AND (id = '567bd77c-5479-4779-a797-a4e915afa338'::text))",
                             "Rows Removed by Filter": 3,
                             "Shared Hit Blocks": 1,
                             "Shared Read Blocks": 0,
@@ -4433,11 +4763,11 @@
                                 "Total Cost": 1.02,
                                 "Plan Rows": 1,
                                 "Plan Width": 37,
-                                "Actual Startup Time": 0.004,
-                                "Actual Total Time": 0.004,
+                                "Actual Startup Time": 0.003,
+                                "Actual Total Time": 0.003,
                                 "Actual Rows": 1,
                                 "Actual Loops": 1,
-                                "Filter": "(\"isActive\" AND (id = 'e171636a-21f9-405d-98c6-32b5cd6bb760'::text))",
+                                "Filter": "(\"isActive\" AND (id = 'b10cc777-bcb8-4dc8-8f65-839a74e862b2'::text))",
                                 "Rows Removed by Filter": 0,
                                 "Shared Hit Blocks": 1,
                                 "Shared Read Blocks": 0,
@@ -4465,289 +4795,7 @@
                                 "Actual Total Time": 0.005,
                                 "Actual Rows": 1,
                                 "Actual Loops": 1,
-                                "Filter": "((\"disabledAt\" IS NULL) AND (\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text) AND (\"userId\" = 'e171636a-21f9-405d-98c6-32b5cd6bb760'::text) AND (role = ANY (ARRAY[('OWNER'::cstring)::\"ShopRole\", ('ADMIN'::cstring)::\"ShopRole\", ('MANAGER'::cstring)::\"ShopRole\"])))",
-                                "Rows Removed by Filter": 1,
-                                "Shared Hit Blocks": 1,
-                                "Shared Read Blocks": 0,
-                                "Shared Dirtied Blocks": 0,
-                                "Shared Written Blocks": 0,
-                                "Local Hit Blocks": 0,
-                                "Local Read Blocks": 0,
-                                "Local Dirtied Blocks": 0,
-                                "Local Written Blocks": 0,
-                                "Temp Read Blocks": 0,
-                                "Temp Written Blocks": 0
-                              }
-                            ]
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          "Planning": {
-            "Shared Hit Blocks": 0,
-            "Shared Read Blocks": 0,
-            "Shared Dirtied Blocks": 0,
-            "Shared Written Blocks": 0,
-            "Local Hit Blocks": 0,
-            "Local Read Blocks": 0,
-            "Local Dirtied Blocks": 0,
-            "Local Written Blocks": 0,
-            "Temp Read Blocks": 0,
-            "Temp Written Blocks": 0
-          },
-          "Planning Time": 0.411,
-          "Triggers": [],
-          "Execution Time": 0.098
-        }
-      },
-      {
-        "name": "categories first page",
-        "sql": "SELECT \"public\".\"categories\".\"id\", \"public\".\"categories\".\"shopId\", \"public\".\"categories\".\"name\", \"public\".\"categories\".\"description\", \"public\".\"categories\".\"slug\", \"public\".\"categories\".\"sortOrder\", \"public\".\"categories\".\"isVisible\", \"public\".\"categories\".\"createdAt\" FROM \"public\".\"categories\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"categories\".\"shopId\") WHERE (\"public\".\"categories\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" IN (CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\"),CAST($7::text AS \"public\".\"ShopRole\")) AND (\"j2\".\"isActive\" = $8 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL))) ORDER BY \"public\".\"categories\".\"sortOrder\" ASC, \"public\".\"categories\".\"createdAt\" ASC, \"public\".\"categories\".\"id\" ASC LIMIT $9 OFFSET $10",
-        "params": [
-          "997bd0bc-c622-40aa-9cf1-5af20059e2a0",
-          "997bd0bc-c622-40aa-9cf1-5af20059e2a0",
-          true,
-          "e171636a-21f9-405d-98c6-32b5cd6bb760",
-          "OWNER",
-          "ADMIN",
-          "MANAGER",
-          true,
-          "26",
-          "0"
-        ],
-        "plan": {
-          "Plan": {
-            "Node Type": "Limit",
-            "Parallel Aware": false,
-            "Async Capable": false,
-            "Startup Cost": 0.41,
-            "Total Cost": 36.17,
-            "Plan Rows": 26,
-            "Plan Width": 151,
-            "Actual Startup Time": 0.049,
-            "Actual Total Time": 0.08,
-            "Actual Rows": 26,
-            "Actual Loops": 1,
-            "Shared Hit Blocks": 31,
-            "Shared Read Blocks": 0,
-            "Shared Dirtied Blocks": 0,
-            "Shared Written Blocks": 0,
-            "Local Hit Blocks": 0,
-            "Local Read Blocks": 0,
-            "Local Dirtied Blocks": 0,
-            "Local Written Blocks": 0,
-            "Temp Read Blocks": 0,
-            "Temp Written Blocks": 0,
-            "Plans": [
-              {
-                "Node Type": "Nested Loop",
-                "Parent Relationship": "Outer",
-                "Parallel Aware": false,
-                "Async Capable": false,
-                "Join Type": "Inner",
-                "Startup Cost": 0.41,
-                "Total Cost": 1376.92,
-                "Plan Rows": 1001,
-                "Plan Width": 151,
-                "Actual Startup Time": 0.048,
-                "Actual Total Time": 0.078,
-                "Actual Rows": 26,
-                "Actual Loops": 1,
-                "Inner Unique": false,
-                "Shared Hit Blocks": 31,
-                "Shared Read Blocks": 0,
-                "Shared Dirtied Blocks": 0,
-                "Shared Written Blocks": 0,
-                "Local Hit Blocks": 0,
-                "Local Read Blocks": 0,
-                "Local Dirtied Blocks": 0,
-                "Local Written Blocks": 0,
-                "Temp Read Blocks": 0,
-                "Temp Written Blocks": 0,
-                "Plans": [
-                  {
-                    "Node Type": "Index Scan",
-                    "Parent Relationship": "Outer",
-                    "Parallel Aware": false,
-                    "Async Capable": false,
-                    "Scan Direction": "Forward",
-                    "Index Name": "categories_shop_page_idx",
-                    "Relation Name": "categories",
-                    "Alias": "categories",
-                    "Startup Cost": 0.41,
-                    "Total Cost": 1361.16,
-                    "Plan Rows": 1001,
-                    "Plan Width": 151,
-                    "Actual Startup Time": 0.014,
-                    "Actual Total Time": 0.033,
-                    "Actual Rows": 26,
-                    "Actual Loops": 1,
-                    "Index Cond": "(\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text)",
-                    "Rows Removed by Index Recheck": 0,
-                    "Shared Hit Blocks": 28,
-                    "Shared Read Blocks": 0,
-                    "Shared Dirtied Blocks": 0,
-                    "Shared Written Blocks": 0,
-                    "Local Hit Blocks": 0,
-                    "Local Read Blocks": 0,
-                    "Local Dirtied Blocks": 0,
-                    "Local Written Blocks": 0,
-                    "Temp Read Blocks": 0,
-                    "Temp Written Blocks": 0
-                  },
-                  {
-                    "Node Type": "Materialize",
-                    "Parent Relationship": "Inner",
-                    "Parallel Aware": false,
-                    "Async Capable": false,
-                    "Startup Cost": 0,
-                    "Total Cost": 3.25,
-                    "Plan Rows": 1,
-                    "Plan Width": 37,
-                    "Actual Startup Time": 0.001,
-                    "Actual Total Time": 0.001,
-                    "Actual Rows": 1,
-                    "Actual Loops": 26,
-                    "Shared Hit Blocks": 3,
-                    "Shared Read Blocks": 0,
-                    "Shared Dirtied Blocks": 0,
-                    "Shared Written Blocks": 0,
-                    "Local Hit Blocks": 0,
-                    "Local Read Blocks": 0,
-                    "Local Dirtied Blocks": 0,
-                    "Local Written Blocks": 0,
-                    "Temp Read Blocks": 0,
-                    "Temp Written Blocks": 0,
-                    "Plans": [
-                      {
-                        "Node Type": "Nested Loop",
-                        "Parent Relationship": "Outer",
-                        "Parallel Aware": false,
-                        "Async Capable": false,
-                        "Join Type": "Semi",
-                        "Startup Cost": 0,
-                        "Total Cost": 3.24,
-                        "Plan Rows": 1,
-                        "Plan Width": 37,
-                        "Actual Startup Time": 0.031,
-                        "Actual Total Time": 0.032,
-                        "Actual Rows": 1,
-                        "Actual Loops": 1,
-                        "Inner Unique": false,
-                        "Shared Hit Blocks": 3,
-                        "Shared Read Blocks": 0,
-                        "Shared Dirtied Blocks": 0,
-                        "Shared Written Blocks": 0,
-                        "Local Hit Blocks": 0,
-                        "Local Read Blocks": 0,
-                        "Local Dirtied Blocks": 0,
-                        "Local Written Blocks": 0,
-                        "Temp Read Blocks": 0,
-                        "Temp Written Blocks": 0,
-                        "Plans": [
-                          {
-                            "Node Type": "Seq Scan",
-                            "Parent Relationship": "Outer",
-                            "Parallel Aware": false,
-                            "Async Capable": false,
-                            "Relation Name": "shops",
-                            "Alias": "j0",
-                            "Startup Cost": 0,
-                            "Total Cost": 1.05,
-                            "Plan Rows": 1,
-                            "Plan Width": 37,
-                            "Actual Startup Time": 0.02,
-                            "Actual Total Time": 0.02,
-                            "Actual Rows": 1,
-                            "Actual Loops": 1,
-                            "Filter": "(\"isActive\" AND (id = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text))",
-                            "Rows Removed by Filter": 3,
-                            "Shared Hit Blocks": 1,
-                            "Shared Read Blocks": 0,
-                            "Shared Dirtied Blocks": 0,
-                            "Shared Written Blocks": 0,
-                            "Local Hit Blocks": 0,
-                            "Local Read Blocks": 0,
-                            "Local Dirtied Blocks": 0,
-                            "Local Written Blocks": 0,
-                            "Temp Read Blocks": 0,
-                            "Temp Written Blocks": 0
-                          },
-                          {
-                            "Node Type": "Nested Loop",
-                            "Parent Relationship": "Inner",
-                            "Parallel Aware": false,
-                            "Async Capable": false,
-                            "Join Type": "Inner",
-                            "Startup Cost": 0,
-                            "Total Cost": 2.18,
-                            "Plan Rows": 2,
-                            "Plan Width": 37,
-                            "Actual Startup Time": 0.011,
-                            "Actual Total Time": 0.011,
-                            "Actual Rows": 1,
-                            "Actual Loops": 1,
-                            "Inner Unique": false,
-                            "Shared Hit Blocks": 2,
-                            "Shared Read Blocks": 0,
-                            "Shared Dirtied Blocks": 0,
-                            "Shared Written Blocks": 0,
-                            "Local Hit Blocks": 0,
-                            "Local Read Blocks": 0,
-                            "Local Dirtied Blocks": 0,
-                            "Local Written Blocks": 0,
-                            "Temp Read Blocks": 0,
-                            "Temp Written Blocks": 0,
-                            "Plans": [
-                              {
-                                "Node Type": "Seq Scan",
-                                "Parent Relationship": "Outer",
-                                "Parallel Aware": false,
-                                "Async Capable": false,
-                                "Relation Name": "users",
-                                "Alias": "j2",
-                                "Startup Cost": 0,
-                                "Total Cost": 1.02,
-                                "Plan Rows": 1,
-                                "Plan Width": 37,
-                                "Actual Startup Time": 0.005,
-                                "Actual Total Time": 0.005,
-                                "Actual Rows": 1,
-                                "Actual Loops": 1,
-                                "Filter": "(\"isActive\" AND (id = 'e171636a-21f9-405d-98c6-32b5cd6bb760'::text))",
-                                "Rows Removed by Filter": 0,
-                                "Shared Hit Blocks": 1,
-                                "Shared Read Blocks": 0,
-                                "Shared Dirtied Blocks": 0,
-                                "Shared Written Blocks": 0,
-                                "Local Hit Blocks": 0,
-                                "Local Read Blocks": 0,
-                                "Local Dirtied Blocks": 0,
-                                "Local Written Blocks": 0,
-                                "Temp Read Blocks": 0,
-                                "Temp Written Blocks": 0
-                              },
-                              {
-                                "Node Type": "Seq Scan",
-                                "Parent Relationship": "Inner",
-                                "Parallel Aware": false,
-                                "Async Capable": false,
-                                "Relation Name": "shop_members",
-                                "Alias": "t1",
-                                "Startup Cost": 0,
-                                "Total Cost": 1.14,
-                                "Plan Rows": 2,
-                                "Plan Width": 74,
-                                "Actual Startup Time": 0.006,
-                                "Actual Total Time": 0.006,
-                                "Actual Rows": 1,
-                                "Actual Loops": 1,
-                                "Filter": "((\"disabledAt\" IS NULL) AND (\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text) AND (\"userId\" = 'e171636a-21f9-405d-98c6-32b5cd6bb760'::text) AND (role = ANY (ARRAY[('OWNER'::cstring)::\"ShopRole\", ('ADMIN'::cstring)::\"ShopRole\", ('MANAGER'::cstring)::\"ShopRole\"])))",
+                                "Filter": "((\"disabledAt\" IS NULL) AND (\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text) AND (\"userId\" = 'b10cc777-bcb8-4dc8-8f65-839a74e862b2'::text) AND (role = ANY (ARRAY[('OWNER'::cstring)::\"ShopRole\", ('ADMIN'::cstring)::\"ShopRole\", ('MANAGER'::cstring)::\"ShopRole\"])))",
                                 "Rows Removed by Filter": 1,
                                 "Shared Hit Blocks": 1,
                                 "Shared Read Blocks": 0,
@@ -4782,29 +4830,29 @@
             "Temp Read Blocks": 0,
             "Temp Written Blocks": 0
           },
-          "Planning Time": 1.182,
+          "Planning Time": 0.755,
           "Triggers": [],
-          "Execution Time": 0.107
+          "Execution Time": 0.084
         }
       },
       {
         "name": "products deep page",
         "sql": "SELECT \"public\".\"products\".\"id\", \"public\".\"products\".\"shopId\", \"public\".\"products\".\"categoryId\", \"public\".\"products\".\"name\", \"public\".\"products\".\"slug\", \"public\".\"products\".\"description\", \"public\".\"products\".\"price\", \"public\".\"products\".\"imageUrl\", \"public\".\"products\".\"status\"::text, \"public\".\"products\".\"isFeatured\", \"public\".\"products\".\"isArchived\", \"public\".\"products\".\"sortOrder\", \"public\".\"products\".\"featuredSortOrder\", \"public\".\"products\".\"createdAt\" FROM \"public\".\"products\" LEFT JOIN \"public\".\"shops\" AS \"j0\" ON (\"j0\".\"id\") = (\"public\".\"products\".\"shopId\") WHERE (\"public\".\"products\".\"shopId\" = $1 AND (\"j0\".\"id\" = $2 AND \"j0\".\"isActive\" = $3 AND EXISTS(SELECT \"t1\".\"shopId\" FROM \"public\".\"shop_members\" AS \"t1\" LEFT JOIN \"public\".\"users\" AS \"j2\" ON (\"j2\".\"id\") = (\"t1\".\"userId\") WHERE (\"t1\".\"userId\" = $4 AND \"t1\".\"disabledAt\" IS NULL AND \"t1\".\"role\" IN (CAST($5::text AS \"public\".\"ShopRole\"),CAST($6::text AS \"public\".\"ShopRole\"),CAST($7::text AS \"public\".\"ShopRole\")) AND (\"j2\".\"isActive\" = $8 AND (\"j2\".\"id\" IS NOT NULL)) AND (\"j0\".\"id\") = (\"t1\".\"shopId\") AND \"t1\".\"shopId\" IS NOT NULL)) AND (\"j0\".\"id\" IS NOT NULL)) AND (\"public\".\"products\".\"sortOrder\" > $9 OR (\"public\".\"products\".\"sortOrder\" = $10 AND \"public\".\"products\".\"createdAt\" > $11) OR (\"public\".\"products\".\"sortOrder\" = $12 AND \"public\".\"products\".\"createdAt\" = $13 AND \"public\".\"products\".\"id\" > $14))) ORDER BY \"public\".\"products\".\"sortOrder\" ASC, \"public\".\"products\".\"createdAt\" ASC, \"public\".\"products\".\"id\" ASC LIMIT $15 OFFSET $16",
         "params": [
-          "997bd0bc-c622-40aa-9cf1-5af20059e2a0",
-          "997bd0bc-c622-40aa-9cf1-5af20059e2a0",
+          "567bd77c-5479-4779-a797-a4e915afa338",
+          "567bd77c-5479-4779-a797-a4e915afa338",
           true,
-          "e171636a-21f9-405d-98c6-32b5cd6bb760",
+          "b10cc777-bcb8-4dc8-8f65-839a74e862b2",
           "OWNER",
           "ADMIN",
           "MANAGER",
           true,
           20801,
           20801,
-          "2026-10-29T02:35:37.581Z",
+          "2026-10-29T03:18:15.224Z",
           20801,
-          "2026-10-29T02:35:37.581Z",
-          "c8d96541-f2e0-4c3b-b1c5-f47dea7cc488",
+          "2026-10-29T03:18:15.224Z",
+          "8996965c-3dd9-42c3-b2f5-269e0462e507",
           "101",
           "0"
         ],
@@ -4817,8 +4865,8 @@
             "Total Cost": 285.45,
             "Plan Rows": 99,
             "Plan Width": 256,
-            "Actual Startup Time": 0.206,
-            "Actual Total Time": 0.219,
+            "Actual Startup Time": 0.236,
+            "Actual Total Time": 0.248,
             "Actual Rows": 99,
             "Actual Loops": 1,
             "Shared Hit Blocks": 17,
@@ -4841,8 +4889,8 @@
                 "Total Cost": 285.45,
                 "Plan Rows": 99,
                 "Plan Width": 256,
-                "Actual Startup Time": 0.205,
-                "Actual Total Time": 0.211,
+                "Actual Startup Time": 0.236,
+                "Actual Total Time": 0.241,
                 "Actual Rows": 99,
                 "Actual Loops": 1,
                 "Sort Key": [
@@ -4874,8 +4922,8 @@
                     "Total Cost": 281.92,
                     "Plan Rows": 99,
                     "Plan Width": 256,
-                    "Actual Startup Time": 0.092,
-                    "Actual Total Time": 0.156,
+                    "Actual Startup Time": 0.105,
+                    "Actual Total Time": 0.178,
                     "Actual Rows": 99,
                     "Actual Loops": 1,
                     "Inner Unique": false,
@@ -4900,8 +4948,8 @@
                         "Total Cost": 3.24,
                         "Plan Rows": 1,
                         "Plan Width": 37,
-                        "Actual Startup Time": 0.031,
-                        "Actual Total Time": 0.032,
+                        "Actual Startup Time": 0.041,
+                        "Actual Total Time": 0.042,
                         "Actual Rows": 1,
                         "Actual Loops": 1,
                         "Inner Unique": false,
@@ -4927,11 +4975,11 @@
                             "Total Cost": 1.05,
                             "Plan Rows": 1,
                             "Plan Width": 37,
-                            "Actual Startup Time": 0.013,
-                            "Actual Total Time": 0.014,
+                            "Actual Startup Time": 0.019,
+                            "Actual Total Time": 0.02,
                             "Actual Rows": 1,
                             "Actual Loops": 1,
-                            "Filter": "(\"isActive\" AND (id = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text))",
+                            "Filter": "(\"isActive\" AND (id = '567bd77c-5479-4779-a797-a4e915afa338'::text))",
                             "Rows Removed by Filter": 3,
                             "Shared Hit Blocks": 1,
                             "Shared Read Blocks": 0,
@@ -4954,8 +5002,8 @@
                             "Total Cost": 2.18,
                             "Plan Rows": 2,
                             "Plan Width": 37,
-                            "Actual Startup Time": 0.016,
-                            "Actual Total Time": 0.017,
+                            "Actual Startup Time": 0.02,
+                            "Actual Total Time": 0.02,
                             "Actual Rows": 1,
                             "Actual Loops": 1,
                             "Inner Unique": false,
@@ -4985,7 +5033,7 @@
                                 "Actual Total Time": 0.008,
                                 "Actual Rows": 1,
                                 "Actual Loops": 1,
-                                "Filter": "(\"isActive\" AND (id = 'e171636a-21f9-405d-98c6-32b5cd6bb760'::text))",
+                                "Filter": "(\"isActive\" AND (id = 'b10cc777-bcb8-4dc8-8f65-839a74e862b2'::text))",
                                 "Rows Removed by Filter": 0,
                                 "Shared Hit Blocks": 1,
                                 "Shared Read Blocks": 0,
@@ -5009,11 +5057,11 @@
                                 "Total Cost": 1.14,
                                 "Plan Rows": 2,
                                 "Plan Width": 74,
-                                "Actual Startup Time": 0.008,
-                                "Actual Total Time": 0.008,
+                                "Actual Startup Time": 0.011,
+                                "Actual Total Time": 0.011,
                                 "Actual Rows": 1,
                                 "Actual Loops": 1,
-                                "Filter": "((\"disabledAt\" IS NULL) AND (\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text) AND (\"userId\" = 'e171636a-21f9-405d-98c6-32b5cd6bb760'::text) AND (role = ANY (ARRAY[('OWNER'::cstring)::\"ShopRole\", ('ADMIN'::cstring)::\"ShopRole\", ('MANAGER'::cstring)::\"ShopRole\"])))",
+                                "Filter": "((\"disabledAt\" IS NULL) AND (\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text) AND (\"userId\" = 'b10cc777-bcb8-4dc8-8f65-839a74e862b2'::text) AND (role = ANY (ARRAY[('OWNER'::cstring)::\"ShopRole\", ('ADMIN'::cstring)::\"ShopRole\", ('MANAGER'::cstring)::\"ShopRole\"])))",
                                 "Rows Removed by Filter": 1,
                                 "Shared Hit Blocks": 1,
                                 "Shared Read Blocks": 0,
@@ -5041,11 +5089,11 @@
                         "Total Cost": 277.19,
                         "Plan Rows": 99,
                         "Plan Width": 228,
-                        "Actual Startup Time": 0.053,
-                        "Actual Total Time": 0.092,
+                        "Actual Startup Time": 0.052,
+                        "Actual Total Time": 0.093,
                         "Actual Rows": 99,
                         "Actual Loops": 1,
-                        "Recheck Cond": "(((\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text) AND (\"sortOrder\" > 20801)) OR ((\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text) AND (\"sortOrder\" = 20801) AND (\"createdAt\" > '2026-10-29 02:35:37.581'::timestamp without time zone)) OR ((\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text) AND (\"sortOrder\" = 20801) AND (\"createdAt\" = '2026-10-29 02:35:37.581'::timestamp without time zone) AND (id > 'c8d96541-f2e0-4c3b-b1c5-f47dea7cc488'::text)))",
+                        "Recheck Cond": "(((\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text) AND (\"sortOrder\" > 20801)) OR ((\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text) AND (\"sortOrder\" = 20801) AND (\"createdAt\" > '2026-10-29 03:18:15.224'::timestamp without time zone)) OR ((\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text) AND (\"sortOrder\" = 20801) AND (\"createdAt\" = '2026-10-29 03:18:15.224'::timestamp without time zone) AND (id > '8996965c-3dd9-42c3-b2f5-269e0462e507'::text)))",
                         "Rows Removed by Index Recheck": 0,
                         "Exact Heap Blocks": 3,
                         "Lossy Heap Blocks": 0,
@@ -5069,8 +5117,8 @@
                             "Total Cost": 22.33,
                             "Plan Rows": 99,
                             "Plan Width": 0,
-                            "Actual Startup Time": 0.045,
-                            "Actual Total Time": 0.046,
+                            "Actual Startup Time": 0.039,
+                            "Actual Total Time": 0.039,
                             "Actual Rows": 0,
                             "Actual Loops": 1,
                             "Shared Hit Blocks": 11,
@@ -5094,11 +5142,11 @@
                                 "Total Cost": 13.4,
                                 "Plan Rows": 99,
                                 "Plan Width": 0,
-                                "Actual Startup Time": 0.039,
-                                "Actual Total Time": 0.039,
+                                "Actual Startup Time": 0.03,
+                                "Actual Total Time": 0.031,
                                 "Actual Rows": 99,
                                 "Actual Loops": 1,
-                                "Index Cond": "((\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text) AND (\"sortOrder\" > 20801))",
+                                "Index Cond": "((\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text) AND (\"sortOrder\" > 20801))",
                                 "Shared Hit Blocks": 5,
                                 "Shared Read Blocks": 0,
                                 "Shared Dirtied Blocks": 0,
@@ -5124,7 +5172,7 @@
                                 "Actual Total Time": 0.004,
                                 "Actual Rows": 0,
                                 "Actual Loops": 1,
-                                "Index Cond": "((\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text) AND (\"sortOrder\" = 20801) AND (\"createdAt\" > '2026-10-29 02:35:37.581'::timestamp without time zone))",
+                                "Index Cond": "((\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text) AND (\"sortOrder\" = 20801) AND (\"createdAt\" > '2026-10-29 03:18:15.224'::timestamp without time zone))",
                                 "Shared Hit Blocks": 3,
                                 "Shared Read Blocks": 0,
                                 "Shared Dirtied Blocks": 0,
@@ -5146,11 +5194,11 @@
                                 "Total Cost": 4.43,
                                 "Plan Rows": 1,
                                 "Plan Width": 0,
-                                "Actual Startup Time": 0.003,
-                                "Actual Total Time": 0.003,
+                                "Actual Startup Time": 0.004,
+                                "Actual Total Time": 0.004,
                                 "Actual Rows": 0,
                                 "Actual Loops": 1,
-                                "Index Cond": "((\"shopId\" = '997bd0bc-c622-40aa-9cf1-5af20059e2a0'::text) AND (\"sortOrder\" = 20801) AND (\"createdAt\" = '2026-10-29 02:35:37.581'::timestamp without time zone) AND (id > 'c8d96541-f2e0-4c3b-b1c5-f47dea7cc488'::text))",
+                                "Index Cond": "((\"shopId\" = '567bd77c-5479-4779-a797-a4e915afa338'::text) AND (\"sortOrder\" = 20801) AND (\"createdAt\" = '2026-10-29 03:18:15.224'::timestamp without time zone) AND (id > '8996965c-3dd9-42c3-b2f5-269e0462e507'::text))",
                                 "Shared Hit Blocks": 3,
                                 "Shared Read Blocks": 0,
                                 "Shared Dirtied Blocks": 0,
@@ -5184,12 +5232,403 @@
             "Temp Read Blocks": 0,
             "Temp Written Blocks": 0
           },
-          "Planning Time": 0.486,
+          "Planning Time": 0.883,
           "Triggers": [],
-          "Execution Time": 0.271
+          "Execution Time": 0.331
         }
       }
     ]
+  },
+  "nPlusOne": {
+    "pass": true,
+    "leanProjectionVerified": true,
+    "completionPass": true,
+    "matrixSizes": [
+      1,
+      10,
+      100,
+      500
+    ],
+    "completedDashboardRecords": 500,
+    "semantics": "Counts include WITH/SELECT statements. Payment 500 measures a single-resource review over a 500-record paid dataset; payment line counts remain capped at 100. Catalog/feed/quote 500 cases traverse bounded pages/batches. Total traversal queries scale with pages, not per-row enrichment.",
+    "quoteAndCheckoutLineCounts": [
+      1,
+      10,
+      100
+    ],
+    "catalogPageSizes": [
+      1,
+      25,
+      100
+    ],
+    "orderFeedRows": [
+      1,
+      10,
+      25
+    ],
+    "queryMeasurements": [
+      {
+        "name": "individual quotes",
+        "size": 1,
+        "selects": 6,
+        "statements": 6
+      },
+      {
+        "name": "batched quotes",
+        "size": 1,
+        "selects": 6,
+        "statements": 6
+      },
+      {
+        "name": "individual quotes",
+        "size": 10,
+        "selects": 60,
+        "statements": 60
+      },
+      {
+        "name": "batched quotes",
+        "size": 10,
+        "selects": 6,
+        "statements": 6
+      },
+      {
+        "name": "individual quotes",
+        "size": 100,
+        "selects": 600,
+        "statements": 600
+      },
+      {
+        "name": "batched quotes",
+        "size": 100,
+        "selects": 6,
+        "statements": 6
+      },
+      {
+        "name": "checkout",
+        "size": 1,
+        "selects": 10,
+        "statements": 14
+      },
+      {
+        "name": "checkout",
+        "size": 10,
+        "selects": 10,
+        "statements": 14
+      },
+      {
+        "name": "checkout",
+        "size": 100,
+        "selects": 10,
+        "statements": 14
+      },
+      {
+        "name": "repeated-product quotes",
+        "size": 100,
+        "selects": 6,
+        "statements": 6
+      },
+      {
+        "name": "management product page",
+        "size": 1,
+        "selects": 5,
+        "statements": 5
+      },
+      {
+        "name": "public menu page",
+        "size": 1,
+        "selects": 4,
+        "statements": 4
+      },
+      {
+        "name": "management product page",
+        "size": 25,
+        "selects": 5,
+        "statements": 5
+      },
+      {
+        "name": "public menu page",
+        "size": 25,
+        "selects": 4,
+        "statements": 4
+      },
+      {
+        "name": "management product page",
+        "size": 100,
+        "selects": 5,
+        "statements": 5
+      },
+      {
+        "name": "public menu page",
+        "size": 100,
+        "selects": 4,
+        "statements": 4
+      },
+      {
+        "name": "active order feed",
+        "size": 1,
+        "selects": 4,
+        "statements": 4
+      },
+      {
+        "name": "active order feed",
+        "size": 10,
+        "selects": 4,
+        "statements": 4
+      },
+      {
+        "name": "active order feed",
+        "size": 25,
+        "selects": 4,
+        "statements": 4
+      },
+      {
+        "name": "payment pending review",
+        "size": 1,
+        "selects": 3,
+        "statements": 3
+      },
+      {
+        "name": "payment settlement",
+        "size": 1,
+        "selects": 10,
+        "statements": 12
+      },
+      {
+        "name": "payment paid receipt",
+        "size": 1,
+        "selects": 3,
+        "statements": 3
+      },
+      {
+        "name": "payment pending review",
+        "size": 10,
+        "selects": 3,
+        "statements": 3
+      },
+      {
+        "name": "payment settlement",
+        "size": 10,
+        "selects": 10,
+        "statements": 12
+      },
+      {
+        "name": "payment paid receipt",
+        "size": 10,
+        "selects": 3,
+        "statements": 3
+      },
+      {
+        "name": "payment pending review",
+        "size": 100,
+        "selects": 3,
+        "statements": 3
+      },
+      {
+        "name": "payment settlement",
+        "size": 100,
+        "selects": 10,
+        "statements": 12
+      },
+      {
+        "name": "payment paid receipt",
+        "size": 100,
+        "selects": 3,
+        "statements": 3
+      },
+      {
+        "name": "dashboard sales report",
+        "size": 1,
+        "selects": 5,
+        "statements": 6
+      },
+      {
+        "name": "dashboard daily analytics",
+        "size": 1,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "dashboard hourly analytics",
+        "size": 1,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "dashboard top products",
+        "size": 1,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "payment lookup over paid dataset",
+        "size": 1,
+        "selects": 3,
+        "statements": 3
+      },
+      {
+        "name": "dashboard sales report",
+        "size": 10,
+        "selects": 5,
+        "statements": 6
+      },
+      {
+        "name": "dashboard daily analytics",
+        "size": 10,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "dashboard hourly analytics",
+        "size": 10,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "dashboard top products",
+        "size": 10,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "payment lookup over paid dataset",
+        "size": 10,
+        "selects": 3,
+        "statements": 3
+      },
+      {
+        "name": "dashboard sales report",
+        "size": 100,
+        "selects": 5,
+        "statements": 6
+      },
+      {
+        "name": "dashboard daily analytics",
+        "size": 100,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "dashboard hourly analytics",
+        "size": 100,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "dashboard top products",
+        "size": 100,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "payment lookup over paid dataset",
+        "size": 100,
+        "selects": 3,
+        "statements": 3
+      },
+      {
+        "name": "dashboard sales report",
+        "size": 500,
+        "selects": 5,
+        "statements": 6
+      },
+      {
+        "name": "dashboard daily analytics",
+        "size": 500,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "dashboard hourly analytics",
+        "size": 500,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "dashboard top products",
+        "size": 500,
+        "selects": 2,
+        "statements": 3
+      },
+      {
+        "name": "payment lookup over paid dataset",
+        "size": 500,
+        "selects": 3,
+        "statements": 3
+      },
+      {
+        "name": "management traversal total",
+        "size": 1,
+        "selects": 5,
+        "statements": 5
+      },
+      {
+        "name": "public menu traversal total",
+        "size": 1,
+        "selects": 4,
+        "statements": 4
+      },
+      {
+        "name": "management traversal total",
+        "size": 10,
+        "selects": 5,
+        "statements": 5
+      },
+      {
+        "name": "public menu traversal total",
+        "size": 10,
+        "selects": 4,
+        "statements": 4
+      },
+      {
+        "name": "management traversal total",
+        "size": 100,
+        "selects": 5,
+        "statements": 5
+      },
+      {
+        "name": "public menu traversal total",
+        "size": 100,
+        "selects": 4,
+        "statements": 4
+      },
+      {
+        "name": "management traversal total",
+        "size": 500,
+        "selects": 25,
+        "statements": 25
+      },
+      {
+        "name": "public menu traversal total",
+        "size": 500,
+        "selects": 20,
+        "statements": 20
+      },
+      {
+        "name": "500 quotes in bounded batches",
+        "size": 500,
+        "selects": 30,
+        "statements": 30
+      },
+      {
+        "name": "oversized 500-line quote rejected",
+        "size": 500,
+        "selects": 0,
+        "statements": 0
+      },
+      {
+        "name": "order feed traversal total",
+        "size": 100,
+        "selects": 16,
+        "statements": 16
+      },
+      {
+        "name": "order feed traversal total",
+        "size": 500,
+        "selects": 80,
+        "statements": 80
+      }
+    ],
+    "limitations": "SELECT round trips and total Prisma statements, not PostgreSQL trigger-internal work or O(1) CPU/row transfer. No mock query-count assertions; no production SQL logging enabled."
   },
   "limitations": "Actual repository/service SQL with bounded runtime adapter. Pending/rejected data only. Mixed-load budgets are local regression checks, not production HTTP SLOs or proof of fairness at arbitrary saturation. Does not establish all-query coverage or paid/report throughput."
 }

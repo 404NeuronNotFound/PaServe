@@ -11,92 +11,92 @@
     {
       "name": "migration-refuses-existing-payment-key-aliases-without-partial-install",
       "pass": true,
-      "elapsedMs": 16
+      "elapsedMs": 22
     },
     {
       "name": "mixed-case-and-historical-order-keys-replay-one-saved-order",
       "pass": true,
-      "elapsedMs": 62
+      "elapsedMs": 168
     },
     {
       "name": "eight-concurrent-order-retries-across-two-clients-commit-once",
       "pass": true,
-      "elapsedMs": 115
+      "elapsedMs": 129
     },
     {
       "name": "changed-order-payload-cannot-reuse-a-committed-key",
       "pass": true,
-      "elapsedMs": 5
+      "elapsedMs": 7
     },
     {
       "name": "order-keys-are-scoped-to-the-route-shop",
       "pass": true,
-      "elapsedMs": 27
+      "elapsedMs": 32
     },
     {
       "name": "concurrent-cash-retries-persist-one-receipt",
       "pass": true,
-      "elapsedMs": 173
+      "elapsedMs": 189
     },
     {
       "name": "concurrent-gcash_manual-retries-persist-one-receipt",
       "pass": true,
-      "elapsedMs": 165
+      "elapsedMs": 196
     },
     {
       "name": "concurrent-card_manual-retries-persist-one-receipt",
       "pass": true,
-      "elapsedMs": 158
+      "elapsedMs": 169
     },
     {
       "name": "concurrent-other-retries-persist-one-receipt",
       "pass": true,
-      "elapsedMs": 156
+      "elapsedMs": 190
     },
     {
       "name": "changed-payment-details-or-actor-never-record-another-payment",
       "pass": true,
-      "elapsedMs": 47
+      "elapsedMs": 61
     },
     {
       "name": "competing-cashiers-with-different-keys-have-one-winner",
       "pass": true,
-      "elapsedMs": 60
+      "elapsedMs": 72
     },
     {
       "name": "payment-key-cannot-be-reused-on-another-order-even-with-different-case",
       "pass": true,
-      "elapsedMs": 47
+      "elapsedMs": 45
     },
     {
       "name": "payment-key-can-be-used-independently-in-another-shop",
       "pass": true,
-      "elapsedMs": 40
+      "elapsedMs": 50
     },
     {
       "name": "historical-mixed-case-paid-receipts-replay-without-mutating-immutable-data",
       "pass": true,
-      "elapsedMs": 23
+      "elapsedMs": 30
     },
     {
       "name": "failed-line-insert-rolls-back-order-number-and-retries-same-key-safely",
       "pass": true,
-      "elapsedMs": 40
+      "elapsedMs": 50
     },
     {
       "name": "replay-still-enforces-live-shop-membership",
       "pass": true,
-      "elapsedMs": 12
+      "elapsedMs": 13
     },
     {
       "name": "lost-HTTP-order-response-retries-the-same-committed-order",
       "pass": true,
-      "elapsedMs": 325
+      "elapsedMs": 339
     },
     {
       "name": "lost-HTTP-payment-response-retries-one-immutable-receipt",
       "pass": true,
-      "elapsedMs": 334
+      "elapsedMs": 354
     },
     {
       "name": "processed-order-retries-conflict-without-creating-a-new-order",
