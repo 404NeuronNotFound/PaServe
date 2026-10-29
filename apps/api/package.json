@@ -27,6 +27,8 @@
     "test:caching:postgres": "node test/request-timeouts.local-postgres.mjs caching",
     "test:load-env": "pnpm build && node test/request-timeouts.local-postgres.mjs load",
     "test:load-env:search": "pnpm build && node test/request-timeouts.local-postgres.mjs load-search",
+    "test:load-ramp": "pnpm build && node test/request-timeouts.local-postgres.mjs load-ramp",
+    "test:load-ramp:diagnostic": "pnpm build && node test/request-timeouts.local-postgres.mjs load-ramp-diagnostic",
     "test:timeouts:supabase": "vitest run --config vitest.config.e2e.ts test/supabase-latency.e2e-spec.ts",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",

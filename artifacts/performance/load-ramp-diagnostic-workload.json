@@ -1,0 +1,477 @@
+{
+  "version": 2,
+  "environment": "disposable-development",
+  "workload": {
+    "levels": [
+      2,
+      4,
+      8,
+      16,
+      32,
+      64
+    ],
+    "stageSeconds": 45,
+    "menuEveryMs": 1000,
+    "statusEveryMs": 5000,
+    "dashboardEveryMs": 15000,
+    "searchEveryMs": 1000,
+    "pollEveryMs": 5000,
+    "p95Ms": 1000,
+    "p99Ms": 1500,
+    "maximumErrorRate": 0.01,
+    "maximumMissedRate": 0.01,
+    "minimumSamples": 100,
+    "date": "2026-10-29",
+    "workflows": [
+      "menu",
+      "login",
+      "dashboard",
+      "order-status"
+    ]
+  },
+  "identities": 3,
+  "shops": 3,
+  "stages": [
+    {
+      "virtualClients": 2,
+      "startedAt": "2026-10-29T09:29:25.516Z",
+      "finishedAt": "2026-10-29T09:30:10.519Z",
+      "elapsedSeconds": 45,
+      "requests": 115,
+      "successes": 115,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 2.56,
+      "p50Ms": 12,
+      "p95Ms": 39,
+      "p99Ms": 152,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 115
+      },
+      "byWorkflow": {
+        "menu": {
+          "requests": 90,
+          "successes": 90,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 2,
+          "p50Ms": 12,
+          "p95Ms": 20,
+          "p99Ms": 155,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 90
+          },
+          "sampleSufficient": false
+        },
+        "login": {
+          "requests": 1,
+          "successes": 1,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.02,
+          "p50Ms": 88,
+          "p95Ms": 88,
+          "p99Ms": 88,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 1
+          },
+          "sampleSufficient": false
+        },
+        "dashboard": {
+          "requests": 6,
+          "successes": 6,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.13,
+          "p50Ms": 32,
+          "p95Ms": 93,
+          "p99Ms": 93,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 6
+          },
+          "sampleSufficient": false
+        },
+        "order-status": {
+          "requests": 18,
+          "successes": 18,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.4,
+          "p50Ms": 14,
+          "p95Ms": 31,
+          "p99Ms": 31,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 18
+          },
+          "sampleSufficient": false
+        }
+      },
+      "sloPass": true,
+      "sampleSufficient": true
+    },
+    {
+      "virtualClients": 4,
+      "startedAt": "2026-10-29T09:30:10.520Z",
+      "finishedAt": "2026-10-29T09:30:55.523Z",
+      "elapsedSeconds": 45,
+      "requests": 229,
+      "successes": 229,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 5.09,
+      "p50Ms": 12,
+      "p95Ms": 23,
+      "p99Ms": 46,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 229
+      },
+      "byWorkflow": {
+        "menu": {
+          "requests": 180,
+          "successes": 180,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 4,
+          "p50Ms": 11,
+          "p95Ms": 15,
+          "p99Ms": 23,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 180
+          },
+          "sampleSufficient": true
+        },
+        "login": {
+          "requests": 1,
+          "successes": 1,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.02,
+          "p50Ms": 90,
+          "p95Ms": 90,
+          "p99Ms": 90,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 1
+          },
+          "sampleSufficient": false
+        },
+        "dashboard": {
+          "requests": 12,
+          "successes": 12,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.27,
+          "p50Ms": 24,
+          "p95Ms": 38,
+          "p99Ms": 38,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 12
+          },
+          "sampleSufficient": false
+        },
+        "order-status": {
+          "requests": 36,
+          "successes": 36,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.8,
+          "p50Ms": 12,
+          "p95Ms": 17,
+          "p99Ms": 66,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 36
+          },
+          "sampleSufficient": false
+        }
+      },
+      "sloPass": true,
+      "sampleSufficient": true
+    },
+    {
+      "virtualClients": 8,
+      "startedAt": "2026-10-29T09:30:55.524Z",
+      "finishedAt": "2026-10-29T09:31:40.527Z",
+      "elapsedSeconds": 45,
+      "requests": 457,
+      "successes": 457,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 10.16,
+      "p50Ms": 12,
+      "p95Ms": 28,
+      "p99Ms": 40,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 457
+      },
+      "byWorkflow": {
+        "menu": {
+          "requests": 360,
+          "successes": 360,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 8,
+          "p50Ms": 12,
+          "p95Ms": 22,
+          "p99Ms": 33,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 360
+          },
+          "sampleSufficient": true
+        },
+        "login": {
+          "requests": 1,
+          "successes": 1,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.02,
+          "p50Ms": 88,
+          "p95Ms": 88,
+          "p99Ms": 88,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 1
+          },
+          "sampleSufficient": false
+        },
+        "dashboard": {
+          "requests": 24,
+          "successes": 24,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.53,
+          "p50Ms": 29,
+          "p95Ms": 37,
+          "p99Ms": 41,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 24
+          },
+          "sampleSufficient": false
+        },
+        "order-status": {
+          "requests": 72,
+          "successes": 72,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 1.6,
+          "p50Ms": 13,
+          "p95Ms": 24,
+          "p99Ms": 29,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 72
+          },
+          "sampleSufficient": false
+        }
+      },
+      "sloPass": true,
+      "sampleSufficient": true
+    },
+    {
+      "virtualClients": 16,
+      "startedAt": "2026-10-29T09:31:40.527Z",
+      "finishedAt": "2026-10-29T09:32:25.531Z",
+      "elapsedSeconds": 45,
+      "requests": 913,
+      "successes": 913,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 20.29,
+      "p50Ms": 12,
+      "p95Ms": 25,
+      "p99Ms": 36,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 913
+      },
+      "byWorkflow": {
+        "menu": {
+          "requests": 720,
+          "successes": 720,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 16,
+          "p50Ms": 11,
+          "p95Ms": 20,
+          "p99Ms": 25,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 720
+          },
+          "sampleSufficient": true
+        },
+        "login": {
+          "requests": 1,
+          "successes": 1,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.02,
+          "p50Ms": 90,
+          "p95Ms": 90,
+          "p99Ms": 90,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 1
+          },
+          "sampleSufficient": false
+        },
+        "dashboard": {
+          "requests": 48,
+          "successes": 48,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 1.07,
+          "p50Ms": 26,
+          "p95Ms": 38,
+          "p99Ms": 40,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 48
+          },
+          "sampleSufficient": false
+        },
+        "order-status": {
+          "requests": 144,
+          "successes": 144,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 3.2,
+          "p50Ms": 13,
+          "p95Ms": 23,
+          "p99Ms": 30,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 144
+          },
+          "sampleSufficient": true
+        }
+      },
+      "sloPass": true,
+      "sampleSufficient": true
+    },
+    {
+      "virtualClients": 32,
+      "startedAt": "2026-10-29T09:32:25.532Z",
+      "finishedAt": "2026-10-29T09:33:10.536Z",
+      "elapsedSeconds": 45,
+      "requests": 1825,
+      "successes": 1345,
+      "failures": 480,
+      "errorRate": 0.26301369863013696,
+      "requestsPerSecond": 40.55,
+      "p50Ms": 12,
+      "p95Ms": 25,
+      "p99Ms": 33,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "200": 1345,
+        "429": 480
+      },
+      "byWorkflow": {
+        "menu": {
+          "requests": 1440,
+          "successes": 960,
+          "failures": 480,
+          "errorRate": 0.3333333333333333,
+          "requestsPerSecond": 32,
+          "p50Ms": 11,
+          "p95Ms": 20,
+          "p99Ms": 24,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 960,
+            "429": 480
+          },
+          "sampleSufficient": true
+        },
+        "login": {
+          "requests": 1,
+          "successes": 1,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 0.02,
+          "p50Ms": 87,
+          "p95Ms": 87,
+          "p99Ms": 87,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 1
+          },
+          "sampleSufficient": false
+        },
+        "dashboard": {
+          "requests": 96,
+          "successes": 96,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 2.13,
+          "p50Ms": 26,
+          "p95Ms": 36,
+          "p99Ms": 39,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 96
+          },
+          "sampleSufficient": false
+        },
+        "order-status": {
+          "requests": 288,
+          "successes": 288,
+          "failures": 0,
+          "errorRate": 0,
+          "requestsPerSecond": 6.4,
+          "p50Ms": 13,
+          "p95Ms": 22,
+          "p99Ms": 23,
+          "missedScheduledRequests": 0,
+          "missedRate": 0,
+          "statusCounts": {
+            "200": 288
+          },
+          "sampleSufficient": true
+        }
+      },
+      "sloPass": false,
+      "sampleSufficient": true
+    }
+  ],
+  "startedAt": "2026-10-29T09:29:25.096Z",
+  "testSessionsCreated": 8,
+  "testSessionsRevoked": 8,
+  "finishedAt": "2026-10-29T09:33:10.556Z"
+}

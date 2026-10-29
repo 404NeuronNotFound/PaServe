@@ -38,7 +38,7 @@ function numberSetting(env, key, fallback, min, max) {
   return value;
 }
 
-export async function runOrderSearchLoad(env = process.env) {
+export async function runOrderSearchLoad(env = process.env, hooks = {}) {
   const { base, fetch } = await connectLoadTarget(env);
   const levels = (env.LOAD_LEVELS ?? "1,5,10,25,50").split(",").map(Number);
   if (
@@ -75,6 +75,10 @@ export async function runOrderSearchLoad(env = process.env) {
     60000,
   );
   const p95Budget = numberSetting(env, "LOAD_P95_MS", 1000, 1, 15000);
+  const p99Budget =
+    env.LOAD_P99_MS === undefined
+      ? null
+      : numberSetting(env, "LOAD_P99_MS", 1500, 1, 30000);
   const timeout = numberSetting(env, "LOAD_TIMEOUT_MS", 10000, 100, 30000);
   const views = ["active", "completed", "cancelled"];
   const terms = ["ORD", "Patio", "T1", "000", "A", "missing-order"];
@@ -131,6 +135,7 @@ export async function runOrderSearchLoad(env = process.env) {
     },
     budgets: {
       p95Ms: p95Budget,
+      p99Ms: p99Budget,
       maximumErrorRate: 0.01,
       maximumMissedRate: 0.01,
       minimumSamplesPerStage: 100,
@@ -205,6 +210,7 @@ export async function runOrderSearchLoad(env = process.env) {
       `Testing ${report.identities} owner identities across ${report.shops} shops. Tokens are never written to the report.`,
     );
     for (const clients of levels) {
+      await hooks.onStage?.({ type: "start", virtualClients: clients });
       const samples = [];
       let missed = 0;
       const start = performance.now();
@@ -282,12 +288,17 @@ export async function runOrderSearchLoad(env = process.env) {
       const sloPass =
         stats.successes > 0 &&
         stats.p95Ms <= p95Budget &&
+        (p99Budget === null || stats.p99Ms <= p99Budget) &&
         stats.errorRate <= 0.01 &&
         stats.missedRate <= 0.01;
       const sampleSufficient =
         stats.requests >= report.budgets.minimumSamplesPerStage;
       const stage = {
         virtualClients: clients,
+        startedAt: new Date(
+          Date.now() - (performance.now() - start),
+        ).toISOString(),
+        finishedAt: new Date().toISOString(),
         elapsedSeconds: Number(elapsed.toFixed(2)),
         ...stats,
         sloPass,
@@ -312,6 +323,7 @@ export async function runOrderSearchLoad(env = process.env) {
         ),
       };
       report.stages.push(stage);
+      await hooks.onStage?.({ type: "complete", virtualClients: clients });
       console.log(
         `${clients} clients: ${stats.requests} requests, ${stats.requestsPerSecond} req/s, p95 ${stats.p95Ms ?? "n/a"} ms, ${(stats.errorRate * 100).toFixed(1)}% errors, ${missed} missed; ${sloPass ? "within" : "outside"} budget${sampleSufficient ? "" : " (small sample)"}.`,
       );

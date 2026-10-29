@@ -15,7 +15,14 @@ export function operatingSystemEnvironment(parent) {
 /** Never inherit application secrets, proxy settings, NODE_OPTIONS or .env. */
 export function loadFixtureEnvironment(
   parent,
-  { databaseUrl, report, directory, search = false },
+  {
+    databaseUrl,
+    report,
+    directory,
+    search = false,
+    ramp = false,
+    diagnostic = false,
+  },
 ) {
   const database = new URL(databaseUrl);
   assert.ok(
@@ -43,6 +50,8 @@ export function loadFixtureEnvironment(
     TIMEOUT_DB_REPORT: report,
     LOAD_FIXTURE_DIRECTORY: directory,
     LOAD_FIXTURE_SEARCH: search ? '1' : '0',
+    LOAD_FIXTURE_RAMP: ramp ? '1' : '0',
+    LOAD_RAMP_DIAGNOSTIC: diagnostic ? '1' : '0',
     LOAD_DATASET_PROFILE: dataset.profile,
     JWT_ACCESS_SECRET: randomBytes(32).toString('hex'),
     JWT_REFRESH_SECRET: randomBytes(32).toString('hex'),

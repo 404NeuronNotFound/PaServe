@@ -18,7 +18,12 @@ import { loadFixtureEnvironment } from './load-fixture-environment.mjs';
 
 const execute = promisify(execFile);
 const suite = process.argv[2] ?? 'timeouts';
-const isolatedLoad = suite === 'load' || suite === 'load-search';
+const isolatedLoad = [
+  'load',
+  'load-search',
+  'load-ramp',
+  'load-ramp-diagnostic',
+].includes(suite);
 const shutdown = new AbortController();
 const interrupt = () => {
   process.exitCode = 130;
@@ -42,6 +47,8 @@ assert.ok(
     'caching',
     'load',
     'load-search',
+    'load-ramp',
+    'load-ramp-diagnostic',
   ].includes(suite),
   'Choose a supported local database suite.',
 );
@@ -84,7 +91,7 @@ let removed = false;
 let loadSucceeded = false;
 const loadReport = resolve(
   apiRoot,
-  `../../artifacts/performance/load-environment${suite === 'load-search' ? '-search' : ''}-local.json`,
+  `../../artifacts/performance/load-environment${suite === 'load-search' ? '-search' : suite === 'load-ramp' ? '-ramp' : suite === 'load-ramp-diagnostic' ? '-ramp-diagnostic' : ''}-local.json`,
 );
 async function cleanup() {
   if (initialized) {
@@ -191,7 +198,7 @@ try {
   const result = await execute(
     process.execPath,
     [
-      suite === 'load' || suite === 'load-search'
+      isolatedLoad
         ? 'test/load-environment.database-check.mjs'
         : suite === 'timeouts'
           ? 'test/request-timeouts.database-check.mjs'
@@ -207,17 +214,25 @@ try {
     ],
     {
       cwd: apiRoot,
-      env:
-        suite === 'load' || suite === 'load-search'
-          ? loadFixtureEnvironment(process.env, {
-              databaseUrl: env.DATABASE_URL,
-              report: loadReport,
-              directory: clusterRoot,
-              search: suite === 'load-search',
-            })
-          : env,
+      env: isolatedLoad
+        ? loadFixtureEnvironment(process.env, {
+            databaseUrl: env.DATABASE_URL,
+            report: loadReport,
+            directory: clusterRoot,
+            search: suite === 'load-search',
+            ramp: suite.startsWith('load-ramp'),
+            diagnostic: suite === 'load-ramp-diagnostic',
+          })
+        : env,
       windowsHide: true,
-      timeout: suite === 'timeouts' ? 30_000 : isolatedLoad ? 180_000 : 90_000,
+      timeout:
+        suite === 'timeouts'
+          ? 30_000
+          : suite.startsWith('load-ramp')
+            ? 480_000
+            : isolatedLoad
+              ? 180_000
+              : 90_000,
       signal: isolatedLoad ? shutdown.signal : undefined,
       maxBuffer: 1024 * 1024,
     },

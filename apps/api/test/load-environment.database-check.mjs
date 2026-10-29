@@ -7,6 +7,12 @@ import { cpus, totalmem } from 'node:os';
 import pg from 'pg';
 import { LoadMonitor, assertLoadMonitoring } from './load-monitor.mjs';
 import { runLoadSearchWorker } from './load-search.worker.mjs';
+import { validateRampResponse } from './load-ramp.client-workload.mjs';
+import {
+  rampProfile,
+  rampDiagnosticProfile,
+  summarizeRamp,
+} from './load-ramp.mjs';
 import {
   loadDatasetPlan,
   seedLoadCatalog,
@@ -85,6 +91,7 @@ async function main() {
     phase = 'migrations';
     await db.connect();
     monitor = new LoadMonitor({
+      maxSamples: process.env.LOAD_FIXTURE_RAMP === '1' ? 1080 : 480,
       client: new pg.Client({
         connectionString: database.href,
         application_name: 'paserve-load-monitor',
@@ -213,6 +220,13 @@ async function main() {
       const menu = await read(`menu/${shop.slug}`);
       assert.equal(menu.status, 200);
       const page = await menu.json();
+      const account = accounts.find((a) => a.shopId === shop.id);
+      account.slug = shop.slug;
+      account.menuProductIds = page.products.map((p) => p.id);
+      assert.ok(
+        validateRampResponse('menu', page, account),
+        'Synthetic menu response is invalid.',
+      );
       assert.ok(page.products.length > 0 && page.products.length <= 100);
       assert.ok(page.products.some((item) => item.id === shop.product.id));
       const sources = [];
@@ -252,6 +266,12 @@ async function main() {
         const created = await read(`menu/${shop.slug}/orders`, options);
         assert.equal(created.status, 201);
         const order = await created.json();
+        if (mode === 'TAKEOUT') {
+          account.orderId = order.order.id;
+          account.trackingCookie = created.headers
+            .get('set-cookie')
+            ?.split(';')[0];
+        }
         ids.push(order.order.id);
         sources.push(order.order.id);
         const duplicate = await read(`menu/${shop.slug}/orders`, options);
@@ -270,27 +290,58 @@ async function main() {
     await prisma.$disconnect();
     phase = 'optional-search';
     let search;
-    if (process.env.LOAD_FIXTURE_SEARCH === '1') {
+    const isRamp = process.env.LOAD_FIXTURE_RAMP === '1';
+    const isDiagnostic = process.env.LOAD_RAMP_DIAGNOSTIC === '1';
+    const profile = isDiagnostic ? rampDiagnosticProfile : rampProfile;
+    if (process.env.LOAD_FIXTURE_SEARCH === '1' || isRamp) {
       credentialsFile = join(root, 'load-accounts.json');
       await writeFile(credentialsFile, JSON.stringify(accounts), {
         mode: 0o600,
         flag: 'wx',
       });
       await monitor.sampleNow();
-      search = await runLoadSearchWorker({
-        ...clientEnv,
-        LOAD_ACCOUNTS_FILE: credentialsFile,
-        LOAD_LEVELS: '5',
-        LOAD_DURATION_SECONDS: '10',
-        LOAD_SEARCH_EVERY_MS: '400',
-        LOAD_POLL_EVERY_MS: '1000',
-        LOAD_ENVIRONMENT: 'disposable-development',
-        LOAD_REPORT: resolve(
-          dirname(process.env.TIMEOUT_DB_REPORT),
-          'load-environment-search-workload.json',
-        ),
-      });
-      assert.ok(search.stages.every((stage) => stage.sloPass));
+      search = await runLoadSearchWorker(
+        {
+          ...clientEnv,
+          LOAD_ACCOUNTS_FILE: credentialsFile,
+          LOAD_FIXTURE_RAMP: isRamp ? '1' : '0',
+          LOAD_RAMP_DIAGNOSTIC: isDiagnostic ? '1' : '0',
+          LOAD_LEVELS: isRamp ? rampProfile.levels.join(',') : '5',
+          LOAD_DURATION_SECONDS: isRamp
+            ? String(rampProfile.stageSeconds)
+            : '10',
+          LOAD_SEARCH_EVERY_MS: isRamp
+            ? String(rampProfile.searchEveryMs)
+            : '400',
+          LOAD_POLL_EVERY_MS: isRamp ? String(rampProfile.pollEveryMs) : '1000',
+          ...(isRamp
+            ? {
+                LOAD_P95_MS: String(rampProfile.p95Ms),
+                LOAD_P99_MS: String(rampProfile.p99Ms),
+              }
+            : {}),
+          LOAD_ENVIRONMENT: 'disposable-development',
+          LOAD_REPORT: resolve(
+            dirname(process.env.TIMEOUT_DB_REPORT),
+            isRamp
+              ? isDiagnostic
+                ? 'load-ramp-diagnostic-workload.json'
+                : 'load-ramp-workload.json'
+              : 'load-environment-search-workload.json',
+          ),
+        },
+        {
+          deadlineMs: isRamp ? 360000 : 60000,
+          onStage: (stage) => {
+            if (isRamp)
+              phase =
+                stage.type === 'start'
+                  ? `ramp-${stage.virtualClients}`
+                  : 'ramp-between-stages';
+          },
+        },
+      );
+      if (!isRamp) assert.ok(search.stages.every((stage) => stage.sloPass));
       assert.equal(search.testSessionsCreated, search.testSessionsRevoked);
     }
     phase = 'report';
@@ -298,8 +349,10 @@ async function main() {
     assertLoadMonitoring(monitoring, {
       search: process.env.LOAD_FIXTURE_SEARCH === '1',
     });
+    const ramp = isRamp ? summarizeRamp(search, monitoring, profile) : null;
     const report = {
-      pass: true,
+      pass: ramp ? ramp.pass : true,
+      ramp,
       runId,
       environment: 'disposable-development',
       database: 'owned loopback PostgreSQL cluster',
@@ -320,7 +373,12 @@ async function main() {
         'critical writes confined to fixture DB',
         'duplicate orders prevented',
       ],
-      search: search ? { stages: search.stages.length, pass: true } : null,
+      search: search
+        ? {
+            stages: search.stages.length,
+            pass: search.stages.every((stage) => stage.sloPass),
+          }
+        : null,
       resources: {
         databaseVersion,
         node: process.version,
@@ -340,7 +398,7 @@ async function main() {
       JSON.stringify(report, null, 2) + '\n',
     );
     summary = {
-      pass: true,
+      pass: report.pass,
       environment: report.environment,
       checks: report.checks.length,
       blockedExternalCalls,
@@ -377,6 +435,8 @@ async function main() {
   }
   if (cleanupFailed) throw new Error('Fixture cleanup failed.');
   console.log(JSON.stringify(summary));
+  if (!summary.pass)
+    throw new Error('Load workload exceeded acceptance budgets.');
 }
 main().catch((error) => {
   console.error(
