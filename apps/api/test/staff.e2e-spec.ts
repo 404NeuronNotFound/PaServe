@@ -9,7 +9,7 @@ import { PrismaService } from '../src/database/prisma.service.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { Prisma } from '../src/generated/prisma/client.js';
 import { StaffService } from '../src/modules/staff/staff.service.js';
-import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
+import { resetRateLimits } from './rate-limit-test-utils.js';
 
 describe('Owner staff invitations through HTTP', () => {
   const ownerId = '75992537-5d60-4d22-8e1e-60a114644681';
@@ -74,7 +74,7 @@ describe('Owner staff invitations through HTTP', () => {
   });
   beforeEach(() => {
     vi.resetAllMocks();
-    app.get<ThrottlerStorageService>(ThrottlerStorage).onApplicationShutdown();
+    resetRateLimits(app);
     role = 'OWNER';
     invite = {
       id: resourceId,

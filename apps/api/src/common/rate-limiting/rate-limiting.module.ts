@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { CriticalAccessService } from '../load-shedding/critical-capacity.js';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ApiCapacityService } from '../load-shedding/api-capacity.service.js';
+import { TrafficFairnessService } from '../load-shedding/traffic-fairness.service.js';
 import { ApiAdmissionGuard } from '../load-shedding/api-admission.guard.js';
 import { ApiWorkInterceptor } from '../load-shedding/api-work.interceptor.js';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -19,6 +20,7 @@ import { RequestDeadlineService } from '../http/request-deadline.service.js';
   ],
   providers: [
     ApiCapacityService,
+    TrafficFairnessService,
     RequestDeadlineService,
     CriticalAccessService,
     { provide: APP_GUARD, useClass: ApiAdmissionGuard },

@@ -10,9 +10,12 @@ export class ApiCapacityService {
   readonly limits: Readonly<Record<Workload | 'total' | 'perIp', number>>;
   readonly criticalReserve: number;
   readonly criticalPerIpReserve: number;
+  readonly menuReserve: number;
+  readonly menuPerIpReserve: number;
+  private menuActive = 0;
   private readonly clients = new Map<
     string,
-    { total: number; ordinary: number }
+    { total: number; ordinary: number; menu: number }
   >();
   private readonly active = {
     total: 0,
@@ -72,10 +75,32 @@ export class ApiCapacityService {
         total - 1,
       ),
     });
+    const reserve = (name: string, fallback: number, max: number) => {
+      const value = Number(config.get(name) ?? fallback);
+      if (!Number.isInteger(value) || value < 0 || value > max)
+        throw new Error(`${name} must be an integer between 0 and ${max}`);
+      return value;
+    };
+    this.menuReserve = reserve(
+      'API_RESERVED_MENU_READS',
+      Math.min(8, Math.floor(this.limits.general / 8)),
+      this.limits.general - 1,
+    );
+    const ordinaryPerIp = perIp - this.criticalPerIpReserve;
+    this.menuPerIpReserve = reserve(
+      'API_RESERVED_MENU_READS_PER_IP',
+      Math.min(this.menuReserve, Math.floor(ordinaryPerIp / 8)),
+      ordinaryPerIp - 1,
+    );
   }
 
-  acquire(client: string, workload: Workload): () => void {
-    const clientActive = this.clients.get(client) ?? { total: 0, ordinary: 0 };
+  acquire(client: string, workload: Workload, menuRead = false): () => void {
+    menuRead = menuRead && workload === 'general';
+    const clientActive = this.clients.get(client) ?? {
+      total: 0,
+      ordinary: 0,
+      menu: 0,
+    };
     const ordinary = workload !== 'critical' && workload !== 'health';
     const ordinaryActive =
       this.active.total - this.active.critical - this.active.health;
@@ -88,15 +113,27 @@ export class ApiCapacityService {
               clientActive.ordinary >=
                 this.limits.perIp - this.criticalPerIpReserve
             ? 'client'
-            : ordinary && ordinaryActive >= this.limits.general
-              ? 'reserved'
-              : workload !== 'health' &&
-                  this.active.total - this.active.health >=
-                    this.limits.total - 1
+            : ordinary &&
+                !menuRead &&
+                clientActive.ordinary - clientActive.menu >=
+                  this.limits.perIp -
+                    this.criticalPerIpReserve -
+                    this.menuPerIpReserve
+              ? 'client'
+              : ordinary &&
+                  !menuRead &&
+                  ordinaryActive - this.menuActive >=
+                    this.limits.general - this.menuReserve
                 ? 'reserved'
-                : this.active[workload] >= this.limits[workload]
-                  ? 'workload'
-                  : undefined;
+                : ordinary && ordinaryActive >= this.limits.general
+                  ? 'reserved'
+                  : workload !== 'health' &&
+                      this.active.total - this.active.health >=
+                        this.limits.total - 1
+                    ? 'reserved'
+                    : this.active[workload] >= this.limits[workload]
+                      ? 'workload'
+                      : undefined;
     if (reason) {
       this.rejected[reason]++;
       throw new ApiOverloadedException();
@@ -105,7 +142,9 @@ export class ApiCapacityService {
     this.clients.set(client, {
       total: clientActive.total + 1,
       ordinary: clientActive.ordinary + Number(ordinary),
+      menu: clientActive.menu + Number(menuRead),
     });
+    this.menuActive += Number(menuRead);
     this.active.total++;
     this.active[workload]++;
     this.admitted++;
@@ -120,9 +159,11 @@ export class ApiCapacityService {
         this.clients.set(client, {
           total: remaining,
           ordinary: current.ordinary - Number(ordinary),
+          menu: current.menu - Number(menuRead),
         });
       else this.clients.delete(client);
       this.active.total--;
+      this.menuActive -= Number(menuRead);
       this.active[workload]--;
       this.completed++;
     };
@@ -134,6 +175,9 @@ export class ApiCapacityService {
       limits: this.limits,
       criticalReserve: this.criticalReserve,
       criticalPerIpReserve: this.criticalPerIpReserve,
+      menuReserve: this.menuReserve,
+      menuPerIpReserve: this.menuPerIpReserve,
+      activeMenuReads: this.menuActive,
       active: { ...this.active },
       rejected: { ...this.rejected },
       trackedClients: this.clients.size,

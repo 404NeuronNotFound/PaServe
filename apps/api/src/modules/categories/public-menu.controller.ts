@@ -1,4 +1,5 @@
 import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
+import { MenuReadCapacity } from '../../common/load-shedding/menu-read-capacity.js';
 import {
   Controller,
   Get,
@@ -15,6 +16,7 @@ import { PublicTablesRepository } from '../tables/public-tables.repository.js';
 import { TableContextService } from '../tables/table-context.service.js';
 
 @Controller('menu')
+@MenuReadCapacity()
 @RateLimit('publicRead')
 export class PublicMenuController {
   constructor(

@@ -23,6 +23,7 @@ import {
   CriticalAccessService,
 } from './critical-capacity.js';
 import { RequestDeadlineService } from '../http/request-deadline.service.js';
+import { MENU_READ_CAPACITY } from './menu-read-capacity.js';
 
 const livenessKey = Symbol('paserve:liveness');
 /** Only for a constant-time endpoint that never accesses dependencies. */
@@ -63,15 +64,26 @@ export class ApiAdmissionGuard implements CanActivate {
               ? 'expensive'
               : 'general';
     // Express applies the configured trusted proxy list. Ignore all other identity hints.
+    const menuRead =
+      request.method === 'GET' &&
+      workload === 'general' &&
+      Boolean(
+        this.reflector.getAllAndOverride<boolean>(MENU_READ_CAPACITY, targets),
+      );
     const release = this.capacity.acquire(
       normalizeIp(request.ip ?? 'unknown'),
       workload,
+      menuRead,
     );
-    const admission = new RequestWork(() => {
-      response.off('finish', close);
-      response.off('close', close);
-      release();
-    });
+    const admission = new RequestWork(
+      () => {
+        response.off('finish', close);
+        response.off('close', close);
+        release();
+      },
+      workload,
+      menuRead,
+    );
     const close = () => admission.close();
     request[REQUEST_WORK] = admission;
     response.once('finish', close);
@@ -85,12 +97,10 @@ export class ApiAdmissionGuard implements CanActivate {
           return;
         }
         response.setHeader('Cache-Control', 'no-store');
-        response
-          .status(error.getStatus())
-          .json({
-            statusCode: error.getStatus(),
-            ...(error.getResponse() as object),
-          });
+        response.status(error.getStatus()).json({
+          statusCode: error.getStatus(),
+          ...(error.getResponse() as object),
+        });
       },
     );
     if (response.destroyed || response.writableEnded) admission.close();

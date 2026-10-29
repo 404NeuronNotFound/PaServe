@@ -3,6 +3,58 @@ import { ApiCapacityService } from './api-capacity.service.js';
 import { RequestWork } from './request-work.js';
 
 describe('API capacity bounds', () => {
+  it('reserves global menu capacity against a mix of auth and ordinary work', () => {
+    const capacity = new ApiCapacityService(new ConfigService());
+    const count = capacity.limits.general - capacity.menuReserve;
+    const releases = Array.from({ length: count }, (_, i) =>
+      capacity.acquire(
+        `source-${i}`,
+        i < capacity.limits.auth ? 'auth' : 'general',
+      ),
+    );
+    expect(() => capacity.acquire('overflow', 'general')).toThrow();
+    for (let i = 0; i < capacity.menuReserve; i++)
+      releases.push(capacity.acquire(`menu-${i}`, 'general', true));
+    expect(() => capacity.acquire('menu-overflow', 'general', true)).toThrow();
+    for (let i = 0; i < capacity.criticalReserve; i++)
+      releases.push(capacity.acquire(`staff-${i}`, 'critical'));
+    releases.push(capacity.acquire('probe', 'health'));
+    expect(capacity.snapshot().active.total).toBe(capacity.limits.total);
+    releases.forEach((release) => {
+      release();
+      release();
+    });
+    expect(capacity.snapshot()).toMatchObject({
+      trackedClients: 0,
+      activeMenuReads: 0,
+      active: { total: 0 },
+    });
+  });
+  it('keeps a per-IP menu slot without using the critical reserve', () => {
+    const capacity = new ApiCapacityService(new ConfigService());
+    const count =
+      capacity.limits.perIp -
+      capacity.criticalPerIpReserve -
+      capacity.menuPerIpReserve;
+    const releases = Array.from({ length: count }, () =>
+      capacity.acquire('shared', 'general'),
+    );
+    expect(() => capacity.acquire('shared', 'auth')).toThrow();
+    releases.push(capacity.acquire('shared', 'general', true));
+    expect(() => capacity.acquire('shared', 'general', true)).toThrow();
+    for (let i = 0; i < capacity.criticalPerIpReserve; i++)
+      releases.push(capacity.acquire('shared', 'critical'));
+    releases.forEach((release) => release());
+    expect(capacity.snapshot().trackedClients).toBe(0);
+  });
+  it.each([
+    { API_RESERVED_MENU_READS: -1 },
+    { API_RESERVED_MENU_READS: 111 },
+    { API_RESERVED_MENU_READS_PER_IP: 14 },
+    { API_RESERVED_MENU_READS_PER_IP: 'bad' },
+  ])('rejects invalid menu reserve settings %j', (settings) => {
+    expect(() => new ApiCapacityService(new ConfigService(settings))).toThrow();
+  });
   it.each(['0', '1', '2', '-1', 'NaN', '1.5', '4097', ''])(
     'rejects unsafe total capacity %s at startup',
     (value) => {

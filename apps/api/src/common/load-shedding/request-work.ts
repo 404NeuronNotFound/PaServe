@@ -2,6 +2,7 @@ import type { Request } from 'express';
 import { ApiOverloadedException } from '../http/api-overloaded.exception.js';
 import { RequestTimeoutException } from '../http/request-timeout.exception.js';
 import { requestContext } from '../http/request-context.js';
+import type { Workload } from './api-capacity.service.js';
 
 export const REQUEST_WORK = Symbol('paserve:request-work');
 
@@ -10,11 +11,24 @@ export class RequestWork {
   private pending = 0;
   private closed = false;
   private released = false;
+  private readonly additionalReleases: Array<() => void> = [];
   private readonly controller = new AbortController();
   private timer?: ReturnType<typeof setTimeout>;
   readonly signal = this.controller.signal;
 
-  constructor(private readonly release: () => void) {}
+  constructor(
+    private readonly release: () => void,
+    readonly workload: Workload = 'general',
+    readonly menuRead = false,
+  ) {}
+
+  addRelease(release: () => void): void {
+    if (this.closed || this.released || this.signal.aborted) {
+      release();
+      throw this.signal.reason ?? new ApiOverloadedException();
+    }
+    this.additionalReleases.push(release);
+  }
 
   close(): void {
     this.closed = true;
@@ -70,6 +84,7 @@ export class RequestWork {
   private tryRelease(): void {
     if (this.closed && this.pending === 0 && !this.released) {
       this.released = true;
+      for (const release of this.additionalReleases.splice(0)) release();
       this.release();
     }
   }

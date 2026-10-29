@@ -1,4 +1,5 @@
 import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
+import { MenuReadCapacity } from '../../common/load-shedding/menu-read-capacity.js';
 import {
   Body,
   Controller,
@@ -17,6 +18,7 @@ import { ProductSelectionDto } from './public-product.dto.js';
 export class PublicProductController {
   constructor(private readonly products: PublicProductService) {}
   @Get()
+  @MenuReadCapacity()
   details(
     @Param('shopSlug') slug: string,
     @Param('productId', new ParseUUIDPipe({ version: '4' })) id: string,
