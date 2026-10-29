@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "pnpm --filter api test --maxWorkers=2 && pnpm --filter api test:e2e --maxWorkers=2 && pnpm --filter web test --maxWorkers=2 && pnpm test:search-load-metrics && pnpm test:edge:config",
+    "test": "pnpm --filter api test --maxWorkers=2 && pnpm --filter api test:e2e --maxWorkers=2 && pnpm --filter web test --maxWorkers=2 && pnpm test:search-load-metrics && pnpm test:load-env:safety && pnpm test:edge:config",
     "lint": "pnpm --filter api lint && pnpm --filter web lint",
     "build": "pnpm --filter api build && pnpm --filter web build",
     "verify": "pnpm lint && pnpm test && pnpm build && pnpm --filter web test:security-release && pnpm test:leaks && pnpm audit --audit-level=low",
@@ -13,6 +13,9 @@
     "seed:dry-run": "pnpm --filter api seed:dry-run",
     "test:search-load": "node scripts/order-search-load.mjs",
     "test:search-load-metrics": "node scripts/order-search-load.test.mjs",
+    "test:load-env:safety": "node --test scripts/load-target.test.mjs apps/api/test/load-fixture-environment.test.mjs apps/api/test/load-environment-metrics.test.mjs",
+    "test:load-env": "pnpm --filter api test:load-env",
+    "test:load-env:search": "pnpm --filter api test:load-env:search",
     "edge:render": "node scripts/edge-config.mjs",
     "test:edge:config": "node --test scripts/edge-config.validation.test.mjs",
     "test:edge": "node --test --test-concurrency=1 scripts/edge-config.validation.test.mjs scripts/edge-proxy.test.mjs"

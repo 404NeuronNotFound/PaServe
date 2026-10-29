@@ -89,16 +89,51 @@ const repository = {
   },
 };
 const database = {
+  menuCacheState: { findUnique: async () => null },
+  category: {
+    findMany: async (query) => {
+      if (
+        query.where.shopId !== shop.id ||
+        query.where.shop.id !== shop.id ||
+        query.take !== 101
+      )
+        throw new Error('Missing bounded fixture category scope');
+      return [];
+    },
+  },
+  product: {
+    findMany: async (query) => {
+      if (
+        query.where.shopId !== shop.id ||
+        query.where.shop.id !== shop.id ||
+        query.take !== 101
+      )
+        throw new Error('Missing bounded fixture product scope');
+      return [
+        {
+          id: '30000000-0000-4000-8000-000000000001',
+          categoryId: null,
+          name: 'Coffee',
+          slug: 'coffee',
+          description: null,
+          price: new Prisma.Decimal('4.50'),
+          imageUrl: null,
+          status: 'AVAILABLE',
+          isFeatured: false,
+          featuredSortOrder: null,
+          sortOrder: 0,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ];
+    },
+  },
   shop: {
     async findFirst(query) {
       if (query.where.slug !== shop.slug || query.where.isActive !== true)
         throw new Error('Unexpected fixture shop scope');
       activity.menuReads++;
       if (query.select.id) return { id: shop.id };
-      if (
-        query.where.id !== shop.id ||
-        query.select.products.where.shopId !== shop.id
-      )
+      if (query.where.id !== shop.id)
         throw new Error('Missing fixture tenant predicate');
       return {
         name: shop.name,
@@ -109,22 +144,6 @@ const database = {
         primaryColor: null,
         accentColor: null,
         menuLayout: 'grid',
-        categories: [],
-        products: [
-          {
-            id: '30000000-0000-4000-8000-000000000001',
-            categoryId: null,
-            name: 'Coffee',
-            slug: 'coffee',
-            description: null,
-            price: new Prisma.Decimal('4.50'),
-            imageUrl: null,
-            status: 'AVAILABLE',
-            isFeatured: false,
-            featuredSortOrder: null,
-            sortOrder: 0,
-          },
-        ],
       };
     },
   },

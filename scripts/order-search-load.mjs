@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { setTimeout as sleep } from "node:timers/promises";
+import { connectLoadTarget } from "./load-target.mjs";
 
 export function summarize(samples, elapsedSeconds, missed = 0) {
   const successful = samples.filter((sample) => sample.ok);
@@ -38,21 +39,7 @@ function numberSetting(env, key, fallback, min, max) {
 }
 
 export async function runOrderSearchLoad(env = process.env) {
-  const base = new URL(env.LOAD_BASE_URL ?? "http://localhost:3000/api/v1/");
-  if (!base.pathname.endsWith("/")) base.pathname += "/";
-  if (
-    !["http:", "https:"].includes(base.protocol) ||
-    base.username ||
-    base.password
-  )
-    throw new Error("Use an HTTP(S) API URL without embedded credentials.");
-  if (
-    !["localhost", "127.0.0.1", "[::1]"].includes(base.hostname) &&
-    env.LOAD_ALLOW_REMOTE !== "1"
-  )
-    throw new Error(
-      "Remote load runs require LOAD_ALLOW_REMOTE=1 and a designated test environment.",
-    );
+  const { base, fetch } = await connectLoadTarget(env);
   const levels = (env.LOAD_LEVELS ?? "1,5,10,25,50").split(",").map(Number);
   if (
     !levels.length ||

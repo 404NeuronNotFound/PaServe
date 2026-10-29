@@ -1,0 +1,1575 @@
+{
+  "environment": "local-nestjs-http-real-argon2-fixture-storage",
+  "generatedAt": "2026-10-29T08:15:18.162Z",
+  "node": "v24.19.0",
+  "platform": "win32",
+  "availableParallelism": 12,
+  "clientAndServerProcessesSeparate": true,
+  "protectionsDisabled": false,
+  "limiterResetsDuringMeasurement": false,
+  "transport": "Distinct loopback socket source addresses; proxy trust disabled; forged forwarding headers do not change identity",
+  "budgets": {
+    "healthyP95Ms": 500,
+    "overlappedHealthyP95Ms": 500,
+    "filesystemProbeMs": 500,
+    "legitimateLoginP95Ms": 1000
+  },
+  "scenarios": [
+    {
+      "mode": "parallel-single-client",
+      "policy": {
+        "type": 2,
+        "version": 19,
+        "memoryCost": 65536,
+        "timeCost": 3,
+        "parallelism": 4,
+        "hashLength": 32
+      },
+      "configuredThreadpoolSize": 4,
+      "durationMs": 3000,
+      "baseline": {
+        "samples": 30,
+        "p50Ms": 4.39,
+        "p95Ms": 8.9,
+        "p99Ms": 10.3,
+        "tailSampleSufficient": false
+      },
+      "attacker": {
+        "statuses": {
+          "401": 2,
+          "429": 84
+        },
+        "unexpected": 0,
+        "networkErrors": 0,
+        "offeredSchedulesMissed": 1,
+        "earlyIpRejections": 81,
+        "credentialFailures": {
+          "samples": 2,
+          "p50Ms": 105.98,
+          "p95Ms": 107.4,
+          "p99Ms": 107.4,
+          "tailSampleSufficient": false
+        },
+        "challenges": {
+          "samples": 0,
+          "p50Ms": null,
+          "p95Ms": null,
+          "p99Ms": null,
+          "tailSampleSufficient": false
+        },
+        "throttled": {
+          "samples": 84,
+          "p50Ms": 2.37,
+          "p95Ms": 29.24,
+          "p99Ms": 37.41,
+          "tailSampleSufficient": false
+        }
+      },
+      "healthy": {
+        "failures": 0,
+        "latency": {
+          "samples": 51,
+          "p50Ms": 4.29,
+          "p95Ms": 37.08,
+          "p99Ms": 43.68,
+          "tailSampleSufficient": false
+        },
+        "byRoute": {
+          "menu": {
+            "samples": 17,
+            "p50Ms": 3.37,
+            "p95Ms": 37.08,
+            "p99Ms": 37.08,
+            "tailSampleSufficient": false
+          },
+          "ownerSession": {
+            "samples": 17,
+            "p50Ms": 3.95,
+            "p95Ms": 39.95,
+            "p99Ms": 39.95,
+            "tailSampleSufficient": false
+          },
+          "cashierSession": {
+            "samples": 17,
+            "p50Ms": 4.99,
+            "p95Ms": 43.68,
+            "p99Ms": 43.68,
+            "tailSampleSufficient": false
+          }
+        }
+      },
+      "overlapHealthy": {
+        "samples": 6,
+        "p50Ms": 14.85,
+        "p95Ms": 43.68,
+        "p99Ms": 43.68,
+        "tailSampleSufficient": false
+      },
+      "cleanLogins": {
+        "failures": 0,
+        "latency": {
+          "samples": 3,
+          "p50Ms": 70.19,
+          "p95Ms": 76.22,
+          "p99Ms": 76.22,
+          "tailSampleSufficient": false
+        }
+      },
+      "poolProbe": {
+        "ms": 0.32110000000011496,
+        "activeAtStart": 2
+      },
+      "missedProbeSchedules": 0,
+      "server": {
+        "elapsedMs": 3104,
+        "cpuCoreEquivalent": 0.5,
+        "cpuSamples": [
+          {
+            "elapsedMs": 52,
+            "cpuCoreEquivalent": 6.96,
+            "rssMiB": 256,
+            "activeHashJobs": 2,
+            "reservedKiB": 131072
+          },
+          {
+            "elapsedMs": 107,
+            "cpuCoreEquivalent": 6.78,
+            "rssMiB": 128,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          },
+          {
+            "elapsedMs": 156,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 207,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 261,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 311,
+            "cpuCoreEquivalent": 0.32,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 362,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 415,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 469,
+            "cpuCoreEquivalent": 0.3,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 524,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 582,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 636,
+            "cpuCoreEquivalent": 0.3,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 686,
+            "cpuCoreEquivalent": 0.3,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 749,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 805,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 128,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 866,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 928,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 979,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1039,
+            "cpuCoreEquivalent": 1.3,
+            "rssMiB": 193,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          },
+          {
+            "elapsedMs": 1096,
+            "cpuCoreEquivalent": 2.48,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1157,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1214,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1268,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1323,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1374,
+            "cpuCoreEquivalent": 0.3,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1427,
+            "cpuCoreEquivalent": 0.3,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1484,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1547,
+            "cpuCoreEquivalent": 0.24,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1601,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1651,
+            "cpuCoreEquivalent": 0.32,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1714,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1768,
+            "cpuCoreEquivalent": 0.28,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1823,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1886,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1950,
+            "cpuCoreEquivalent": 0.25,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2004,
+            "cpuCoreEquivalent": 0.3,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2059,
+            "cpuCoreEquivalent": 0.27,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2116,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2170,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2229,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2283,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2338,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2392,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2450,
+            "cpuCoreEquivalent": 0.28,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2504,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2559,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2616,
+            "cpuCoreEquivalent": 0.28,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2670,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2726,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2783,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2846,
+            "cpuCoreEquivalent": 0.24,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2899,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2950,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 3003,
+            "cpuCoreEquivalent": 1.75,
+            "rssMiB": 193,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          },
+          {
+            "elapsedMs": 3068,
+            "cpuCoreEquivalent": 3.16,
+            "rssMiB": 193,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          }
+        ],
+        "eventLoopP95Ms": 22.71,
+        "fsProbes": [
+          {
+            "ms": 5.184899999999743,
+            "activeAtStart": 2
+          },
+          {
+            "ms": 1.1105999999999767,
+            "activeAtStart": 1
+          },
+          {
+            "ms": 0.3079999999999927,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.21010000000023865,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3022000000000844,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.22929999999996653,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.374000000000251,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2571000000002641,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.42470000000002983,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.23900000000003274,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.1580999999996493,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3283000000001266,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.21700000000009823,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.22989999999981592,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.16300000000001091,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.18069999999988795,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.1835000000000946,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.22269999999980428,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.36049999999977445,
+            "activeAtStart": 1
+          },
+          {
+            "ms": 0.1873000000000502,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.22910000000001673,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.19929999999976644,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.26279999999997017,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.31020000000035,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2274000000002161,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2189000000003034,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.20669999999972788,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2037000000000262,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3847000000000662,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.20669999999972788,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2784999999998945,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.313499999999749,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.32180000000062137,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.36849999999958527,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2283000000006723,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3400000000001455,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3040000000000873,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.23559999999997672,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.39319999999952415,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.19280000000071595,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.17529999999987922,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.16409999999996217,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.33539999999993597,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2033000000001266,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.30709999999999127,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.30490000000008877,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.23689999999987776,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3135999999994965,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3280000000004293,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3111000000008062,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.19970000000012078,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.38660000000072614,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.19899999999961437,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3172000000004118,
+            "activeAtStart": 1
+          },
+          {
+            "ms": 0.3118000000004031,
+            "activeAtStart": 1
+          }
+        ],
+        "fsFailures": 0,
+        "fsMissed": 0,
+        "overlapRequests": 6,
+        "distinctSocketPeersObserved": true,
+        "native": {
+          "started": 11,
+          "completed": 11,
+          "failed": 0,
+          "rejected": 0,
+          "invalidDigests": 0,
+          "hashJobs": 4,
+          "verifyJobs": 7,
+          "peakActive": 2,
+          "peakReservedKiB": 131072,
+          "totalHashMs": 251.89970000000017,
+          "totalVerifyMs": 503.14109999999937,
+          "active": 0,
+          "reservedKiB": 0,
+          "maxConcurrent": 2,
+          "memoryBudgetKiB": 131072,
+          "measuredVerifyJobs": 5
+        },
+        "activity": {
+          "loginReads": 5,
+          "attackerLoginReads": 2,
+          "sessionReads": 34,
+          "menuReads": 34,
+          "sessionWrites": 3,
+          "attackerSessionWrites": 0
+        },
+        "externalFetchAttempts": 0
+      },
+      "acceptance": {
+        "checks": {
+          "existingSecurePolicyPreserved": true,
+          "cpuRecordedDuringRealHashing": true,
+          "nativeJobAndMemoryBounds": true,
+          "realDistinctClients": true,
+          "attackerThrottled": true,
+          "rateLimitedBeforeExcessiveVerification": true,
+          "healthyRequestsSucceeded": true,
+          "healthyRequestsDuringHashing": true,
+          "remainingWorkerPoolProgress": true,
+          "legitimateLoginAndRecovery": true,
+          "noAttackerSessionWrites": true,
+          "noExternalProviderCalls": true
+        },
+        "pass": true
+      }
+    },
+    {
+      "mode": "progressive-escalation",
+      "policy": {
+        "type": 2,
+        "version": 19,
+        "memoryCost": 65536,
+        "timeCost": 3,
+        "parallelism": 4,
+        "hashLength": 32
+      },
+      "configuredThreadpoolSize": 4,
+      "durationMs": 3000,
+      "baseline": {
+        "samples": 30,
+        "p50Ms": 4.2,
+        "p95Ms": 8.15,
+        "p99Ms": 9.49,
+        "tailSampleSufficient": false
+      },
+      "attacker": {
+        "statuses": {
+          "401": 3,
+          "403": 2,
+          "429": 80
+        },
+        "unexpected": 0,
+        "networkErrors": 0,
+        "offeredSchedulesMissed": 1,
+        "earlyIpRejections": 80,
+        "credentialFailures": {
+          "samples": 3,
+          "p50Ms": 64.06,
+          "p95Ms": 68.76,
+          "p99Ms": 68.76,
+          "tailSampleSufficient": false
+        },
+        "challenges": {
+          "samples": 2,
+          "p50Ms": 6.46,
+          "p95Ms": 7.67,
+          "p99Ms": 7.67,
+          "tailSampleSufficient": false
+        },
+        "throttled": {
+          "samples": 80,
+          "p50Ms": 2.12,
+          "p95Ms": 12,
+          "p99Ms": 14.24,
+          "tailSampleSufficient": false
+        }
+      },
+      "healthy": {
+        "failures": 0,
+        "latency": {
+          "samples": 51,
+          "p50Ms": 4.13,
+          "p95Ms": 12.11,
+          "p99Ms": 14.38,
+          "tailSampleSufficient": false
+        },
+        "byRoute": {
+          "menu": {
+            "samples": 17,
+            "p50Ms": 2.92,
+            "p95Ms": 12.11,
+            "p99Ms": 12.11,
+            "tailSampleSufficient": false
+          },
+          "ownerSession": {
+            "samples": 17,
+            "p50Ms": 3.9,
+            "p95Ms": 13.2,
+            "p99Ms": 13.2,
+            "tailSampleSufficient": false
+          },
+          "cashierSession": {
+            "samples": 17,
+            "p50Ms": 4.97,
+            "p95Ms": 14.38,
+            "p99Ms": 14.38,
+            "tailSampleSufficient": false
+          }
+        }
+      },
+      "overlapHealthy": {
+        "samples": 6,
+        "p50Ms": 6.27,
+        "p95Ms": 8.4,
+        "p99Ms": 8.4,
+        "tailSampleSufficient": false
+      },
+      "cleanLogins": {
+        "failures": 0,
+        "latency": {
+          "samples": 3,
+          "p50Ms": 66.13,
+          "p95Ms": 69.89,
+          "p99Ms": 69.89,
+          "tailSampleSufficient": false
+        }
+      },
+      "poolProbe": {
+        "ms": 0.48450000000002547,
+        "activeAtStart": 1
+      },
+      "missedProbeSchedules": 0,
+      "server": {
+        "elapsedMs": 3138,
+        "cpuCoreEquivalent": 0.46,
+        "cpuSamples": [
+          {
+            "elapsedMs": 64,
+            "cpuCoreEquivalent": 3.44,
+            "rssMiB": 193,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          },
+          {
+            "elapsedMs": 126,
+            "cpuCoreEquivalent": 3.29,
+            "rssMiB": 192,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          },
+          {
+            "elapsedMs": 179,
+            "cpuCoreEquivalent": 2.62,
+            "rssMiB": 192,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          },
+          {
+            "elapsedMs": 235,
+            "cpuCoreEquivalent": 1.69,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 292,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 346,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 397,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 460,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 513,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 563,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 622,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 673,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 730,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 792,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 842,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 896,
+            "cpuCoreEquivalent": 0.28,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 959,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1013,
+            "cpuCoreEquivalent": 1.17,
+            "rssMiB": 151,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          },
+          {
+            "elapsedMs": 1063,
+            "cpuCoreEquivalent": 3.72,
+            "rssMiB": 193,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          },
+          {
+            "elapsedMs": 1119,
+            "cpuCoreEquivalent": 0.29,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1173,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1235,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1292,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1346,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1396,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1455,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1506,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1563,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1613,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1666,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1722,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1783,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1834,
+            "cpuCoreEquivalent": 0.31,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1893,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 1945,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2002,
+            "cpuCoreEquivalent": 0.26,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2063,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2128,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2179,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2230,
+            "cpuCoreEquivalent": 0.32,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2292,
+            "cpuCoreEquivalent": 0.26,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2355,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2408,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2459,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2513,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2564,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2614,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2672,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2732,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2792,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2842,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2896,
+            "cpuCoreEquivalent": 0.28,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 2958,
+            "cpuCoreEquivalent": 0,
+            "rssMiB": 129,
+            "activeHashJobs": 0,
+            "reservedKiB": 0
+          },
+          {
+            "elapsedMs": 3012,
+            "cpuCoreEquivalent": 1.16,
+            "rssMiB": 162,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          },
+          {
+            "elapsedMs": 3062,
+            "cpuCoreEquivalent": 2.48,
+            "rssMiB": 193,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          },
+          {
+            "elapsedMs": 3126,
+            "cpuCoreEquivalent": 3.69,
+            "rssMiB": 193,
+            "activeHashJobs": 1,
+            "reservedKiB": 65536
+          }
+        ],
+        "eventLoopP95Ms": 22.82,
+        "fsProbes": [
+          {
+            "ms": 0.30700000000024374,
+            "activeAtStart": 1
+          },
+          {
+            "ms": 0.45349999999962165,
+            "activeAtStart": 1
+          },
+          {
+            "ms": 0.38540000000011787,
+            "activeAtStart": 1
+          },
+          {
+            "ms": 0.31310000000030414,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.17219999999997526,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3191999999999098,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.176600000000235,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.18229999999994106,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.22870000000011714,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.21430000000009386,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.315900000000056,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3058000000000902,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.22969999999986612,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.24690000000009604,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.19200000000000728,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.22240000000010696,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.21219999999993888,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3226999999997133,
+            "activeAtStart": 1
+          },
+          {
+            "ms": 0.2878000000000611,
+            "activeAtStart": 1
+          },
+          {
+            "ms": 0.19639999999981228,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.38879999999971915,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.29140000000006694,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.19650000000001455,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2618000000002212,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.21810000000004948,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.23229999999966822,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.32600000000002183,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.18950000000040745,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.17180000000007567,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2986000000000786,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.21570000000019718,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.35789999999997235,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.20870000000013533,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.21720000000004802,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2312000000001717,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.18869999999969878,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2103000000006432,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.32880000000022847,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3807999999999083,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.1540999999997439,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.20380000000022847,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.1868000000004031,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2989000000006854,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.19939999999951397,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3824000000004162,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.183100000000195,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 2.2076999999999316,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.3838999999998123,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.30820000000039727,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2622000000001208,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.16669999999976426,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.15030000000024302,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.24989999999979773,
+            "activeAtStart": 0
+          },
+          {
+            "ms": 0.2574000000004162,
+            "activeAtStart": 1
+          },
+          {
+            "ms": 0.32150000000001455,
+            "activeAtStart": 1
+          },
+          {
+            "ms": 0.25709999999980937,
+            "activeAtStart": 1
+          }
+        ],
+        "fsFailures": 0,
+        "fsMissed": 0,
+        "overlapRequests": 6,
+        "distinctSocketPeersObserved": true,
+        "native": {
+          "started": 12,
+          "completed": 12,
+          "failed": 0,
+          "rejected": 0,
+          "invalidDigests": 0,
+          "hashJobs": 4,
+          "verifyJobs": 8,
+          "peakActive": 1,
+          "peakReservedKiB": 65536,
+          "totalHashMs": 250.13009999999986,
+          "totalVerifyMs": 493.15540000000055,
+          "active": 0,
+          "reservedKiB": 0,
+          "maxConcurrent": 2,
+          "memoryBudgetKiB": 131072,
+          "measuredVerifyJobs": 6
+        },
+        "activity": {
+          "loginReads": 6,
+          "attackerLoginReads": 3,
+          "sessionReads": 34,
+          "menuReads": 34,
+          "sessionWrites": 3,
+          "attackerSessionWrites": 0
+        },
+        "externalFetchAttempts": 0
+      },
+      "acceptance": {
+        "checks": {
+          "existingSecurePolicyPreserved": true,
+          "cpuRecordedDuringRealHashing": true,
+          "nativeJobAndMemoryBounds": true,
+          "realDistinctClients": true,
+          "attackerThrottled": true,
+          "rateLimitedBeforeExcessiveVerification": true,
+          "healthyRequestsSucceeded": true,
+          "healthyRequestsDuringHashing": true,
+          "remainingWorkerPoolProgress": true,
+          "legitimateLoginAndRecovery": true,
+          "noAttackerSessionWrites": true,
+          "noExternalProviderCalls": true
+        },
+        "pass": true
+      }
+    }
+  ],
+  "pass": true,
+  "limitations": [
+    "Fixture repositories; no real database/connection pool/network/CDN",
+    "CPU and RSS are measured in the server child, not the load generator",
+    "Local short smoke checks do not establish deployed p95/p99 or supported user counts",
+    "Configured test limits match existing defaults; Argon2 work factor is not reduced",
+    "CPU quotas, production sizing and deployed workflow isolation remain pending"
+  ]
+}

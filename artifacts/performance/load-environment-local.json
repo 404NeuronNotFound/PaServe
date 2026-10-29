@@ -1,0 +1,1095 @@
+{
+  "pass": true,
+  "runId": "b9aff153-281f-4166-9845-8d5ad48d6362",
+  "environment": "disposable-development",
+  "database": "owned loopback PostgreSQL cluster",
+  "externalServices": "blocked; local storage/realtime SQL shims",
+  "synthetic": {
+    "shops": 3,
+    "users": 24,
+    "products": 82,
+    "orders": 430,
+    "orderLines": 860
+  },
+  "monitoring": {
+    "intervalMs": 500,
+    "maxSamples": 480,
+    "sampleFailures": 0,
+    "skippedSamples": 0,
+    "truncated": false,
+    "processScope": "API and collector process; fixture generation shares this process during setup. Search clients run in a separate process.",
+    "networkScope": "Observed loopback HTTP socket bytes, including headers; not NIC/WAN or database protocol bandwidth.",
+    "http": {
+      "requests": 17,
+      "completed": 17,
+      "aborted": 0,
+      "inFlight": 0,
+      "peakInFlight": 1,
+      "statusCounts": {
+        "200": 4,
+        "201": 12,
+        "404": 1
+      },
+      "latencyCount": 17,
+      "latencyTotalMs": 368.01289999999926,
+      "latencyMaxMs": 121.35390000000007,
+      "latencyBuckets": [
+        2,
+        8,
+        3,
+        2,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "latencyMeanMs": 21.648,
+      "latencyBoundsMs": [
+        5,
+        10,
+        25,
+        50,
+        100,
+        250,
+        500,
+        1000,
+        5000,
+        10000,
+        "overflow"
+      ]
+    },
+    "network": {
+      "receivedBytes": 10413,
+      "sentBytes": 61086,
+      "connections": 2,
+      "peakConnections": 2,
+      "activeConnections": 2
+    },
+    "databaseDeltas": {
+      "xact_commit": 165,
+      "xact_rollback": 0,
+      "blks_read": 332,
+      "blks_hit": 41474,
+      "tup_returned": 30418,
+      "tup_fetched": 29993,
+      "tup_inserted": 2600,
+      "tup_updated": 341,
+      "tup_deleted": 252,
+      "deadlocks": 0,
+      "temp_bytes": 0
+    },
+    "samples": [
+      {
+        "elapsedMs": 18.252,
+        "phase": "migrations",
+        "process": {
+          "cpuCoreEquivalent": 0,
+          "rssBytes": 79142912,
+          "heapUsedBytes": 16789720,
+          "externalBytes": 2806039,
+          "eventLoopP95Ms": 0.001,
+          "eventLoopMaxMs": 0
+        },
+        "api": null,
+        "database": {
+          "connections": 2,
+          "xact_commit": 2,
+          "xact_rollback": 0,
+          "blks_read": 82,
+          "blks_hit": 1612,
+          "tup_returned": 888,
+          "tup_fetched": 806,
+          "tup_inserted": 0,
+          "tup_updated": 0,
+          "tup_deleted": 0,
+          "deadlocks": 0,
+          "temp_bytes": 0,
+          "bytes": 8033971,
+          "active": 0,
+          "idle_in_transaction": 0,
+          "lock_waiters": 0
+        },
+        "monitorQueryMs": 18.009,
+        "network": {
+          "receivedBytes": 0,
+          "sentBytes": 0,
+          "connections": 0,
+          "peakConnections": 0,
+          "activeConnections": 0
+        }
+      },
+      {
+        "elapsedMs": 579.293,
+        "phase": "synthetic-fixtures",
+        "process": {
+          "cpuCoreEquivalent": 0.75,
+          "rssBytes": 126611456,
+          "heapUsedBytes": 24023136,
+          "externalBytes": 17309134,
+          "eventLoopP95Ms": 27.754,
+          "eventLoopMaxMs": 110.166
+        },
+        "api": null,
+        "database": {
+          "connections": 2,
+          "xact_commit": 2,
+          "xact_rollback": 0,
+          "blks_read": 82,
+          "blks_hit": 1612,
+          "tup_returned": 888,
+          "tup_fetched": 806,
+          "tup_inserted": 0,
+          "tup_updated": 0,
+          "tup_deleted": 0,
+          "deadlocks": 0,
+          "temp_bytes": 0,
+          "bytes": 9565875,
+          "active": 0,
+          "idle_in_transaction": 0,
+          "lock_waiters": 0
+        },
+        "monitorQueryMs": 30.04,
+        "network": {
+          "receivedBytes": 0,
+          "sentBytes": 0,
+          "connections": 0,
+          "peakConnections": 0,
+          "activeConnections": 0
+        }
+      },
+      {
+        "elapsedMs": 2075.294,
+        "phase": "api-startup",
+        "process": {
+          "cpuCoreEquivalent": 1.368,
+          "rssBytes": 237682688,
+          "heapUsedBytes": 49102768,
+          "externalBytes": 11179459,
+          "eventLoopP95Ms": 26.722,
+          "eventLoopMaxMs": 1234.174
+        },
+        "api": {
+          "pool": {
+            "policy": {
+              "max": 5,
+              "maxWaiting": 20,
+              "idleTimeoutMillis": 10000,
+              "maxLifetimeSeconds": 300
+            },
+            "state": "not-created",
+            "total": 0,
+            "idle": 0,
+            "waiting": 0,
+            "pendingCheckouts": 0,
+            "generations": 0,
+            "connected": 0,
+            "acquired": 0,
+            "released": 0,
+            "removed": 0,
+            "rejected": 0,
+            "acquisitionFailures": 0,
+            "idleErrors": 0,
+            "peakTotal": 0,
+            "peakWaiting": 0,
+            "peakPendingCheckouts": 0
+          },
+          "capacity": {
+            "limits": {
+              "total": 128,
+              "general": 111,
+              "critical": 127,
+              "health": 1,
+              "perIp": 16,
+              "auth": 32,
+              "stream": 32,
+              "expensive": 16
+            },
+            "criticalReserve": 16,
+            "criticalPerIpReserve": 2,
+            "menuReserve": 8,
+            "menuPerIpReserve": 1,
+            "activeMenuReads": 0,
+            "active": {
+              "total": 0,
+              "general": 0,
+              "auth": 0,
+              "stream": 0,
+              "expensive": 0,
+              "critical": 0,
+              "health": 0
+            },
+            "rejected": {
+              "total": 0,
+              "client": 0,
+              "workload": 0,
+              "reserved": 0
+            },
+            "trackedClients": 0,
+            "peak": 0,
+            "admitted": 0,
+            "completed": 0
+          },
+          "fairness": {
+            "limits": {
+              "tenant": {
+                "concurrent": 32,
+                "burst": 300,
+                "perMinute": 1200
+              },
+              "account": {
+                "concurrent": 8,
+                "burst": 60,
+                "perMinute": 600
+              },
+              "maxScopes": 4096,
+              "protectedScopeReserve": 512
+            },
+            "admitted": 0,
+            "concurrencyRejected": 0,
+            "rateRejected": 0,
+            "capacityRejected": 0,
+            "trackedScopes": 0,
+            "activeScopeLeases": 0
+          }
+        },
+        "database": {
+          "connections": 3,
+          "xact_commit": 3,
+          "xact_rollback": 0,
+          "blks_read": 82,
+          "blks_hit": 1644,
+          "tup_returned": 903,
+          "tup_fetched": 820,
+          "tup_inserted": 0,
+          "tup_updated": 0,
+          "tup_deleted": 0,
+          "deadlocks": 0,
+          "temp_bytes": 0,
+          "bytes": 10032819,
+          "active": 0,
+          "idle_in_transaction": 0,
+          "lock_waiters": 0
+        },
+        "monitorQueryMs": 29.158,
+        "network": {
+          "receivedBytes": 0,
+          "sentBytes": 0,
+          "connections": 0,
+          "peakConnections": 0,
+          "activeConnections": 0
+        }
+      },
+      {
+        "elapsedMs": 2154.004,
+        "phase": "api-startup",
+        "process": {
+          "cpuCoreEquivalent": 1.995,
+          "rssBytes": 177143808,
+          "heapUsedBytes": 50040152,
+          "externalBytes": 11199711,
+          "eventLoopP95Ms": 22.675,
+          "eventLoopMaxMs": 22.675
+        },
+        "api": {
+          "pool": {
+            "policy": {
+              "max": 5,
+              "maxWaiting": 20,
+              "idleTimeoutMillis": 10000,
+              "maxLifetimeSeconds": 300
+            },
+            "state": "not-created",
+            "total": 0,
+            "idle": 0,
+            "waiting": 0,
+            "pendingCheckouts": 0,
+            "generations": 0,
+            "connected": 0,
+            "acquired": 0,
+            "released": 0,
+            "removed": 0,
+            "rejected": 0,
+            "acquisitionFailures": 0,
+            "idleErrors": 0,
+            "peakTotal": 0,
+            "peakWaiting": 0,
+            "peakPendingCheckouts": 0
+          },
+          "capacity": {
+            "limits": {
+              "total": 128,
+              "general": 111,
+              "critical": 127,
+              "health": 1,
+              "perIp": 16,
+              "auth": 32,
+              "stream": 32,
+              "expensive": 16
+            },
+            "criticalReserve": 16,
+            "criticalPerIpReserve": 2,
+            "menuReserve": 8,
+            "menuPerIpReserve": 1,
+            "activeMenuReads": 0,
+            "active": {
+              "total": 0,
+              "general": 0,
+              "auth": 0,
+              "stream": 0,
+              "expensive": 0,
+              "critical": 0,
+              "health": 0
+            },
+            "rejected": {
+              "total": 0,
+              "client": 0,
+              "workload": 0,
+              "reserved": 0
+            },
+            "trackedClients": 0,
+            "peak": 0,
+            "admitted": 0,
+            "completed": 0
+          },
+          "fairness": {
+            "limits": {
+              "tenant": {
+                "concurrent": 32,
+                "burst": 300,
+                "perMinute": 1200
+              },
+              "account": {
+                "concurrent": 8,
+                "burst": 60,
+                "perMinute": 600
+              },
+              "maxScopes": 4096,
+              "protectedScopeReserve": 512
+            },
+            "admitted": 0,
+            "concurrencyRejected": 0,
+            "rateRejected": 0,
+            "capacityRejected": 0,
+            "trackedScopes": 0,
+            "activeScopeLeases": 0
+          }
+        },
+        "database": {
+          "connections": 3,
+          "xact_commit": 8,
+          "xact_rollback": 0,
+          "blks_read": 167,
+          "blks_hit": 2084,
+          "tup_returned": 1216,
+          "tup_fetched": 1133,
+          "tup_inserted": 0,
+          "tup_updated": 0,
+          "tup_deleted": 0,
+          "deadlocks": 0,
+          "temp_bytes": 0,
+          "bytes": 10032819,
+          "active": 0,
+          "idle_in_transaction": 0,
+          "lock_waiters": 0
+        },
+        "monitorQueryMs": 18.754,
+        "network": {
+          "receivedBytes": 0,
+          "sentBytes": 0,
+          "connections": 0,
+          "peakConnections": 0,
+          "activeConnections": 0
+        }
+      },
+      {
+        "elapsedMs": 2567.294,
+        "phase": "attestation-and-smoke",
+        "process": {
+          "cpuCoreEquivalent": 1.171,
+          "rssBytes": 183001088,
+          "heapUsedBytes": 63366952,
+          "externalBytes": 11674711,
+          "eventLoopP95Ms": 27.197,
+          "eventLoopMaxMs": 40.698
+        },
+        "api": {
+          "pool": {
+            "policy": {
+              "max": 5,
+              "maxWaiting": 20,
+              "idleTimeoutMillis": 10000,
+              "maxLifetimeSeconds": 300
+            },
+            "state": "open",
+            "total": 2,
+            "idle": 1,
+            "waiting": 0,
+            "pendingCheckouts": 0,
+            "generations": 1,
+            "connected": 2,
+            "acquired": 16,
+            "released": 15,
+            "removed": 0,
+            "rejected": 0,
+            "acquisitionFailures": 0,
+            "idleErrors": 0,
+            "peakTotal": 2,
+            "peakWaiting": 1,
+            "peakPendingCheckouts": 2
+          },
+          "capacity": {
+            "limits": {
+              "total": 128,
+              "general": 111,
+              "critical": 127,
+              "health": 1,
+              "perIp": 16,
+              "auth": 32,
+              "stream": 32,
+              "expensive": 16
+            },
+            "criticalReserve": 16,
+            "criticalPerIpReserve": 2,
+            "menuReserve": 8,
+            "menuPerIpReserve": 1,
+            "activeMenuReads": 0,
+            "active": {
+              "total": 1,
+              "general": 1,
+              "auth": 0,
+              "stream": 0,
+              "expensive": 0,
+              "critical": 0,
+              "health": 0
+            },
+            "rejected": {
+              "total": 0,
+              "client": 0,
+              "workload": 0,
+              "reserved": 0
+            },
+            "trackedClients": 1,
+            "peak": 1,
+            "admitted": 8,
+            "completed": 7
+          },
+          "fairness": {
+            "limits": {
+              "tenant": {
+                "concurrent": 32,
+                "burst": 300,
+                "perMinute": 1200
+              },
+              "account": {
+                "concurrent": 8,
+                "burst": 60,
+                "perMinute": 600
+              },
+              "maxScopes": 4096,
+              "protectedScopeReserve": 512
+            },
+            "admitted": 8,
+            "concurrencyRejected": 0,
+            "rateRejected": 0,
+            "capacityRejected": 0,
+            "trackedScopes": 2,
+            "activeScopeLeases": 1
+          }
+        },
+        "database": {
+          "connections": 5,
+          "xact_commit": 76,
+          "xact_rollback": 0,
+          "blks_read": 394,
+          "blks_hit": 38464,
+          "tup_returned": 30021,
+          "tup_fetched": 29524,
+          "tup_inserted": 2381,
+          "tup_updated": 313,
+          "tup_deleted": 252,
+          "deadlocks": 0,
+          "temp_bytes": 0,
+          "bytes": 10598067,
+          "active": 1,
+          "idle_in_transaction": 0,
+          "lock_waiters": 0
+        },
+        "monitorQueryMs": 20.149,
+        "network": {
+          "receivedBytes": 5356,
+          "sentBytes": 25167,
+          "connections": 2,
+          "peakConnections": 2,
+          "activeConnections": 2
+        }
+      },
+      {
+        "elapsedMs": 3069.47,
+        "phase": "history-large-ready",
+        "process": {
+          "cpuCoreEquivalent": 0.219,
+          "rssBytes": 184332288,
+          "heapUsedBytes": 72762712,
+          "externalBytes": 11932754,
+          "eventLoopP95Ms": 24.674,
+          "eventLoopMaxMs": 27.836
+        },
+        "api": {
+          "pool": {
+            "policy": {
+              "max": 5,
+              "maxWaiting": 20,
+              "idleTimeoutMillis": 10000,
+              "maxLifetimeSeconds": 300
+            },
+            "state": "open",
+            "total": 2,
+            "idle": 2,
+            "waiting": 0,
+            "pendingCheckouts": 0,
+            "generations": 1,
+            "connected": 2,
+            "acquired": 27,
+            "released": 27,
+            "removed": 0,
+            "rejected": 0,
+            "acquisitionFailures": 0,
+            "idleErrors": 0,
+            "peakTotal": 2,
+            "peakWaiting": 1,
+            "peakPendingCheckouts": 2
+          },
+          "capacity": {
+            "limits": {
+              "total": 128,
+              "general": 111,
+              "critical": 127,
+              "health": 1,
+              "perIp": 16,
+              "auth": 32,
+              "stream": 32,
+              "expensive": 16
+            },
+            "criticalReserve": 16,
+            "criticalPerIpReserve": 2,
+            "menuReserve": 8,
+            "menuPerIpReserve": 1,
+            "activeMenuReads": 0,
+            "active": {
+              "total": 0,
+              "general": 0,
+              "auth": 0,
+              "stream": 0,
+              "expensive": 0,
+              "critical": 0,
+              "health": 0
+            },
+            "rejected": {
+              "total": 0,
+              "client": 0,
+              "workload": 0,
+              "reserved": 0
+            },
+            "trackedClients": 0,
+            "peak": 1,
+            "admitted": 15,
+            "completed": 15
+          },
+          "fairness": {
+            "limits": {
+              "tenant": {
+                "concurrent": 32,
+                "burst": 300,
+                "perMinute": 1200
+              },
+              "account": {
+                "concurrent": 8,
+                "burst": 60,
+                "perMinute": 600
+              },
+              "maxScopes": 4096,
+              "protectedScopeReserve": 512
+            },
+            "admitted": 15,
+            "concurrencyRejected": 0,
+            "rateRejected": 0,
+            "capacityRejected": 0,
+            "trackedScopes": 3,
+            "activeScopeLeases": 0
+          }
+        },
+        "database": {
+          "connections": 5,
+          "xact_commit": 76,
+          "xact_rollback": 0,
+          "blks_read": 394,
+          "blks_hit": 38464,
+          "tup_returned": 30021,
+          "tup_fetched": 29524,
+          "tup_inserted": 2381,
+          "tup_updated": 313,
+          "tup_deleted": 252,
+          "deadlocks": 0,
+          "temp_bytes": 0,
+          "bytes": 15701683,
+          "active": 1,
+          "idle_in_transaction": 0,
+          "lock_waiters": 0
+        },
+        "monitorQueryMs": 19.771,
+        "network": {
+          "receivedBytes": 10413,
+          "sentBytes": 61086,
+          "connections": 2,
+          "peakConnections": 2,
+          "activeConnections": 2
+        }
+      },
+      {
+        "elapsedMs": 3299.42,
+        "phase": "report",
+        "process": {
+          "cpuCoreEquivalent": 0,
+          "rssBytes": 184455168,
+          "heapUsedBytes": 73032656,
+          "externalBytes": 12001901,
+          "eventLoopP95Ms": 24.396,
+          "eventLoopMaxMs": 24.396
+        },
+        "api": {
+          "pool": {
+            "policy": {
+              "max": 5,
+              "maxWaiting": 20,
+              "idleTimeoutMillis": 10000,
+              "maxLifetimeSeconds": 300
+            },
+            "state": "open",
+            "total": 2,
+            "idle": 2,
+            "waiting": 0,
+            "pendingCheckouts": 0,
+            "generations": 1,
+            "connected": 2,
+            "acquired": 27,
+            "released": 27,
+            "removed": 0,
+            "rejected": 0,
+            "acquisitionFailures": 0,
+            "idleErrors": 0,
+            "peakTotal": 2,
+            "peakWaiting": 1,
+            "peakPendingCheckouts": 2
+          },
+          "capacity": {
+            "limits": {
+              "total": 128,
+              "general": 111,
+              "critical": 127,
+              "health": 1,
+              "perIp": 16,
+              "auth": 32,
+              "stream": 32,
+              "expensive": 16
+            },
+            "criticalReserve": 16,
+            "criticalPerIpReserve": 2,
+            "menuReserve": 8,
+            "menuPerIpReserve": 1,
+            "activeMenuReads": 0,
+            "active": {
+              "total": 0,
+              "general": 0,
+              "auth": 0,
+              "stream": 0,
+              "expensive": 0,
+              "critical": 0,
+              "health": 0
+            },
+            "rejected": {
+              "total": 0,
+              "client": 0,
+              "workload": 0,
+              "reserved": 0
+            },
+            "trackedClients": 0,
+            "peak": 1,
+            "admitted": 15,
+            "completed": 15
+          },
+          "fairness": {
+            "limits": {
+              "tenant": {
+                "concurrent": 32,
+                "burst": 300,
+                "perMinute": 1200
+              },
+              "account": {
+                "concurrent": 8,
+                "burst": 60,
+                "perMinute": 600
+              },
+              "maxScopes": 4096,
+              "protectedScopeReserve": 512
+            },
+            "admitted": 15,
+            "concurrencyRejected": 0,
+            "rateRejected": 0,
+            "capacityRejected": 0,
+            "trackedScopes": 3,
+            "activeScopeLeases": 0
+          }
+        },
+        "database": {
+          "connections": 4,
+          "xact_commit": 167,
+          "xact_rollback": 0,
+          "blks_read": 414,
+          "blks_hit": 43086,
+          "tup_returned": 31306,
+          "tup_fetched": 30799,
+          "tup_inserted": 2600,
+          "tup_updated": 341,
+          "tup_deleted": 252,
+          "deadlocks": 0,
+          "temp_bytes": 0,
+          "bytes": 16605711,
+          "active": 0,
+          "idle_in_transaction": 0,
+          "lock_waiters": 0
+        },
+        "monitorQueryMs": 18.029,
+        "network": {
+          "receivedBytes": 10413,
+          "sentBytes": 61086,
+          "connections": 2,
+          "peakConnections": 2,
+          "activeConnections": 2
+        }
+      }
+    ]
+  },
+  "dataset": {
+    "version": 1,
+    "profile": "smoke",
+    "historyDays": 180,
+    "assumption": "Local expected-use planning baseline; not a measured production forecast.",
+    "tenants": [
+      {
+        "tier": "small",
+        "products": 12,
+        "orders": 30,
+        "categories": 2,
+        "tables": 2,
+        "roles": {
+          "OWNER": 1,
+          "ADMIN": 1,
+          "MANAGER": 1,
+          "CASHIER": 1,
+          "KITCHEN": 1
+        }
+      },
+      {
+        "tier": "medium",
+        "products": 20,
+        "orders": 100,
+        "categories": 5,
+        "tables": 10,
+        "roles": {
+          "OWNER": 1,
+          "ADMIN": 1,
+          "MANAGER": 1,
+          "CASHIER": 2,
+          "KITCHEN": 2
+        }
+      },
+      {
+        "tier": "large",
+        "products": 50,
+        "orders": 300,
+        "categories": 15,
+        "tables": 40,
+        "roles": {
+          "OWNER": 1,
+          "ADMIN": 1,
+          "MANAGER": 2,
+          "CASHIER": 4,
+          "KITCHEN": 4
+        }
+      }
+    ],
+    "actual": [
+      {
+        "tier": "small",
+        "products": 12,
+        "staff": 5,
+        "orders": 30,
+        "lines": 60,
+        "roles": {
+          "OWNER": 1,
+          "ADMIN": 1,
+          "MANAGER": 1,
+          "CASHIER": 1,
+          "KITCHEN": 1
+        },
+        "states": [
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "COMPLETED",
+            "mode": "DINE_IN",
+            "records": 11
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "COMPLETED",
+            "mode": "TAKEOUT",
+            "records": 10
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "PREPARING",
+            "mode": "TAKEOUT",
+            "records": 1
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "QUEUED",
+            "mode": "DINE_IN",
+            "records": 1
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "READY",
+            "mode": "DINE_IN",
+            "records": 2
+          },
+          {
+            "status": "PENDING_CONFIRMATION",
+            "paymentStatus": "UNPAID",
+            "preparationStatus": null,
+            "mode": "DINE_IN",
+            "records": 1
+          },
+          {
+            "status": "PENDING_CONFIRMATION",
+            "paymentStatus": "UNPAID",
+            "preparationStatus": null,
+            "mode": "TAKEOUT",
+            "records": 2
+          },
+          {
+            "status": "REJECTED",
+            "paymentStatus": "UNPAID",
+            "preparationStatus": null,
+            "mode": "TAKEOUT",
+            "records": 2
+          }
+        ],
+        "history": {
+          "oldest": "2026-05-14T09:01:47.216Z",
+          "newest": "2026-10-29T09:02:18.198Z"
+        }
+      },
+      {
+        "tier": "medium",
+        "products": 20,
+        "staff": 7,
+        "orders": 100,
+        "lines": 200,
+        "roles": {
+          "OWNER": 1,
+          "ADMIN": 1,
+          "MANAGER": 1,
+          "CASHIER": 2,
+          "KITCHEN": 2
+        },
+        "states": [
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "COMPLETED",
+            "mode": "DINE_IN",
+            "records": 40
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "COMPLETED",
+            "mode": "TAKEOUT",
+            "records": 35
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "PREPARING",
+            "mode": "TAKEOUT",
+            "records": 4
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "QUEUED",
+            "mode": "DINE_IN",
+            "records": 4
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "READY",
+            "mode": "DINE_IN",
+            "records": 5
+          },
+          {
+            "status": "PENDING_CONFIRMATION",
+            "paymentStatus": "UNPAID",
+            "preparationStatus": null,
+            "mode": "DINE_IN",
+            "records": 1
+          },
+          {
+            "status": "PENDING_CONFIRMATION",
+            "paymentStatus": "UNPAID",
+            "preparationStatus": null,
+            "mode": "TAKEOUT",
+            "records": 6
+          },
+          {
+            "status": "REJECTED",
+            "paymentStatus": "UNPAID",
+            "preparationStatus": null,
+            "mode": "TAKEOUT",
+            "records": 5
+          }
+        ],
+        "history": {
+          "oldest": "2026-05-02T09:01:32.216Z",
+          "newest": "2026-10-29T09:02:18.362Z"
+        }
+      },
+      {
+        "tier": "large",
+        "products": 50,
+        "staff": 12,
+        "orders": 300,
+        "lines": 600,
+        "roles": {
+          "OWNER": 1,
+          "ADMIN": 1,
+          "MANAGER": 2,
+          "CASHIER": 4,
+          "KITCHEN": 4
+        },
+        "states": [
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "COMPLETED",
+            "mode": "DINE_IN",
+            "records": 120
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "COMPLETED",
+            "mode": "TAKEOUT",
+            "records": 105
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "PREPARING",
+            "mode": "TAKEOUT",
+            "records": 14
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "QUEUED",
+            "mode": "DINE_IN",
+            "records": 14
+          },
+          {
+            "status": "CONFIRMED",
+            "paymentStatus": "PAID",
+            "preparationStatus": "READY",
+            "mode": "DINE_IN",
+            "records": 15
+          },
+          {
+            "status": "PENDING_CONFIRMATION",
+            "paymentStatus": "UNPAID",
+            "preparationStatus": null,
+            "mode": "DINE_IN",
+            "records": 1
+          },
+          {
+            "status": "PENDING_CONFIRMATION",
+            "paymentStatus": "UNPAID",
+            "preparationStatus": null,
+            "mode": "TAKEOUT",
+            "records": 16
+          },
+          {
+            "status": "REJECTED",
+            "paymentStatus": "UNPAID",
+            "preparationStatus": null,
+            "mode": "TAKEOUT",
+            "records": 15
+          }
+        ],
+        "history": {
+          "oldest": "2026-05-02T08:58:31.216Z",
+          "newest": "2026-10-29T09:02:18.573Z"
+        }
+      }
+    ],
+    "totals": {
+      "shops": 3,
+      "users": 24,
+      "products": 82,
+      "orders": 430,
+      "orderLines": 860
+    },
+    "anchorUtc": "2026-10-29T09:02:16.216Z",
+    "templatesCreatedThroughApi": 6
+  },
+  "migrations": 63,
+  "checks": [
+    "missing capability rejected",
+    "matching target attested",
+    "external HTTP refused before transport",
+    "all three public menus read",
+    "critical writes confined to fixture DB",
+    "duplicate orders prevented"
+  ],
+  "search": null,
+  "resources": {
+    "databaseVersion": "17.11",
+    "node": "v24.19.0",
+    "platform": "win32",
+    "architecture": "x64",
+    "logicalCpus": 12,
+    "cpuModel": "AMD Ryzen 5 PRO 4650G with Radeon Graphics",
+    "hostMemoryBytes": 16502763520,
+    "dbPoolPerApiInstance": {
+      "max": 5,
+      "maxWaiting": 20,
+      "idleTimeoutMillis": 10000,
+      "maxLifetimeSeconds": 300
+    }
+  },
+  "limitations": "Versioned synthetic planning baseline, not a production forecast or capacity claim. Host resources are observations, not deployment allocations. Parent removes its owned cluster after exit.",
+  "status": "complete",
+  "cleanup": {
+    "postgresStopped": true,
+    "ownedDirectoryRemoved": true
+  }
+}

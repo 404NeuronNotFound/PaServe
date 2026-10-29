@@ -21,6 +21,7 @@ import { frontendOrigins } from './common/http/frontend-origins.js';
 @Module({
   imports: [
     ConfigModule.forRoot({
+      ignoreEnvFile: process.env.PASERVE_IGNORE_ENV_FILE === 'true',
       isGlobal: true,
       validate: (config: Record<string, unknown>) => {
         frontendOrigins(

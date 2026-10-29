@@ -8,6 +8,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { setTimeout as pause } from 'node:timers/promises';
+import { operatingSystemEnvironment } from './load-fixture-environment.mjs';
 import {
   summarizeTimes,
   evaluateLocalFlood,
@@ -30,7 +31,8 @@ function startFixture() {
       windowsHide: true,
       stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
       env: {
-        ...process.env,
+        ...operatingSystemEnvironment(process.env),
+        PASERVE_IGNORE_ENV_FILE: 'true',
         NODE_ENV: 'test',
         UV_THREADPOOL_SIZE: process.env.UV_THREADPOOL_SIZE ?? '4',
         FRONTEND_ORIGINS: 'http://localhost',

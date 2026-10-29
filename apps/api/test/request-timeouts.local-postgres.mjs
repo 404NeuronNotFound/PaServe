@@ -2,14 +2,36 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, mkdir, writeFile, unlink, rm } from 'node:fs/promises';
+import {
+  mkdtemp,
+  mkdir,
+  writeFile,
+  readFile,
+  unlink,
+  rm,
+} from 'node:fs/promises';
 import { resolve, join, basename, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { createServer } from 'node:net';
+import { loadFixtureEnvironment } from './load-fixture-environment.mjs';
 
 const execute = promisify(execFile);
 const suite = process.argv[2] ?? 'timeouts';
+const isolatedLoad = suite === 'load' || suite === 'load-search';
+const shutdown = new AbortController();
+const interrupt = () => {
+  process.exitCode = 130;
+  shutdown.abort();
+};
+const terminate = () => {
+  process.exitCode = 143;
+  shutdown.abort();
+};
+if (isolatedLoad) {
+  process.once('SIGINT', interrupt);
+  process.once('SIGTERM', terminate);
+}
 assert.ok(
   [
     'timeouts',
@@ -18,6 +40,8 @@ assert.ok(
     'indexing',
     'tenants',
     'caching',
+    'load',
+    'load-search',
   ].includes(suite),
   'Choose a supported local database suite.',
 );
@@ -32,12 +56,13 @@ const binary = (name) =>
   binaryRoot
     ? join(binaryRoot, `${name}${process.platform === 'win32' ? '.exe' : ''}`)
     : name;
-const command = (name, args) =>
+const command = (name, args, cleanup = false) =>
   execute(binary(name), args, {
     cwd: apiRoot,
     windowsHide: true,
     timeout: 25_000,
     maxBuffer: 1024 * 1024,
+    signal: isolatedLoad && !cleanup ? shutdown.signal : undefined,
   });
 
 await command('postgres', ['--version']);
@@ -55,23 +80,24 @@ const port = listener.address().port;
 await new Promise((resolve) => listener.close(resolve));
 let initialized = false;
 let stopped = false;
+let removed = false;
+let loadSucceeded = false;
+const loadReport = resolve(
+  apiRoot,
+  `../../artifacts/performance/load-environment${suite === 'load-search' ? '-search' : ''}-local.json`,
+);
 async function cleanup() {
   if (initialized) {
     try {
-      await command('pg_ctl', [
-        '-D',
-        data,
-        '-m',
-        'fast',
-        '-w',
-        '-t',
-        '15',
-        'stop',
-      ]);
+      await command(
+        'pg_ctl',
+        ['-D', data, '-m', 'fast', '-w', '-t', '15', 'stop'],
+        true,
+      );
       stopped = true;
     } catch (error) {
       try {
-        await command('pg_ctl', ['-D', data, 'status']);
+        await command('pg_ctl', ['-D', data, 'status'], true);
       } catch (status) {
         if (status.code === 3) stopped = true;
       }
@@ -86,9 +112,23 @@ async function cleanup() {
         basename(target).startsWith('timeout-pg-'),
     );
     await rm(target, { recursive: true, force: true });
+    removed = true;
   }
 }
 try {
+  if (isolatedLoad) {
+    await mkdir(resolve(apiRoot, '../../artifacts/performance'), {
+      recursive: true,
+    });
+    await writeFile(
+      loadReport,
+      JSON.stringify({
+        pass: false,
+        environment: 'disposable-development',
+        status: 'starting',
+      }) + '\n',
+    );
+  }
   await writeFile(passwordFile, password, { mode: 0o600 });
   await command('initdb', [
     '-D',
@@ -151,27 +191,59 @@ try {
   const result = await execute(
     process.execPath,
     [
-      suite === 'timeouts'
-        ? 'test/request-timeouts.database-check.mjs'
-        : suite === 'idempotency'
-          ? 'test/idempotency.database-check.mjs'
-          : suite === 'indexing'
-            ? 'test/database-indexing.database-check.mjs'
-            : suite === 'tenants'
-              ? 'test/tenant-performance.database-check.mjs'
-              : suite === 'caching'
-                ? 'test/caching.database-check.mjs'
-                : 'test/database-pooling.database-check.mjs',
+      suite === 'load' || suite === 'load-search'
+        ? 'test/load-environment.database-check.mjs'
+        : suite === 'timeouts'
+          ? 'test/request-timeouts.database-check.mjs'
+          : suite === 'idempotency'
+            ? 'test/idempotency.database-check.mjs'
+            : suite === 'indexing'
+              ? 'test/database-indexing.database-check.mjs'
+              : suite === 'tenants'
+                ? 'test/tenant-performance.database-check.mjs'
+                : suite === 'caching'
+                  ? 'test/caching.database-check.mjs'
+                  : 'test/database-pooling.database-check.mjs',
     ],
     {
       cwd: apiRoot,
-      env,
+      env:
+        suite === 'load' || suite === 'load-search'
+          ? loadFixtureEnvironment(process.env, {
+              databaseUrl: env.DATABASE_URL,
+              report: loadReport,
+              directory: clusterRoot,
+              search: suite === 'load-search',
+            })
+          : env,
       windowsHide: true,
-      timeout: suite === 'timeouts' ? 30_000 : 90_000,
+      timeout: suite === 'timeouts' ? 30_000 : isolatedLoad ? 180_000 : 90_000,
+      signal: isolatedLoad ? shutdown.signal : undefined,
       maxBuffer: 1024 * 1024,
     },
   );
   process.stdout.write(result.stdout);
+  loadSucceeded = true;
 } finally {
-  await cleanup();
+  try {
+    await cleanup();
+  } finally {
+    process.off('SIGINT', interrupt);
+    process.off('SIGTERM', terminate);
+    if (isolatedLoad) {
+      let report = { pass: false, environment: 'disposable-development' };
+      try {
+        report = JSON.parse(await readFile(loadReport, 'utf8'));
+      } catch {
+        /* Failed startup may have no complete child report. */
+      }
+      report.pass = Boolean(report.pass && loadSucceeded && stopped && removed);
+      report.status = report.pass ? 'complete' : 'failed';
+      report.cleanup = {
+        postgresStopped: stopped,
+        ownedDirectoryRemoved: removed,
+      };
+      await writeFile(loadReport, JSON.stringify(report, null, 2) + '\n');
+    }
+  }
 }
