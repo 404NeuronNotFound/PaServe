@@ -171,6 +171,22 @@ function setup(
       view.rerender(tree({ ...membership, role })),
   };
 }
+it("keeps navigation and heading mounted while the section skeleton resolves", async () => {
+  let finish!: (value: ProductVariantsResponse) => void;
+  vi.mocked(api.listVariants).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+  setup("OWNER", false, "choices");
+  const heading = await screen.findByRole("heading", { name: "Customize Latte" });
+  const back = screen.getByRole("link", { name: "Back to products" });
+  back.focus();
+  expect(screen.getByText("Loading customization…")).toBeInTheDocument();
+  expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+  finish(options);
+  await screen.findByRole("tab", { name: /Sizes & choices/ });
+  expect(screen.getByRole("heading", { name: "Customize Latte" })).toBe(heading);
+  expect(back).toHaveFocus();
+  expect(screen.queryByText("Loading customization…")).not.toBeInTheDocument();
+});
+
 it("links to customization sections and explains list position in the editor", async () => {
   setup("OWNER", false, "choices");
   const choices = await screen.findByRole("tab", { name: /Sizes & choices/ });

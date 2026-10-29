@@ -16,6 +16,33 @@
   background: color-mix(in srgb, var(--color-muted) 14%, var(--color-surface));
   animation: skeleton-pulse 1.8s ease-in-out infinite;
 }
+/* One coherent pulse per region, rather than an animation on every shape. */
+.loading-skeleton > [aria-busy="true"] {
+  animation: skeleton-pulse 1.8s ease-in-out infinite;
+}
+.loading-skeleton .skeleton-block {
+  animation: none;
+}
+.skeleton-product-details,
+.skeleton-product-details > [aria-busy="true"] {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.skeleton-product-details .customer-dialog-body {
+  flex: 1 1 auto;
+}
+.skeleton-product-details .skeleton-product-submit {
+  width: 180px;
+}
+.skeleton-customization .customization-tabs {
+  flex-wrap: wrap;
+}
+.skeleton-customization .customization-toolbar > .skeleton-lines {
+  flex: 1;
+}
 .skeleton-sales,
 .skeleton-sales > div[aria-busy="true"] {
   display: flex;
@@ -268,8 +295,17 @@
     gap: 8px;
   }
 }
+@media (max-width: 560px) {
+  .skeleton-product-details .customer-dialog-footer {
+    flex-wrap: wrap;
+  }
+  .skeleton-product-details .skeleton-product-submit {
+    width: 100%;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .skeleton-block {
+  .skeleton-block,
+  .loading-skeleton > [aria-busy="true"] {
     animation: none;
   }
 }

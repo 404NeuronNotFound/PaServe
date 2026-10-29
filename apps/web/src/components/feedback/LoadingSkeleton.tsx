@@ -33,7 +33,12 @@ function LoadingRegion({
   return (
     <div className={`loading-skeleton ${className}`}>
       {/* Readable when explored, without a chorus of live updates as sections load. */}
-      <span className="sr-only" role="status" aria-live="off" aria-atomic="true">
+      <span
+        className="sr-only"
+        role="status"
+        aria-live="off"
+        aria-atomic="true"
+      >
         {label}
       </span>
       <div aria-busy="true" aria-hidden="true">
@@ -423,19 +428,84 @@ export function ProductDetailsSkeleton() {
   return (
     <LoadingRegion
       label="Loading product details…"
-      className="customer-dialog-body"
+      className="skeleton-product-details"
     >
-      <div className="product-details-summary">
-        <SkeletonBlock className="product-details-placeholder" />
+      <div className="customer-dialog-body">
+        <div className="product-details-summary">
+          <SkeletonBlock className="product-details-placeholder" />
+          <Lines />
+        </div>
+        <div className="skeleton-form-fields">
+          <SkeletonBlock width="40%" height={24} />
+          <SkeletonBlock height={56} />
+          <SkeletonBlock height={56} />
+          <SkeletonBlock height={96} />
+        </div>
+      </div>
+      <footer className="customer-dialog-footer">
+        <div className="product-details-total skeleton-lines">
+          <SkeletonBlock width={160} height={28} />
+          <SkeletonBlock width={220} />
+        </div>
+        <SkeletonBlock className="skeleton-product-submit" height={50} />
+      </footer>
+    </LoadingRegion>
+  );
+}
+
+export function CustomizationSkeleton({
+  tab = "choices",
+}: {
+  tab?: "choices" | "addons";
+}) {
+  return (
+    <LoadingRegion
+      label="Loading customization…"
+      className="skeleton-customization"
+    >
+      <div className="customization-tabs">
+        <SkeletonBlock width={180} height={44} />
+        <SkeletonBlock width={140} height={44} />
+      </div>
+      <div className="customization-section-heading customization-toolbar">
         <Lines />
+        <div className="skeleton-actions">
+          <SkeletonBlock width={140} height={44} />
+          <SkeletonBlock width={180} height={44} />
+        </div>
       </div>
-      <div className="skeleton-form-fields">
-        <SkeletonBlock width="40%" height={24} />
-        <SkeletonBlock height={56} />
-        <SkeletonBlock height={56} />
-        <SkeletonBlock height={96} />
-        <SkeletonBlock height={44} />
-      </div>
+      {tab === "choices" ? (
+        <div className="customization-groups">
+          {[0, 1].map((index) => (
+            <div
+              key={index}
+              className="customization-group skeleton-form-fields"
+            >
+              <Lines />
+              <div className="skeleton-divider" />
+              <SkeletonBlock height={56} />
+              <SkeletonBlock height={56} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="customization-product-addons">
+          <div className="customization-panel product-addon-list">
+            <div className="addon-library-toolbar">
+              <SkeletonBlock width={280} height={44} />
+            </div>
+            {[0, 1, 2].map((index) => (
+              <div key={index} className="addon-library-row product-addon-row">
+                <div>
+                  <Lines />
+                </div>
+                <SkeletonBlock width={72} height={28} />
+                <SkeletonBlock width={44} height={44} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </LoadingRegion>
   );
 }
@@ -473,8 +543,16 @@ export function SalesReportSkeleton({
   controls?: boolean;
 }) {
   return (
-    <LoadingRegion label={label} className={`skeleton-sales skeleton-sales-${kind}`}>
-      <SkeletonBlock width={kind === "payments" ? "100%" : "55%"} height={controls && (kind === "payments" || kind === "products") ? 50 : 14} />
+    <LoadingRegion
+      label={label}
+      className={`skeleton-sales skeleton-sales-${kind}`}
+    >
+      <SkeletonBlock
+        width={kind === "payments" ? "100%" : "55%"}
+        height={
+          controls && (kind === "payments" || kind === "products") ? 50 : 14
+        }
+      />
       {kind === "trends" && (
         <div className="sales-trend-chart skeleton-sales-chart">
           <SkeletonBlock width="55%" />
@@ -487,13 +565,19 @@ export function SalesReportSkeleton({
       )}
       {kind === "hours" && (
         <div className="skeleton-sales-hours">
-          {Array.from({ length: 24 }, (_, i) => <SkeletonBlock key={i} height="100%" />)}
+          {Array.from({ length: 24 }, (_, i) => (
+            <SkeletonBlock key={i} height="100%" />
+          ))}
         </div>
       )}
       {kind === "payments" && (
         <>
           <div className="sales-payment-visual">
-            <SkeletonBlock className="skeleton-sales-ring" width={132} height={132} />
+            <SkeletonBlock
+              className="skeleton-sales-ring"
+              width={132}
+              height={132}
+            />
             <div className="sales-payment-context skeleton-lines">
               <SkeletonBlock width="45%" />
               <SkeletonBlock width="90%" height={36} />
@@ -505,25 +589,36 @@ export function SalesReportSkeleton({
       )}
       {(kind === "products" || kind === "payments" || kind === "recent") && (
         <div className="skeleton-sales-rows">
-          {Array.from({ length: kind === "products" ? 5 : kind === "payments" ? 4 : 3 }, (_, i) => (
-            <div className="skeleton-sales-row" key={i}>
-              <div className="skeleton-sales-row-heading">
-                <SkeletonBlock width={kind === "recent" ? "45%" : "35%"} />
-                <SkeletonBlock width="20%" />
+          {Array.from(
+            { length: kind === "products" ? 5 : kind === "payments" ? 4 : 3 },
+            (_, i) => (
+              <div className="skeleton-sales-row" key={i}>
+                <div className="skeleton-sales-row-heading">
+                  <SkeletonBlock width={kind === "recent" ? "45%" : "35%"} />
+                  <SkeletonBlock width="20%" />
+                </div>
+                <SkeletonBlock
+                  width={kind === "recent" ? "60%" : "100%"}
+                  height={kind === "recent" ? 14 : 6}
+                />
               </div>
-              <SkeletonBlock width={kind === "recent" ? "60%" : "100%"} height={kind === "recent" ? 14 : 6} />
-            </div>
-          ))}
+            ),
+          )}
         </div>
       )}
-      <div className="skeleton-sales-footer"><SkeletonBlock width="55%" height={20} /></div>
+      <div className="skeleton-sales-footer">
+        <SkeletonBlock width="55%" height={20} />
+      </div>
     </LoadingRegion>
   );
 }
 
 export function PreparationMetricSkeleton() {
   return (
-    <LoadingRegion label="Loading average preparation time…" className="skeleton-sales skeleton-sales-preparation">
+    <LoadingRegion
+      label="Loading average preparation time…"
+      className="skeleton-sales skeleton-sales-preparation"
+    >
       <div className="prep-time-display">
         <SkeletonBlock className="skeleton-sales-ring" width={72} height={72} />
         <div className="prep-time-average skeleton-prep-value">
@@ -536,7 +631,9 @@ export function PreparationMetricSkeleton() {
           <SkeletonBlock width="90%" />
         </div>
       </div>
-      <div className="skeleton-sales-footer"><SkeletonBlock width="80%" height={20} /></div>
+      <div className="skeleton-sales-footer">
+        <SkeletonBlock width="80%" height={20} />
+      </div>
     </LoadingRegion>
   );
 }
