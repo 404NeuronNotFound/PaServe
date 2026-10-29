@@ -32,6 +32,7 @@ import {
 } from "@paserve/contracts";
 import { useActiveShop } from "../../features/shops/active-shop";
 import { currentUserKey } from "../../features/auth/api/session";
+import { categoriesQuery } from "../../features/shops/catalog-queries";
 import {
   categoriesKey,
   createCategory,
@@ -92,8 +93,7 @@ function CategoryWorkspace({ userId }: { userId: string }) {
   const authorized = hasShopPermission(membership.role, "shop.menu.manage");
   const key = categoriesKey(userId, shopId);
   const query = useQuery({
-    queryKey: key,
-    queryFn: ({ signal }) => listCategories(shopId, signal),
+    ...categoriesQuery(userId, shopId),
     enabled: authorized && !lostAccess,
     retry: false,
     networkMode: "always",

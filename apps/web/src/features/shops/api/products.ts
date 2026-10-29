@@ -138,11 +138,14 @@ export async function listProducts(
   shopId: string,
   signal?: AbortSignal,
 ): Promise<ProductsResponse> {
-  const products=await collectPages(async cursor=>{
-    const {data}=await api.get<ProductsResponse>(`/shops/${encodeURIComponent(shopId)}/products`,{signal,...(cursor?{params:{cursor}}:{})});
-    return {items:data.products,nextCursor:data.nextCursor};
-  },signal);
-  return {products};
+  const products = await collectPages(async (cursor) => {
+    const { data } = await api.get<ProductsResponse>(
+      `/shops/${encodeURIComponent(shopId)}/products`,
+      { signal, timeout: 15_000, ...(cursor ? { params: { cursor } } : {}) },
+    );
+    return { items: data.products, nextCursor: data.nextCursor };
+  }, signal);
+  return { products };
 }
 export async function createProduct(
   shopId: string,

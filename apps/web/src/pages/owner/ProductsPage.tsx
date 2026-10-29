@@ -49,6 +49,11 @@ import {
 } from "../../features/shops/featured-menu";
 import { currentUserKey } from "../../features/auth/api/session";
 import {
+  categoriesQuery,
+  productsQuery,
+} from "../../features/shops/catalog-queries";
+import { useCustomizationPrefetch } from "../../features/shops/useCustomizationPrefetch";
+import {
   productsKey,
   listProducts,
   setProductArchived,
@@ -69,10 +74,6 @@ import "./categories.css";
 import "./products.css";
 import "./customization.css";
 import { formatProductPrice } from "../../lib/money";
-import {
-  categoriesKey,
-  listCategories,
-} from "../../features/shops/api/categories";
 
 export function ProductsPage() {
   const membership = useActiveShop();
@@ -474,15 +475,13 @@ function ProductWorkspace({ userId }: { userId: string }) {
   }
   const allowed = hasShopPermission(membership.role, "shop.menu.manage");
   const categories = useQuery({
-    queryKey: categoriesKey(userId, membership.shopId),
-    queryFn: ({ signal }) => listCategories(membership.shopId, signal),
+    ...categoriesQuery(userId, membership.shopId),
     enabled: allowed,
     retry: false,
     refetchOnWindowFocus: false,
   });
   const query = useQuery({
-    queryKey: productsKey(userId, membership.shopId),
-    queryFn: ({ signal }) => listProducts(membership.shopId, signal),
+    ...productsQuery(userId, membership.shopId),
     enabled: allowed,
     retry: false,
     networkMode: "always",
@@ -491,6 +490,15 @@ function ProductWorkspace({ userId }: { userId: string }) {
   useEffect(() => {
     document.title = `Products · ${membership.shop.name} · PaServe`;
   }, [membership.shop.name]);
+  const denied =
+    unverified ||
+    (isAxiosError(query.error) &&
+      [401, 403, 404].includes(query.error.response?.status ?? 0));
+  const prefetch = useCustomizationPrefetch(
+    userId,
+    membership.shopId,
+    allowed && !denied && !query.isError,
+  );
   if (!allowed)
     return (
       <section className="dashboard-status">
@@ -500,10 +508,6 @@ function ProductWorkspace({ userId }: { userId: string }) {
         </InlineMessage>
       </section>
     );
-  const denied =
-    unverified ||
-    (isAxiosError(query.error) &&
-      [401, 403, 404].includes(query.error.response?.status ?? 0));
   // Keep previews local: rollback reveals the latest server cache, and an
   // unfinished request cannot leak into another shop or a customer menu.
   const visibleProducts =
@@ -1051,6 +1055,18 @@ function ProductWorkspace({ userId }: { userId: string }) {
                               className="secondary-button"
                               type="button"
                               aria-label={`Customize ${product.name}`}
+                              onPointerEnter={(event) => {
+                                if (
+                                  event.pointerType !== "touch" &&
+                                  !event.currentTarget.disabled &&
+                                  !product.isArchived
+                                ) prefetch.schedule(product.id);
+                              }}
+                              onPointerLeave={prefetch.cancel}
+                              onFocus={() => {
+                                if (!product.isArchived) prefetch.schedule(product.id);
+                              }}
+                              onBlur={prefetch.cancel}
                               disabled={
                                 creating ||
                                 Boolean(editing) ||

@@ -6,6 +6,7 @@ import { useMenuAvailability } from "./useMenuAvailability";
 const cache = vi.hoisted(() => ({
   cancelQueries: vi.fn(),
   invalidateQueries: vi.fn(),
+  isFetching: vi.fn(),
 }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => cache }));
 vi.mock("../orders/new-order-events", () => ({
@@ -16,6 +17,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   cache.cancelQueries.mockResolvedValue(undefined);
   cache.invalidateQueries.mockResolvedValue(undefined);
+  cache.isFetching.mockReturnValue(0);
 });
 afterEach(() => vi.useRealTimers());
 const flush = async () => {
@@ -23,6 +25,45 @@ const flush = async () => {
     for (let i = 0; i < 20; i++) await Promise.resolve();
   });
 };
+
+it("lets a slow menu finish across fallback polls while availability events still supersede it", async () => {
+  cache.isFetching.mockReturnValue(1);
+  const { unmount } = renderHook(() => useMenuAvailability("cafe"));
+  act(() => vi.advanceTimersByTime(45_000));
+  await flush();
+  expect(cache.cancelQueries).not.toHaveBeenCalled();
+  expect(cache.invalidateQueries).not.toHaveBeenCalled();
+  const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
+  act(() => notify("product_sold_out", { shopSlug: "cafe" }));
+  await flush();
+  expect(cache.cancelQueries).toHaveBeenCalledOnce();
+  expect(cache.invalidateQueries).toHaveBeenCalledOnce();
+  cache.isFetching.mockReturnValue(0);
+  act(() => vi.advanceTimersByTime(15_000));
+  await flush();
+  expect(cache.invalidateQueries).toHaveBeenCalledTimes(2);
+  expect(cache.cancelQueries).toHaveBeenCalledOnce();
+  unmount();
+});
+
+it("does not queue another refresh for polls during a pending refresh", async () => {
+  let finish!: () => void;
+  cache.invalidateQueries.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const { unmount } = renderHook(() => useMenuAvailability("cafe"));
+  act(() => window.dispatchEvent(new Event("focus")));
+  await flush();
+  act(() => vi.advanceTimersByTime(45_000));
+  await flush();
+  await act(async () => finish());
+  await flush();
+  expect(cache.invalidateQueries).toHaveBeenCalledOnce();
+  unmount();
+});
 
 it("serializes duplicate invalidations and rereads after an event during an in-flight refresh", async () => {
   let finish!: () => void;

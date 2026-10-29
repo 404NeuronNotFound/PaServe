@@ -31,6 +31,33 @@ const show = () =>
       <YourActiveOrders shopSlug="cafe" />
     </MemoryRouter>,
   );
+
+it("bounds saved-order recovery and discards queued requests on navigation", async () => {
+  for (let i = 0; i < 20; i++)
+    rememberActiveOrder(
+      "cafe",
+      `e47f6994-a303-4a7b-87b0-${String(i).padStart(12, "0")}`,
+      `ORD-${String(i + 1).padStart(6, "0")}`,
+      Date.parse("2030-01-01T00:00:00Z"),
+    );
+  const finish: Array<(value: { ok: boolean }) => void> = [];
+  fetchMock.mockImplementation(
+    () => new Promise((resolve) => finish.push(resolve)),
+  );
+  const view = show();
+  expect(fetchMock).toHaveBeenCalledTimes(4);
+  await act(async () => finish[0]({ ok: false }));
+  expect(fetchMock).toHaveBeenCalledTimes(5);
+  view.unmount();
+  expect(
+    fetchMock.mock.calls.every(([, options]) => options.signal.aborted),
+  ).toBe(true);
+  await act(async () =>
+    finish.slice(1).forEach((resolve) => resolve({ ok: false })),
+  );
+  expect(fetchMock).toHaveBeenCalledTimes(5);
+  expect(readActiveOrders("cafe")).toHaveLength(20);
+});
 it("reopens a saved order with cookie-based backend verification instead of trusting the local index", async () => {
   seed();
   fetchMock.mockResolvedValue({

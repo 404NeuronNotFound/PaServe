@@ -11,16 +11,18 @@ export function useMenuAvailability(shopSlug: string) {
       loading = false,
       again = false;
     const queryKey = ["public-menu", shopSlug];
-    async function refresh() {
+    async function refresh(force = true) {
       if (!active) return;
       if (loading) {
-        again = true;
+        if (force) again = true;
         return;
       }
+      // A slow multi-page load must be able to finish between fallback polls.
+      if (!force && client.isFetching({ queryKey })) return;
       loading = true;
       try {
         // Discard a pre-event read so a late snapshot cannot undo availability.
-        await client.cancelQueries({ queryKey });
+        if (force) await client.cancelQueries({ queryKey });
         if (active) await client.invalidateQueries({ queryKey });
       } catch {
         // Query errors stay with the menu; reconnect/polling will retry.
@@ -45,7 +47,7 @@ export function useMenuAvailability(shopSlug: string) {
       false,
       true,
     );
-    const interval = setInterval(recover, 15_000);
+    const interval = setInterval(() => void refresh(false), 15_000);
     window.addEventListener("focus", recover);
     window.addEventListener("online", recover);
     return () => {

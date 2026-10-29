@@ -23,7 +23,6 @@ import {
 } from "@paserve/contracts";
 import {
   categoriesKey,
-  listCategories,
 } from "../../features/shops/api/categories";
 import {
   createProduct,
@@ -38,6 +37,7 @@ import { DecisionDialog } from "../../components/feedback/DecisionDialog";
 import { ProductPhotoPicker } from "./ProductPhotoPicker";
 import { ProductImageUpload } from "./ProductImageUpload";
 import { formatProductPrice } from "../../lib/money";
+import { categoriesQuery } from "../../features/shops/catalog-queries";
 
 export function ProductEditor({
   userId,
@@ -112,8 +112,7 @@ export function ProductEditor({
           sortOrder !== "0",
         ));
   const categories = useQuery({
-    queryKey: categoriesKey(userId, shopId),
-    queryFn: ({ signal }) => listCategories(shopId, signal),
+    ...categoriesQuery(userId, shopId),
     retry: false,
     networkMode: "always",
     refetchOnWindowFocus: false,

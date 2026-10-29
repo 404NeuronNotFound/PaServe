@@ -47,11 +47,14 @@ export async function listCategories(
   shopId: string,
   signal?: AbortSignal,
 ): Promise<CategoriesResponse> {
-  const categories=await collectPages(async cursor=>{
-    const {data}=await api.get<CategoriesResponse>(`/shops/${encodeURIComponent(shopId)}/categories`,{signal,...(cursor?{params:{cursor}}:{})});
-    return {items:data.categories,nextCursor:data.nextCursor};
-  },signal);
-  return {categories};
+  const categories = await collectPages(async (cursor) => {
+    const { data } = await api.get<CategoriesResponse>(
+      `/shops/${encodeURIComponent(shopId)}/categories`,
+      { signal, timeout: 15_000, ...(cursor ? { params: { cursor } } : {}) },
+    );
+    return { items: data.categories, nextCursor: data.nextCursor };
+  }, signal);
+  return { categories };
 }
 export async function updateCategory(
   shopId: string,

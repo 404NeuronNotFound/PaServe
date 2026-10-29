@@ -16,12 +16,8 @@ import type {
   ProductVariant,
   ProductOptionGroup,
 } from "@paserve/contracts";
-import { productsKey, listProducts } from "../../features/shops/api/products";
+import { productsQuery, customizationQuery } from "../../features/shops/catalog-queries";
 import {
-  customizationKey,
-  listAddOns,
-  listProductAddOns,
-  listVariants,
   saveVariant,
   deleteVariant,
   deleteAddOn,
@@ -76,8 +72,7 @@ function ProductCustomization({ productId }: { productId: string }) {
     }
   }, [editor, busy]);
   const products = useQuery({
-    queryKey: productsKey(userId, membership.shopId),
-    queryFn: ({ signal }) => listProducts(membership.shopId, signal),
+    ...productsQuery(userId, membership.shopId),
     enabled: allowed,
     retry: false,
     networkMode: "always",
@@ -90,15 +85,7 @@ function ProductCustomization({ productId }: { productId: string }) {
       !item.isArchived,
   );
   const data = useQuery({
-    queryKey: customizationKey(userId, membership.shopId, productId),
-    queryFn: async ({ signal }) => {
-      const [options, catalog, assigned] = await Promise.all([
-        listVariants(membership.shopId, productId, signal),
-        listAddOns(membership.shopId, signal),
-        listProductAddOns(membership.shopId, productId, signal),
-      ]);
-      return { ...options, catalog: catalog.addOns, assigned: assigned.addOns };
-    },
+    ...customizationQuery(userId, membership.shopId, productId),
     enabled: allowed && Boolean(product),
     retry: false,
     networkMode: "always",

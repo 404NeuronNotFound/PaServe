@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { CustomerOrderStatusResponse } from "@paserve/contracts";
+import { mapConcurrentReads } from "../../lib/api/read-scheduling";
 import {
   forgetActiveOrder,
   readActiveOrders,
@@ -30,8 +31,9 @@ export function YourActiveOrders({ shopSlug }: { shopSlug: string }) {
       timeout = setTimeout(() => request.abort(), 15_000);
       try {
         const entries = readActiveOrders(shopSlug);
-        const results = await Promise.all(
-          entries.map(async (entry) => {
+        const results = await mapConcurrentReads(
+          entries,
+          async (entry) => {
             try {
               const response = await fetch(
                 trackingApiUrl(`${trackingPath(shopSlug, entry.id)}/status`),
@@ -56,16 +58,20 @@ export function YourActiveOrders({ shopSlug }: { shopSlug: string }) {
                 data.order.status === "REJECTED" ||
                 data.order.preparationStatus === "COMPLETED"
               ) {
-                if (active) forgetActiveOrder(shopSlug, entry.id);
+                if (active && !request.signal.aborted)
+                  forgetActiveOrder(shopSlug, entry.id);
                 return null;
               }
               return { ...entry, verified: true };
             } catch {
               return { ...entry, verified: false };
             }
-          }),
+          },
+          request.signal,
         );
         if (active) setOrders(results.filter((entry) => entry !== null));
+      } catch {
+        // Navigation/deadline cancellation keeps existing saved-order hints.
       } finally {
         clearTimeout(timeout);
         loading = false;
