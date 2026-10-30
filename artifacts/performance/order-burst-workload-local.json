@@ -1,0 +1,1434 @@
+{
+  "version": 2,
+  "runId": "13c48b38-2eae-4eda-9f7e-8c4c17f68fd6",
+  "profile": {
+    "version": 2,
+    "multiClients": 12,
+    "hotClients": 8,
+    "duplicateClients": 8,
+    "maxAttempts": 8,
+    "p95Ms": 5000,
+    "p99Ms": 8000,
+    "launchSpreadMs": 100,
+    "uniqueOrders": 27,
+    "staffSessions": 4,
+    "probeRounds": 2,
+    "probeBudgetMs": 1000
+  },
+  "environment": "disposable-development",
+  "startedAt": "2026-10-30T04:06:04.500Z",
+  "stages": [
+    {
+      "phase": "baseline",
+      "samples": [
+        {
+          "client": 0,
+          "tenant": 0,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 0.417699999999968,
+          "ms": 32.730500000000006
+        },
+        {
+          "client": 1,
+          "tenant": 1,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 33.1943,
+          "ms": 28.351
+        },
+        {
+          "client": 2,
+          "tenant": 2,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 61.579200000000014,
+          "ms": 20.34229999999991
+        }
+      ],
+      "probes": [],
+      "requests": 3,
+      "successes": 3,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 36.81,
+      "p50Ms": 28,
+      "p95Ms": 33,
+      "p99Ms": 33,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "201": 3
+      },
+      "requestWindowSeconds": 0.08150379999999996,
+      "uniqueOrdersPerSecond": 36.80809974504258,
+      "launchSpreadMs": 61.161500000000046,
+      "uniqueReceipts": 3
+    },
+    {
+      "phase": "multi-burst",
+      "samples": [
+        {
+          "client": 0,
+          "tenant": 0,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 102.35489999999982,
+          "ms": 76.92540000000008
+        },
+        {
+          "client": 5,
+          "tenant": 2,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 106.39289999999983,
+          "ms": 117.46289999999999
+        },
+        {
+          "client": 10,
+          "tenant": 1,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 109.73969999999986,
+          "ms": 180.93990000000008
+        },
+        {
+          "client": 1,
+          "tenant": 1,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 103.71679999999992,
+          "ms": 247.17439999999988
+        },
+        {
+          "client": 7,
+          "tenant": 1,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 107.59619999999995,
+          "ms": 284.55989999999997
+        },
+        {
+          "client": 11,
+          "tenant": 2,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 110.48349999999982,
+          "ms": 305.3578
+        },
+        {
+          "client": 3,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 105.18349999999987,
+          "ms": 386.2021
+        },
+        {
+          "client": 2,
+          "tenant": 2,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 104.53509999999983,
+          "ms": 447.24739999999997
+        },
+        {
+          "client": 6,
+          "tenant": 0,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 106.9849999999999,
+          "ms": 461.4891
+        },
+        {
+          "client": 9,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 108.93639999999982,
+          "ms": 637.9382
+        },
+        {
+          "client": 8,
+          "tenant": 2,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 108.3164999999999,
+          "ms": 677.3752999999999
+        },
+        {
+          "client": 4,
+          "tenant": 1,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 105.77749999999992,
+          "ms": 917.6569999999999
+        }
+      ],
+      "probes": [
+        {
+          "kind": "health",
+          "round": 0,
+          "offsetMs": 113.77539999999999,
+          "status": "200",
+          "ok": true,
+          "ms": 35.023099999999886
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 0,
+          "round": 0,
+          "offsetMs": 111.95809999999983,
+          "status": "200",
+          "ok": true,
+          "ms": 166.65319999999997
+        },
+        {
+          "kind": "health",
+          "round": 1,
+          "offsetMs": 259.3414,
+          "status": "200",
+          "ok": true,
+          "ms": 19.709899999999834
+        },
+        {
+          "kind": "cashier",
+          "tenant": 0,
+          "round": 0,
+          "offsetMs": 111.1422,
+          "status": "200",
+          "ok": true,
+          "ms": 177.07119999999986
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 2,
+          "round": 0,
+          "offsetMs": 113.20169999999985,
+          "status": "200",
+          "ok": true,
+          "ms": 182.9996000000001
+        },
+        {
+          "kind": "cashier",
+          "tenant": 2,
+          "round": 0,
+          "offsetMs": 112.65359999999987,
+          "status": "200",
+          "ok": true,
+          "ms": 193.45679999999993
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 0,
+          "round": 1,
+          "offsetMs": 256.48019999999997,
+          "status": "200",
+          "ok": true,
+          "ms": 91.64380000000006
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 2,
+          "round": 1,
+          "offsetMs": 258.54179999999997,
+          "status": "200",
+          "ok": true,
+          "ms": 101.91819999999984
+        },
+        {
+          "kind": "cashier",
+          "tenant": 0,
+          "round": 1,
+          "offsetMs": 255.31209999999987,
+          "status": "200",
+          "ok": true,
+          "ms": 105.76649999999995
+        },
+        {
+          "kind": "cashier",
+          "tenant": 2,
+          "round": 1,
+          "offsetMs": 257.57079999999996,
+          "status": "200",
+          "ok": true,
+          "ms": 118.45439999999985
+        }
+      ],
+      "requests": 12,
+      "successes": 12,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 13.03,
+      "p50Ms": 305,
+      "p95Ms": 918,
+      "p99Ms": 918,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "201": 12
+      },
+      "requestWindowSeconds": 0.9210796,
+      "uniqueOrdersPerSecond": 13.028189963169307,
+      "launchSpreadMs": 8.128600000000006,
+      "uniqueReceipts": 12
+    },
+    {
+      "phase": "hot-burst",
+      "samples": [
+        {
+          "client": 0,
+          "tenant": 0,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 103.75,
+          "ms": 38.516200000000026
+        },
+        {
+          "client": 5,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 106.96500000000015,
+          "ms": 73.74659999999994
+        },
+        {
+          "client": 1,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 104.75739999999996,
+          "ms": 140.2541000000001
+        },
+        {
+          "client": 3,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 105.8119999999999,
+          "ms": 202.44410000000016
+        },
+        {
+          "client": 2,
+          "tenant": 0,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 105.29730000000018,
+          "ms": 341.9542999999999
+        },
+        {
+          "client": 4,
+          "tenant": 0,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 106.34709999999995,
+          "ms": 357.17560000000003
+        },
+        {
+          "client": 6,
+          "tenant": 0,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 107.4960000000001,
+          "ms": 380.99739999999974
+        },
+        {
+          "client": 7,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 108.05119999999988,
+          "ms": 555.9419000000003
+        }
+      ],
+      "probes": [
+        {
+          "kind": "health",
+          "round": 0,
+          "offsetMs": 111.06100000000015,
+          "status": "200",
+          "ok": true,
+          "ms": 14.178100000000086
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 0,
+          "round": 0,
+          "offsetMs": 109.17070000000012,
+          "status": "200",
+          "ok": true,
+          "ms": 63.184099999999944
+        },
+        {
+          "kind": "cashier",
+          "tenant": 0,
+          "round": 0,
+          "offsetMs": 108.57929999999988,
+          "status": "200",
+          "ok": true,
+          "ms": 64.95770000000039
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 2,
+          "round": 0,
+          "offsetMs": 110.43020000000024,
+          "status": "200",
+          "ok": true,
+          "ms": 67.83799999999974
+        },
+        {
+          "kind": "cashier",
+          "tenant": 2,
+          "round": 0,
+          "offsetMs": 109.80560000000014,
+          "status": "200",
+          "ok": true,
+          "ms": 69.90819999999985
+        },
+        {
+          "kind": "health",
+          "round": 1,
+          "offsetMs": 260.453,
+          "status": "200",
+          "ok": true,
+          "ms": 7.6095000000000255
+        },
+        {
+          "kind": "cashier",
+          "tenant": 0,
+          "round": 1,
+          "offsetMs": 257.75030000000015,
+          "status": "200",
+          "ok": true,
+          "ms": 34.69470000000001
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 2,
+          "round": 1,
+          "offsetMs": 259.9832999999999,
+          "status": "200",
+          "ok": true,
+          "ms": 37.71280000000024
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 0,
+          "round": 1,
+          "offsetMs": 258.59389999999985,
+          "status": "200",
+          "ok": true,
+          "ms": 40.45410000000038
+        },
+        {
+          "kind": "cashier",
+          "tenant": 2,
+          "round": 1,
+          "offsetMs": 259.31849999999986,
+          "status": "200",
+          "ok": true,
+          "ms": 40.44960000000037
+        }
+      ],
+      "requests": 8,
+      "successes": 8,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 14.28,
+      "p50Ms": 202,
+      "p95Ms": 556,
+      "p99Ms": 556,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "201": 8
+      },
+      "requestWindowSeconds": 0.5602431000000001,
+      "uniqueOrdersPerSecond": 14.279515446062609,
+      "launchSpreadMs": 4.301199999999881,
+      "uniqueReceipts": 8
+    },
+    {
+      "phase": "duplicates",
+      "samples": [
+        {
+          "client": 5,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 109.57989999999972,
+          "ms": 83.14550000000008
+        },
+        {
+          "client": 6,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 110.36119999999983,
+          "ms": 92.91240000000016
+        },
+        {
+          "client": 7,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 111.12509999999975,
+          "ms": 106.36490000000003
+        },
+        {
+          "client": 0,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 105.42089999999962,
+          "ms": 178.99980000000005
+        },
+        {
+          "client": 1,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 106.58259999999973,
+          "ms": 194.0658000000003
+        },
+        {
+          "client": 2,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 107.26599999999962,
+          "ms": 215.50950000000012
+        },
+        {
+          "client": 3,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 108.01029999999992,
+          "ms": 238.23099999999977
+        },
+        {
+          "client": 4,
+          "tenant": 0,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 108.72809999999981,
+          "ms": 243.08080000000018
+        }
+      ],
+      "probes": [
+        {
+          "kind": "health",
+          "round": 0,
+          "offsetMs": 115.71099999999979,
+          "status": "200",
+          "ok": true,
+          "ms": 26.009399999999914
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 0,
+          "round": 0,
+          "offsetMs": 113.08439999999973,
+          "status": "200",
+          "ok": true,
+          "ms": 129.36220000000003
+        },
+        {
+          "kind": "cashier",
+          "tenant": 2,
+          "round": 0,
+          "offsetMs": 114.10860000000002,
+          "status": "200",
+          "ok": true,
+          "ms": 132.37699999999995
+        },
+        {
+          "kind": "cashier",
+          "tenant": 0,
+          "round": 0,
+          "offsetMs": 112.03749999999991,
+          "status": "200",
+          "ok": true,
+          "ms": 137.11929999999984
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 2,
+          "round": 0,
+          "offsetMs": 114.9096999999997,
+          "status": "200",
+          "ok": true,
+          "ms": 143.6648
+        },
+        {
+          "kind": "health",
+          "round": 1,
+          "offsetMs": 254.9949999999999,
+          "status": "200",
+          "ok": true,
+          "ms": 18.13110000000006
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 0,
+          "round": 1,
+          "offsetMs": 250.89210000000003,
+          "status": "200",
+          "ok": true,
+          "ms": 69.5284999999999
+        },
+        {
+          "kind": "cashier",
+          "tenant": 0,
+          "round": 1,
+          "offsetMs": 249.40419999999995,
+          "status": "200",
+          "ok": true,
+          "ms": 89.41199999999981
+        },
+        {
+          "kind": "kitchen",
+          "tenant": 2,
+          "round": 1,
+          "offsetMs": 253.9391999999998,
+          "status": "200",
+          "ok": true,
+          "ms": 90.24359999999979
+        },
+        {
+          "kind": "cashier",
+          "tenant": 2,
+          "round": 1,
+          "offsetMs": 252.2548999999999,
+          "status": "200",
+          "ok": true,
+          "ms": 92.96289999999999
+        }
+      ],
+      "requests": 8,
+      "successes": 8,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 32.47,
+      "p50Ms": 179,
+      "p95Ms": 243,
+      "p99Ms": 243,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "201": 8
+      },
+      "requestWindowSeconds": 0.24638800000000038,
+      "uniqueOrdersPerSecond": 4.058639219442499,
+      "launchSpreadMs": 5.704200000000128,
+      "uniqueReceipts": 1
+    },
+    {
+      "phase": "recovery",
+      "samples": [
+        {
+          "client": 0,
+          "tenant": 0,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 0.02070000000003347,
+          "ms": 17.64119999999957
+        },
+        {
+          "client": 1,
+          "tenant": 1,
+          "mode": "DINE_IN",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 17.68889999999965,
+          "ms": 18.671299999999974
+        },
+        {
+          "client": 2,
+          "tenant": 2,
+          "mode": "TAKEOUT",
+          "ok": true,
+          "status": "201",
+          "offsetMs": 36.38269999999966,
+          "ms": 16.269900000000234
+        }
+      ],
+      "probes": [],
+      "requests": 3,
+      "successes": 3,
+      "failures": 0,
+      "errorRate": 0,
+      "requestsPerSecond": 57,
+      "p50Ms": 18,
+      "p95Ms": 19,
+      "p99Ms": 19,
+      "missedScheduledRequests": 0,
+      "missedRate": 0,
+      "statusCounts": {
+        "201": 3
+      },
+      "requestWindowSeconds": 0.05263189999999986,
+      "uniqueOrdersPerSecond": 56.99965230212111,
+      "launchSpreadMs": 36.361999999999625,
+      "uniqueReceipts": 3
+    }
+  ],
+  "attempts": [
+    {
+      "phase": "baseline",
+      "client": 0,
+      "attempt": 0,
+      "status": "201",
+      "ms": 32.71370000000002
+    },
+    {
+      "phase": "baseline",
+      "client": 1,
+      "attempt": 0,
+      "status": "201",
+      "ms": 28.3442
+    },
+    {
+      "phase": "baseline",
+      "client": 2,
+      "attempt": 0,
+      "status": "201",
+      "ms": 20.334500000000048
+    },
+    {
+      "phase": "multi-burst",
+      "client": 0,
+      "attempt": 0,
+      "status": "201",
+      "ms": 76.91669999999999
+    },
+    {
+      "phase": "multi-burst",
+      "client": 3,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 82.19859999999994
+    },
+    {
+      "phase": "multi-burst",
+      "client": 1,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 85.99710000000005
+    },
+    {
+      "phase": "multi-burst",
+      "client": 2,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 94.16639999999984
+    },
+    {
+      "phase": "multi-burst",
+      "client": 4,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 102.75999999999999
+    },
+    {
+      "phase": "multi-burst",
+      "client": 5,
+      "attempt": 0,
+      "status": "201",
+      "ms": 117.4565
+    },
+    {
+      "phase": "multi-burst",
+      "client": 6,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 118.60329999999999
+    },
+    {
+      "phase": "multi-burst",
+      "client": 8,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 119.33390000000009
+    },
+    {
+      "phase": "multi-burst",
+      "client": 7,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 124.68200000000002
+    },
+    {
+      "phase": "multi-burst",
+      "client": 9,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 151.86820000000012
+    },
+    {
+      "phase": "multi-burst",
+      "client": 10,
+      "attempt": 0,
+      "status": "201",
+      "ms": 180.93129999999996
+    },
+    {
+      "phase": "multi-burst",
+      "client": 11,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 189.53089999999997
+    },
+    {
+      "phase": "multi-burst",
+      "client": 1,
+      "attempt": 1,
+      "status": "201",
+      "ms": 89.39459999999985
+    },
+    {
+      "phase": "multi-burst",
+      "client": 2,
+      "attempt": 1,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 66.07580000000007
+    },
+    {
+      "phase": "multi-burst",
+      "client": 3,
+      "attempt": 1,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 66.26369999999997
+    },
+    {
+      "phase": "multi-burst",
+      "client": 6,
+      "attempt": 1,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 63.221500000000106
+    },
+    {
+      "phase": "multi-burst",
+      "client": 7,
+      "attempt": 1,
+      "status": "201",
+      "ms": 59.196300000000065
+    },
+    {
+      "phase": "multi-burst",
+      "client": 8,
+      "attempt": 1,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 48.68669999999997
+    },
+    {
+      "phase": "multi-burst",
+      "client": 4,
+      "attempt": 1,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 63.6713000000002
+    },
+    {
+      "phase": "multi-burst",
+      "client": 9,
+      "attempt": 1,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 71.70969999999988
+    },
+    {
+      "phase": "multi-burst",
+      "client": 11,
+      "attempt": 1,
+      "status": "201",
+      "ms": 19.434099999999944
+    },
+    {
+      "phase": "multi-burst",
+      "client": 3,
+      "attempt": 2,
+      "status": "201",
+      "ms": 20.748100000000022
+    },
+    {
+      "phase": "multi-burst",
+      "client": 2,
+      "attempt": 2,
+      "status": "201",
+      "ms": 32.65460000000007
+    },
+    {
+      "phase": "multi-burst",
+      "client": 4,
+      "attempt": 2,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 27.045499999999947
+    },
+    {
+      "phase": "multi-burst",
+      "client": 8,
+      "attempt": 2,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 34.61439999999993
+    },
+    {
+      "phase": "multi-burst",
+      "client": 6,
+      "attempt": 2,
+      "status": "201",
+      "ms": 28.854499999999916
+    },
+    {
+      "phase": "multi-burst",
+      "client": 9,
+      "attempt": 2,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 29.667599999999993
+    },
+    {
+      "phase": "multi-burst",
+      "client": 9,
+      "attempt": 3,
+      "status": "201",
+      "ms": 18.092499999999973
+    },
+    {
+      "phase": "multi-burst",
+      "client": 8,
+      "attempt": 3,
+      "status": "201",
+      "ms": 21.855600000000095
+    },
+    {
+      "phase": "multi-burst",
+      "client": 4,
+      "attempt": 3,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 22.208900000000085
+    },
+    {
+      "phase": "multi-burst",
+      "client": 4,
+      "attempt": 4,
+      "status": "201",
+      "ms": 18.05020000000013
+    },
+    {
+      "phase": "hot-burst",
+      "client": 0,
+      "attempt": 0,
+      "status": "201",
+      "ms": 38.50590000000011
+    },
+    {
+      "phase": "hot-burst",
+      "client": 1,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 41.32390000000032
+    },
+    {
+      "phase": "hot-burst",
+      "client": 2,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 41.26079999999956
+    },
+    {
+      "phase": "hot-burst",
+      "client": 4,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 40.84860000000026
+    },
+    {
+      "phase": "hot-burst",
+      "client": 3,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 42.66980000000012
+    },
+    {
+      "phase": "hot-burst",
+      "client": 5,
+      "attempt": 0,
+      "status": "201",
+      "ms": 73.74330000000009
+    },
+    {
+      "phase": "hot-burst",
+      "client": 6,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 74.98970000000008
+    },
+    {
+      "phase": "hot-burst",
+      "client": 7,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 74.70730000000003
+    },
+    {
+      "phase": "hot-burst",
+      "client": 1,
+      "attempt": 1,
+      "status": "201",
+      "ms": 21.663499999999658
+    },
+    {
+      "phase": "hot-burst",
+      "client": 2,
+      "attempt": 1,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 10.86999999999989
+    },
+    {
+      "phase": "hot-burst",
+      "client": 3,
+      "attempt": 1,
+      "status": "201",
+      "ms": 47.25729999999976
+    },
+    {
+      "phase": "hot-burst",
+      "client": 6,
+      "attempt": 1,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 42.24350000000004
+    },
+    {
+      "phase": "hot-burst",
+      "client": 7,
+      "attempt": 1,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 17.77980000000025
+    },
+    {
+      "phase": "hot-burst",
+      "client": 4,
+      "attempt": 1,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 42.16519999999991
+    },
+    {
+      "phase": "hot-burst",
+      "client": 2,
+      "attempt": 2,
+      "status": "201",
+      "ms": 22.48949999999968
+    },
+    {
+      "phase": "hot-burst",
+      "client": 7,
+      "attempt": 2,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 22.53729999999996
+    },
+    {
+      "phase": "hot-burst",
+      "client": 4,
+      "attempt": 2,
+      "status": "201",
+      "ms": 19.83809999999994
+    },
+    {
+      "phase": "hot-burst",
+      "client": 6,
+      "attempt": 2,
+      "status": "201",
+      "ms": 16.63700000000017
+    },
+    {
+      "phase": "hot-burst",
+      "client": 7,
+      "attempt": 3,
+      "status": "201",
+      "ms": 21.748399999999947
+    },
+    {
+      "phase": "duplicates",
+      "client": 0,
+      "attempt": 0,
+      "status": "simulated_response_loss",
+      "ms": 67.49339999999984
+    },
+    {
+      "phase": "duplicates",
+      "client": 1,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 72.90050000000019
+    },
+    {
+      "phase": "duplicates",
+      "client": 2,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 74.9658000000004
+    },
+    {
+      "phase": "duplicates",
+      "client": 3,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 78.9398000000001
+    },
+    {
+      "phase": "duplicates",
+      "client": 5,
+      "attempt": 0,
+      "status": "201",
+      "ms": 83.14049999999997
+    },
+    {
+      "phase": "duplicates",
+      "client": 4,
+      "attempt": 0,
+      "status": "409",
+      "code": "ORDER_RETRY_REQUIRED",
+      "ms": 87.54199999999992
+    },
+    {
+      "phase": "duplicates",
+      "client": 6,
+      "attempt": 0,
+      "status": "201",
+      "ms": 92.9086000000002
+    },
+    {
+      "phase": "duplicates",
+      "client": 7,
+      "attempt": 0,
+      "status": "201",
+      "ms": 106.36000000000013
+    },
+    {
+      "phase": "duplicates",
+      "client": 0,
+      "attempt": 1,
+      "status": "201",
+      "ms": 60.0619999999999
+    },
+    {
+      "phase": "duplicates",
+      "client": 1,
+      "attempt": 1,
+      "status": "201",
+      "ms": 53.74319999999989
+    },
+    {
+      "phase": "duplicates",
+      "client": 2,
+      "attempt": 1,
+      "status": "201",
+      "ms": 56.76999999999998
+    },
+    {
+      "phase": "duplicates",
+      "client": 3,
+      "attempt": 1,
+      "status": "201",
+      "ms": 45.32159999999976
+    },
+    {
+      "phase": "duplicates",
+      "client": 4,
+      "attempt": 1,
+      "status": "201",
+      "ms": 37.21329999999989
+    },
+    {
+      "phase": "recovery",
+      "client": 0,
+      "attempt": 0,
+      "status": "201",
+      "ms": 17.63869999999997
+    },
+    {
+      "phase": "recovery",
+      "client": 1,
+      "attempt": 0,
+      "status": "201",
+      "ms": 18.66899999999987
+    },
+    {
+      "phase": "recovery",
+      "client": 2,
+      "attempt": 0,
+      "status": "201",
+      "ms": 16.267199999999775
+    }
+  ],
+  "tracking": [
+    {
+      "phase": "baseline",
+      "ok": true,
+      "status": "200",
+      "ms": 9.469099999999912
+    },
+    {
+      "phase": "baseline",
+      "ok": true,
+      "status": "200",
+      "ms": 6.535200000000032
+    },
+    {
+      "phase": "baseline",
+      "ok": true,
+      "status": "200",
+      "ms": 5.640199999999936
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 5.807900000000245
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 5.699099999999817
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 5.038900000000012
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 4.841499999999996
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 5.116899999999987
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 5.491100000000188
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 4.98680000000013
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 6.93939999999975
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 6.813000000000102
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 11.707899999999881
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 5.745200000000295
+    },
+    {
+      "phase": "multi-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 5.475100000000111
+    },
+    {
+      "phase": "hot-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 5.770099999999729
+    },
+    {
+      "phase": "hot-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 6.2237999999997555
+    },
+    {
+      "phase": "hot-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 7.69840000000022
+    },
+    {
+      "phase": "hot-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 8.533300000000054
+    },
+    {
+      "phase": "hot-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 7.156100000000151
+    },
+    {
+      "phase": "hot-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 6.754100000000108
+    },
+    {
+      "phase": "hot-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 6.804900000000089
+    },
+    {
+      "phase": "hot-burst",
+      "ok": true,
+      "status": "200",
+      "ms": 7.328599999999824
+    },
+    {
+      "phase": "duplicates",
+      "ok": true,
+      "status": "200",
+      "ms": 7.2060999999998785
+    },
+    {
+      "phase": "recovery",
+      "ok": true,
+      "status": "200",
+      "ms": 4.784599999999955
+    },
+    {
+      "phase": "recovery",
+      "ok": true,
+      "status": "200",
+      "ms": 5.298600000000079
+    },
+    {
+      "phase": "recovery",
+      "ok": true,
+      "status": "200",
+      "ms": 5.197999999999865
+    }
+  ],
+  "negativeChecks": [
+    {
+      "kind": "changed-payload",
+      "ok": true,
+      "status": "409"
+    },
+    {
+      "kind": "cross-tenant",
+      "ok": true,
+      "status": "404"
+    }
+  ],
+  "sessionsCreated": 4,
+  "sessionsRevoked": 4,
+  "staffSetup": [
+    {
+      "tenant": 0,
+      "role": "CASHIER",
+      "status": "200",
+      "verified": true
+    },
+    {
+      "tenant": 0,
+      "role": "KITCHEN",
+      "status": "200",
+      "verified": true
+    },
+    {
+      "tenant": 2,
+      "role": "CASHIER",
+      "status": "200",
+      "verified": true
+    },
+    {
+      "tenant": 2,
+      "role": "KITCHEN",
+      "status": "200",
+      "verified": true
+    }
+  ],
+  "finishedAt": "2026-10-30T04:06:08.879Z"
+}

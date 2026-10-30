@@ -1050,6 +1050,29 @@ describe('dine-in order submission', () => {
     const result = await post().expect(500);
     expect(result.body.code).toBe('INTERNAL_SERVER_ERROR');
   });
+  it.each(['40001', '40P01'])(
+    'returns a same-key retry for direct pg adapter commit conflict %s',
+    async (originalCode) => {
+      const error = new Error('Fixture commit conflict', {
+        cause: { kind: 'TransactionWriteConflict', originalCode },
+      });
+      error.name = 'DriverAdapterError';
+      transaction.mockRejectedValueOnce(error);
+      const result = await post().expect(409);
+      expect(result.body.code).toBe('ORDER_RETRY_REQUIRED');
+      expect(create).not.toHaveBeenCalled();
+      expect(createItems).not.toHaveBeenCalled();
+    },
+  );
+  it('does not treat an ambiguous adapter connection loss as a confirmed rollback', async () => {
+    const error = new Error('Fixture connection failure', {
+      cause: { kind: 'ConnectionClosed' },
+    });
+    error.name = 'DriverAdapterError';
+    transaction.mockRejectedValueOnce(error);
+    const result = await post().expect(500);
+    expect(result.body.code).toBe('INTERNAL_SERVER_ERROR');
+  });
   it('rejects using another shop route with the scanned context', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/menu/other/orders')

@@ -30,6 +30,7 @@
     "test:load-ramp": "pnpm build && node test/request-timeouts.local-postgres.mjs load-ramp",
     "test:login-flood": "pnpm build && node test/request-timeouts.local-postgres.mjs load-login-flood",
     "test:menu-spike": "pnpm build && node test/request-timeouts.local-postgres.mjs load-menu-spike",
+    "test:order-burst": "pnpm build && node test/request-timeouts.local-postgres.mjs load-order-burst",
     "test:load-ramp:diagnostic": "pnpm build && node test/request-timeouts.local-postgres.mjs load-ramp-diagnostic",
     "test:timeouts:supabase": "vitest run --config vitest.config.e2e.ts test/supabase-latency.e2e-spec.ts",
     "test:cov": "vitest run --coverage",

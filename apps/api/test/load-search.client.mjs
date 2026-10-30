@@ -3,21 +3,27 @@ import { runOrderSearchLoad } from '../../../scripts/order-search-load.mjs';
 import { runMixedRamp } from './load-ramp.client-workload.mjs';
 import { runLoginFlood } from './login-flood.workload.mjs';
 import { runMenuSpike } from './menu-spike.workload.mjs';
+import { runOrderBurst } from './order-burst.workload.mjs';
 if (!process.send) throw new Error('Use the managed load environment.');
 process.once('disconnect', () => process.exit(1));
 const run =
-  process.env.LOAD_MENU_SPIKE === '1'
-    ? runMenuSpike
-    : process.env.LOAD_LOGIN_FLOOD === '1'
-      ? runLoginFlood
-      : process.env.LOAD_FIXTURE_RAMP === '1'
-        ? runMixedRamp
-        : runOrderSearchLoad;
+  process.env.LOAD_ORDER_BURST === '1'
+    ? runOrderBurst
+    : process.env.LOAD_MENU_SPIKE === '1'
+      ? runMenuSpike
+      : process.env.LOAD_LOGIN_FLOOD === '1'
+        ? runLoginFlood
+        : process.env.LOAD_FIXTURE_RAMP === '1'
+          ? runMixedRamp
+          : runOrderSearchLoad;
 let stageId = 0;
 run(process.env, {
   onStage: (stage) =>
     new Promise((resolve, reject) => {
-      if (process.env.LOAD_MENU_SPIKE !== '1') {
+      if (
+        process.env.LOAD_MENU_SPIKE !== '1' &&
+        process.env.LOAD_ORDER_BURST !== '1'
+      ) {
         process.send({ type: 'stage', stage }, (error) =>
           error ? reject(error) : resolve(),
         );

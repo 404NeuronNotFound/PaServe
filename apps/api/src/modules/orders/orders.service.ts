@@ -16,6 +16,7 @@ import {
 } from '@paserve/contracts';
 import { Prisma, type Order } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { isTransactionConflict } from '../../database/transaction-conflict.js';
 import { PublicProductService } from '../products/public-product.service.js';
 import { CreateOrderDto } from './create-order.dto.js';
 import { TableContextService } from '../tables/table-context.service.js';
@@ -355,6 +356,7 @@ export class OrdersService {
     } catch (error) {
       // Prisma's pg adapter can report the PostgreSQL SQLSTATE in the cause
       // instead of meta.code for raw row-lock serialization failures.
+      // Commit conflicts can also bypass Prisma's known-request wrapper.
       const adapterCause =
         error instanceof Prisma.PrismaClientKnownRequestError
           ? (
@@ -363,12 +365,13 @@ export class OrdersService {
             )?.cause
           : undefined;
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        (['P2002', 'P2034'].includes(error.code) ||
-          (error.code === 'P2010' &&
-            [error.meta?.code, adapterCause?.originalCode].some((state) =>
-              ['40001', '40P01'].includes(String(state)),
-            )))
+        isTransactionConflict(error) ||
+        (error instanceof Prisma.PrismaClientKnownRequestError &&
+          (['P2002', 'P2034'].includes(error.code) ||
+            (error.code === 'P2010' &&
+              [error.meta?.code, adapterCause?.originalCode].some((state) =>
+                ['40001', '40P01'].includes(String(state)),
+              ))))
       ) {
         throw new ConflictException({
           code: 'ORDER_RETRY_REQUIRED',

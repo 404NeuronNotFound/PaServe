@@ -11,6 +11,12 @@ import { validateRampResponse } from './load-ramp.client-workload.mjs';
 import { evaluateLoginFlood } from './login-flood.metrics.mjs';
 import { evaluateMenuSpike } from './menu-spike.metrics.mjs';
 import { menuSpikeStages } from './menu-spike.workload.mjs';
+import { auditOrderBurst, evaluateOrderBurst } from './order-burst.metrics.mjs';
+import { orderBurstStages } from './order-burst.workload.mjs';
+import {
+  instrumentOrderTransactions,
+  summarizeOrderTransactions,
+} from './order-burst.instrumentation.mjs';
 import {
   loginFloodProfile,
   loginFloodSource,
@@ -89,6 +95,8 @@ async function main() {
   const db = new pg.Client({ connectionString: database.href });
   let app;
   let credentialsFile;
+  let privateResultsFile;
+  let orderTransactions;
   let cleanupFailed = false;
   let summary;
   let monitor;
@@ -96,20 +104,22 @@ async function main() {
   let reportWritten = false;
   const isLoginFlood = process.env.LOAD_LOGIN_FLOOD === '1';
   const isMenuSpike = process.env.LOAD_MENU_SPIKE === '1';
+  const isOrderBurst = process.env.LOAD_ORDER_BURST === '1';
   const spikeCache = {};
   const floodCounters = {
     targetAccountReads: 0,
     peers: { attacker: 0, legitimate: 0, other: 0 },
   };
   const floodPeerSources = new Set();
+  const orderErrors = [];
   try {
     phase = 'migrations';
     await db.connect();
     monitor = new LoadMonitor({
-      intervalMs: isMenuSpike ? 50 : isLoginFlood ? 100 : 500,
+      intervalMs: isMenuSpike ? 50 : isLoginFlood || isOrderBurst ? 100 : 500,
       maxSamples: isMenuSpike
         ? 4000
-        : isLoginFlood
+        : isLoginFlood || isOrderBurst
           ? 2400
           : process.env.LOAD_FIXTURE_RAMP === '1'
             ? 1080
@@ -175,6 +185,28 @@ async function main() {
       passwordHash,
     });
     phase = 'api-startup';
+    if (isOrderBurst) {
+      const { ApiExceptionFilter } =
+        await import('../dist/common/filters/api-exception.filter.js');
+      // The original method is intentionally invoked below with the filter receiver.
+      // oxlint-disable-next-line typescript/unbound-method
+      const originalCatch = ApiExceptionFilter.prototype.catch;
+      ApiExceptionFilter.prototype.catch = function (error, host) {
+        if (orderErrors.length < 16 && !error.getStatus)
+          orderErrors.push({
+            name: error.name,
+            code: error.code,
+            adapterKind: error.cause?.kind,
+            sqlState: error.meta?.driverAdapterError?.cause?.originalCode,
+            // Only source frames; never error text, SQL, parameters or request data.
+            frames: error.stack
+              ?.split('\n')
+              .filter((line) => /^\s+at /.test(line))
+              .slice(0, 4),
+          });
+        return originalCatch.call(this, error, host);
+      };
+    }
     const { NestFactory } = await import('@nestjs/core');
     const { AppModule } = await import('../dist/app.module.js');
     const { PrismaService } =
@@ -345,6 +377,79 @@ async function main() {
     const dataset = await inspectLoadDataset(db, shops, plan);
     await db.query('ANALYZE');
     let spikeFixture, spikeBefore;
+    let burstFixture, burstBefore;
+    if (isOrderBurst) {
+      const staff = await prisma.user.findUniqueOrThrow({
+        where: { id: shops[0].actors.CASHIER },
+        select: { id: true, email: true },
+      });
+      burstFixture = {
+        shops: await Promise.all(
+          shops.map(async (shop) => ({
+            shopId: shop.id,
+            slug: shop.slug,
+            productId: shop.product.id,
+            variantId: shop.variant.id,
+            addOnId: shop.addOn.id,
+            tableId: (
+              await prisma.restaurantTable.findFirstOrThrow({
+                where: { shopId: shop.id, code: 'T1' },
+                select: { id: true },
+              })
+            ).id,
+          })),
+        ),
+        staff: { ...staff, password, shopId: shops[0].id },
+        probeStaff: await Promise.all(
+          [0, 2].flatMap((tenant) =>
+            ['CASHIER', 'KITCHEN'].map(async (role) => ({
+              ...(await prisma.user.findUniqueOrThrow({
+                where: { id: shops[tenant].actors[role] },
+                select: { id: true, email: true },
+              })),
+              tenant,
+              role,
+              password,
+              shopId: shops[tenant].id,
+              kitchenIds:
+                role === 'KITCHEN'
+                  ? (
+                      await prisma.order.findMany({
+                        where: {
+                          shopId: shops[tenant].id,
+                          status: 'CONFIRMED',
+                          paymentStatus: 'PAID',
+                          preparationStatus: 'QUEUED',
+                          queuedAt: { not: null },
+                        },
+                        orderBy: [{ queuedAt: 'asc' }, { id: 'asc' }],
+                        take: 50,
+                        select: { id: true },
+                      })
+                    ).map((order) => order.id)
+                  : undefined,
+            })),
+          ),
+        ),
+      };
+      burstBefore = {
+        orders: await prisma.order.count(),
+        lines: await prisma.orderItem.count(),
+        paid: await prisma.order.count({ where: { paymentStatus: 'PAID' } }),
+        users: await prisma.user.count(),
+        counters: await Promise.all(
+          shops.map(
+            async (shop) =>
+              (
+                await prisma.shop.findUniqueOrThrow({
+                  where: { id: shop.id },
+                  select: { lastOrderNumber: true },
+                })
+              ).lastOrderNumber,
+          ),
+        ),
+      };
+    }
     if (isMenuSpike) {
       const staff = await prisma.user.findUniqueOrThrow({
         where: { id: shops[0].actors.CASHIER },
@@ -422,6 +527,45 @@ async function main() {
     let search;
     let floodWorkload, loginFlood;
     let spikeWorkload, menuSpike;
+    let burstWorkload, orderBurst;
+    if (isOrderBurst) {
+      credentialsFile = join(root, 'load-accounts.json');
+      const { OrdersService } =
+        await import('../dist/modules/orders/orders.service.js');
+      orderTransactions = instrumentOrderTransactions(
+        app.get(OrdersService),
+        app.get(PrismaService),
+        () => phase,
+      );
+      privateResultsFile = join(root, 'order-burst-records.json');
+      await writeFile(credentialsFile, JSON.stringify(burstFixture), {
+        mode: 0o600,
+        flag: 'wx',
+      });
+      burstWorkload = await runLoadSearchWorker(
+        {
+          ...clientEnv,
+          LOAD_ORDER_BURST: '1',
+          LOAD_ACCOUNTS_FILE: credentialsFile,
+          LOAD_PRIVATE_RESULTS: privateResultsFile,
+          LOAD_REPORT: resolve(
+            dirname(process.env.TIMEOUT_DB_REPORT),
+            'order-burst-workload-local.json',
+          ),
+        },
+        {
+          onStage: async (stage) => {
+            assert.ok(
+              orderBurstStages
+                .map((name) => `order-burst-${name}`)
+                .includes(stage.phase),
+            );
+            phase = stage.phase;
+            await monitor.sampleNow();
+          },
+        },
+      );
+    }
     if (isMenuSpike) {
       credentialsFile = join(root, 'load-accounts.json');
       await writeFile(credentialsFile, JSON.stringify(spikeFixture), {
@@ -623,14 +767,36 @@ async function main() {
         }),
       });
     }
+    if (isOrderBurst) {
+      const records = JSON.parse(await readFile(privateResultsFile, 'utf8'));
+      assert.equal(burstWorkload.runId, runId);
+      const { OrderTokenService } =
+        await import('../dist/modules/orders/order-token.service.js');
+      orderBurst = evaluateOrderBurst(
+        burstWorkload,
+        monitoring,
+        await auditOrderBurst(
+          db,
+          burstFixture,
+          burstBefore,
+          records,
+          app.get(OrderTokenService),
+        ),
+        summarizeOrderTransactions(orderTransactions),
+      );
+    }
     const report = {
-      pass: menuSpike
-        ? menuSpike.pass
-        : loginFlood
-          ? loginFlood.pass
-          : ramp
-            ? ramp.pass
-            : true,
+      orderErrors: isOrderBurst ? orderErrors : undefined,
+      orderBurst,
+      pass: isOrderBurst
+        ? orderBurst.pass
+        : menuSpike
+          ? menuSpike.pass
+          : loginFlood
+            ? loginFlood.pass
+            : ramp
+              ? ramp.pass
+              : true,
       menuSpike,
       loginFlood,
       ramp,
@@ -704,7 +870,13 @@ async function main() {
           ) + '\n',
         );
     } finally {
+      orderTransactions?.restore();
       const cleanup = await Promise.allSettled([
+        privateResultsFile
+          ? unlink(privateResultsFile).catch((error) => {
+              if (error.code !== 'ENOENT') throw error;
+            })
+          : Promise.resolve(),
         credentialsFile ? unlink(credentialsFile) : Promise.resolve(),
         app ? app.close() : Promise.resolve(),
         prisma.$disconnect(),

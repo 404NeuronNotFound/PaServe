@@ -24,6 +24,7 @@ export function loadFixtureEnvironment(
     diagnostic = false,
     loginFlood = false,
     menuSpike = false,
+    orderBurst = false,
   },
 ) {
   const database = new URL(databaseUrl);
@@ -56,6 +57,7 @@ export function loadFixtureEnvironment(
     LOAD_RAMP_DIAGNOSTIC: diagnostic ? '1' : '0',
     LOAD_LOGIN_FLOOD: loginFlood ? '1' : '0',
     LOAD_MENU_SPIKE: menuSpike ? '1' : '0',
+    LOAD_ORDER_BURST: orderBurst ? '1' : '0',
     LOAD_DATASET_PROFILE: dataset.profile,
     JWT_ACCESS_SECRET: randomBytes(32).toString('hex'),
     JWT_REFRESH_SECRET: randomBytes(32).toString('hex'),

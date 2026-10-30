@@ -7,85 +7,85 @@
     {
       "kind": "logo",
       "scenario": "delayed-success",
-      "elapsedMs": 155,
+      "elapsedMs": 133,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "delayed-success",
-      "elapsedMs": 68,
+      "elapsedMs": 70,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "delayed-success",
-      "elapsedMs": 71,
+      "elapsedMs": 53,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "stalled-headers",
-      "elapsedMs": 492,
+      "elapsedMs": 490,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "stalled-headers",
-      "elapsedMs": 469,
+      "elapsedMs": 487,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "stalled-headers",
-      "elapsedMs": 480,
+      "elapsedMs": 473,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "stalled-body",
-      "elapsedMs": 478,
+      "elapsedMs": 483,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "stalled-body",
-      "elapsedMs": 470,
+      "elapsedMs": 476,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "stalled-body",
-      "elapsedMs": 481,
+      "elapsedMs": 483,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "connection-reset",
-      "elapsedMs": 75,
+      "elapsedMs": 81,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "connection-reset",
-      "elapsedMs": 71,
+      "elapsedMs": 67,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "connection-reset",
-      "elapsedMs": 85,
+      "elapsedMs": 87,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "client-disconnect",
-      "elapsedMs": 41,
+      "elapsedMs": 18,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "dependency-timeout-without-context",
-      "elapsedMs": 10028,
+      "elapsedMs": 10029,
       "pass": true
     },
     {
