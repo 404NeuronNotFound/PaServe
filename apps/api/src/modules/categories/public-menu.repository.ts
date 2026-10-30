@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -38,6 +38,9 @@ export function menuPages(
 
 @Injectable()
 export class PublicMenuRepository {
+  private readonly logger = new Logger(PublicMenuRepository.name);
+  private cacheSchemaRetryAt = 0;
+  private warnedMissingCacheSchema = false;
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly cache?: PublicMenuCache,
@@ -46,6 +49,36 @@ export class PublicMenuRepository {
   ) {}
   async read(slug: string, tableCode?: string, query: MenuPageQuery = {}) {
     return this.gate.run(() => this.readAdmitted(slug, tableCode, query));
+  }
+
+  private async cacheVersion(shopId: string) {
+    if (Date.now() < this.cacheSchemaRetryAt) return null;
+    try {
+      const state = await this.prisma.menuCacheState.findUnique({
+        where: { shopId },
+        select: { version: true },
+      });
+      this.cacheSchemaRetryAt = 0;
+      return state;
+    } catch (error) {
+      // Optional cache schema may lag the API during rollout. Never hide failures
+      // in business tables, permissions or pool/query deadlines behind a retry.
+      if (
+        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+        error.code !== 'P2021' ||
+        error.meta?.modelName !== 'MenuCacheState'
+      )
+        throw error;
+      this.cacheSchemaRetryAt = Date.now() + 30_000;
+      this.cache?.clear();
+      if (!this.warnedMissingCacheSchema) {
+        this.warnedMissingCacheSchema = true;
+        this.logger.warn(
+          'Public menu cache metadata is unavailable; serving uncached. Apply migration 20261029100000_public_menu_cache_versions to enable caching.',
+        );
+      }
+      return null;
+    }
   }
 
   private async readAdmitted(
@@ -158,10 +191,7 @@ export class PublicMenuRepository {
     // The version is read on every eligible request, so other API instances and
     // direct SQL catalog writes invalidate through the same committed state.
     if (!tableCode && this.cache?.enabled) {
-      const state = await this.prisma.menuCacheState.findUnique({
-        where: { shopId: shop.id },
-        select: { version: true },
-      });
+      const state = await this.cacheVersion(shop.id);
       if (state) {
         const key = `${shop.id}:${state.version}:${createHash('sha256')
           .update(
