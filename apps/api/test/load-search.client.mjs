@@ -5,10 +5,12 @@ import { runLoginFlood } from './login-flood.workload.mjs';
 import { runMenuSpike } from './menu-spike.workload.mjs';
 import { runOrderBurst } from './order-burst.workload.mjs';
 import { runTrafficSpike } from './load-spike.workload.mjs';
+import { runSoak } from './load-soak.workload.mjs';
 if (!process.send) throw new Error('Use the managed load environment.');
 process.once('disconnect', () => process.exit(1));
-const run =
-  process.env.LOAD_TRAFFIC_SPIKE === '1'
+const run = process.env.LOAD_SOAK_PROFILE
+  ? runSoak
+  : process.env.LOAD_TRAFFIC_SPIKE === '1'
     ? runTrafficSpike
     : process.env.LOAD_ORDER_BURST === '1'
       ? runOrderBurst
@@ -25,6 +27,7 @@ run(process.env, {
     new Promise((resolve, reject) => {
       if (
         process.env.LOAD_MENU_SPIKE !== '1' &&
+        !process.env.LOAD_SOAK_PROFILE &&
         process.env.LOAD_TRAFFIC_SPIKE !== '1' &&
         process.env.LOAD_ORDER_BURST !== '1'
       ) {

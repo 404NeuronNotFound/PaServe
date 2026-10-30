@@ -1,0 +1,114 @@
+{
+  "version": 2,
+  "pass": true,
+  "scope": "Five requested local soak criteria, using completed three-hour traffic plus targeted monitor verification; not a passing corrected three-hour profile.",
+  "checks": {
+    "severalHours": true,
+    "resourceAndErrorMonitoring": true,
+    "noAccumulatingSoakWarningsOrErrors": true,
+    "noSteadyLatencyDegradation": true,
+    "connectionsReturnToBaseline": true
+  },
+  "monitorCorrection": true,
+  "sources": {
+    "completedTraffic": "baselines/2026-10-30-soak-multi-hour-v1-diagnostic.json",
+    "completedTargetedVerification": "baselines/2026-10-30-soak-classified-smoke-v2.json",
+    "userShortenedRepeat": "baselines/2026-10-30-soak-multi-hour-v2-user-shortened.json"
+  },
+  "runId": "45a72898-f100-4388-9970-2e8077173f01",
+  "measuredMinutes": 180,
+  "successfulReads": 64800,
+  "failures": 0,
+  "missed": 0,
+  "workflows": [
+    {
+      "kind": "menu",
+      "reads": 10800,
+      "maxWindowP95Ms": 49,
+      "maxWindowP99Ms": 218
+    },
+    {
+      "kind": "product",
+      "reads": 10800,
+      "maxWindowP95Ms": 53,
+      "maxWindowP99Ms": 229
+    },
+    {
+      "kind": "order-status",
+      "reads": 10800,
+      "maxWindowP95Ms": 44,
+      "maxWindowP99Ms": 224
+    },
+    {
+      "kind": "dashboard",
+      "reads": 10800,
+      "maxWindowP95Ms": 101,
+      "maxWindowP99Ms": 275
+    },
+    {
+      "kind": "cashier",
+      "reads": 10800,
+      "maxWindowP95Ms": 83,
+      "maxWindowP99Ms": 259
+    },
+    {
+      "kind": "kitchen",
+      "reads": 10800,
+      "maxWindowP95Ms": 83,
+      "maxWindowP99Ms": 253
+    }
+  ],
+  "monitoringSamples": 10939,
+  "peakApiRssMiB": 358.3359375,
+  "peakApiHeapMiB": 126.90703582763672,
+  "peakApiCpuCoreEquivalent": 2,
+  "quiescent": {
+    "pool": {
+      "policy": {
+        "max": 5,
+        "maxWaiting": 20,
+        "idleTimeoutMillis": 10000,
+        "maxLifetimeSeconds": 300
+      },
+      "state": "open",
+      "total": 0,
+      "idle": 0,
+      "waiting": 0,
+      "pendingCheckouts": 0,
+      "generations": 1,
+      "connected": 187,
+      "acquired": 429270,
+      "released": 429270,
+      "removed": 187,
+      "rejected": 0,
+      "acquisitionFailures": 0,
+      "idleErrors": 0,
+      "peakTotal": 5,
+      "peakWaiting": 6,
+      "peakPendingCheckouts": 6
+    },
+    "connections": 2,
+    "activeRequests": 0,
+    "activeSockets": 0,
+    "resources": {
+      "PipeWrap": 2,
+      "TCPSocketWrap": 2,
+      "TCPServerWrap": 1,
+      "ProcessWrap": 1,
+      "Timeout": 1
+    }
+  },
+  "targetedObservation": {
+    "completedWindows": 26,
+    "samples": 1591,
+    "peakClientConnections": 7,
+    "peakBackgroundConnections": 2,
+    "peakTotalBackends": 9
+  },
+  "limitations": [
+    "The original three-hour run failed one unclassified total-backend budget check. Its status remains failed.",
+    "The corrected monitor passed a complete smoke and 26 observed minutes before the repeat was stopped at user request; no corrected three-hour completion is claimed.",
+    "Soak-period log counters exclude separately recorded setup events.",
+    "Local API read/auth/session evidence only; no hosted, browser, SSE or write-heavy longevity claim."
+  ]
+}

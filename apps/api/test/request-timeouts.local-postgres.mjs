@@ -15,9 +15,22 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { createServer } from 'node:net';
 import { loadFixtureEnvironment } from './load-fixture-environment.mjs';
+import { soakProfile, soakSeconds } from './load-soak.profile.mjs';
+import { auditSoakDatabaseLog } from './load-soak.logs.mjs';
 
 const execute = promisify(execFile);
 const suite = process.argv[2] ?? 'timeouts';
+const soakName =
+  suite === 'load-soak-multi-hour'
+    ? 'multi-hour'
+    : suite === 'load-soak-smoke'
+      ? 'smoke'
+      : suite === 'load-soak-extended'
+        ? 'extended'
+        : suite === 'load-soak'
+          ? 'initial'
+          : '';
+const soak = soakName ? soakProfile(soakName) : null;
 const isolatedLoad = [
   'load',
   'load-search',
@@ -27,6 +40,10 @@ const isolatedLoad = [
   'load-menu-spike',
   'load-order-burst',
   'load-spike',
+  'load-soak',
+  'load-soak-smoke',
+  'load-soak-extended',
+  'load-soak-multi-hour',
 ].includes(suite);
 const shutdown = new AbortController();
 const interrupt = () => {
@@ -57,6 +74,10 @@ assert.ok(
     'load-menu-spike',
     'load-order-burst',
     'load-spike',
+    'load-soak',
+    'load-soak-smoke',
+    'load-soak-extended',
+    'load-soak-multi-hour',
   ].includes(suite),
   'Choose a supported local database suite.',
 );
@@ -99,7 +120,7 @@ let removed = false;
 let loadSucceeded = false;
 const loadReport = resolve(
   apiRoot,
-  `../../artifacts/performance/load-environment${suite === 'load-search' ? '-search' : suite === 'load-ramp' ? '-ramp' : suite === 'load-ramp-diagnostic' ? '-ramp-diagnostic' : suite === 'load-login-flood' ? '-login-flood' : suite === 'load-menu-spike' ? '-menu-spike' : suite === 'load-order-burst' ? '-order-burst' : suite === 'load-spike' ? '-spike' : ''}-local.json`,
+  `../../artifacts/performance/load-environment${suite === 'load-search' ? '-search' : suite === 'load-ramp' ? '-ramp' : suite === 'load-ramp-diagnostic' ? '-ramp-diagnostic' : suite === 'load-login-flood' ? '-login-flood' : suite === 'load-menu-spike' ? '-menu-spike' : suite === 'load-order-burst' ? '-order-burst' : suite === 'load-spike' ? '-spike' : soak ? '-soak-' + soak.name : ''}-local.json`,
 );
 async function cleanup() {
   if (initialized) {
@@ -234,11 +255,13 @@ try {
             menuSpike: suite === 'load-menu-spike',
             orderBurst: suite === 'load-order-burst',
             trafficSpike: suite === 'load-spike',
+            soak: soakName,
           })
         : env,
       windowsHide: true,
-      timeout:
-        suite === 'timeouts'
+      timeout: soak
+        ? (soakSeconds(soak) + 240) * 1000
+        : suite === 'timeouts'
           ? 30_000
           : suite.startsWith('load-ramp')
             ? 480_000
@@ -252,6 +275,23 @@ try {
   process.stdout.write(result.stdout);
   loadSucceeded = true;
 } finally {
+  let databaseLogs;
+  let databaseWholeLog;
+  if (soak) {
+    try {
+      const childReport = JSON.parse(await readFile(loadReport, 'utf8'));
+      assert.ok(Number.isSafeInteger(childReport.soak?.databaseLogOffset));
+      databaseWholeLog = await auditSoakDatabaseLog(
+        join(clusterRoot, 'postgres.log'),
+      );
+      databaseLogs = await auditSoakDatabaseLog(
+        join(clusterRoot, 'postgres.log'),
+        childReport.soak.databaseLogOffset,
+      );
+    } catch {
+      databaseLogs = { pass: false, unreadable: true };
+    }
+  }
   try {
     await cleanup();
   } finally {
@@ -264,13 +304,37 @@ try {
       } catch {
         /* Failed startup may have no complete child report. */
       }
-      report.pass = Boolean(report.pass && loadSucceeded && stopped && removed);
+      if (soak) report.databaseLogs = databaseLogs;
+      if (soak) report.databaseWholeLog = databaseWholeLog;
+      report.pass = Boolean(
+        report.pass &&
+        loadSucceeded &&
+        stopped &&
+        removed &&
+        (!soak || databaseLogs?.pass),
+      );
       report.status = report.pass ? 'complete' : 'failed';
+      if (soak && !report.pass) process.exitCode = 1;
       report.cleanup = {
         postgresStopped: stopped,
         ownedDirectoryRemoved: removed,
       };
       await writeFile(loadReport, JSON.stringify(report, null, 2) + '\n');
+      if (soak)
+        await writeFile(
+          resolve(
+            apiRoot,
+            `../../artifacts/performance/load-soak-${soak.name}-progress-local.json`,
+          ),
+          JSON.stringify({
+            runId: report.runId,
+            profile: soak.name,
+            status: report.status,
+            pass: report.pass,
+            cleanup: report.cleanup,
+            finishedAt: new Date().toISOString(),
+          }) + '\n',
+        );
     }
   }
 }

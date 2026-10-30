@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { loadDatasetPlan } from './load-dataset.mjs';
+import { soakProfile } from './load-soak.profile.mjs';
 
 export function operatingSystemEnvironment(parent) {
   return Object.fromEntries(
@@ -26,6 +27,7 @@ export function loadFixtureEnvironment(
     menuSpike = false,
     orderBurst = false,
     trafficSpike = false,
+    soak = '',
   },
 ) {
   const database = new URL(databaseUrl);
@@ -41,6 +43,7 @@ export function loadFixtureEnvironment(
     'Only an owned disposable database URL is allowed.',
   );
   const operatingSystem = operatingSystemEnvironment(parent);
+  if (soak) soakProfile(soak);
   const dataset = loadDatasetPlan(
     parent.LOAD_DATASET_PROFILE ?? 'representative',
   );
@@ -60,6 +63,7 @@ export function loadFixtureEnvironment(
     LOAD_MENU_SPIKE: menuSpike ? '1' : '0',
     LOAD_ORDER_BURST: orderBurst ? '1' : '0',
     LOAD_TRAFFIC_SPIKE: trafficSpike ? '1' : '0',
+    LOAD_SOAK_PROFILE: soak,
     LOAD_DATASET_PROFILE: dataset.profile,
     JWT_ACCESS_SECRET: randomBytes(32).toString('hex'),
     JWT_REFRESH_SECRET: randomBytes(32).toString('hex'),

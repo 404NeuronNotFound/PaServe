@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { monitorEventLoopDelay, performance } from 'node:perf_hooks';
 
-const DATABASE_SAMPLE = `SELECT numbackends::int connections,xact_commit,xact_rollback,
+const DATABASE_SAMPLE = `WITH activity AS MATERIALIZED (
+  SELECT backend_type,pid,state,wait_event_type FROM pg_stat_activity WHERE datname=current_database()
+) SELECT numbackends::int connections,
+  (SELECT count(*)::int FROM activity WHERE backend_type='client backend') "clientConnections",
+  (SELECT count(*)::int FROM activity WHERE backend_type<>'client backend') "backgroundConnections",
+  (SELECT count(*)::int FROM activity) "activityBackends",xact_commit,xact_rollback,
   blks_read,blks_hit,tup_returned,tup_fetched,tup_inserted,tup_updated,tup_deleted,deadlocks,temp_bytes,
   pg_database_size(current_database()) bytes,
   (SELECT count(*)::int FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid() AND state='active') active,
@@ -212,6 +217,8 @@ export class LoadMonitor {
           ),
           rssBytes: memory.rss,
           heapUsedBytes: memory.heapUsed,
+          heapTotalBytes: memory.heapTotal,
+          arrayBufferBytes: memory.arrayBuffers,
           externalBytes: memory.external,
           eventLoopP95Ms: round(this.loop.percentile(95) / 1e6),
           eventLoopMaxMs: round(this.loop.max / 1e6),

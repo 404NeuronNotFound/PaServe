@@ -46,7 +46,11 @@
     "seed:images": "pnpm seed --upload-images",
     "test:realtime-fanout": "pnpm build && node --test test/realtime-fanout.identity.test.mjs && node test/realtime-fanout.mjs local",
     "test:realtime-fanout:hosted": "pnpm build && node --test test/realtime-fanout.identity.test.mjs && node test/realtime-fanout.mjs hosted",
-    "test:load-spike": "pnpm build && node test/request-timeouts.local-postgres.mjs load-spike"
+    "test:load-spike": "pnpm build && node test/request-timeouts.local-postgres.mjs load-spike",
+    "test:load-soak": "pnpm build && node test/request-timeouts.local-postgres.mjs load-soak",
+    "test:load-soak:smoke": "pnpm build && node test/request-timeouts.local-postgres.mjs load-soak-smoke",
+    "test:load-soak:extended": "pnpm build && node test/request-timeouts.local-postgres.mjs load-soak-extended",
+    "test:load-soak:multi-hour": "pnpm build && node test/request-timeouts.local-postgres.mjs load-soak-multi-hour"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

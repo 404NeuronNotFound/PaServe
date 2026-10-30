@@ -1,7 +1,14 @@
 // Owned-cluster entry point only. Production bootstrap never exposes the marker.
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
-import { readdir, readFile, mkdir, writeFile, unlink } from 'node:fs/promises';
+import {
+  readdir,
+  readFile,
+  mkdir,
+  writeFile,
+  unlink,
+  stat,
+} from 'node:fs/promises';
 import { dirname, join, resolve, basename, sep } from 'node:path';
 import { cpus, totalmem } from 'node:os';
 import pg from 'pg';
@@ -15,6 +22,9 @@ import { auditOrderBurst, evaluateOrderBurst } from './order-burst.metrics.mjs';
 import { orderBurstStages } from './order-burst.workload.mjs';
 import { spikeProfile } from './load-spike.workload.mjs';
 import { evaluateTrafficSpike } from './load-spike.metrics.mjs';
+import { soakProfile, soakSeconds } from './load-soak.profile.mjs';
+import { evaluateSoak } from './load-soak.metrics.mjs';
+import { soakLogs } from './load-soak.logs.mjs';
 import {
   instrumentOrderTransactions,
   summarizeOrderTransactions,
@@ -108,7 +118,12 @@ async function main() {
   const isMenuSpike = process.env.LOAD_MENU_SPIKE === '1';
   const isOrderBurst = process.env.LOAD_ORDER_BURST === '1';
   const isTrafficSpike = process.env.LOAD_TRAFFIC_SPIKE === '1';
+  const soak = process.env.LOAD_SOAK_PROFILE
+    ? soakProfile(process.env.LOAD_SOAK_PROFILE)
+    : null;
   const spikeCache = {};
+  const logCapture = soak ? soakLogs() : null;
+  logCapture?.install();
   const floodCounters = {
     targetAccountReads: 0,
     peers: { attacker: 0, legitimate: 0, other: 0 },
@@ -120,18 +135,22 @@ async function main() {
     phase = 'migrations';
     await db.connect();
     monitor = new LoadMonitor({
-      intervalMs: isMenuSpike
-        ? 50
-        : isLoginFlood || isOrderBurst || isTrafficSpike
-          ? 100
-          : 500,
-      maxSamples: isMenuSpike
-        ? 4000
-        : isLoginFlood || isOrderBurst || isTrafficSpike
-          ? 2400
-          : process.env.LOAD_FIXTURE_RAMP === '1'
-            ? 1080
-            : 480,
+      intervalMs: soak
+        ? 1000
+        : isMenuSpike
+          ? 50
+          : isLoginFlood || isOrderBurst || isTrafficSpike
+            ? 100
+            : 500,
+      maxSamples: soak
+        ? soakSeconds(soak) + 250
+        : isMenuSpike
+          ? 4000
+          : isLoginFlood || isOrderBurst || isTrafficSpike
+            ? 2400
+            : process.env.LOAD_FIXTURE_RAMP === '1'
+              ? 1080
+              : 480,
       client: new pg.Client({
         connectionString: database.href,
         application_name: 'paserve-load-monitor',
@@ -146,7 +165,22 @@ async function main() {
               capacity: app.get(ApiCapacityService).snapshot(),
               fairness: app.get(TrafficFairnessService).snapshot(),
               passwords: app.get(PasswordHashService).snapshot(),
-              ...(isMenuSpike || isTrafficSpike
+              ...(soak
+                ? {
+                    soakResources: Object.fromEntries(
+                      [...new Set(process.getActiveResourcesInfo())].map(
+                        (name) => [
+                          name,
+                          process
+                            .getActiveResourcesInfo()
+                            .filter((value) => value === name).length,
+                        ],
+                      ),
+                    ),
+                    soakLogs: logCapture.snapshot(),
+                  }
+                : {}),
+              ...(isMenuSpike || isTrafficSpike || soak
                 ? {
                     menuCache: app.get(PublicMenuCache).snapshot(),
                     menuGate: app.get(PublicMenuReadGate).snapshot(),
@@ -235,7 +269,9 @@ async function main() {
       await import('../dist/common/http/request-body.js');
     const { configureServerTimeouts } =
       await import('../dist/common/http/server-timeouts.js');
-    app = await NestFactory.create(AppModule, { logger: false });
+    app = await NestFactory.create(AppModule, {
+      logger: logCapture?.logger ?? false,
+    });
     configureSecurityHeaders(app);
     configureTrustedProxy(app, '');
     configureRequestBody(app);
@@ -264,7 +300,7 @@ async function main() {
       next();
     });
     app.setGlobalPrefix('api/v1');
-    const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
+    let expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
     app.use(LOAD_MARKER_PATH, (req, res) => {
       const supplied = req.headers['x-paserve-load-capability'];
       if (
@@ -385,7 +421,7 @@ async function main() {
     const dataset = await inspectLoadDataset(db, shops, plan);
     await db.query('ANALYZE');
     let trafficBefore, trafficAccounts;
-    if (isTrafficSpike) {
+    if (isTrafficSpike || soak) {
       trafficBefore = {
         orders: await prisma.order.count(),
         lines: await prisma.orderItem.count(),
@@ -572,6 +608,71 @@ async function main() {
     let floodWorkload, loginFlood;
     let spikeWorkload, menuSpike;
     let trafficWorkload, trafficSpike;
+    let soakWorkload, soakResult, soakSetupLogs, soakDatabaseLogOffset;
+    if (soak) {
+      credentialsFile = join(root, 'load-accounts.json');
+      await writeFile(credentialsFile, JSON.stringify(trafficAccounts), {
+        mode: 0o600,
+        flag: 'wx',
+      });
+      soakSetupLogs = logCapture.begin();
+      soakDatabaseLogOffset = (await stat(join(root, 'postgres.log'))).size;
+      soakWorkload = await runLoadSearchWorker(
+        {
+          ...clientEnv,
+          LOAD_SOAK_PROFILE: soak.name,
+          LOAD_ACCOUNTS_FILE: credentialsFile,
+          LOAD_REPORT: resolve(
+            dirname(process.env.TIMEOUT_DB_REPORT),
+            `load-soak-${soak.name}-workload-local.json`,
+          ),
+        },
+        {
+          deadlineMs: (soakSeconds(soak) + 60) * 1000,
+          onStage: async (stage) => {
+            assert.ok(
+              [
+                'soak-warmup',
+                'soak-cooldown',
+                ...Array.from(
+                  { length: soak.windows },
+                  (_, i) => `soak-window-${i}`,
+                ),
+              ].includes(stage.phase),
+            );
+            phase = stage.phase;
+            expiresAt = new Date(Date.now() + 15 * 60000).toISOString();
+            await monitor.sampleNow();
+            const memory = process.memoryUsage();
+            await writeFile(
+              resolve(
+                dirname(process.env.TIMEOUT_DB_REPORT),
+                `load-soak-${soak.name}-progress-local.json`,
+              ),
+              JSON.stringify({
+                runId,
+                profile: soak.name,
+                phase,
+                status: 'running',
+                at: new Date().toISOString(),
+                memory: {
+                  rssBytes: memory.rss,
+                  heapUsedBytes: memory.heapUsed,
+                  externalBytes: memory.external,
+                },
+                pool: app.get(PrismaService).databasePoolSnapshot(),
+              }) + '\n',
+            );
+            assert.ok(
+              memory.rss <= soak.maxRssBytes &&
+                memory.heapUsed <= soak.maxHeapBytes &&
+                memory.external <= soak.maxExternalBytes,
+              'Soak resource ceiling exceeded.',
+            );
+          },
+        },
+      );
+    }
     if (isTrafficSpike) {
       credentialsFile = join(root, 'load-accounts.json');
       await writeFile(credentialsFile, JSON.stringify(trafficAccounts), {
@@ -898,21 +999,51 @@ async function main() {
         }),
       });
     }
+    if (soak) {
+      assert.equal(soakWorkload.runId, runId);
+      await prisma.$connect();
+      soakResult = evaluateSoak(soakWorkload, monitoring, {
+        logs: logCapture.snapshot(),
+        ordersUnchanged: (await prisma.order.count()) === trafficBefore.orders,
+        linesUnchanged:
+          (await prisma.orderItem.count()) === trafficBefore.lines,
+        usersUnchanged: (await prisma.user.count()) === trafficBefore.users,
+        paidUnchanged:
+          (await prisma.order.count({ where: { paymentStatus: 'PAID' } })) ===
+          trafficBefore.paid,
+        productsUnchanged:
+          JSON.stringify(
+            await prisma.product.findMany({
+              select: { id: true, status: true, isArchived: true },
+              orderBy: { id: 'asc' },
+            }),
+          ) === JSON.stringify(trafficBefore.products),
+        sessions: await prisma.authSession.count(),
+        revoked: await prisma.authSession.count({
+          where: { revokedAt: { not: null } },
+        }),
+      });
+      soakResult.setupLogs = soakSetupLogs;
+      soakResult.databaseLogOffset = soakDatabaseLogOffset;
+    }
     const report = {
+      soak: soakResult,
       trafficSpike,
       orderErrors: isOrderBurst ? orderErrors : undefined,
       orderBurst,
-      pass: isTrafficSpike
-        ? trafficSpike.pass
-        : isOrderBurst
-          ? orderBurst.pass
-          : menuSpike
-            ? menuSpike.pass
-            : loginFlood
-              ? loginFlood.pass
-              : ramp
-                ? ramp.pass
-                : true,
+      pass: soak
+        ? soakResult.pass
+        : isTrafficSpike
+          ? trafficSpike.pass
+          : isOrderBurst
+            ? orderBurst.pass
+            : menuSpike
+              ? menuSpike.pass
+              : loginFlood
+                ? loginFlood.pass
+                : ramp
+                  ? ramp.pass
+                  : true,
       menuSpike,
       loginFlood,
       ramp,
@@ -999,6 +1130,7 @@ async function main() {
         db.end(),
       ]);
       globalThis.fetch = nativeFetch;
+      logCapture?.restore();
       cleanupFailed = cleanup.some((result) => result.status === 'rejected');
     }
   }
