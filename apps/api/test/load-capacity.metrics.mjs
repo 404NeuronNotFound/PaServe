@@ -3,6 +3,10 @@ import {
   capacityConclusion,
   capacityStageVerdict,
 } from './load-capacity.profile.mjs';
+import {
+  assessLatencyCoverage,
+  capacityLatencyObservations,
+} from '../../../scripts/latency-slo.mjs';
 
 export function evaluateCapacity(workload, monitoring, evidence) {
   const stages = workload.stages.map((stage) => {
@@ -65,6 +69,9 @@ export function evaluateCapacity(workload, monitoring, evidence) {
   const recovery = stages.filter((s) => s.role === 'recovery');
   const headroom = stages.filter((s) => s.role === 'headroom');
   const conclusion = capacityConclusion(stages);
+  const latencyTargets = assessLatencyCoverage(
+    capacityLatencyObservations(workload),
+  );
   const events = evidence.attribution?.events ?? [];
   const validEvents =
     events.length > 0 &&
@@ -152,6 +159,9 @@ export function evaluateCapacity(workload, monitoring, evidence) {
       validEvents &&
       !!firstLimiter,
     headroom: headroomPass,
+    noKnownLatencyTargetBreach: !latencyTargets.flows.some((s) =>
+      ['failed', 'invalid'].includes(s.status),
+    ),
     health: stages.every((s) =>
       s.probes
         .filter((v) => v.kind === 'health')
@@ -195,6 +205,7 @@ export function evaluateCapacity(workload, monitoring, evidence) {
     pass: Object.values(checks).every(Boolean),
     checks,
     conclusion,
+    latencyTargets,
     attribution: {
       ...evidence.attribution,
       firstAcrossRamp: events[0] ?? null,

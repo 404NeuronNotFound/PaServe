@@ -1,0 +1,334 @@
+{
+  "version": 1,
+  "scope": "Initial SLO definitions and partial local sample coverage, not deployed SLO attainment",
+  "sourceCapacityBaseline": "2026-10-30-capacity-v3.json",
+  "assessment": {
+    "policyVersion": 1,
+    "status": "partial",
+    "pass": false,
+    "flows": [
+      {
+        "id": "api.menu",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000
+        },
+        "status": "passed",
+        "pass": true,
+        "reasons": [],
+        "errorRate": 0,
+        "expectedRequests": 4005,
+        "successfulLatencySamples": 4005,
+        "durationSeconds": 180,
+        "p50Ms": 5,
+        "p95Ms": 9,
+        "p99Ms": 14
+      },
+      {
+        "id": "api.product",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000
+        },
+        "status": "passed",
+        "pass": true,
+        "reasons": [],
+        "errorRate": 0,
+        "expectedRequests": 4005,
+        "successfulLatencySamples": 4005,
+        "durationSeconds": 180,
+        "p50Ms": 6,
+        "p95Ms": 11,
+        "p99Ms": 16
+      },
+      {
+        "id": "api.order-status",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000
+        },
+        "status": "passed",
+        "pass": true,
+        "reasons": [],
+        "errorRate": 0,
+        "expectedRequests": 4005,
+        "successfulLatencySamples": 4005,
+        "durationSeconds": 180,
+        "p50Ms": 5,
+        "p95Ms": 9,
+        "p99Ms": 13
+      },
+      {
+        "id": "api.login",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 1000,
+          "p99Ms": 1500
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 3,
+        "successfulLatencySamples": 3,
+        "durationSeconds": 0.29997470000000004,
+        "p50Ms": 83.21100000000001,
+        "p95Ms": 137.16809999999998,
+        "p99Ms": 137.16809999999998
+      },
+      {
+        "id": "api.order-create",
+        "budget": {
+          "boundary": "logical-order-result",
+          "p95Ms": 2000,
+          "p99Ms": 4000
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "api.cashier",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 180,
+        "successfulLatencySamples": 180,
+        "durationSeconds": 180,
+        "p50Ms": 20.35740000003716,
+        "p95Ms": 31.084299999987707,
+        "p99Ms": 49.352299999969546
+      },
+      {
+        "id": "api.kitchen",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 180,
+        "successfulLatencySamples": 180,
+        "durationSeconds": 180,
+        "p50Ms": 22.651200000022072,
+        "p95Ms": 34.04950000002282,
+        "p99Ms": 47.57300000003306
+      },
+      {
+        "id": "api.dashboard",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 1000,
+          "p99Ms": 1500
+        },
+        "status": "passed",
+        "pass": true,
+        "reasons": [],
+        "errorRate": 0,
+        "expectedRequests": 4005,
+        "successfulLatencySamples": 4005,
+        "durationSeconds": 180,
+        "p50Ms": 16,
+        "p95Ms": 26,
+        "p99Ms": 39
+      },
+      {
+        "id": "api.health",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 100,
+          "p99Ms": 250
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 180,
+        "successfulLatencySamples": 180,
+        "durationSeconds": 180,
+        "p50Ms": 2.929999999993015,
+        "p95Ms": 4.522799999976996,
+        "p99Ms": 6.546399999991991
+      },
+      {
+        "id": "realtime.order-status",
+        "budget": {
+          "boundary": "commit-to-authorized-client",
+          "p95Ms": 1000,
+          "p99Ms": 2000
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "browser.menu-ready",
+        "budget": {
+          "boundary": "navigation-to-usable-content",
+          "p95Ms": 2000,
+          "p99Ms": 3500
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "browser.workspace-ready",
+        "budget": {
+          "boundary": "navigation-to-usable-content",
+          "p95Ms": 2000,
+          "p99Ms": 3500
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "browser.checkout-complete",
+        "budget": {
+          "boundary": "submit-to-visible-confirmation",
+          "p95Ms": 3000,
+          "p99Ms": 5000
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "browser.pending-feedback",
+        "budget": {
+          "boundary": "action-to-pending-feedback",
+          "p95Ms": 150,
+          "p99Ms": 300
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      }
+    ],
+    "scope": "Observed normal-load samples only; production attainment requires the defined reporting window and telemetry.",
+    "source": {
+      "runId": "9373100c-a355-490b-af4c-6be7a80df315",
+      "durationSeconds": 180
+    },
+    "policy": {
+      "version": 1,
+      "reportingWindowDays": 28,
+      "operationalWindowSeconds": 300,
+      "minimumObservationSeconds": 60,
+      "minimumP95Samples": 100,
+      "minimumP99Samples": 1000,
+      "maximumErrorRate": 0.001,
+      "targets": {
+        "api.menu": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000
+        },
+        "api.product": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000
+        },
+        "api.order-status": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000
+        },
+        "api.login": {
+          "boundary": "api-complete-body",
+          "p95Ms": 1000,
+          "p99Ms": 1500
+        },
+        "api.order-create": {
+          "boundary": "logical-order-result",
+          "p95Ms": 2000,
+          "p99Ms": 4000
+        },
+        "api.cashier": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000
+        },
+        "api.kitchen": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000
+        },
+        "api.dashboard": {
+          "boundary": "api-complete-body",
+          "p95Ms": 1000,
+          "p99Ms": 1500
+        },
+        "api.health": {
+          "boundary": "api-complete-body",
+          "p95Ms": 100,
+          "p99Ms": 250
+        },
+        "realtime.order-status": {
+          "boundary": "commit-to-authorized-client",
+          "p95Ms": 1000,
+          "p99Ms": 2000
+        },
+        "browser.menu-ready": {
+          "boundary": "navigation-to-usable-content",
+          "p95Ms": 2000,
+          "p99Ms": 3500
+        },
+        "browser.workspace-ready": {
+          "boundary": "navigation-to-usable-content",
+          "p95Ms": 2000,
+          "p99Ms": 3500
+        },
+        "browser.checkout-complete": {
+          "boundary": "submit-to-visible-confirmation",
+          "p95Ms": 3000,
+          "p99Ms": 5000
+        },
+        "browser.pending-feedback": {
+          "boundary": "action-to-pending-feedback",
+          "p95Ms": 150,
+          "p99Ms": 300
+        }
+      }
+    }
+  },
+  "verification": {
+    "policyTests": 24,
+    "loadSafetyTests": 226
+  }
+}

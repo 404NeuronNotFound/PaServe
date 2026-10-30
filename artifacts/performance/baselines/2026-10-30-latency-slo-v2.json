@@ -1,0 +1,967 @@
+{
+  "version": 2,
+  "scope": "Definition/tracking checklist complete; sample attainment remains partial and future-scale goals planning-only",
+  "sourceReports": [
+    "load-environment-capacity-local.json",
+    "load-environment-menu-spike-local.json",
+    "database-indexing-local.json"
+  ],
+  "assessment": {
+    "policyVersion": 2,
+    "goal": "mvp",
+    "status": "partial",
+    "pass": false,
+    "flows": [
+      {
+        "id": "api.menu",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 250,
+            "p99Ms": 500
+          }
+        },
+        "status": "passed",
+        "pass": true,
+        "reasons": [],
+        "errorRate": 0,
+        "expectedRequests": 4005,
+        "successfulLatencySamples": 4005,
+        "durationSeconds": 180,
+        "p50Ms": 5,
+        "p95Ms": 9,
+        "p99Ms": 14
+      },
+      {
+        "id": "api.menu.cold-start",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "cacheState": "cold-start-burst",
+          "futureScale": {
+            "p95Ms": 350,
+            "p99Ms": 750
+          }
+        },
+        "cacheState": "cold-start-burst",
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 24,
+        "successfulLatencySamples": 24,
+        "durationSeconds": 0.19493320000000017,
+        "p50Ms": 129,
+        "p95Ms": 175,
+        "p99Ms": 177
+      },
+      {
+        "id": "api.menu.warm-cache",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "cacheState": "warm-cache-burst",
+          "futureScale": {
+            "p95Ms": 200,
+            "p99Ms": 400
+          }
+        },
+        "cacheState": "warm-cache-burst",
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 24,
+        "successfulLatencySamples": 24,
+        "durationSeconds": 0.1462159999999999,
+        "p50Ms": 89,
+        "p95Ms": 131,
+        "p99Ms": 132
+      },
+      {
+        "id": "api.product",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 250,
+            "p99Ms": 500
+          }
+        },
+        "status": "passed",
+        "pass": true,
+        "reasons": [],
+        "errorRate": 0,
+        "expectedRequests": 4005,
+        "successfulLatencySamples": 4005,
+        "durationSeconds": 180,
+        "p50Ms": 6,
+        "p95Ms": 11,
+        "p99Ms": 16
+      },
+      {
+        "id": "api.order-status",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 250,
+            "p99Ms": 500
+          }
+        },
+        "status": "passed",
+        "pass": true,
+        "reasons": [],
+        "errorRate": 0,
+        "expectedRequests": 4005,
+        "successfulLatencySamples": 4005,
+        "durationSeconds": 180,
+        "p50Ms": 5,
+        "p95Ms": 9,
+        "p99Ms": 13
+      },
+      {
+        "id": "api.login",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 1000,
+          "p99Ms": 1500,
+          "futureScale": {
+            "p95Ms": 1000,
+            "p99Ms": 1500
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 3,
+        "successfulLatencySamples": 3,
+        "durationSeconds": 0.29997470000000004,
+        "p50Ms": 83.21100000000001,
+        "p95Ms": 137.16809999999998,
+        "p99Ms": 137.16809999999998
+      },
+      {
+        "id": "api.order-create",
+        "budget": {
+          "boundary": "logical-order-result",
+          "p95Ms": 2000,
+          "p99Ms": 4000,
+          "futureScale": {
+            "p95Ms": 1500,
+            "p99Ms": 3000
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "api.cashier",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 250,
+            "p99Ms": 500
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 180,
+        "successfulLatencySamples": 180,
+        "durationSeconds": 180,
+        "p50Ms": 20.35740000003716,
+        "p95Ms": 31.084299999987707,
+        "p99Ms": 49.352299999969546
+      },
+      {
+        "id": "api.kitchen",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 250,
+            "p99Ms": 500
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 180,
+        "successfulLatencySamples": 180,
+        "durationSeconds": 180,
+        "p50Ms": 22.651200000022072,
+        "p95Ms": 34.04950000002282,
+        "p99Ms": 47.57300000003306
+      },
+      {
+        "id": "api.dashboard",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 1000,
+          "p99Ms": 1500,
+          "futureScale": {
+            "p95Ms": 500,
+            "p99Ms": 1000
+          }
+        },
+        "status": "passed",
+        "pass": true,
+        "reasons": [],
+        "errorRate": 0,
+        "expectedRequests": 4005,
+        "successfulLatencySamples": 4005,
+        "durationSeconds": 180,
+        "p50Ms": 16,
+        "p95Ms": 26,
+        "p99Ms": 39
+      },
+      {
+        "id": "api.health",
+        "budget": {
+          "boundary": "api-complete-body",
+          "p95Ms": 100,
+          "p99Ms": 250,
+          "futureScale": {
+            "p95Ms": 100,
+            "p99Ms": 250
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 180,
+        "successfulLatencySamples": 180,
+        "durationSeconds": 180,
+        "p50Ms": 2.929999999993015,
+        "p95Ms": 4.522799999976996,
+        "p99Ms": 6.546399999991991
+      },
+      {
+        "id": "realtime.order-status",
+        "budget": {
+          "boundary": "commit-to-authorized-client",
+          "p95Ms": 1000,
+          "p99Ms": 2000,
+          "futureScale": {
+            "p95Ms": 500,
+            "p99Ms": 1000
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "browser.menu-ready",
+        "budget": {
+          "boundary": "navigation-to-usable-content",
+          "p95Ms": 2000,
+          "p99Ms": 3500,
+          "futureScale": {
+            "p95Ms": 1500,
+            "p99Ms": 2500
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "browser.workspace-ready",
+        "budget": {
+          "boundary": "navigation-to-usable-content",
+          "p95Ms": 2000,
+          "p99Ms": 3500,
+          "futureScale": {
+            "p95Ms": 1500,
+            "p99Ms": 2500
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "browser.checkout-complete",
+        "budget": {
+          "boundary": "submit-to-visible-confirmation",
+          "p95Ms": 3000,
+          "p99Ms": 5000,
+          "futureScale": {
+            "p95Ms": 2500,
+            "p99Ms": 4000
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "browser.pending-feedback",
+        "budget": {
+          "boundary": "action-to-pending-feedback",
+          "p95Ms": 150,
+          "p99Ms": 300,
+          "futureScale": {
+            "p95Ms": 100,
+            "p99Ms": 200
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "db.tenant-lookup",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 50,
+          "p99Ms": 100,
+          "futureScale": {
+            "p95Ms": 25,
+            "p99Ms": 50
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "db.catalog-read",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 200,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 100
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "db.order-feed",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 250,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 150
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "db.order-status",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 50,
+          "p99Ms": 100,
+          "futureScale": {
+            "p95Ms": 25,
+            "p99Ms": 50
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "db.daily-sales",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 250,
+          "p99Ms": 500,
+          "futureScale": {
+            "p95Ms": 150,
+            "p99Ms": 300
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "db.order-write",
+        "budget": {
+          "boundary": "db-transaction-client",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 350,
+            "p99Ms": 750
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      },
+      {
+        "id": "db.repository-read",
+        "budget": {
+          "boundary": "db-repository-operation",
+          "p95Ms": 250,
+          "p99Ms": 500,
+          "futureScale": {
+            "p95Ms": 150,
+            "p99Ms": 300
+          }
+        },
+        "status": "not_measured",
+        "pass": false,
+        "reasons": [
+          "no-observation"
+        ]
+      }
+    ],
+    "scope": "Observed normal-load samples only; production attainment requires the defined reporting window and telemetry.",
+    "cacheTracking": {
+      "runId": "5450aa58-7802-4045-ac0a-6e6ae48d102f",
+      "proof": {
+        "api.menu.cold-start": {
+          "sourcePhase": "cold-spike",
+          "cacheState": "cold-start-burst",
+          "counters": {
+            "hits": 22,
+            "misses": 1,
+            "coalesced": 1,
+            "loadErrors": 0,
+            "bypassed": 0
+          }
+        },
+        "api.menu.warm-cache": {
+          "sourcePhase": "warm-spike",
+          "cacheState": "warm-cache-burst",
+          "counters": {
+            "hits": 24,
+            "misses": 0,
+            "coalesced": 0,
+            "loadErrors": 0,
+            "bypassed": 0
+          }
+        }
+      },
+      "scope": "Cold-start burst includes one shared miss plus hits/coalescing; warm burst is all hits. Neither means cold PostgreSQL/OS/CDN buffers."
+    },
+    "databaseQueries": [
+      {
+        "operation": "pending orders",
+        "id": "db.order-feed",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 250,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 150
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 1,
+        "successfulLatencySamples": 1,
+        "durationSeconds": 0,
+        "p50Ms": 0.065,
+        "p95Ms": 0.065,
+        "p99Ms": 0.065
+      },
+      {
+        "operation": "rejected history",
+        "id": "db.order-feed",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 250,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 150
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 1,
+        "successfulLatencySamples": 1,
+        "durationSeconds": 0,
+        "p50Ms": 0.042,
+        "p95Ms": 0.042,
+        "p99Ms": 0.042
+      },
+      {
+        "operation": "pending orders next page",
+        "id": "db.order-feed",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 250,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 150
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 1,
+        "successfulLatencySamples": 1,
+        "durationSeconds": 0,
+        "p50Ms": 0.096,
+        "p95Ms": 0.096,
+        "p99Ms": 0.096
+      },
+      {
+        "operation": "active orders",
+        "id": "db.order-feed",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 250,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 150
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 1,
+        "successfulLatencySamples": 1,
+        "durationSeconds": 0,
+        "p50Ms": 0.424,
+        "p95Ms": 0.424,
+        "p99Ms": 0.424
+      },
+      {
+        "operation": "categories",
+        "id": "db.catalog-read",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 200,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 100
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 1,
+        "successfulLatencySamples": 1,
+        "durationSeconds": 0,
+        "p50Ms": 0.398,
+        "p95Ms": 0.398,
+        "p99Ms": 0.398
+      },
+      {
+        "operation": "product management",
+        "id": "db.catalog-read",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 200,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 100
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 1,
+        "successfulLatencySamples": 1,
+        "durationSeconds": 0,
+        "p50Ms": 5.495,
+        "p95Ms": 5.495,
+        "p99Ms": 5.495
+      },
+      {
+        "operation": "public menu products",
+        "id": "db.catalog-read",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 200,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 100
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 1,
+        "successfulLatencySamples": 1,
+        "durationSeconds": 0,
+        "p50Ms": 5.396,
+        "p95Ms": 5.396,
+        "p99Ms": 5.396
+      },
+      {
+        "operation": "category reorder",
+        "id": "db.catalog-read",
+        "budget": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 200,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 100
+          }
+        },
+        "status": "insufficient",
+        "pass": false,
+        "reasons": [
+          "short-observation",
+          "insufficient-p95-samples",
+          "insufficient-p99-samples"
+        ],
+        "errorRate": 0,
+        "expectedRequests": 1,
+        "successfulLatencySamples": 1,
+        "durationSeconds": 0,
+        "p50Ms": 0.033,
+        "p95Ms": 0.033,
+        "p99Ms": 0.033
+      }
+    ],
+    "source": {
+      "runId": "9373100c-a355-490b-af4c-6be7a80df315",
+      "durationSeconds": 180
+    },
+    "policy": {
+      "version": 2,
+      "goals": {
+        "mvp": {
+          "status": "active-targets",
+          "maximumErrorRate": 0.001,
+          "workload": "Validate on the selected deployment; current local read reference is 89 reads/sec, one API, three shops and a five-connection pool."
+        },
+        "futureScale": {
+          "status": "planning-only",
+          "maximumErrorRate": 0.001,
+          "workload": "Target at least 178 aggregate mixed reads/sec, at least 20 representative tenants with 100,000 orders in the largest, and multiple API instances within a shared DB budget. Not measured or promised capacity."
+        }
+      },
+      "reportingWindowDays": 28,
+      "operationalWindowSeconds": 300,
+      "minimumObservationSeconds": 60,
+      "minimumP95Samples": 100,
+      "minimumP99Samples": 1000,
+      "maximumErrorRate": 0.001,
+      "targets": {
+        "api.menu": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 250,
+            "p99Ms": 500
+          }
+        },
+        "api.menu.cold-start": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "cacheState": "cold-start-burst",
+          "futureScale": {
+            "p95Ms": 350,
+            "p99Ms": 750
+          }
+        },
+        "api.menu.warm-cache": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "cacheState": "warm-cache-burst",
+          "futureScale": {
+            "p95Ms": 200,
+            "p99Ms": 400
+          }
+        },
+        "api.product": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 250,
+            "p99Ms": 500
+          }
+        },
+        "api.order-status": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 250,
+            "p99Ms": 500
+          }
+        },
+        "api.login": {
+          "boundary": "api-complete-body",
+          "p95Ms": 1000,
+          "p99Ms": 1500,
+          "futureScale": {
+            "p95Ms": 1000,
+            "p99Ms": 1500
+          }
+        },
+        "api.order-create": {
+          "boundary": "logical-order-result",
+          "p95Ms": 2000,
+          "p99Ms": 4000,
+          "futureScale": {
+            "p95Ms": 1500,
+            "p99Ms": 3000
+          }
+        },
+        "api.cashier": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 250,
+            "p99Ms": 500
+          }
+        },
+        "api.kitchen": {
+          "boundary": "api-complete-body",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 250,
+            "p99Ms": 500
+          }
+        },
+        "api.dashboard": {
+          "boundary": "api-complete-body",
+          "p95Ms": 1000,
+          "p99Ms": 1500,
+          "futureScale": {
+            "p95Ms": 500,
+            "p99Ms": 1000
+          }
+        },
+        "api.health": {
+          "boundary": "api-complete-body",
+          "p95Ms": 100,
+          "p99Ms": 250,
+          "futureScale": {
+            "p95Ms": 100,
+            "p99Ms": 250
+          }
+        },
+        "realtime.order-status": {
+          "boundary": "commit-to-authorized-client",
+          "p95Ms": 1000,
+          "p99Ms": 2000,
+          "futureScale": {
+            "p95Ms": 500,
+            "p99Ms": 1000
+          }
+        },
+        "browser.menu-ready": {
+          "boundary": "navigation-to-usable-content",
+          "p95Ms": 2000,
+          "p99Ms": 3500,
+          "futureScale": {
+            "p95Ms": 1500,
+            "p99Ms": 2500
+          }
+        },
+        "browser.workspace-ready": {
+          "boundary": "navigation-to-usable-content",
+          "p95Ms": 2000,
+          "p99Ms": 3500,
+          "futureScale": {
+            "p95Ms": 1500,
+            "p99Ms": 2500
+          }
+        },
+        "browser.checkout-complete": {
+          "boundary": "submit-to-visible-confirmation",
+          "p95Ms": 3000,
+          "p99Ms": 5000,
+          "futureScale": {
+            "p95Ms": 2500,
+            "p99Ms": 4000
+          }
+        },
+        "browser.pending-feedback": {
+          "boundary": "action-to-pending-feedback",
+          "p95Ms": 150,
+          "p99Ms": 300,
+          "futureScale": {
+            "p95Ms": 100,
+            "p99Ms": 200
+          }
+        },
+        "db.tenant-lookup": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 50,
+          "p99Ms": 100,
+          "futureScale": {
+            "p95Ms": 25,
+            "p99Ms": 50
+          }
+        },
+        "db.catalog-read": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 200,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 100
+          }
+        },
+        "db.order-feed": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 100,
+          "p99Ms": 250,
+          "futureScale": {
+            "p95Ms": 50,
+            "p99Ms": 150
+          }
+        },
+        "db.order-status": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 50,
+          "p99Ms": 100,
+          "futureScale": {
+            "p95Ms": 25,
+            "p99Ms": 50
+          }
+        },
+        "db.daily-sales": {
+          "boundary": "db-statement-execution",
+          "p95Ms": 250,
+          "p99Ms": 500,
+          "futureScale": {
+            "p95Ms": 150,
+            "p99Ms": 300
+          }
+        },
+        "db.order-write": {
+          "boundary": "db-transaction-client",
+          "p95Ms": 500,
+          "p99Ms": 1000,
+          "futureScale": {
+            "p95Ms": 350,
+            "p99Ms": 750
+          }
+        },
+        "db.repository-read": {
+          "boundary": "db-repository-operation",
+          "p95Ms": 250,
+          "p99Ms": 500,
+          "futureScale": {
+            "p95Ms": 150,
+            "p99Ms": 300
+          }
+        }
+      }
+    }
+  },
+  "verification": {
+    "policyTests": 32,
+    "loadSafetyTests": 226
+  }
+}

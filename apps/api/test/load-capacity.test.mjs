@@ -104,7 +104,11 @@ function fixture() {
       peakInFlight: 10,
       sessionsCreated: 3,
       sessionsRevoked: 3,
-      controls: Array.from({ length: 6 }, () => ({ ok: true, ms: 50 })),
+      controls: Array.from({ length: 6 }, (_, i) => ({
+        kind: i < 3 ? 'login' : 'logout',
+        ok: true,
+        ms: 50,
+      })),
     },
     monitoring: {
       sampleFailures: 0,
@@ -153,6 +157,13 @@ await test('finds a confirmed policy boundary and preserves background/client di
   assert.equal(r.conclusion.classification, 'policy-throttling');
 });
 for (const [name, mutate] of [
+  [
+    'slow workflow hidden by mixed latency',
+    (f) => {
+      f.workload.stages.at(-1).byKind.menu.p95Ms = 600;
+      f.workload.stages.at(-1).byKind.menu.p99Ms = 700;
+    },
+  ],
   [
     'missing attribution',
     (f) => {
