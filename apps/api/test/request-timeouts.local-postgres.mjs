@@ -26,6 +26,7 @@ const isolatedLoad = [
   'load-login-flood',
   'load-menu-spike',
   'load-order-burst',
+  'load-spike',
 ].includes(suite);
 const shutdown = new AbortController();
 const interrupt = () => {
@@ -55,6 +56,7 @@ assert.ok(
     'load-login-flood',
     'load-menu-spike',
     'load-order-burst',
+    'load-spike',
   ].includes(suite),
   'Choose a supported local database suite.',
 );
@@ -97,7 +99,7 @@ let removed = false;
 let loadSucceeded = false;
 const loadReport = resolve(
   apiRoot,
-  `../../artifacts/performance/load-environment${suite === 'load-search' ? '-search' : suite === 'load-ramp' ? '-ramp' : suite === 'load-ramp-diagnostic' ? '-ramp-diagnostic' : suite === 'load-login-flood' ? '-login-flood' : suite === 'load-menu-spike' ? '-menu-spike' : suite === 'load-order-burst' ? '-order-burst' : ''}-local.json`,
+  `../../artifacts/performance/load-environment${suite === 'load-search' ? '-search' : suite === 'load-ramp' ? '-ramp' : suite === 'load-ramp-diagnostic' ? '-ramp-diagnostic' : suite === 'load-login-flood' ? '-login-flood' : suite === 'load-menu-spike' ? '-menu-spike' : suite === 'load-order-burst' ? '-order-burst' : suite === 'load-spike' ? '-spike' : ''}-local.json`,
 );
 async function cleanup() {
   if (initialized) {
@@ -231,6 +233,7 @@ try {
             loginFlood: suite === 'load-login-flood',
             menuSpike: suite === 'load-menu-spike',
             orderBurst: suite === 'load-order-burst',
+            trafficSpike: suite === 'load-spike',
           })
         : env,
       windowsHide: true,

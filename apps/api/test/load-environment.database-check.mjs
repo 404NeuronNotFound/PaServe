@@ -13,6 +13,8 @@ import { evaluateMenuSpike } from './menu-spike.metrics.mjs';
 import { menuSpikeStages } from './menu-spike.workload.mjs';
 import { auditOrderBurst, evaluateOrderBurst } from './order-burst.metrics.mjs';
 import { orderBurstStages } from './order-burst.workload.mjs';
+import { spikeProfile } from './load-spike.workload.mjs';
+import { evaluateTrafficSpike } from './load-spike.metrics.mjs';
 import {
   instrumentOrderTransactions,
   summarizeOrderTransactions,
@@ -105,6 +107,7 @@ async function main() {
   const isLoginFlood = process.env.LOAD_LOGIN_FLOOD === '1';
   const isMenuSpike = process.env.LOAD_MENU_SPIKE === '1';
   const isOrderBurst = process.env.LOAD_ORDER_BURST === '1';
+  const isTrafficSpike = process.env.LOAD_TRAFFIC_SPIKE === '1';
   const spikeCache = {};
   const floodCounters = {
     targetAccountReads: 0,
@@ -112,14 +115,19 @@ async function main() {
   };
   const floodPeerSources = new Set();
   const orderErrors = [];
+  const trafficProtection = {};
   try {
     phase = 'migrations';
     await db.connect();
     monitor = new LoadMonitor({
-      intervalMs: isMenuSpike ? 50 : isLoginFlood || isOrderBurst ? 100 : 500,
+      intervalMs: isMenuSpike
+        ? 50
+        : isLoginFlood || isOrderBurst || isTrafficSpike
+          ? 100
+          : 500,
       maxSamples: isMenuSpike
         ? 4000
-        : isLoginFlood || isOrderBurst
+        : isLoginFlood || isOrderBurst || isTrafficSpike
           ? 2400
           : process.env.LOAD_FIXTURE_RAMP === '1'
             ? 1080
@@ -138,7 +146,7 @@ async function main() {
               capacity: app.get(ApiCapacityService).snapshot(),
               fairness: app.get(TrafficFairnessService).snapshot(),
               passwords: app.get(PasswordHashService).snapshot(),
-              ...(isMenuSpike
+              ...(isMenuSpike || isTrafficSpike
                 ? {
                     menuCache: app.get(PublicMenuCache).snapshot(),
                     menuGate: app.get(PublicMenuReadGate).snapshot(),
@@ -376,6 +384,42 @@ async function main() {
     }
     const dataset = await inspectLoadDataset(db, shops, plan);
     await db.query('ANALYZE');
+    let trafficBefore, trafficAccounts;
+    if (isTrafficSpike) {
+      trafficBefore = {
+        orders: await prisma.order.count(),
+        lines: await prisma.orderItem.count(),
+        users: await prisma.user.count(),
+        paid: await prisma.order.count({ where: { paymentStatus: 'PAID' } }),
+        products: await prisma.product.findMany({
+          select: { id: true, status: true, isArchived: true },
+          orderBy: { id: 'asc' },
+        }),
+      };
+      trafficAccounts = await Promise.all(
+        accounts.map(async (account, i) => ({
+          ...account,
+          productId: shops[i].product.id,
+          variantId: shops[i].variant.id,
+          addOnId: shops[i].addOn.id,
+          categoryIds: account.menuCategoryIds,
+          kitchenIds: (
+            await prisma.order.findMany({
+              where: {
+                shopId: account.shopId,
+                status: 'CONFIRMED',
+                paymentStatus: 'PAID',
+                preparationStatus: 'QUEUED',
+                queuedAt: { not: null },
+              },
+              orderBy: [{ queuedAt: 'asc' }, { id: 'asc' }],
+              take: 50,
+              select: { id: true },
+            })
+          ).map((order) => order.id),
+        })),
+      );
+    }
     let spikeFixture, spikeBefore;
     let burstFixture, burstBefore;
     if (isOrderBurst) {
@@ -527,6 +571,50 @@ async function main() {
     let search;
     let floodWorkload, loginFlood;
     let spikeWorkload, menuSpike;
+    let trafficWorkload, trafficSpike;
+    if (isTrafficSpike) {
+      credentialsFile = join(root, 'load-accounts.json');
+      await writeFile(credentialsFile, JSON.stringify(trafficAccounts), {
+        mode: 0o600,
+        flag: 'wx',
+      });
+      trafficWorkload = await runLoadSearchWorker(
+        {
+          ...clientEnv,
+          LOAD_TRAFFIC_SPIKE: '1',
+          LOAD_ACCOUNTS_FILE: credentialsFile,
+          LOAD_REPORT: resolve(
+            dirname(process.env.TIMEOUT_DB_REPORT),
+            'load-spike-workload-local.json',
+          ),
+        },
+        {
+          onStage: async (stage) => {
+            assert.ok(
+              [...spikeProfile.phases, 'overload', 'overload-recovery'].some(
+                (name) => stage.phase === `traffic-spike-${name}`,
+              ),
+            );
+            phase = stage.phase;
+            const snapshot = () => ({
+              gate: app.get(PublicMenuReadGate).snapshot(),
+              capacity: app.get(ApiCapacityService).snapshot(),
+              pool: app.get(PrismaService).databasePoolSnapshot(),
+              passwords: app.get(PasswordHashService).snapshot(),
+            });
+            if (stage.phase === 'traffic-spike-overload')
+              trafficProtection[stage.type === 'start' ? 'before' : 'after'] =
+                snapshot();
+            if (
+              stage.phase === 'traffic-spike-overload-recovery' &&
+              stage.type === 'complete'
+            )
+              trafficProtection.recovered = snapshot();
+            await monitor.sampleNow();
+          },
+        },
+      );
+    }
     let burstWorkload, orderBurst;
     if (isOrderBurst) {
       credentialsFile = join(root, 'load-accounts.json');
@@ -785,18 +873,46 @@ async function main() {
         summarizeOrderTransactions(orderTransactions),
       );
     }
+    if (isTrafficSpike) {
+      assert.equal(trafficWorkload.runId, runId);
+      await prisma.$connect();
+      trafficSpike = evaluateTrafficSpike(trafficWorkload, monitoring, {
+        protection: trafficProtection,
+        ordersUnchanged: (await prisma.order.count()) === trafficBefore.orders,
+        linesUnchanged:
+          (await prisma.orderItem.count()) === trafficBefore.lines,
+        usersUnchanged: (await prisma.user.count()) === trafficBefore.users,
+        paidUnchanged:
+          (await prisma.order.count({ where: { paymentStatus: 'PAID' } })) ===
+          trafficBefore.paid,
+        productsUnchanged:
+          JSON.stringify(
+            await prisma.product.findMany({
+              select: { id: true, status: true, isArchived: true },
+              orderBy: { id: 'asc' },
+            }),
+          ) === JSON.stringify(trafficBefore.products),
+        sessions: await prisma.authSession.count(),
+        revoked: await prisma.authSession.count({
+          where: { revokedAt: { not: null } },
+        }),
+      });
+    }
     const report = {
+      trafficSpike,
       orderErrors: isOrderBurst ? orderErrors : undefined,
       orderBurst,
-      pass: isOrderBurst
-        ? orderBurst.pass
-        : menuSpike
-          ? menuSpike.pass
-          : loginFlood
-            ? loginFlood.pass
-            : ramp
-              ? ramp.pass
-              : true,
+      pass: isTrafficSpike
+        ? trafficSpike.pass
+        : isOrderBurst
+          ? orderBurst.pass
+          : menuSpike
+            ? menuSpike.pass
+            : loginFlood
+              ? loginFlood.pass
+              : ramp
+                ? ramp.pass
+                : true,
       menuSpike,
       loginFlood,
       ramp,
