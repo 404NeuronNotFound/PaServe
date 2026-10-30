@@ -1,0 +1,243 @@
+{
+  "version": 1,
+  "profile": {
+    "version": 1,
+    "levels": [
+      6,
+      18,
+      24
+    ],
+    "apiInstances": 3,
+    "topics": 6,
+    "p95Ms": 2000,
+    "p99Ms": 5000,
+    "maxPublishes": 100,
+    "deadlineMs": 55000
+  },
+  "mode": "controlled-local-relay",
+  "supabaseVerified": false,
+  "startedAt": "2026-10-30T04:29:39.211Z",
+  "stages": [
+    {
+      "clients": 6,
+      "upstreamChannels": 6,
+      "deliveries": 18,
+      "p50Ms": 7.224,
+      "p95Ms": 14.229,
+      "p99Ms": 14.229,
+      "invalidFrames": 0
+    },
+    {
+      "clients": 18,
+      "upstreamChannels": 18,
+      "deliveries": 54,
+      "p50Ms": 7.531,
+      "p95Ms": 16.003,
+      "p99Ms": 16.113,
+      "invalidFrames": 0
+    },
+    {
+      "clients": 24,
+      "upstreamChannels": 18,
+      "deliveries": 72,
+      "p50Ms": 7.415,
+      "p95Ms": 16.056,
+      "p99Ms": 16.167,
+      "invalidFrames": 0
+    }
+  ],
+  "controls": {
+    "isolation": true,
+    "revocation": true,
+    "reconnect": true,
+    "coalescing": true,
+    "recovery": true,
+    "multiplex": true,
+    "slowConsumer": true
+  },
+  "resources": [
+    {
+      "elapsedMs": 1.0679999999999836,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 91136000,
+      "heapUsedBytes": 25925520,
+      "eventLoopP95Ms": 0.000511
+    },
+    {
+      "elapsedMs": 102.10080000000005,
+      "cpuCoreEquivalent": 0.15836441234925677,
+      "rssBytes": 92295168,
+      "heapUsedBytes": 27119776,
+      "eventLoopP95Ms": 20.873215
+    },
+    {
+      "elapsedMs": 206.60400000000004,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 92323840,
+      "heapUsedBytes": 27229464,
+      "eventLoopP95Ms": 21.299199
+    },
+    {
+      "elapsedMs": 310.8062000000001,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 92327936,
+      "heapUsedBytes": 27324976,
+      "eventLoopP95Ms": 21.184511
+    },
+    {
+      "elapsedMs": 414.5331,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 92340224,
+      "heapUsedBytes": 27351624,
+      "eventLoopP95Ms": 14.254079
+    },
+    {
+      "elapsedMs": 518.7051,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 92340224,
+      "heapUsedBytes": 27353360,
+      "eventLoopP95Ms": 14.442495
+    },
+    {
+      "elapsedMs": 622.8443000000001,
+      "cpuCoreEquivalent": 0.15364051193018563,
+      "rssBytes": 93106176,
+      "heapUsedBytes": 27975352,
+      "eventLoopP95Ms": 22.593535
+    },
+    {
+      "elapsedMs": 735.7668,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 93515776,
+      "heapUsedBytes": 28419984,
+      "eventLoopP95Ms": 22.659071
+    },
+    {
+      "elapsedMs": 839.0422,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 93696000,
+      "heapUsedBytes": 28632344,
+      "eventLoopP95Ms": 22.462463
+    },
+    {
+      "elapsedMs": 942.6374999999999,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 93949952,
+      "heapUsedBytes": 28811632,
+      "eventLoopP95Ms": 22.511615
+    },
+    {
+      "elapsedMs": 1048.7827000000002,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 93949952,
+      "heapUsedBytes": 28854264,
+      "eventLoopP95Ms": 21.233663
+    },
+    {
+      "elapsedMs": 1150.2213000000002,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 93954048,
+      "heapUsedBytes": 28856256,
+      "eventLoopP95Ms": 21.446655
+    },
+    {
+      "elapsedMs": 1254.4239000000002,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 94625792,
+      "heapUsedBytes": 29250592,
+      "eventLoopP95Ms": 20.479999
+    },
+    {
+      "elapsedMs": 1367.3370999999997,
+      "cpuCoreEquivalent": 0.274547174289632,
+      "rssBytes": 94949376,
+      "heapUsedBytes": 29482736,
+      "eventLoopP95Ms": 21.168127
+    },
+    {
+      "elapsedMs": 1470.1508,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 95248384,
+      "heapUsedBytes": 29739896,
+      "eventLoopP95Ms": 22.675455
+    },
+    {
+      "elapsedMs": 1574.3854999999999,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 95457280,
+      "heapUsedBytes": 29910736,
+      "eventLoopP95Ms": 22.364159
+    },
+    {
+      "elapsedMs": 1678.027,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 95457280,
+      "heapUsedBytes": 29912232,
+      "eventLoopP95Ms": 29.196287
+    },
+    {
+      "elapsedMs": 1782.1911,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 95457280,
+      "heapUsedBytes": 29913728,
+      "eventLoopP95Ms": 22.429695
+    },
+    {
+      "elapsedMs": 1886.6619999999998,
+      "cpuCoreEquivalent": 0.15315269610963464,
+      "rssBytes": 95457280,
+      "heapUsedBytes": 29956872,
+      "eventLoopP95Ms": 22.413311
+    },
+    {
+      "elapsedMs": 1990.6599,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 95461376,
+      "heapUsedBytes": 29958480,
+      "eventLoopP95Ms": 15.400959
+    },
+    {
+      "elapsedMs": 2103.2938999999997,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 95461376,
+      "heapUsedBytes": 29960032,
+      "eventLoopP95Ms": 22.331391
+    },
+    {
+      "elapsedMs": 2206.2873999999997,
+      "cpuCoreEquivalent": 0.14564025885128667,
+      "rssBytes": 95870976,
+      "heapUsedBytes": 30290400,
+      "eventLoopP95Ms": 22.233087
+    },
+    {
+      "elapsedMs": 2243.8449,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 96137216,
+      "heapUsedBytes": 30525792,
+      "eventLoopP95Ms": 21.807103
+    }
+  ],
+  "publishes": 69,
+  "cleanup": {
+    "streamsClosed": false,
+    "channelsRemoved": true,
+    "serverClosed": true
+  },
+  "providerErrors": 0,
+  "elapsedMs": 2243.9514999999997,
+  "pass": false,
+  "checks": {
+    "stages": true,
+    "isolation": true,
+    "revocation": true,
+    "recovery": true,
+    "reconnect": true,
+    "coalescing": true,
+    "slowConsumer": true,
+    "multiplex": true,
+    "cleanup": false,
+    "bounded": true,
+    "observed": true
+  }
+}

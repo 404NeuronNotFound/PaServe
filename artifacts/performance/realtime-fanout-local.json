@@ -1,0 +1,334 @@
+{
+  "version": 2,
+  "profile": {
+    "version": 2,
+    "levels": [
+      6,
+      18,
+      24
+    ],
+    "apiInstances": 3,
+    "topics": 9,
+    "p95Ms": 2000,
+    "p99Ms": 5000,
+    "maxPublishes": 100,
+    "deadlineMs": 55000
+  },
+  "mode": "controlled-local-relay",
+  "supabaseVerified": false,
+  "databaseVerified": false,
+  "delivery": {
+    "expected": 121,
+    "received": 121,
+    "dropped": 0,
+    "unexpectedSseClosures": 0,
+    "expectedSseClosures": 29,
+    "unexpectedWireClosures": 0,
+    "expectedWireClosures": 4,
+    "expectedOfflineDrops": 5,
+    "unexpectedChannelClosures": 0,
+    "expectedChannelInterruptions": 24,
+    "channelRejoins": 24
+  },
+  "roles": {
+    "CUSTOMER": {
+      "subscribers": 6,
+      "deliveries": 35
+    },
+    "OWNER": {
+      "subscribers": 6,
+      "deliveries": 31
+    },
+    "CASHIER": {
+      "subscribers": 6,
+      "deliveries": 34
+    },
+    "KITCHEN": {
+      "subscribers": 6,
+      "deliveries": 27
+    }
+  },
+  "startedAt": "2026-10-30T04:59:32.278Z",
+  "stages": [
+    {
+      "clients": 6,
+      "upstreamChannels": 6,
+      "deliveries": 6,
+      "expectedDeliveries": 6,
+      "dropped": 0,
+      "p50Ms": 1.658,
+      "p95Ms": 2.843,
+      "p99Ms": 2.843,
+      "invalidFrames": 0
+    },
+    {
+      "clients": 18,
+      "upstreamChannels": 15,
+      "deliveries": 18,
+      "expectedDeliveries": 18,
+      "dropped": 0,
+      "p50Ms": 2.515,
+      "p95Ms": 3.254,
+      "p99Ms": 3.254,
+      "invalidFrames": 0
+    },
+    {
+      "clients": 24,
+      "upstreamChannels": 18,
+      "deliveries": 24,
+      "expectedDeliveries": 24,
+      "dropped": 0,
+      "p50Ms": 3.233,
+      "p95Ms": 3.947,
+      "p99Ms": 3.966,
+      "invalidFrames": 0
+    }
+  ],
+  "controls": {
+    "roles": true,
+    "isolation": true,
+    "revocation": true,
+    "reconnect": true,
+    "coalescing": true,
+    "recovery": true,
+    "multiplex": true,
+    "networkRecovery": true,
+    "reconnectStorm": true,
+    "browserChurn": true,
+    "slowConsumer": true
+  },
+  "resources": [
+    {
+      "elapsedMs": 1.0830999999999449,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 90615808,
+      "heapUsedBytes": 26032248,
+      "eventLoopP95Ms": 0.000511
+    },
+    {
+      "elapsedMs": 101.09960000000001,
+      "cpuCoreEquivalent": 0.46992246279363875,
+      "rssBytes": 93458432,
+      "heapUsedBytes": 28230576,
+      "eventLoopP95Ms": 15.917055
+    },
+    {
+      "elapsedMs": 203.21089999999992,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 93458432,
+      "heapUsedBytes": 28239592,
+      "eventLoopP95Ms": 22.872063
+    },
+    {
+      "elapsedMs": 306.95630000000006,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 93458432,
+      "heapUsedBytes": 28241488,
+      "eventLoopP95Ms": 22.757375
+    },
+    {
+      "elapsedMs": 414.13689999999997,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 93458432,
+      "heapUsedBytes": 28243360,
+      "eventLoopP95Ms": 22.577151
+    },
+    {
+      "elapsedMs": 515.4958999999999,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 93458432,
+      "heapUsedBytes": 28245144,
+      "eventLoopP95Ms": 24.428543
+    },
+    {
+      "elapsedMs": 633.3679999999999,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 93458432,
+      "heapUsedBytes": 28246680,
+      "eventLoopP95Ms": 22.773759
+    },
+    {
+      "elapsedMs": 737.6784,
+      "cpuCoreEquivalent": 0.14380157683222372,
+      "rssBytes": 95358976,
+      "heapUsedBytes": 29777264,
+      "eventLoopP95Ms": 22.560767
+    },
+    {
+      "elapsedMs": 841.3572999999999,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 95363072,
+      "heapUsedBytes": 29786184,
+      "eventLoopP95Ms": 22.183935
+    },
+    {
+      "elapsedMs": 945.7325000000001,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 95363072,
+      "heapUsedBytes": 29789040,
+      "eventLoopP95Ms": 22.347775
+    },
+    {
+      "elapsedMs": 1049.8263,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 95363072,
+      "heapUsedBytes": 29791144,
+      "eventLoopP95Ms": 22.167551
+    },
+    {
+      "elapsedMs": 1162.7934,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 95363072,
+      "heapUsedBytes": 29793112,
+      "eventLoopP95Ms": 22.167551
+    },
+    {
+      "elapsedMs": 1272.749,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 96464896,
+      "heapUsedBytes": 30796272,
+      "eventLoopP95Ms": 22.675455
+    },
+    {
+      "elapsedMs": 1376.3115,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 96530432,
+      "heapUsedBytes": 30797856,
+      "eventLoopP95Ms": 22.315007
+    },
+    {
+      "elapsedMs": 1480.693,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 96530432,
+      "heapUsedBytes": 30799384,
+      "eventLoopP95Ms": 22.593535
+    },
+    {
+      "elapsedMs": 1584.8403999999998,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 96530432,
+      "heapUsedBytes": 30800968,
+      "eventLoopP95Ms": 22.724607
+    },
+    {
+      "elapsedMs": 1697.4419999999998,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 96530432,
+      "heapUsedBytes": 30802552,
+      "eventLoopP95Ms": 20.889599
+    },
+    {
+      "elapsedMs": 1800.6222999999998,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 96530432,
+      "heapUsedBytes": 30804360,
+      "eventLoopP95Ms": 22.577151
+    },
+    {
+      "elapsedMs": 1903.4354,
+      "cpuCoreEquivalent": 0.15562219211365041,
+      "rssBytes": 96808960,
+      "heapUsedBytes": 30989072,
+      "eventLoopP95Ms": 25.608191
+    },
+    {
+      "elapsedMs": 2008.4878,
+      "cpuCoreEquivalent": 0.43787671676230133,
+      "rssBytes": 97714176,
+      "heapUsedBytes": 31656336,
+      "eventLoopP95Ms": 21.659647
+    },
+    {
+      "elapsedMs": 2112.3208999999997,
+      "cpuCoreEquivalent": 0.15409344419072557,
+      "rssBytes": 98058240,
+      "heapUsedBytes": 32005248,
+      "eventLoopP95Ms": 22.298623
+    },
+    {
+      "elapsedMs": 2216.7855,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98824192,
+      "heapUsedBytes": 32682176,
+      "eventLoopP95Ms": 14.516223
+    },
+    {
+      "elapsedMs": 2320.9034,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 99622912,
+      "heapUsedBytes": 33521200,
+      "eventLoopP95Ms": 21.086207
+    },
+    {
+      "elapsedMs": 2424.9134999999997,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 99921920,
+      "heapUsedBytes": 33802560,
+      "eventLoopP95Ms": 21.168127
+    },
+    {
+      "elapsedMs": 2529.6242,
+      "cpuCoreEquivalent": 0.15280195815709366,
+      "rssBytes": 100552704,
+      "heapUsedBytes": 34341784,
+      "eventLoopP95Ms": 15.138815
+    },
+    {
+      "elapsedMs": 2556.6827000000003,
+      "cpuCoreEquivalent": 0.5543544542380379,
+      "rssBytes": 100962304,
+      "heapUsedBytes": 34726856,
+      "eventLoopP95Ms": 13.524991
+    }
+  ],
+  "publishes": 71,
+  "cleanup": {
+    "streamsClosed": true,
+    "channelsRemoved": true,
+    "serverClosed": true,
+    "temporaryDatabaseObjectsRemoved": true
+  },
+  "authorizationMatrix": {
+    "ownerStaffAndKitchen": true,
+    "cashierDeniedKitchen": true,
+    "kitchenDeniedCashier": true,
+    "foreignMembership": true,
+    "invalidStaffToken": true,
+    "foreignCustomer": true,
+    "wrongCustomerOrder": true,
+    "tamperedCustomer": true
+  },
+  "providerErrors": 0,
+  "invalidFrames": 0,
+  "elapsedMs": 2557.0694999999996,
+  "authorization": {
+    "checks": 258,
+    "denied": 9,
+    "byRole": {
+      "CUSTOMER": 70,
+      "CASHIER": 67,
+      "KITCHEN": 58,
+      "OWNER": 63
+    }
+  },
+  "pass": true,
+  "checks": {
+    "noFailure": true,
+    "provider": true,
+    "stages": true,
+    "isolation": true,
+    "revocation": true,
+    "recovery": true,
+    "reconnect": true,
+    "coalescing": true,
+    "slowConsumer": true,
+    "multiplex": true,
+    "roles": true,
+    "database": true,
+    "disconnects": true,
+    "networkRecovery": true,
+    "cleanup": true,
+    "bounded": true,
+    "observed": true
+  }
+}

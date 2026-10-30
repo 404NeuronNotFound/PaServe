@@ -1,0 +1,557 @@
+{
+  "version": 1,
+  "profile": {
+    "version": 1,
+    "levels": [
+      6,
+      18,
+      24
+    ],
+    "apiInstances": 3,
+    "topics": 6,
+    "p95Ms": 2000,
+    "p99Ms": 5000,
+    "maxPublishes": 100,
+    "deadlineMs": 55000
+  },
+  "mode": "disposable-supabase-broadcast",
+  "supabaseVerified": false,
+  "startedAt": "2026-10-30T04:32:21.084Z",
+  "stages": [],
+  "controls": {},
+  "resources": [
+    {
+      "elapsedMs": 0.9960999999999558,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 92672000,
+      "heapUsedBytes": 22881824,
+      "eventLoopP95Ms": 0.000511
+    },
+    {
+      "elapsedMs": 101.28189999999995,
+      "cpuCoreEquivalent": 0.15954402318174657,
+      "rssBytes": 95133696,
+      "heapUsedBytes": 24102736,
+      "eventLoopP95Ms": 23.445503
+    },
+    {
+      "elapsedMs": 205.44909999999993,
+      "cpuCoreEquivalent": 0.1439992627237749,
+      "rssBytes": 97017856,
+      "heapUsedBytes": 24311936,
+      "eventLoopP95Ms": 22.691839
+    },
+    {
+      "elapsedMs": 309.88159999999993,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 97017856,
+      "heapUsedBytes": 24313544,
+      "eventLoopP95Ms": 22.396927
+    },
+    {
+      "elapsedMs": 413.5094999999999,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 97021952,
+      "heapUsedBytes": 24315720,
+      "eventLoopP95Ms": 21.921791
+    },
+    {
+      "elapsedMs": 518.6376,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 97021952,
+      "heapUsedBytes": 24317520,
+      "eventLoopP95Ms": 22.691839
+    },
+    {
+      "elapsedMs": 630.6341,
+      "cpuCoreEquivalent": 0.41965597139196326,
+      "rssBytes": 105885696,
+      "heapUsedBytes": 24572048,
+      "eventLoopP95Ms": 29.949951
+    },
+    {
+      "elapsedMs": 733.3851999999999,
+      "cpuCoreEquivalent": 0.14598383861583972,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24574304,
+      "eventLoopP95Ms": 16.056319
+    },
+    {
+      "elapsedMs": 837.5655999999999,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24587944,
+      "eventLoopP95Ms": 22.527999
+    },
+    {
+      "elapsedMs": 937.7824,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24591936,
+      "eventLoopP95Ms": 15.433727
+    },
+    {
+      "elapsedMs": 1038.8306,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24594152,
+      "eventLoopP95Ms": 20.971519
+    },
+    {
+      "elapsedMs": 1143.1616999999999,
+      "cpuCoreEquivalent": 0.15335791532917814,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24596568,
+      "eventLoopP95Ms": 20.938751
+    },
+    {
+      "elapsedMs": 1247.8773999999999,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24598224,
+      "eventLoopP95Ms": 15.269887
+    },
+    {
+      "elapsedMs": 1351.1444999999999,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24599880,
+      "eventLoopP95Ms": 22.249471
+    },
+    {
+      "elapsedMs": 1463.7428999999997,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24601480,
+      "eventLoopP95Ms": 22.315007
+    },
+    {
+      "elapsedMs": 1566.8166,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24603080,
+      "eventLoopP95Ms": 22.675455
+    },
+    {
+      "elapsedMs": 1674.1439,
+      "cpuCoreEquivalent": 0.14907670275875767,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24604736,
+      "eventLoopP95Ms": 22.200319
+    },
+    {
+      "elapsedMs": 1774.9389,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24606336,
+      "eventLoopP95Ms": 22.544383
+    },
+    {
+      "elapsedMs": 1878.9139,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24608296,
+      "eventLoopP95Ms": 17.170431
+    },
+    {
+      "elapsedMs": 1983.0675999999999,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24609896,
+      "eventLoopP95Ms": 22.315007
+    },
+    {
+      "elapsedMs": 2096.1476,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24611496,
+      "eventLoopP95Ms": 20.594687
+    },
+    {
+      "elapsedMs": 2198.6079,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24613096,
+      "eventLoopP95Ms": 21.135359
+    },
+    {
+      "elapsedMs": 2302.7598,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24614696,
+      "eventLoopP95Ms": 22.593535
+    },
+    {
+      "elapsedMs": 2406.5702,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24616296,
+      "eventLoopP95Ms": 22.151167
+    },
+    {
+      "elapsedMs": 2511.0476,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24617840,
+      "eventLoopP95Ms": 22.495231
+    },
+    {
+      "elapsedMs": 2615.1979,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24619440,
+      "eventLoopP95Ms": 22.413311
+    },
+    {
+      "elapsedMs": 2727.8595,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24621096,
+      "eventLoopP95Ms": 14.303231
+    },
+    {
+      "elapsedMs": 2832.4761,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24622640,
+      "eventLoopP95Ms": 22.839295
+    },
+    {
+      "elapsedMs": 2934.5938,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24624240,
+      "eventLoopP95Ms": 22.298623
+    },
+    {
+      "elapsedMs": 3038.5731,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24625840,
+      "eventLoopP95Ms": 22.527999
+    },
+    {
+      "elapsedMs": 3142.9762,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24627440,
+      "eventLoopP95Ms": 22.282239
+    },
+    {
+      "elapsedMs": 3247.0701,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24629040,
+      "eventLoopP95Ms": 22.495231
+    },
+    {
+      "elapsedMs": 3351.2505,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24630696,
+      "eventLoopP95Ms": 22.478847
+    },
+    {
+      "elapsedMs": 3463.9366,
+      "cpuCoreEquivalent": 0.1419873436031597,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24632296,
+      "eventLoopP95Ms": 22.446079
+    },
+    {
+      "elapsedMs": 3566.5751,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24633840,
+      "eventLoopP95Ms": 22.396927
+    },
+    {
+      "elapsedMs": 3670.6501,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24635440,
+      "eventLoopP95Ms": 22.413311
+    },
+    {
+      "elapsedMs": 3774.4638999999997,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24637040,
+      "eventLoopP95Ms": 22.839295
+    },
+    {
+      "elapsedMs": 3878.9698,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24638584,
+      "eventLoopP95Ms": 22.364159
+    },
+    {
+      "elapsedMs": 3983.1512999999995,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24640184,
+      "eventLoopP95Ms": 22.413311
+    },
+    {
+      "elapsedMs": 4095.6848,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24641784,
+      "eventLoopP95Ms": 18.366463
+    },
+    {
+      "elapsedMs": 4198.455,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24643328,
+      "eventLoopP95Ms": 22.527999
+    },
+    {
+      "elapsedMs": 4302.5963,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24644984,
+      "eventLoopP95Ms": 15.491071
+    },
+    {
+      "elapsedMs": 4406.7437,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24646584,
+      "eventLoopP95Ms": 22.315007
+    },
+    {
+      "elapsedMs": 4510.9218,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24648128,
+      "eventLoopP95Ms": 22.315007
+    },
+    {
+      "elapsedMs": 4615.0518,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24650400,
+      "eventLoopP95Ms": 22.544383
+    },
+    {
+      "elapsedMs": 4727.8186,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24652000,
+      "eventLoopP95Ms": 22.347775
+    },
+    {
+      "elapsedMs": 4831.9285,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24653600,
+      "eventLoopP95Ms": 22.315007
+    },
+    {
+      "elapsedMs": 4934.1663,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24655256,
+      "eventLoopP95Ms": 16.138239
+    },
+    {
+      "elapsedMs": 5038.6837,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24656912,
+      "eventLoopP95Ms": 20.856831
+    },
+    {
+      "elapsedMs": 5142.8177,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24658624,
+      "eventLoopP95Ms": 14.204927
+    },
+    {
+      "elapsedMs": 5247.6191,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24660280,
+      "eventLoopP95Ms": 14.565375
+    },
+    {
+      "elapsedMs": 5351.0898,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24661936,
+      "eventLoopP95Ms": 15.589375
+    },
+    {
+      "elapsedMs": 5463.5275,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24663536,
+      "eventLoopP95Ms": 22.495231
+    },
+    {
+      "elapsedMs": 5566.4474,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24665080,
+      "eventLoopP95Ms": 22.593535
+    },
+    {
+      "elapsedMs": 5670.5628,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24666624,
+      "eventLoopP95Ms": 22.495231
+    },
+    {
+      "elapsedMs": 5774.6607,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24668224,
+      "eventLoopP95Ms": 22.364159
+    },
+    {
+      "elapsedMs": 5878.6025,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24669824,
+      "eventLoopP95Ms": 22.036479
+    },
+    {
+      "elapsedMs": 5982.6878,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24671424,
+      "eventLoopP95Ms": 20.922367
+    },
+    {
+      "elapsedMs": 6096.0122,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24673024,
+      "eventLoopP95Ms": 18.006015
+    },
+    {
+      "elapsedMs": 6198.4262,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24674568,
+      "eventLoopP95Ms": 22.036479
+    },
+    {
+      "elapsedMs": 6302.5087,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24676168,
+      "eventLoopP95Ms": 22.364159
+    },
+    {
+      "elapsedMs": 6406.3803,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24677768,
+      "eventLoopP95Ms": 22.347775
+    },
+    {
+      "elapsedMs": 6510.562,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24679312,
+      "eventLoopP95Ms": 22.691839
+    },
+    {
+      "elapsedMs": 6614.8867,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24680912,
+      "eventLoopP95Ms": 22.315007
+    },
+    {
+      "elapsedMs": 6718.8326,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24682512,
+      "eventLoopP95Ms": 22.642687
+    },
+    {
+      "elapsedMs": 6831.6092,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24684112,
+      "eventLoopP95Ms": 21.118975
+    },
+    {
+      "elapsedMs": 6934.7231,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98611200,
+      "heapUsedBytes": 24685712,
+      "eventLoopP95Ms": 22.527999
+    },
+    {
+      "elapsedMs": 7041.6815,
+      "cpuCoreEquivalent": 0.14024143966252361,
+      "rssBytes": 98713600,
+      "heapUsedBytes": 24797448,
+      "eventLoopP95Ms": 22.282239
+    },
+    {
+      "elapsedMs": 7142.6871,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98717696,
+      "heapUsedBytes": 24811848,
+      "eventLoopP95Ms": 17.416191
+    },
+    {
+      "elapsedMs": 7246.5978,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98717696,
+      "heapUsedBytes": 24820376,
+      "eventLoopP95Ms": 22.396927
+    },
+    {
+      "elapsedMs": 7351.0264,
+      "cpuCoreEquivalent": 0,
+      "rssBytes": 98885632,
+      "heapUsedBytes": 24905968,
+      "eventLoopP95Ms": 22.429695
+    },
+    {
+      "elapsedMs": 7352.4583999999995,
+      "cpuCoreEquivalent": 11.173184357543546,
+      "rssBytes": 98893824,
+      "heapUsedBytes": 24927680,
+      "eventLoopP95Ms": 0.000511
+    }
+  ],
+  "publishes": 0,
+  "cleanup": {
+    "streamsClosed": true,
+    "channelsRemoved": true,
+    "serverClosed": true
+  },
+  "failure": {
+    "code": "FANOUT_CHECK_FAILED",
+    "step": "initialization"
+  },
+  "providerErrors": 0,
+  "invalidFrames": 0,
+  "elapsedMs": 7352.6264,
+  "pass": false,
+  "checks": {
+    "noFailure": false,
+    "provider": false,
+    "stages": false,
+    "isolation": false,
+    "revocation": false,
+    "recovery": false,
+    "reconnect": false,
+    "coalescing": false,
+    "slowConsumer": false,
+    "multiplex": false,
+    "cleanup": true,
+    "bounded": false,
+    "observed": true
+  }
+}

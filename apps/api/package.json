@@ -43,7 +43,9 @@
     "seed:dry-run": "pnpm seed --dry-run",
     "seed:reset": "pnpm seed --reset-demo",
     "seed:verify": "pnpm seed --verify",
-    "seed:images": "pnpm seed --upload-images"
+    "seed:images": "pnpm seed --upload-images",
+    "test:realtime-fanout": "pnpm build && node --test test/realtime-fanout.identity.test.mjs && node test/realtime-fanout.mjs local",
+    "test:realtime-fanout:hosted": "pnpm build && node --test test/realtime-fanout.identity.test.mjs && node test/realtime-fanout.mjs hosted"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
