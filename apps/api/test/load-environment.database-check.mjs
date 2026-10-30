@@ -9,6 +9,8 @@ import { LoadMonitor, assertLoadMonitoring } from './load-monitor.mjs';
 import { runLoadSearchWorker } from './load-search.worker.mjs';
 import { validateRampResponse } from './load-ramp.client-workload.mjs';
 import { evaluateLoginFlood } from './login-flood.metrics.mjs';
+import { evaluateMenuSpike } from './menu-spike.metrics.mjs';
+import { menuSpikeStages } from './menu-spike.workload.mjs';
 import {
   loginFloodProfile,
   loginFloodSource,
@@ -93,6 +95,8 @@ async function main() {
   let monitoring;
   let reportWritten = false;
   const isLoginFlood = process.env.LOAD_LOGIN_FLOOD === '1';
+  const isMenuSpike = process.env.LOAD_MENU_SPIKE === '1';
+  const spikeCache = {};
   const floodCounters = {
     targetAccountReads: 0,
     peers: { attacker: 0, legitimate: 0, other: 0 },
@@ -102,12 +106,14 @@ async function main() {
     phase = 'migrations';
     await db.connect();
     monitor = new LoadMonitor({
-      intervalMs: isLoginFlood ? 100 : 500,
-      maxSamples: isLoginFlood
-        ? 2400
-        : process.env.LOAD_FIXTURE_RAMP === '1'
-          ? 1080
-          : 480,
+      intervalMs: isMenuSpike ? 50 : isLoginFlood ? 100 : 500,
+      maxSamples: isMenuSpike
+        ? 4000
+        : isLoginFlood
+          ? 2400
+          : process.env.LOAD_FIXTURE_RAMP === '1'
+            ? 1080
+            : 480,
       client: new pg.Client({
         connectionString: database.href,
         application_name: 'paserve-load-monitor',
@@ -122,6 +128,12 @@ async function main() {
               capacity: app.get(ApiCapacityService).snapshot(),
               fairness: app.get(TrafficFairnessService).snapshot(),
               passwords: app.get(PasswordHashService).snapshot(),
+              ...(isMenuSpike
+                ? {
+                    menuCache: app.get(PublicMenuCache).snapshot(),
+                    menuGate: app.get(PublicMenuReadGate).snapshot(),
+                  }
+                : {}),
             }
           : null,
     });
@@ -171,6 +183,10 @@ async function main() {
       await import('../dist/common/load-shedding/api-capacity.service.js');
     const { TrafficFairnessService } =
       await import('../dist/common/load-shedding/traffic-fairness.service.js');
+    const { PublicMenuCache } =
+      await import('../dist/modules/categories/public-menu-cache.js');
+    const { PublicMenuReadGate } =
+      await import('../dist/modules/categories/public-menu-read-gate.js');
     const { configureSecurityHeaders } =
       await import('../dist/common/http/security-headers.js');
     const { configureTrustedProxy } =
@@ -263,6 +279,7 @@ async function main() {
       const account = accounts.find((a) => a.shopId === shop.id);
       account.slug = shop.slug;
       account.menuProductIds = page.products.map((p) => p.id);
+      account.menuCategoryIds = page.categories.map((c) => c.id);
       assert.ok(
         validateRampResponse('menu', page, account),
         'Synthetic menu response is invalid.',
@@ -327,6 +344,34 @@ async function main() {
     }
     const dataset = await inspectLoadDataset(db, shops, plan);
     await db.query('ANALYZE');
+    let spikeFixture, spikeBefore;
+    if (isMenuSpike) {
+      const staff = await prisma.user.findUniqueOrThrow({
+        where: { id: shops[0].actors.CASHIER },
+        select: { id: true, email: true },
+      });
+      spikeFixture = {
+        shops: accounts.map((a, i) => ({
+          slug: a.slug,
+          shopId: a.shopId,
+          menuProductIds: a.menuProductIds,
+          categoryIds: a.menuCategoryIds,
+          productId: shops[i].product.id,
+          variantId: shops[i].variant.id,
+          addOnId: shops[i].addOn.id,
+        })),
+        staff: { ...staff, password, shopId: shops[0].id },
+      };
+      spikeBefore = {
+        users: await prisma.user.count(),
+        orders: await prisma.order.count(),
+        products: await prisma.product.findMany({
+          where: { id: { in: shops.map((s) => s.product.id) } },
+          select: { id: true, shopId: true, status: true, isArchived: true },
+          orderBy: { id: 'asc' },
+        }),
+      };
+    }
     let floodFixture, floodBefore;
     if (isLoginFlood) {
       const actors = [];
@@ -376,6 +421,63 @@ async function main() {
     phase = 'optional-search';
     let search;
     let floodWorkload, loginFlood;
+    let spikeWorkload, menuSpike;
+    if (isMenuSpike) {
+      credentialsFile = join(root, 'load-accounts.json');
+      await writeFile(credentialsFile, JSON.stringify(spikeFixture), {
+        mode: 0o600,
+        flag: 'wx',
+      });
+      spikeWorkload = await runLoadSearchWorker(
+        {
+          ...clientEnv,
+          LOAD_MENU_SPIKE: '1',
+          LOAD_ACCOUNTS_FILE: credentialsFile,
+          LOAD_REPORT: resolve(
+            dirname(process.env.TIMEOUT_DB_REPORT),
+            'menu-spike-workload-local.json',
+          ),
+        },
+        {
+          onStage: async (stage) => {
+            assert.ok(
+              menuSpikeStages
+                .map((name) => `menu-spike-${name}`)
+                .includes(stage.phase),
+            );
+            phase = stage.phase;
+            const name = stage.phase.slice('menu-spike-'.length);
+            const cache = app.get(PublicMenuCache);
+            if (stage.type === 'start') {
+              if (stage.clearMenuCache) cache.clear();
+              spikeCache[name] = {
+                before: cache.snapshot(),
+                explicitlyCleared: Boolean(stage.clearMenuCache),
+              };
+              spikeCache[name].revisionBefore = (
+                await db.query(
+                  'SELECT version FROM menu_cache_versions WHERE "shopId"=$1',
+                  [shops[0].id],
+                )
+              ).rows[0].version;
+              await monitor.sampleNow();
+            } else {
+              await monitor.sampleNow();
+              spikeCache[name].after = cache.snapshot();
+              spikeCache[name].revisionChanged =
+                spikeCache[name].revisionBefore !==
+                (
+                  await db.query(
+                    'SELECT version FROM menu_cache_versions WHERE "shopId"=$1',
+                    [shops[0].id],
+                  )
+                ).rows[0].version;
+              delete spikeCache[name].revisionBefore;
+            }
+          },
+        },
+      );
+    }
     if (isLoginFlood) {
       credentialsFile = join(root, 'load-accounts.json');
       await writeFile(credentialsFile, JSON.stringify(floodFixture), {
@@ -496,8 +598,40 @@ async function main() {
       });
     }
     const ramp = isRamp ? summarizeRamp(search, monitoring, profile) : null;
+    if (isMenuSpike) {
+      await prisma.$connect();
+      menuSpike = evaluateMenuSpike(spikeWorkload, monitoring, {
+        cache: spikeCache,
+        usersUnchanged: (await prisma.user.count()) === spikeBefore.users,
+        ordersUnchanged: (await prisma.order.count()) === spikeBefore.orders,
+        availabilityRestored:
+          JSON.stringify(
+            await prisma.product.findMany({
+              where: { id: { in: shops.map((s) => s.product.id) } },
+              select: {
+                id: true,
+                shopId: true,
+                status: true,
+                isArchived: true,
+              },
+              orderBy: { id: 'asc' },
+            }),
+          ) === JSON.stringify(spikeBefore.products),
+        sessionRows: await prisma.authSession.count(),
+        revokedRows: await prisma.authSession.count({
+          where: { revokedAt: { not: null } },
+        }),
+      });
+    }
     const report = {
-      pass: loginFlood ? loginFlood.pass : ramp ? ramp.pass : true,
+      pass: menuSpike
+        ? menuSpike.pass
+        : loginFlood
+          ? loginFlood.pass
+          : ramp
+            ? ramp.pass
+            : true,
+      menuSpike,
       loginFlood,
       ramp,
       runId,

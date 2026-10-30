@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import {
   ADD_ON_LIMITS,
@@ -15,6 +16,7 @@ import {
 import { Prisma } from '../../generated/prisma/client.js';
 import { PublicProductRepository } from './public-product.repository.js';
 import type { ProductSelectionDto } from './public-product.dto.js';
+import { PublicMenuReadGate } from '../categories/public-menu-read-gate.js';
 
 type PricingDetails = {
   product: Pick<
@@ -39,7 +41,11 @@ const unavailable = () =>
   });
 @Injectable()
 export class PublicProductService {
-  constructor(private readonly repository: PublicProductRepository) {}
+  constructor(
+    private readonly repository: PublicProductRepository,
+    @Optional()
+    private readonly gate: PublicMenuReadGate = new PublicMenuReadGate(),
+  ) {}
   private async read(
     slug: string,
     productId: string,
@@ -56,7 +62,9 @@ export class PublicProductService {
     productId: string,
     db?: Prisma.TransactionClient,
   ): Promise<PublicProductDetailsResponse> {
-    return this.serializeDetails(await this.read(slug, productId, db));
+    return this.gate.run(async () =>
+      this.serializeDetails(await this.read(slug, productId, db)),
+    );
   }
   private serializeDetails(
     record: NonNullable<Awaited<ReturnType<PublicProductRepository['read']>>>,

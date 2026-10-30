@@ -1,0 +1,41 @@
+{
+  "source": "2026-10-30-menu-spike-v1.json",
+  "pass": true,
+  "stages": [
+    {
+      "phase": "baseline",
+      "gateBoundsVerified": true,
+      "peakObservedWaiting": 0,
+      "waitingAtEnd": 0,
+      "activeAtEnd": 0
+    },
+    {
+      "phase": "cold-spike",
+      "gateBoundsVerified": true,
+      "peakObservedWaiting": 20,
+      "waitingAtEnd": 0,
+      "activeAtEnd": 0
+    },
+    {
+      "phase": "warm-spike",
+      "gateBoundsVerified": true,
+      "peakObservedWaiting": 16,
+      "waitingAtEnd": 0,
+      "activeAtEnd": 0
+    },
+    {
+      "phase": "mixed-spike",
+      "gateBoundsVerified": true,
+      "peakObservedWaiting": 20,
+      "waitingAtEnd": 0,
+      "activeAtEnd": 0
+    },
+    {
+      "phase": "recovery",
+      "gateBoundsVerified": true,
+      "peakObservedWaiting": 0,
+      "waitingAtEnd": 0,
+      "activeAtEnd": 0
+    }
+  ]
+}

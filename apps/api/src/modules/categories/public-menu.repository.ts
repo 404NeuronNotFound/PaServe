@@ -4,6 +4,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { collectionPage } from '../../common/http/collection-page.js';
 import { PublicMenuCache } from './public-menu-cache.js';
+import { PublicMenuReadGate } from './public-menu-read-gate.js';
 
 export type MenuPageQuery = {
   limit?: unknown;
@@ -40,8 +41,18 @@ export class PublicMenuRepository {
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly cache?: PublicMenuCache,
+    @Optional()
+    private readonly gate: PublicMenuReadGate = new PublicMenuReadGate(),
   ) {}
   async read(slug: string, tableCode?: string, query: MenuPageQuery = {}) {
+    return this.gate.run(() => this.readAdmitted(slug, tableCode, query));
+  }
+
+  private async readAdmitted(
+    slug: string,
+    tableCode: string | undefined,
+    query: MenuPageQuery,
+  ) {
     const pages = menuPages(slug, tableCode, query);
     // Public slugs resolve only active shops. All child queries repeat the resolved tenant.
     const shop = await this.prisma.shop.findFirst({

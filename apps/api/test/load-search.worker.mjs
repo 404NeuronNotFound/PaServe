@@ -22,7 +22,27 @@ export function runLoadSearchWorker(
     }, deadlineMs);
     child.on('message', (message) => {
       if (message?.type === 'complete') report = message.report;
-      if (message?.type === 'stage') onStage(message.stage);
+      if (message?.type === 'stage') {
+        void Promise.resolve()
+          .then(() => onStage(message.stage))
+          .then(
+            () => {
+              if (message.id !== undefined && child.connected)
+                child.send({ type: 'stage-ack', id: message.id }, (error) => {
+                  if (error) {
+                    clearTimeout(timer);
+                    child.kill();
+                    reject(new Error('Stage barrier failed.'));
+                  }
+                });
+            },
+            () => {
+              clearTimeout(timer);
+              child.kill();
+              reject(new Error('Stage setup failed.'));
+            },
+          );
+      }
     });
     child.once('error', () => {
       clearTimeout(timer);

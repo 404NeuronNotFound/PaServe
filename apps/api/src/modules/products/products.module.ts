@@ -13,9 +13,10 @@ import { ProductVariantsService } from './product-variants.service.js';
 import { PublicProductController } from './public-product.controller.js';
 import { PublicProductRepository } from './public-product.repository.js';
 import { PublicProductService } from './public-product.service.js';
+import { PublicMenuReadModule } from '../categories/public-menu-read.module.js';
 
 @Module({
-  imports: [DatabaseModule, TenancyModule],
+  imports: [DatabaseModule, TenancyModule, PublicMenuReadModule],
   controllers: [
     ProductsController,
     ProductVariantsController,

@@ -7,12 +7,18 @@ import { CategoriesService } from './categories.service.js';
 import { PublicMenuController } from './public-menu.controller.js';
 import { PublicMenuRepository } from './public-menu.repository.js';
 import { PublicMenuCache } from './public-menu-cache.js';
+import { PublicMenuReadModule } from './public-menu-read.module.js';
 import { PublicTablesRepository } from '../tables/public-tables.repository.js';
 import { TableContextService } from '../tables/table-context.service.js';
 import { RealtimeModule } from '../realtime/realtime.module.js';
 import { PublicMenuEventsController } from './public-menu-events.controller.js';
 @Module({
-  imports: [DatabaseModule, TenancyModule, RealtimeModule],
+  imports: [
+    DatabaseModule,
+    TenancyModule,
+    RealtimeModule,
+    PublicMenuReadModule,
+  ],
   controllers: [
     CategoriesController,
     PublicMenuController,
