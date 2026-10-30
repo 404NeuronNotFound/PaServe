@@ -40,6 +40,7 @@ const isolatedLoad = [
   'load-menu-spike',
   'load-order-burst',
   'load-spike',
+  'load-capacity',
   'load-soak',
   'load-soak-smoke',
   'load-soak-extended',
@@ -74,6 +75,7 @@ assert.ok(
     'load-menu-spike',
     'load-order-burst',
     'load-spike',
+    'load-capacity',
     'load-soak',
     'load-soak-smoke',
     'load-soak-extended',
@@ -120,7 +122,7 @@ let removed = false;
 let loadSucceeded = false;
 const loadReport = resolve(
   apiRoot,
-  `../../artifacts/performance/load-environment${suite === 'load-search' ? '-search' : suite === 'load-ramp' ? '-ramp' : suite === 'load-ramp-diagnostic' ? '-ramp-diagnostic' : suite === 'load-login-flood' ? '-login-flood' : suite === 'load-menu-spike' ? '-menu-spike' : suite === 'load-order-burst' ? '-order-burst' : suite === 'load-spike' ? '-spike' : soak ? '-soak-' + soak.name : ''}-local.json`,
+  `../../artifacts/performance/load-environment${suite === 'load-capacity' ? '-capacity' : suite === 'load-search' ? '-search' : suite === 'load-ramp' ? '-ramp' : suite === 'load-ramp-diagnostic' ? '-ramp-diagnostic' : suite === 'load-login-flood' ? '-login-flood' : suite === 'load-menu-spike' ? '-menu-spike' : suite === 'load-order-burst' ? '-order-burst' : suite === 'load-spike' ? '-spike' : soak ? '-soak-' + soak.name : ''}-local.json`,
 );
 async function cleanup() {
   if (initialized) {
@@ -255,19 +257,23 @@ try {
             menuSpike: suite === 'load-menu-spike',
             orderBurst: suite === 'load-order-burst',
             trafficSpike: suite === 'load-spike',
+            capacity: suite === 'load-capacity',
             soak: soakName,
           })
         : env,
       windowsHide: true,
-      timeout: soak
-        ? (soakSeconds(soak) + 240) * 1000
-        : suite === 'timeouts'
-          ? 30_000
-          : suite.startsWith('load-ramp')
-            ? 480_000
-            : isolatedLoad
-              ? 180_000
-              : 90_000,
+      timeout:
+        suite === 'load-capacity'
+          ? 780000
+          : soak
+            ? (soakSeconds(soak) + 240) * 1000
+            : suite === 'timeouts'
+              ? 30_000
+              : suite.startsWith('load-ramp')
+                ? 480_000
+                : isolatedLoad
+                  ? 180_000
+                  : 90_000,
       signal: isolatedLoad ? shutdown.signal : undefined,
       maxBuffer: 1024 * 1024,
     },
@@ -314,21 +320,22 @@ try {
         (!soak || databaseLogs?.pass),
       );
       report.status = report.pass ? 'complete' : 'failed';
-      if (soak && !report.pass) process.exitCode = 1;
+      if ((soak || suite === 'load-capacity') && !report.pass)
+        process.exitCode = 1;
       report.cleanup = {
         postgresStopped: stopped,
         ownedDirectoryRemoved: removed,
       };
       await writeFile(loadReport, JSON.stringify(report, null, 2) + '\n');
-      if (soak)
+      if (soak || suite === 'load-capacity')
         await writeFile(
           resolve(
             apiRoot,
-            `../../artifacts/performance/load-soak-${soak.name}-progress-local.json`,
+            `../../artifacts/performance/load-${soak ? 'soak-' + soak.name : 'capacity'}-progress-local.json`,
           ),
           JSON.stringify({
             runId: report.runId,
-            profile: soak.name,
+            profile: soak?.name ?? 'capacity',
             status: report.status,
             pass: report.pass,
             cleanup: report.cleanup,

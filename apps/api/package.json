@@ -50,7 +50,8 @@
     "test:load-soak": "pnpm build && node test/request-timeouts.local-postgres.mjs load-soak",
     "test:load-soak:smoke": "pnpm build && node test/request-timeouts.local-postgres.mjs load-soak-smoke",
     "test:load-soak:extended": "pnpm build && node test/request-timeouts.local-postgres.mjs load-soak-extended",
-    "test:load-soak:multi-hour": "pnpm build && node test/request-timeouts.local-postgres.mjs load-soak-multi-hour"
+    "test:load-soak:multi-hour": "pnpm build && node test/request-timeouts.local-postgres.mjs load-soak-multi-hour",
+    "test:load-capacity": "pnpm build && node test/request-timeouts.local-postgres.mjs load-capacity"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

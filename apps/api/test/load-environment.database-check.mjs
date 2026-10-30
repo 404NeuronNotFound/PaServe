@@ -25,6 +25,10 @@ import { evaluateTrafficSpike } from './load-spike.metrics.mjs';
 import { soakProfile, soakSeconds } from './load-soak.profile.mjs';
 import { evaluateSoak } from './load-soak.metrics.mjs';
 import { soakLogs } from './load-soak.logs.mjs';
+import { capacityProfile } from './load-capacity.profile.mjs';
+import { evaluateCapacity } from './load-capacity.metrics.mjs';
+import { instrumentCapacity } from './capacity-attribution.mjs';
+import { postgresCpuCollector } from './load-postgres-cpu.mjs';
 import {
   instrumentOrderTransactions,
   summarizeOrderTransactions,
@@ -109,6 +113,7 @@ async function main() {
   let credentialsFile;
   let privateResultsFile;
   let orderTransactions;
+  let capacityAttribution, postgresCpu;
   let cleanupFailed = false;
   let summary;
   let monitor;
@@ -118,6 +123,7 @@ async function main() {
   const isMenuSpike = process.env.LOAD_MENU_SPIKE === '1';
   const isOrderBurst = process.env.LOAD_ORDER_BURST === '1';
   const isTrafficSpike = process.env.LOAD_TRAFFIC_SPIKE === '1';
+  const isCapacity = process.env.LOAD_CAPACITY === '1';
   const soak = process.env.LOAD_SOAK_PROFILE
     ? soakProfile(process.env.LOAD_SOAK_PROFILE)
     : null;
@@ -132,25 +138,37 @@ async function main() {
   const orderErrors = [];
   const trafficProtection = {};
   try {
+    if (isCapacity) {
+      const ownedPid = Number(
+        (await readFile(join(root, 'data/postmaster.pid'), 'utf8')).split(
+          /\r?\n/u,
+        )[0],
+      );
+      postgresCpu = postgresCpuCollector(ownedPid, join(root, 'data'));
+    }
     phase = 'migrations';
     await db.connect();
     monitor = new LoadMonitor({
-      intervalMs: soak
-        ? 1000
-        : isMenuSpike
-          ? 50
-          : isLoginFlood || isOrderBurst || isTrafficSpike
-            ? 100
-            : 500,
-      maxSamples: soak
-        ? soakSeconds(soak) + 250
-        : isMenuSpike
-          ? 4000
-          : isLoginFlood || isOrderBurst || isTrafficSpike
-            ? 2400
-            : process.env.LOAD_FIXTURE_RAMP === '1'
-              ? 1080
-              : 480,
+      intervalMs: isCapacity
+        ? 200
+        : soak
+          ? 1000
+          : isMenuSpike
+            ? 50
+            : isLoginFlood || isOrderBurst || isTrafficSpike
+              ? 100
+              : 500,
+      maxSamples: isCapacity
+        ? 4200
+        : soak
+          ? soakSeconds(soak) + 250
+          : isMenuSpike
+            ? 4000
+            : isLoginFlood || isOrderBurst || isTrafficSpike
+              ? 2400
+              : process.env.LOAD_FIXTURE_RAMP === '1'
+                ? 1080
+                : 480,
       client: new pg.Client({
         connectionString: database.href,
         application_name: 'paserve-load-monitor',
@@ -165,6 +183,7 @@ async function main() {
               capacity: app.get(ApiCapacityService).snapshot(),
               fairness: app.get(TrafficFairnessService).snapshot(),
               passwords: app.get(PasswordHashService).snapshot(),
+              ...(isCapacity ? { databaseCpu: postgresCpu.snapshot() } : {}),
               ...(soak
                 ? {
                     soakResources: Object.fromEntries(
@@ -180,7 +199,7 @@ async function main() {
                     soakLogs: logCapture.snapshot(),
                   }
                 : {}),
-              ...(isMenuSpike || isTrafficSpike || soak
+              ...(isMenuSpike || isTrafficSpike || isCapacity || soak
                 ? {
                     menuCache: app.get(PublicMenuCache).snapshot(),
                     menuGate: app.get(PublicMenuReadGate).snapshot(),
@@ -421,7 +440,7 @@ async function main() {
     const dataset = await inspectLoadDataset(db, shops, plan);
     await db.query('ANALYZE');
     let trafficBefore, trafficAccounts;
-    if (isTrafficSpike || soak) {
+    if (isTrafficSpike || isCapacity || soak) {
       trafficBefore = {
         orders: await prisma.order.count(),
         lines: await prisma.orderItem.count(),
@@ -605,6 +624,71 @@ async function main() {
     await prisma.$disconnect();
     phase = 'optional-search';
     let search;
+    let capacityWorkload, capacityResult;
+    if (isCapacity) {
+      const { ApiRateLimitGuard } =
+        await import('../dist/common/rate-limiting/api-rate-limit.guard.js');
+      capacityAttribution = instrumentCapacity(
+        {
+          rateStorage: app.get(ApiRateLimitGuard).storageService,
+          fairness: app.get(TrafficFairnessService),
+          admission: app.get(ApiCapacityService),
+          menuGate: app.get(PublicMenuReadGate),
+          poolAdapter: app.get(PrismaService).poolAdapter,
+        },
+        () => phase,
+      );
+      credentialsFile = join(root, 'load-accounts.json');
+      await writeFile(credentialsFile, JSON.stringify(trafficAccounts), {
+        mode: 0o600,
+        flag: 'wx',
+      });
+      capacityWorkload = await runLoadSearchWorker(
+        {
+          ...clientEnv,
+          LOAD_CAPACITY: '1',
+          LOAD_ACCOUNTS_FILE: credentialsFile,
+          LOAD_REPORT: resolve(
+            dirname(process.env.TIMEOUT_DB_REPORT),
+            'load-capacity-workload-local.json',
+          ),
+        },
+        {
+          deadlineMs: 660000,
+          onStage: async (stage) => {
+            assert.ok(
+              /^capacity-(?:warmup|recovery-wait|idle|level-[0-6]|confirmation-[0-6]|recovery-0|headroom-0)$/u.test(
+                stage.phase,
+              ),
+            );
+            phase = stage.phase;
+            const cpuSample = postgresCpu.snapshot();
+            assert.ok(
+              cpuSample.healthy && cpuSample.ageMs <= 3000,
+              'Owned PostgreSQL CPU monitoring unavailable.',
+            );
+            await monitor.sampleNow();
+            assert.ok(
+              process.memoryUsage().rss <= capacityProfile.resourceRssBytes,
+              'Capacity fixture RSS guard reached.',
+            );
+            await writeFile(
+              resolve(
+                dirname(process.env.TIMEOUT_DB_REPORT),
+                'load-capacity-progress-local.json',
+              ),
+              JSON.stringify({
+                runId,
+                phase,
+                status: 'running',
+                at: new Date().toISOString(),
+                pool: app.get(PrismaService).databasePoolSnapshot(),
+              }) + '\n',
+            );
+          },
+        },
+      );
+    }
     let floodWorkload, loginFlood;
     let spikeWorkload, menuSpike;
     let trafficWorkload, trafficSpike;
@@ -999,6 +1083,31 @@ async function main() {
         }),
       });
     }
+    if (isCapacity) {
+      assert.equal(capacityWorkload.runId, runId);
+      await prisma.$connect();
+      capacityResult = evaluateCapacity(capacityWorkload, monitoring, {
+        attribution: capacityAttribution.snapshot(),
+        ordersUnchanged: (await prisma.order.count()) === trafficBefore.orders,
+        linesUnchanged:
+          (await prisma.orderItem.count()) === trafficBefore.lines,
+        usersUnchanged: (await prisma.user.count()) === trafficBefore.users,
+        paidUnchanged:
+          (await prisma.order.count({ where: { paymentStatus: 'PAID' } })) ===
+          trafficBefore.paid,
+        productsUnchanged:
+          JSON.stringify(
+            await prisma.product.findMany({
+              select: { id: true, status: true, isArchived: true },
+              orderBy: { id: 'asc' },
+            }),
+          ) === JSON.stringify(trafficBefore.products),
+        sessions: await prisma.authSession.count(),
+        revoked: await prisma.authSession.count({
+          where: { revokedAt: { not: null } },
+        }),
+      });
+    }
     if (soak) {
       assert.equal(soakWorkload.runId, runId);
       await prisma.$connect();
@@ -1027,23 +1136,26 @@ async function main() {
       soakResult.databaseLogOffset = soakDatabaseLogOffset;
     }
     const report = {
+      capacity: capacityResult,
       soak: soakResult,
       trafficSpike,
       orderErrors: isOrderBurst ? orderErrors : undefined,
       orderBurst,
-      pass: soak
-        ? soakResult.pass
-        : isTrafficSpike
-          ? trafficSpike.pass
-          : isOrderBurst
-            ? orderBurst.pass
-            : menuSpike
-              ? menuSpike.pass
-              : loginFlood
-                ? loginFlood.pass
-                : ramp
-                  ? ramp.pass
-                  : true,
+      pass: isCapacity
+        ? capacityResult.pass
+        : soak
+          ? soakResult.pass
+          : isTrafficSpike
+            ? trafficSpike.pass
+            : isOrderBurst
+              ? orderBurst.pass
+              : menuSpike
+                ? menuSpike.pass
+                : loginFlood
+                  ? loginFlood.pass
+                  : ramp
+                    ? ramp.pass
+                    : true,
       menuSpike,
       loginFlood,
       ramp,
@@ -1118,6 +1230,8 @@ async function main() {
         );
     } finally {
       orderTransactions?.restore();
+      capacityAttribution?.restore();
+      postgresCpu?.stop();
       const cleanup = await Promise.allSettled([
         privateResultsFile
           ? unlink(privateResultsFile).catch((error) => {

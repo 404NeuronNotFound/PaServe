@@ -13,7 +13,7 @@
     "seed:dry-run": "pnpm --filter api seed:dry-run",
     "test:search-load": "node scripts/order-search-load.mjs",
     "test:search-load-metrics": "node scripts/order-search-load.test.mjs",
-    "test:load-env:safety": "node --test scripts/load-target.test.mjs apps/api/test/load-fixture-environment.test.mjs apps/api/test/load-environment-metrics.test.mjs apps/api/test/load-ramp.test.mjs apps/api/test/login-flood.test.mjs apps/api/test/menu-spike.test.mjs apps/api/test/order-burst.test.mjs apps/api/test/realtime-fanout.test.mjs apps/api/test/load-spike.test.mjs apps/api/test/load-soak.test.mjs",
+    "test:load-env:safety": "node --test scripts/load-target.test.mjs apps/api/test/load-fixture-environment.test.mjs apps/api/test/load-environment-metrics.test.mjs apps/api/test/load-ramp.test.mjs apps/api/test/login-flood.test.mjs apps/api/test/menu-spike.test.mjs apps/api/test/order-burst.test.mjs apps/api/test/realtime-fanout.test.mjs apps/api/test/load-spike.test.mjs apps/api/test/load-soak.test.mjs apps/api/test/load-capacity.test.mjs",
     "test:load-env": "pnpm --filter api test:load-env",
     "test:load-env:search": "pnpm --filter api test:load-env:search",
     "test:load-ramp": "pnpm --filter api test:load-ramp",
@@ -30,7 +30,8 @@
     "test:load-soak": "pnpm --filter api test:load-soak",
     "test:load-soak:smoke": "pnpm --filter api test:load-soak:smoke",
     "test:load-soak:extended": "pnpm --filter api test:load-soak:extended",
-    "test:load-soak:multi-hour": "pnpm --filter api test:load-soak:multi-hour"
+    "test:load-soak:multi-hour": "pnpm --filter api test:load-soak:multi-hour",
+    "test:load-capacity": "pnpm --filter api test:load-capacity"
   },
   "keywords": [],
   "author": "",

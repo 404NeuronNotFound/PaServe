@@ -27,6 +27,7 @@ export function loadFixtureEnvironment(
     menuSpike = false,
     orderBurst = false,
     trafficSpike = false,
+    capacity = false,
     soak = '',
   },
 ) {
@@ -63,6 +64,7 @@ export function loadFixtureEnvironment(
     LOAD_MENU_SPIKE: menuSpike ? '1' : '0',
     LOAD_ORDER_BURST: orderBurst ? '1' : '0',
     LOAD_TRAFFIC_SPIKE: trafficSpike ? '1' : '0',
+    LOAD_CAPACITY: capacity ? '1' : '0',
     LOAD_SOAK_PROFILE: soak,
     LOAD_DATASET_PROFILE: dataset.profile,
     JWT_ACCESS_SECRET: randomBytes(32).toString('hex'),
