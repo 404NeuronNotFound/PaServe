@@ -1,6 +1,12 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import type { Pool, PoolClient, PoolConfig } from 'pg';
 import type { DatabasePoolPolicy } from './database-pool.policy.js';
+import { DatabaseQueryMetrics } from './database-query.metrics.js';
+
+type Queryable = Pick<
+  Awaited<ReturnType<PrismaPg['connect']>>,
+  'queryRaw' | 'executeRaw'
+>;
 
 /** A safe structured tag survives the pg adapter's error conversion. */
 class PoolBusyError extends Error {
@@ -18,6 +24,14 @@ type CheckoutCallback = (
 
 export class BoundedPgAdapter extends PrismaPg {
   private pool?: Pool;
+  private readonly queryMetrics = new DatabaseQueryMetrics();
+  private readonly acquisitionTiming = {
+    count: 0,
+    totalMs: 0,
+    maxMs: 0,
+    boundsMs: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 3000],
+    buckets: Array<number>(11).fill(0),
+  };
   private readonly counts = {
     generations: 0,
     connected: 0,
@@ -49,6 +63,13 @@ export class BoundedPgAdapter extends PrismaPg {
 
   override async connect(): ReturnType<PrismaPg['connect']> {
     const adapter = await super.connect();
+    this.observeQueries(adapter);
+    const startTransaction = adapter.startTransaction.bind(adapter);
+    adapter.startTransaction = async (isolationLevel) => {
+      const transaction = await startTransaction(isolationLevel);
+      this.observeQueries(transaction);
+      return transaction;
+    };
     const pool = adapter.underlyingDriver();
     // Prisma creates a lazy pool per engine lifecycle. Wrap every generation,
     // including reconnect after $disconnect; ownership/disposal stays with Prisma.
@@ -58,6 +79,14 @@ export class BoundedPgAdapter extends PrismaPg {
       this.attach(pool);
     }
     return adapter;
+  }
+
+  private observeQueries(queryable: Queryable) {
+    const query = queryable.queryRaw.bind(queryable);
+    const execute = queryable.executeRaw.bind(queryable);
+    queryable.queryRaw = (sql) => this.queryMetrics.observe(() => query(sql));
+    queryable.executeRaw = (sql) =>
+      this.queryMetrics.observe(() => execute(sql));
   }
 
   private attach(pool: Pool) {
@@ -74,6 +103,17 @@ export class BoundedPgAdapter extends PrismaPg {
       );
     };
     const checkout = (callback: CheckoutCallback) => {
+      const started = performance.now();
+      const finish: CheckoutCallback = (error, client, release) => {
+        const elapsed = performance.now() - started;
+        const timing = this.acquisitionTiming;
+        timing.count++;
+        timing.totalMs += elapsed;
+        timing.maxMs = Math.max(timing.maxMs, elapsed);
+        const bucket = timing.boundsMs.findIndex((bound) => elapsed <= bound);
+        timing.buckets[bucket === -1 ? timing.boundsMs.length : bucket]++;
+        callback(error, client, release);
+      };
       // pg schedules idle-client handoffs on nextTick. Reserve those idle slots
       // before counting parked waiters so bursts can reuse *all* idle clients.
       const available =
@@ -86,16 +126,14 @@ export class BoundedPgAdapter extends PrismaPg {
         waiting >= this.policy.maxWaiting
       ) {
         this.counts.rejected++;
-        queueMicrotask(() =>
-          callback(new PoolBusyError(), undefined, () => {}),
-        );
+        queueMicrotask(() => finish(new PoolBusyError(), undefined, () => {}));
         return;
       }
       original((error, client, release) => {
         if (error) {
           this.counts.acquisitionFailures++;
-          callback(new PoolBusyError(), undefined, () => {});
-        } else callback(undefined, client, release);
+          finish(new PoolBusyError(), undefined, () => {});
+        } else finish(undefined, client, release);
       });
       markPeaks();
     };
@@ -150,6 +188,12 @@ export class BoundedPgAdapter extends PrismaPg {
       idle: pool?.idleCount ?? 0,
       waiting: pool ? Math.max(0, pool.waitingCount - pool.idleCount) : 0,
       pendingCheckouts: pool?.waitingCount ?? 0,
+      queryWorkloads: this.queryMetrics.snapshot(),
+      acquisitionTiming: {
+        ...this.acquisitionTiming,
+        boundsMs: [...this.acquisitionTiming.boundsMs],
+        buckets: [...this.acquisitionTiming.buckets],
+      },
       ...this.counts,
     };
   }

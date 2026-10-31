@@ -26,6 +26,7 @@ import { ShopMembersService } from '../src/modules/shop-members/shop-members.ser
 import { CashPaymentService } from '../src/modules/orders/cash-payment.service.js';
 import { PreparationReadyService } from '../src/modules/orders/preparation-ready.service.js';
 import { invalidSession } from '../src/modules/auth/tokens.service.js';
+import { requestContext } from '../src/common/http/request-context.js';
 
 const gate = {
   calls: 0,
@@ -43,6 +44,17 @@ const gate = {
 
 @Controller('capacity-test')
 class CapacityTestController {
+  @Get('analytics-metrics')
+  @RateLimit('reports')
+  analyticsMetrics() {
+    return { group: requestContext.getStore()?.databaseWorkload };
+  }
+
+  @Post('order-metrics')
+  @RateLimit('orderCreate')
+  orderMetrics() {
+    return { group: requestContext.getStore()?.databaseWorkload };
+  }
   @Get('slow')
   slow() {
     return gate.wait();
@@ -81,6 +93,19 @@ class CapacityTestController {
 }
 
 describe('API backpressure and recovery', () => {
+  it('assigns database metric groups from server policies, ignoring client hints', async () => {
+    const analytics = await get('analytics-metrics').set(
+      'X-Database-Workload',
+      'orders',
+    );
+    expect(analytics.status).toBe(200);
+    expect(analytics.body.group).toBe('analytics');
+    const order = await request(app.getHttpServer())
+      .post('/api/v1/capacity-test/order-metrics')
+      .set('X-Database-Workload', 'analytics');
+    expect(order.status).toBe(201);
+    expect(order.body.group).toBe('orders');
+  });
   let app: NestExpressApplication;
   let capacity: ApiCapacityService;
   const database = { $queryRaw: vi.fn().mockResolvedValue([{ healthy: 1 }]) };

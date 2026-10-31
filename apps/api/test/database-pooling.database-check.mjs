@@ -363,6 +363,17 @@ try {
   if (app) await app.close();
   await Promise.all(instances.map((db) => db.$disconnect()));
   const remaining = await serverConnections();
+  for (const db of instances) {
+    const timing = db.databasePoolSnapshot().acquisitionTiming;
+    assert.equal(
+      timing.buckets.reduce((total, count) => total + count, 0),
+      timing.count,
+    );
+    assert.ok(timing.count > 0 && timing.totalMs >= timing.maxMs);
+    const copy = db.databasePoolSnapshot().acquisitionTiming;
+    copy.buckets[0] = -1;
+    assert.ok(db.databasePoolSnapshot().acquisitionTiming.buckets[0] >= 0);
+  }
   await setup.end();
   const report = {
     pass: results.length === 13 && remaining === 0,

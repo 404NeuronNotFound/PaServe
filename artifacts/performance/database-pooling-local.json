@@ -17,6 +17,128 @@
       "idle": 0,
       "waiting": 0,
       "pendingCheckouts": 0,
+      "queryWorkloads": {
+        "analytics": {
+          "count": 0,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 0,
+          "maxMs": 0,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "orders": {
+          "count": 0,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 0,
+          "maxMs": 0,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "other": {
+          "count": 68,
+          "failures": 12,
+          "slow": 2,
+          "totalMs": 734.7090999999996,
+          "maxMs": 303.60059999999976,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            63,
+            0,
+            0,
+            3,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "acquisitionTiming": {
+        "count": 55,
+        "totalMs": 800.1940999999988,
+        "maxMs": 303.44979999999987,
+        "boundsMs": [
+          1,
+          5,
+          10,
+          25,
+          50,
+          100,
+          250,
+          500,
+          1000,
+          3000
+        ],
+        "buckets": [
+          46,
+          1,
+          0,
+          0,
+          6,
+          0,
+          0,
+          2,
+          0,
+          0,
+          0
+        ]
+      },
       "generations": 2,
       "connected": 6,
       "acquired": 44,
@@ -43,6 +165,128 @@
       "idle": 0,
       "waiting": 0,
       "pendingCheckouts": 0,
+      "queryWorkloads": {
+        "analytics": {
+          "count": 0,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 0,
+          "maxMs": 0,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "orders": {
+          "count": 0,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 0,
+          "maxMs": 0,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "other": {
+          "count": 6,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 4.298400000000129,
+          "maxMs": 1.1141999999999825,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            6,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "acquisitionTiming": {
+        "count": 2,
+        "totalMs": 67.8439000000003,
+        "maxMs": 36.49850000000015,
+        "boundsMs": [
+          1,
+          5,
+          10,
+          25,
+          50,
+          100,
+          250,
+          500,
+          1000,
+          3000
+        ],
+        "buckets": [
+          0,
+          0,
+          0,
+          0,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
       "generations": 1,
       "connected": 2,
       "acquired": 2,
@@ -69,6 +313,128 @@
       "idle": 0,
       "waiting": 0,
       "pendingCheckouts": 0,
+      "queryWorkloads": {
+        "analytics": {
+          "count": 0,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 0,
+          "maxMs": 0,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "orders": {
+          "count": 0,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 0,
+          "maxMs": 0,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "other": {
+          "count": 8,
+          "failures": 5,
+          "slow": 0,
+          "totalMs": 464.0430000000001,
+          "maxMs": 213.0467000000001,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            5,
+            0,
+            0,
+            0,
+            1,
+            2,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "acquisitionTiming": {
+        "count": 8,
+        "totalMs": 291.74570000000017,
+        "maxMs": 156.25610000000006,
+        "boundsMs": [
+          1,
+          5,
+          10,
+          25,
+          50,
+          100,
+          250,
+          500,
+          1000,
+          3000
+        ],
+        "buckets": [
+          5,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
       "generations": 1,
       "connected": 2,
       "acquired": 3,
@@ -95,6 +461,128 @@
       "idle": 0,
       "waiting": 0,
       "pendingCheckouts": 0,
+      "queryWorkloads": {
+        "analytics": {
+          "count": 0,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 0,
+          "maxMs": 0,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "orders": {
+          "count": 0,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 0,
+          "maxMs": 0,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "other": {
+          "count": 5,
+          "failures": 1,
+          "slow": 0,
+          "totalMs": 28.640799999999672,
+          "maxMs": 27.23799999999983,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            4,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "acquisitionTiming": {
+        "count": 3,
+        "totalMs": 54.15199999999959,
+        "maxMs": 27.26449999999977,
+        "boundsMs": [
+          1,
+          5,
+          10,
+          25,
+          50,
+          100,
+          250,
+          500,
+          1000,
+          3000
+        ],
+        "buckets": [
+          1,
+          0,
+          0,
+          0,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
       "generations": 1,
       "connected": 2,
       "acquired": 2,
@@ -121,6 +609,128 @@
       "idle": 0,
       "waiting": 0,
       "pendingCheckouts": 0,
+      "queryWorkloads": {
+        "analytics": {
+          "count": 0,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 0,
+          "maxMs": 0,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "orders": {
+          "count": 0,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 0,
+          "maxMs": 0,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "other": {
+          "count": 4,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 32.60920000000078,
+          "maxMs": 31.209200000000237,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            3,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "acquisitionTiming": {
+        "count": 2,
+        "totalMs": 155.45680000000038,
+        "maxMs": 124.88049999999976,
+        "boundsMs": [
+          1,
+          5,
+          10,
+          25,
+          50,
+          100,
+          250,
+          500,
+          1000,
+          3000
+        ],
+        "buckets": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
       "generations": 1,
       "connected": 2,
       "acquired": 2,
@@ -138,67 +748,67 @@
     {
       "name": "lazy-client-creates-no-idle-connection-before-first-query",
       "pass": true,
-      "elapsedMs": 9
+      "elapsedMs": 4
     },
     {
       "name": "cold-concurrent-queries-create-one-bounded-pool",
       "pass": true,
-      "elapsedMs": 432
+      "elapsedMs": 285
     },
     {
       "name": "sequential-tenant-queries-reuse-one-connection-and-preserve-scope",
       "pass": true,
-      "elapsedMs": 243
+      "elapsedMs": 57
     },
     {
       "name": "HTTP-requests-share-the-singleton-pool-across-tenants",
       "pass": true,
-      "elapsedMs": 182
+      "elapsedMs": 112
     },
     {
       "name": "saturated-pool-bounds-connections-and-waiters-with-retryable-HTTP-503",
       "pass": true,
-      "elapsedMs": 436
+      "elapsedMs": 373
     },
     {
       "name": "SQL-errors-and-transaction-rollback-return-their-checkouts",
       "pass": true,
-      "elapsedMs": 11
+      "elapsedMs": 6
     },
     {
       "name": "idle-backend-failure-is-observed-and-pool-recovers",
       "pass": true,
-      "elapsedMs": 94
+      "elapsedMs": 48
     },
     {
       "name": "two-client-pools-stay-within-the-declared-combined-budget",
       "pass": true,
-      "elapsedMs": 106
+      "elapsedMs": 48
     },
     {
       "name": "disconnect-closes-owned-pool-and-reconnect-keeps-queue-bounds",
       "pass": true,
-      "elapsedMs": 542
+      "elapsedMs": 369
     },
     {
       "name": "application-shutdown-disposes-all-owned-connections",
       "pass": true,
-      "elapsedMs": 40
+      "elapsedMs": 11
     },
     {
       "name": "idle-connections-are-reaped-without-a-minimum-prewarm",
       "pass": true,
-      "elapsedMs": 224
+      "elapsedMs": 137
     },
     {
       "name": "zero-waiting-policy-sheds-busy-checkouts-and-recovers",
       "pass": true,
-      "elapsedMs": 75
+      "elapsedMs": 32
     },
     {
       "name": "lifetime-expiry-does-not-kill-an-in-use-transaction",
       "pass": true,
-      "elapsedMs": 1309
+      "elapsedMs": 1367
     }
   ]
 }

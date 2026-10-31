@@ -83,6 +83,17 @@ export class ApiAdmissionGuard implements CanActivate {
       },
       workload,
       menuRead,
+      policy === 'reports'
+        ? 'analytics'
+        : [
+              'orderCreate',
+              'orderAction',
+              'quote',
+              'receiptRead',
+              'receiptProof',
+            ].includes(policy ?? '')
+          ? 'orders'
+          : 'other',
     );
     const close = () => admission.close();
     request[REQUEST_WORK] = admission;

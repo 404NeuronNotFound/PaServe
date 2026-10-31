@@ -1,0 +1,562 @@
+{
+  "pass": true,
+  "scope": "owned-disposable-postgresql",
+  "checks": [
+    {
+      "name": "baseline-is-read-only-and-separates-client-backends",
+      "pass": true
+    },
+    {
+      "name": "detects-a-slow-query-without-logging-its-text",
+      "pass": true
+    },
+    {
+      "name": "detects-lock-waits-and-idle-transactions-and-recovers",
+      "pass": true
+    },
+    {
+      "name": "supports-extension-schema-and-bounded-aggregate-statement-statistics",
+      "pass": true
+    },
+    {
+      "name": "restricted-role-reports-incomplete-visibility",
+      "pass": true
+    },
+    {
+      "name": "measures-real-table-and-index-growth",
+      "pass": true
+    },
+    {
+      "name": "separates-concurrent-analytics-and-order-query-durations-in-real-prisma-transactions",
+      "pass": true
+    },
+    {
+      "name": "operator-cli-emits-bounded-json-and-redacts-connection-failures",
+      "pass": true
+    }
+  ],
+  "snapshots": [
+    {
+      "database": {
+        "sampledAt": "2026-10-31T04:57:24.750Z",
+        "statsReset": null,
+        "activitiesTracked": true,
+        "countsTracked": true,
+        "ioTimingEnabled": false,
+        "fullVisibility": true,
+        "serverMaxConnections": 12,
+        "serverClientConnections": 4,
+        "clientConnections": 3,
+        "backgroundConnections": 0,
+        "active": 0,
+        "idleInTransaction": 0,
+        "lockWaiters": 0,
+        "ioWaiters": 0,
+        "slowActiveQueries": 0,
+        "oldestActiveMs": 0,
+        "oldestTransactionMs": 0,
+        "commits": 4,
+        "rollbacks": 0,
+        "deadlocks": 0,
+        "tempBytes": 0,
+        "blocksHit": 1676,
+        "blocksRead": 82,
+        "blockReadMs": 0,
+        "blockWriteMs": 0
+      },
+      "interval": {
+        "status": "baseline"
+      },
+      "signals": [],
+      "collectorRoundTripMs": 8.381000000000029
+    },
+    {
+      "database": {
+        "sampledAt": "2026-10-31T04:57:25.910Z",
+        "statsReset": null,
+        "activitiesTracked": true,
+        "countsTracked": true,
+        "ioTimingEnabled": false,
+        "fullVisibility": true,
+        "serverMaxConnections": 12,
+        "serverClientConnections": 4,
+        "clientConnections": 3,
+        "backgroundConnections": 0,
+        "active": 1,
+        "idleInTransaction": 0,
+        "lockWaiters": 0,
+        "ioWaiters": 0,
+        "slowActiveQueries": 1,
+        "oldestActiveMs": 1155.103,
+        "oldestTransactionMs": 1155.127,
+        "commits": 4,
+        "rollbacks": 0,
+        "deadlocks": 0,
+        "tempBytes": 0,
+        "blocksHit": 1676,
+        "blocksRead": 82,
+        "blockReadMs": 0,
+        "blockWriteMs": 0
+      },
+      "interval": {
+        "status": "ok",
+        "milliseconds": 1160,
+        "delta": {
+          "commits": 0,
+          "rollbacks": 0,
+          "deadlocks": 0,
+          "tempBytes": 0,
+          "blocksHit": 0,
+          "blocksRead": 0,
+          "blockReadMs": 0,
+          "blockWriteMs": 0
+        },
+        "transactionsPerSecond": 0,
+        "bufferHitRatio": null
+      },
+      "signals": [
+        "slow-active-queries"
+      ],
+      "collectorRoundTripMs": 3.1067999999997937
+    },
+    {
+      "database": {
+        "sampledAt": "2026-10-31T04:57:26.405Z",
+        "statsReset": null,
+        "activitiesTracked": true,
+        "countsTracked": true,
+        "ioTimingEnabled": false,
+        "fullVisibility": true,
+        "serverMaxConnections": 12,
+        "serverClientConnections": 4,
+        "clientConnections": 3,
+        "backgroundConnections": 0,
+        "active": 1,
+        "idleInTransaction": 1,
+        "lockWaiters": 1,
+        "ioWaiters": 0,
+        "slowActiveQueries": 0,
+        "oldestActiveMs": 33.507,
+        "oldestTransactionMs": 35.581,
+        "commits": 8,
+        "rollbacks": 1,
+        "deadlocks": 0,
+        "tempBytes": 0,
+        "blocksHit": 2479,
+        "blocksRead": 180,
+        "blockReadMs": 0,
+        "blockWriteMs": 0
+      },
+      "interval": {
+        "status": "ok",
+        "milliseconds": 495,
+        "delta": {
+          "commits": 4,
+          "rollbacks": 1,
+          "deadlocks": 0,
+          "tempBytes": 0,
+          "blocksHit": 803,
+          "blocksRead": 98,
+          "blockReadMs": 0,
+          "blockWriteMs": 0
+        },
+        "transactionsPerSecond": 10.1010101010101,
+        "bufferHitRatio": 0.8912319644839067
+      },
+      "signals": [
+        "lock-contention",
+        "idle-transaction"
+      ],
+      "collectorRoundTripMs": 3.673899999999776
+    },
+    {
+      "database": {
+        "sampledAt": "2026-10-31T04:57:26.410Z",
+        "statsReset": null,
+        "activitiesTracked": true,
+        "countsTracked": true,
+        "ioTimingEnabled": false,
+        "fullVisibility": true,
+        "serverMaxConnections": 12,
+        "serverClientConnections": 4,
+        "clientConnections": 3,
+        "backgroundConnections": 0,
+        "active": 0,
+        "idleInTransaction": 0,
+        "lockWaiters": 0,
+        "ioWaiters": 0,
+        "slowActiveQueries": 0,
+        "oldestActiveMs": 0,
+        "oldestTransactionMs": 0,
+        "commits": 8,
+        "rollbacks": 2,
+        "deadlocks": 0,
+        "tempBytes": 0,
+        "blocksHit": 2591,
+        "blocksRead": 182,
+        "blockReadMs": 0,
+        "blockWriteMs": 0
+      },
+      "interval": {
+        "status": "ok",
+        "milliseconds": 5,
+        "delta": {
+          "commits": 0,
+          "rollbacks": 1,
+          "deadlocks": 0,
+          "tempBytes": 0,
+          "blocksHit": 112,
+          "blocksRead": 2,
+          "blockReadMs": 0,
+          "blockWriteMs": 0
+        },
+        "transactionsPerSecond": 200,
+        "bufferHitRatio": 0.9824561403508771
+      },
+      "signals": [],
+      "collectorRoundTripMs": 3.5755999999996675
+    },
+    {
+      "statements": {
+        "status": "available",
+        "scope": "cumulative-since-provider-reset; not p95/p99",
+        "rows": [
+          {
+            "fingerprint": "-2749826580604107531",
+            "calls": 1,
+            "totalExecutionMs": 1611.9668,
+            "meanExecutionMs": 1611.9668,
+            "maxExecutionMs": 1611.9668,
+            "blocksHit": 0,
+            "blocksRead": 0,
+            "tempBlocksWritten": 0
+          },
+          {
+            "fingerprint": "-2292252540888213157",
+            "calls": 2,
+            "totalExecutionMs": 34.680200000000006,
+            "meanExecutionMs": 17.3401,
+            "maxExecutionMs": 34.6373,
+            "blocksHit": 8,
+            "blocksRead": 0,
+            "tempBlocksWritten": 0
+          },
+          {
+            "fingerprint": "-2902937112829432096",
+            "calls": 1,
+            "totalExecutionMs": 20.5728,
+            "meanExecutionMs": 20.5728,
+            "maxExecutionMs": 20.5728,
+            "blocksHit": 3356,
+            "blocksRead": 52,
+            "tempBlocksWritten": 0
+          },
+          {
+            "fingerprint": "3294167460654545426",
+            "calls": 1,
+            "totalExecutionMs": 6.2318,
+            "meanExecutionMs": 6.2318,
+            "maxExecutionMs": 6.2318,
+            "blocksHit": 362,
+            "blocksRead": 88,
+            "tempBlocksWritten": 0
+          },
+          {
+            "fingerprint": "9155229928969199436",
+            "calls": 4,
+            "totalExecutionMs": 0.9569000000000001,
+            "meanExecutionMs": 0.23922500000000002,
+            "maxExecutionMs": 0.2615,
+            "blocksHit": 12,
+            "blocksRead": 0,
+            "tempBlocksWritten": 0
+          },
+          {
+            "fingerprint": "11924883668345799",
+            "calls": 1,
+            "totalExecutionMs": 0.4115,
+            "meanExecutionMs": 0.4115,
+            "maxExecutionMs": 0.4115,
+            "blocksHit": 10,
+            "blocksRead": 4,
+            "tempBlocksWritten": 0
+          },
+          {
+            "fingerprint": "4683284888687938234",
+            "calls": 1,
+            "totalExecutionMs": 0.3495,
+            "meanExecutionMs": 0.3495,
+            "maxExecutionMs": 0.3495,
+            "blocksHit": 3,
+            "blocksRead": 1,
+            "tempBlocksWritten": 0
+          },
+          {
+            "fingerprint": "8262515495673408305",
+            "calls": 2,
+            "totalExecutionMs": 0.0587,
+            "meanExecutionMs": 0.02935,
+            "maxExecutionMs": 0.035800000000000005,
+            "blocksHit": 2,
+            "blocksRead": 1,
+            "tempBlocksWritten": 0
+          },
+          {
+            "fingerprint": "-7835111983797254704",
+            "calls": 1,
+            "totalExecutionMs": 0.0153,
+            "meanExecutionMs": 0.0153,
+            "maxExecutionMs": 0.0153,
+            "blocksHit": 1,
+            "blocksRead": 0,
+            "tempBlocksWritten": 0
+          },
+          {
+            "fingerprint": "-2646723144215712964",
+            "calls": 1,
+            "totalExecutionMs": 0.0023,
+            "meanExecutionMs": 0.0023,
+            "maxExecutionMs": 0.0023,
+            "blocksHit": 0,
+            "blocksRead": 0,
+            "tempBlocksWritten": 0
+          }
+        ]
+      }
+    },
+    {
+      "database": {
+        "sampledAt": "2026-10-31T04:57:26.444Z",
+        "statsReset": null,
+        "activitiesTracked": true,
+        "countsTracked": true,
+        "ioTimingEnabled": false,
+        "fullVisibility": false,
+        "serverMaxConnections": 12,
+        "serverClientConnections": 0,
+        "clientConnections": 0,
+        "backgroundConnections": 0,
+        "active": 0,
+        "idleInTransaction": 0,
+        "lockWaiters": 0,
+        "ioWaiters": 0,
+        "slowActiveQueries": 0,
+        "oldestActiveMs": 0,
+        "oldestTransactionMs": 0,
+        "commits": 10,
+        "rollbacks": 2,
+        "deadlocks": 0,
+        "tempBytes": 0,
+        "blocksHit": 6284,
+        "blocksRead": 323,
+        "blockReadMs": 0,
+        "blockWriteMs": 0
+      },
+      "interval": {
+        "status": "ok",
+        "milliseconds": 34,
+        "delta": {
+          "commits": 2,
+          "rollbacks": 0,
+          "deadlocks": 0,
+          "tempBytes": 0,
+          "blocksHit": 3693,
+          "blocksRead": 141,
+          "blockReadMs": 0,
+          "blockWriteMs": 0
+        },
+        "transactionsPerSecond": 58.8235294117647,
+        "bufferHitRatio": 0.9632237871674492
+      },
+      "signals": [
+        "incomplete-visibility"
+      ],
+      "collectorRoundTripMs": 4.244900000000143
+    },
+    {
+      "relations": {
+        "status": "available",
+        "scope": "public ordinary tables and indexes; physical allocated bytes",
+        "sampledAt": "2026-10-31T04:57:26.473Z",
+        "rows": [
+          {
+            "relationId": "16384",
+            "generation": "16384",
+            "schema": "public",
+            "name": "monitor_fixture",
+            "kind": "table",
+            "bytes": 8192,
+            "indexBytes": 16384
+          },
+          {
+            "relationId": "16387",
+            "generation": "16387",
+            "schema": "public",
+            "name": "monitor_fixture_pkey",
+            "kind": "index",
+            "bytes": 16384,
+            "indexBytes": 0
+          },
+          {
+            "relationId": "16428",
+            "generation": "16428",
+            "schema": "public",
+            "name": "monitor_growth",
+            "kind": "table",
+            "bytes": 2080768,
+            "indexBytes": 90112
+          },
+          {
+            "relationId": "16433",
+            "generation": "16433",
+            "schema": "public",
+            "name": "monitor_growth_pkey",
+            "kind": "index",
+            "bytes": 90112,
+            "indexBytes": 0
+          }
+        ],
+        "growth": {
+          "status": "compared",
+          "changes": [
+            {
+              "relationId": "16384",
+              "schema": "public",
+              "name": "monitor_fixture",
+              "kind": "table",
+              "status": "existing",
+              "bytesDelta": 0,
+              "indexBytesDelta": 0
+            },
+            {
+              "relationId": "16387",
+              "schema": "public",
+              "name": "monitor_fixture_pkey",
+              "kind": "index",
+              "status": "existing",
+              "bytesDelta": 0,
+              "indexBytesDelta": 0
+            },
+            {
+              "relationId": "16428",
+              "schema": "public",
+              "name": "monitor_growth",
+              "kind": "table",
+              "status": "existing",
+              "bytesDelta": 2072576,
+              "indexBytesDelta": 81920
+            },
+            {
+              "relationId": "16433",
+              "schema": "public",
+              "name": "monitor_growth_pkey",
+              "kind": "index",
+              "status": "existing",
+              "bytesDelta": 81920,
+              "indexBytesDelta": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "queryWorkloads": {
+        "analytics": {
+          "count": 4,
+          "failures": 1,
+          "slow": 1,
+          "totalMs": 309.0458000000003,
+          "maxMs": 301.92260000000033,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "orders": {
+          "count": 3,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 4.757000000000062,
+          "maxMs": 2.2053000000000793,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "other": {
+          "count": 0,
+          "failures": 0,
+          "slow": 0,
+          "totalMs": 0,
+          "maxMs": 0,
+          "boundsMs": [
+            5,
+            10,
+            25,
+            50,
+            100,
+            250,
+            500,
+            1000,
+            5000
+          ],
+          "buckets": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  ],
+  "status": "complete",
+  "cleanup": {
+    "postgresStopped": true,
+    "ownedDirectoryRemoved": true
+  }
+}

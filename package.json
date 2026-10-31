@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "pnpm --filter api test --maxWorkers=2 && pnpm --filter api test:e2e --maxWorkers=2 && pnpm --filter web test --maxWorkers=2 && pnpm test:search-load-metrics && pnpm test:latency-slo && pnpm test:load-env:safety && pnpm test:edge:config",
+    "test": "pnpm --filter api test --maxWorkers=2 && pnpm --filter api test:e2e --maxWorkers=2 && pnpm --filter web test --maxWorkers=2 && pnpm test:search-load-metrics && pnpm test:latency-slo && pnpm test:database-monitor && pnpm test:load-env:safety && pnpm test:edge:config",
     "lint": "pnpm --filter api lint && pnpm --filter web lint",
     "build": "pnpm --filter api build && pnpm --filter web build",
     "verify": "pnpm lint && pnpm test && pnpm build && pnpm --filter web test:security-release && pnpm test:leaks && pnpm audit --audit-level=low",
@@ -33,6 +33,9 @@
     "test:load-soak:multi-hour": "pnpm --filter api test:load-soak:multi-hour",
     "test:load-capacity": "pnpm --filter api test:load-capacity",
     "test:latency-slo": "node --test scripts/latency-slo.test.mjs",
+    "test:database-monitor": "pnpm --filter api test:database-monitor",
+    "test:monitoring:postgres": "pnpm --filter api test:monitoring:postgres",
+    "monitor:database": "pnpm --filter api monitor:database",
     "check:latency-slo": "node scripts/check-latency-slo.mjs"
   },
   "keywords": [],

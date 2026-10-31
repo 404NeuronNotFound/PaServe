@@ -10,7 +10,7 @@ import {
   unlink,
   rm,
 } from 'node:fs/promises';
-import { resolve, join, basename, sep } from 'node:path';
+import { resolve, join, basename, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { createServer } from 'node:net';
@@ -64,6 +64,7 @@ assert.ok(
     'timeouts',
     'idempotency',
     'pooling',
+    'monitoring',
     'indexing',
     'tenants',
     'caching',
@@ -124,6 +125,10 @@ const loadReport = resolve(
   apiRoot,
   `../../artifacts/performance/load-environment${suite === 'load-capacity' ? '-capacity' : suite === 'load-search' ? '-search' : suite === 'load-ramp' ? '-ramp' : suite === 'load-ramp-diagnostic' ? '-ramp-diagnostic' : suite === 'load-login-flood' ? '-login-flood' : suite === 'load-menu-spike' ? '-menu-spike' : suite === 'load-order-burst' ? '-order-burst' : suite === 'load-spike' ? '-spike' : soak ? '-soak-' + soak.name : ''}-local.json`,
 );
+const monitoringReport = resolve(
+  apiRoot,
+  '../../artifacts/performance/database-monitoring-local.json',
+);
 async function cleanup() {
   if (initialized) {
     try {
@@ -154,6 +159,13 @@ async function cleanup() {
   }
 }
 try {
+  if (suite === 'monitoring') {
+    await mkdir(dirname(monitoringReport), { recursive: true });
+    await writeFile(
+      monitoringReport,
+      JSON.stringify({ pass: false, status: 'starting' }) + '\n',
+    );
+  }
   if (isolatedLoad) {
     await mkdir(resolve(apiRoot, '../../artifacts/performance'), {
       recursive: true,
@@ -189,7 +201,7 @@ try {
     '-l',
     join(clusterRoot, 'postgres.log'),
     '-o',
-    `-h 127.0.0.1 -p ${port} -c listen_addresses=127.0.0.1 -c max_connections=12`,
+    `-h 127.0.0.1 -p ${port} -c listen_addresses=127.0.0.1 -c max_connections=12${suite === 'monitoring' ? ' -c shared_preload_libraries=pg_stat_statements' : ''}`,
     '-w',
     '-t',
     '15',
@@ -205,13 +217,15 @@ try {
         ? '../../artifacts/performance/request-timeouts-postgres-local.json'
         : suite === 'idempotency'
           ? '../../artifacts/performance/idempotency-postgres-local.json'
-          : suite === 'indexing'
-            ? '../../artifacts/performance/database-indexing-local.json'
-            : suite === 'tenants'
-              ? '../../artifacts/performance/tenant-query-performance-local.json'
-              : suite === 'caching'
-                ? '../../artifacts/performance/caching-local.json'
-                : '../../artifacts/performance/database-pooling-local.json',
+          : suite === 'monitoring'
+            ? '../../artifacts/performance/database-monitoring-local.json'
+            : suite === 'indexing'
+              ? '../../artifacts/performance/database-indexing-local.json'
+              : suite === 'tenants'
+                ? '../../artifacts/performance/tenant-query-performance-local.json'
+                : suite === 'caching'
+                  ? '../../artifacts/performance/caching-local.json'
+                  : '../../artifacts/performance/database-pooling-local.json',
     ),
     ...(suite !== 'timeouts'
       ? {
@@ -235,13 +249,15 @@ try {
           ? 'test/request-timeouts.database-check.mjs'
           : suite === 'idempotency'
             ? 'test/idempotency.database-check.mjs'
-            : suite === 'indexing'
-              ? 'test/database-indexing.database-check.mjs'
-              : suite === 'tenants'
-                ? 'test/tenant-performance.database-check.mjs'
-                : suite === 'caching'
-                  ? 'test/caching.database-check.mjs'
-                  : 'test/database-pooling.database-check.mjs',
+            : suite === 'monitoring'
+              ? 'test/database-monitoring.database-check.mjs'
+              : suite === 'indexing'
+                ? 'test/database-indexing.database-check.mjs'
+                : suite === 'tenants'
+                  ? 'test/tenant-performance.database-check.mjs'
+                  : suite === 'caching'
+                    ? 'test/caching.database-check.mjs'
+                    : 'test/database-pooling.database-check.mjs',
     ],
     {
       cwd: apiRoot,
@@ -303,6 +319,22 @@ try {
   } finally {
     process.off('SIGINT', interrupt);
     process.off('SIGTERM', terminate);
+    if (suite === 'monitoring') {
+      let report = { pass: false };
+      try {
+        report = JSON.parse(await readFile(monitoringReport, 'utf8'));
+      } catch {
+        /* no complete report */
+      }
+      report.pass = Boolean(report.pass && loadSucceeded && stopped && removed);
+      report.status = report.pass ? 'complete' : 'failed';
+      report.cleanup = {
+        postgresStopped: stopped,
+        ownedDirectoryRemoved: removed,
+      };
+      await writeFile(monitoringReport, JSON.stringify(report, null, 2) + '\n');
+      if (!report.pass) process.exitCode = 1;
+    }
     if (isolatedLoad) {
       let report = { pass: false, environment: 'disposable-development' };
       try {

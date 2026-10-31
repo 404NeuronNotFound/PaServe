@@ -3,6 +3,7 @@ import { ApiOverloadedException } from '../http/api-overloaded.exception.js';
 import { RequestTimeoutException } from '../http/request-timeout.exception.js';
 import { requestContext } from '../http/request-context.js';
 import type { Workload } from './api-capacity.service.js';
+import type { DatabaseWorkload } from '../../database/database-query.metrics.js';
 
 export const REQUEST_WORK = Symbol('paserve:request-work');
 
@@ -20,6 +21,7 @@ export class RequestWork {
     private readonly release: () => void,
     readonly workload: Workload = 'general',
     readonly menuRead = false,
+    readonly databaseWorkload: DatabaseWorkload = 'other',
   ) {}
 
   addRelease(release: () => void): void {
@@ -61,7 +63,8 @@ export class RequestWork {
     this.pending++;
     const underlying = (async () => {
       try {
-        return await requestContext.run(this, work);
+        // Resolve lazy Prisma thenables while the admission context is active.
+        return await requestContext.run(this, async () => await work());
       } finally {
         this.pending--;
         this.tryRelease();

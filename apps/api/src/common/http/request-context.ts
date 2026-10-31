@@ -1,6 +1,9 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-export const requestContext = new AsyncLocalStorage<{ signal: AbortSignal }>();
+export const requestContext = new AsyncLocalStorage<{
+  signal: AbortSignal;
+  databaseWorkload?: 'analytics' | 'orders' | 'other';
+}>();
 export const requestSignal = () => requestContext.getStore()?.signal;
 export function throwIfRequestAborted(): void {
   requestSignal()?.throwIfAborted();
