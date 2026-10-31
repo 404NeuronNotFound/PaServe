@@ -26,6 +26,8 @@
     "test:database-monitor": "node --test scripts/database-monitor.test.mjs",
     "test:observability-flood": "pnpm build && node test/api-observability-flood.mjs",
     "test:monitoring:postgres": "node test/request-timeouts.local-postgres.mjs monitoring",
+    "test:recovery:postgres": "pnpm build && node test/request-timeouts.local-postgres.mjs recovery",
+    "test:failure-recovery": "pnpm test:recovery:postgres && vitest run src/modules/auth/bot-challenge.service.spec.ts src/modules/orders/new-order-events.service.spec.ts src/modules/categories/public-menu.repository.spec.ts --maxWorkers=2 && vitest run --config vitest.config.e2e.ts test/request-timeouts.e2e-spec.ts test/supabase-latency.e2e-spec.ts --maxWorkers=2",
     "test:indexing:postgres": "node test/request-timeouts.local-postgres.mjs indexing",
     "test:tenant-performance:postgres": "node test/request-timeouts.local-postgres.mjs tenants",
     "test:caching:postgres": "node test/request-timeouts.local-postgres.mjs caching",

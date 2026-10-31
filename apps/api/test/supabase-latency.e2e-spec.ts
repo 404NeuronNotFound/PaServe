@@ -19,7 +19,13 @@ import { RateLimit } from '../src/common/rate-limiting/rate-limit.policy.js';
 import { configureTrustedProxy } from '../src/common/http/trusted-proxy.js';
 
 type Kind = 'logo' | 'banner' | 'product';
-type Mode = 'delayed-success' | 'stalled-headers' | 'stalled-body' | 'reset';
+type Mode =
+  | 'delayed-success'
+  | 'stalled-headers'
+  | 'stalled-body'
+  | 'reset'
+  | 'provider-503'
+  | 'invalid-json';
 const kinds: Kind[] = ['logo', 'banner', 'product'];
 const shop = '10000000-0000-4000-8000-000000000001';
 const product = '20000000-0000-4000-8000-000000000002';
@@ -103,6 +109,18 @@ describe('real Supabase SDK storage under local network faults', () => {
         return;
       }
       uploads++;
+      if (mode === 'provider-503') {
+        response
+          .writeHead(503, { 'Content-Type': 'application/json' })
+          .end('{"error":"private-provider-token-details"}');
+        return;
+      }
+      if (mode === 'invalid-json') {
+        response
+          .writeHead(200, { 'Content-Type': 'application/json' })
+          .end('private-provider-invalid-json');
+        return;
+      }
       if (mode === 'reset') {
         incoming.socket.destroy();
         return;
@@ -116,14 +134,12 @@ describe('real Supabase SDK storage under local network faults', () => {
       const timer = setTimeout(() => {
         timers.delete(timer);
         if (!response.destroyed)
-          response
-            .writeHead(200, { 'Content-Type': 'application/json' })
-            .end(
-              JSON.stringify({
-                Key: incoming.url?.slice('/storage/v1/object/'.length),
-                Id: product,
-              }),
-            );
+          response.writeHead(200, { 'Content-Type': 'application/json' }).end(
+            JSON.stringify({
+              Key: incoming.url?.slice('/storage/v1/object/'.length),
+              Id: product,
+            }),
+          );
       }, 40);
       timers.add(timer);
     });
@@ -179,7 +195,7 @@ describe('real Supabase SDK storage under local network faults', () => {
       report,
       JSON.stringify(
         {
-          pass: rows.length === 16,
+          pass: rows.length === 22,
           scope: 'real-sdk-local-http-no-live-provider',
           requestDeadlineMs: 400,
           dependencyDeadlineMs: 10000,
@@ -256,6 +272,25 @@ describe('real Supabase SDK storage under local network faults', () => {
       record(kind, 'connection-reset', start);
     },
   );
+  for (const fault of ['provider-503', 'invalid-json'] as const) {
+    it.each(kinds)(
+      `%s fails safely on ${fault} and accepts the next healthy request`,
+      async (kind) => {
+        mode = fault;
+        const start = performance.now(),
+          before = uploads;
+        const reply = await post(kind);
+        expect(reply.status).toBe(503);
+        expect(JSON.stringify(reply.body)).not.toMatch(
+          /private-provider|fixture-only|127\.0\.0\.1|storage\/v1/,
+        );
+        expect(uploads - before).toBe(1);
+        mode = 'delayed-success';
+        await post(kind).expect(201);
+        record(kind, fault, start);
+      },
+    );
+  }
 
   it('cancels a real SDK upload when its API client disconnects', async () => {
     mode = 'stalled-headers';

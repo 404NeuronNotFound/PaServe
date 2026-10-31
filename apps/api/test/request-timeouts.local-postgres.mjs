@@ -65,6 +65,7 @@ assert.ok(
     'idempotency',
     'pooling',
     'monitoring',
+    'recovery',
     'indexing',
     'tenants',
     'caching',
@@ -129,6 +130,10 @@ const monitoringReport = resolve(
   apiRoot,
   '../../artifacts/performance/database-monitoring-local.json',
 );
+const recoveryReport = resolve(
+  apiRoot,
+  '../../artifacts/performance/failure-recovery-postgres-local.json',
+);
 async function cleanup() {
   if (initialized) {
     try {
@@ -159,6 +164,13 @@ async function cleanup() {
   }
 }
 try {
+  if (suite === 'recovery') {
+    await mkdir(dirname(recoveryReport), { recursive: true });
+    await writeFile(
+      recoveryReport,
+      JSON.stringify({ pass: false, status: 'starting' }) + '\n',
+    );
+  }
   if (suite === 'monitoring') {
     await mkdir(dirname(monitoringReport), { recursive: true });
     await writeFile(
@@ -217,19 +229,27 @@ try {
         ? '../../artifacts/performance/request-timeouts-postgres-local.json'
         : suite === 'idempotency'
           ? '../../artifacts/performance/idempotency-postgres-local.json'
-          : suite === 'monitoring'
-            ? '../../artifacts/performance/database-monitoring-local.json'
-            : suite === 'indexing'
-              ? '../../artifacts/performance/database-indexing-local.json'
-              : suite === 'tenants'
-                ? '../../artifacts/performance/tenant-query-performance-local.json'
-                : suite === 'caching'
-                  ? '../../artifacts/performance/caching-local.json'
-                  : '../../artifacts/performance/database-pooling-local.json',
+          : suite === 'recovery'
+            ? '../../artifacts/performance/failure-recovery-postgres-local.json'
+            : suite === 'monitoring'
+              ? '../../artifacts/performance/database-monitoring-local.json'
+              : suite === 'indexing'
+                ? '../../artifacts/performance/database-indexing-local.json'
+                : suite === 'tenants'
+                  ? '../../artifacts/performance/tenant-query-performance-local.json'
+                  : suite === 'caching'
+                    ? '../../artifacts/performance/caching-local.json'
+                    : '../../artifacts/performance/database-pooling-local.json',
     ),
     ...(suite !== 'timeouts'
       ? {
           NODE_ENV: 'test',
+          ...(suite === 'recovery'
+            ? {
+                PASERVE_IGNORE_ENV_FILE: 'true',
+                API_OBSERVABILITY_REQUEST_LOG_LIMIT: '0',
+              }
+            : {}),
           JWT_ACCESS_SECRET:
             'fixture-only-idempotency-access-secret-at-least-32-characters',
           JWT_REFRESH_SECRET:
@@ -249,15 +269,17 @@ try {
           ? 'test/request-timeouts.database-check.mjs'
           : suite === 'idempotency'
             ? 'test/idempotency.database-check.mjs'
-            : suite === 'monitoring'
-              ? 'test/database-monitoring.database-check.mjs'
-              : suite === 'indexing'
-                ? 'test/database-indexing.database-check.mjs'
-                : suite === 'tenants'
-                  ? 'test/tenant-performance.database-check.mjs'
-                  : suite === 'caching'
-                    ? 'test/caching.database-check.mjs'
-                    : 'test/database-pooling.database-check.mjs',
+            : suite === 'recovery'
+              ? 'test/failure-recovery.database-check.mjs'
+              : suite === 'monitoring'
+                ? 'test/database-monitoring.database-check.mjs'
+                : suite === 'indexing'
+                  ? 'test/database-indexing.database-check.mjs'
+                  : suite === 'tenants'
+                    ? 'test/tenant-performance.database-check.mjs'
+                    : suite === 'caching'
+                      ? 'test/caching.database-check.mjs'
+                      : 'test/database-pooling.database-check.mjs',
     ],
     {
       cwd: apiRoot,
@@ -319,6 +341,22 @@ try {
   } finally {
     process.off('SIGINT', interrupt);
     process.off('SIGTERM', terminate);
+    if (suite === 'recovery') {
+      let report = { pass: false };
+      try {
+        report = JSON.parse(await readFile(recoveryReport, 'utf8'));
+      } catch {
+        /* incomplete child */
+      }
+      report.pass = Boolean(report.pass && loadSucceeded && stopped && removed);
+      report.status = report.pass ? 'complete' : 'failed';
+      report.cleanup = {
+        postgresStopped: stopped,
+        ownedDirectoryRemoved: removed,
+      };
+      await writeFile(recoveryReport, JSON.stringify(report, null, 2) + '\n');
+      if (!report.pass) process.exitCode = 1;
+    }
     if (suite === 'monitoring') {
       let report = { pass: false };
       try {

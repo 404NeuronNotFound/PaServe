@@ -35,6 +35,7 @@
     "test:latency-slo": "node --test scripts/latency-slo.test.mjs",
     "test:database-monitor": "pnpm --filter api test:database-monitor",
     "test:observability-flood": "pnpm --filter api test:observability-flood",
+    "test:failure-recovery": "pnpm --filter api test:failure-recovery",
     "test:monitoring:postgres": "pnpm --filter api test:monitoring:postgres",
     "monitor:database": "pnpm --filter api monitor:database",
     "check:latency-slo": "node scripts/check-latency-slo.mjs"
