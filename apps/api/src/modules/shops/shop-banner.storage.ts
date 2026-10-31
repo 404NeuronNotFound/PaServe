@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { boundedFetch } from '../../common/http/request-context.js';
+import { externalServiceMetrics } from '../../common/observability/external-service.metrics.js';
 import { isStorageConflict } from '../../common/storage/upload-errors.js';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
@@ -38,11 +39,16 @@ export class ShopBannerStorage {
     const storagePath = brandingImagePath(shopId, 'banner');
     const bucket = this.admin().storage.from(SHOP_BANNER_BUCKET);
     try {
-      const { error } = await bucket.upload(storagePath, buffer, {
-        contentType: 'image/webp',
-        upsert: false,
-        cacheControl: '31536000',
-      });
+      const { error } = await externalServiceMetrics.observe(
+        'storage-upload',
+        () =>
+          bucket.upload(storagePath, buffer, {
+            contentType: 'image/webp',
+            upsert: false,
+            cacheControl: '31536000',
+          }),
+        (result) => Boolean(result.error),
+      );
       if (error) throw error;
     } catch (error) {
       // A conflict means this attempt never owned the existing object.
@@ -77,9 +83,11 @@ export class ShopBannerStorage {
 
   async remove(storagePath: string, bucketName = SHOP_BANNER_BUCKET) {
     try {
-      const { error } = await this.admin()
-        .storage.from(bucketName)
-        .remove([storagePath]);
+      const { error } = await externalServiceMetrics.observe(
+        'storage-remove',
+        () => this.admin().storage.from(bucketName).remove([storagePath]),
+        (result) => Boolean(result.error),
+      );
       if (error) this.logger.warn('Shop banner cleanup needs retry.');
     } catch {
       this.logger.warn('Shop banner cleanup needs retry.');

@@ -17,6 +17,7 @@ import { TablesModule } from './modules/tables/tables.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
 import { StaffModule } from './modules/staff/staff.module.js';
 import { frontendOrigins } from './common/http/frontend-origins.js';
+import { ApiObservabilityModule } from './common/observability/api-observability.module.js';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { frontendOrigins } from './common/http/frontend-origins.js';
       },
     }),
     RateLimitingModule,
+    ApiObservabilityModule,
     DatabaseModule,
     AuthModule,
     ShopsModule,

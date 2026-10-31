@@ -2,7 +2,6 @@ import {
   Catch,
   HttpException,
   HttpStatus,
-  Logger,
   type ArgumentsHost,
   type ExceptionFilter,
 } from '@nestjs/common';
@@ -13,11 +12,10 @@ import { ApiOverloadedException } from '../http/api-overloaded.exception.js';
 import { RequestTimeoutException } from '../http/request-timeout.exception.js';
 import { databaseTimeoutKind } from '../../database/database-timeout-error.js';
 import type { Response } from 'express';
+import { apiObservation } from '../observability/api-observation.context.js';
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(ApiExceptionFilter.name);
-
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
     // Disconnected callers must not trigger a second write or error-log storm.
@@ -85,12 +83,18 @@ export class ApiExceptionFilter implements ExceptionFilter {
         message: 'The request is too large.',
       };
     } else {
-      // Do not log request bodies, Prisma query parameters, or password data.
-      this.logger.error(
-        'Unhandled API failure',
-        exception instanceof Error ? exception.name : 'Unknown error',
-      );
+      // The request observer emits bounded diagnostics, never raw exception data.
     }
+    const observation = apiObservation.getStore();
+    if (observation && body.statusCode >= 500)
+      observation.failure =
+        body.code === 'DATABASE_BUSY'
+          ? 'database-busy'
+          : body.code === 'DEPENDENCY_TIMEOUT'
+            ? 'dependency-timeout'
+            : exception instanceof RequestTimeoutException
+              ? 'request-timeout'
+              : 'server-error';
     response.status(body.statusCode).json(body);
   }
 }

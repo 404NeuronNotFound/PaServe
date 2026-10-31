@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { externalServiceMetrics } from '../observability/external-service.metrics.js';
 
 export const requestContext = new AsyncLocalStorage<{
   signal: AbortSignal;
@@ -17,5 +18,9 @@ export const boundedFetch: typeof fetch = (input, init) => {
   if (incoming) signals.push(incoming);
   if (init?.signal) signals.push(init.signal);
   if (input instanceof Request) signals.push(input.signal);
-  return fetch(input, { ...init, signal: AbortSignal.any(signals) });
+  return externalServiceMetrics.observe(
+    'http-headers',
+    () => fetch(input, { ...init, signal: AbortSignal.any(signals) }),
+    (response) => !response.ok,
+  );
 };

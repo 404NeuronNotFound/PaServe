@@ -24,6 +24,7 @@ async function bootstrap() {
     ),
     credentials: true,
     exposedHeaders: [
+      'X-Request-ID',
       'Retry-After',
       'X-RateLimit-Limit',
       'X-RateLimit-Remaining',

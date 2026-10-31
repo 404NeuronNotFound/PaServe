@@ -9,6 +9,7 @@ import { createHmac, randomBytes } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import type { Request, Response } from 'express';
 import { boundedFetch } from '../../common/http/request-context.js';
+import { externalServiceMetrics } from '../../common/observability/external-service.metrics.js';
 
 type Action = 'login' | 'register';
 type Risk = {
@@ -195,21 +196,27 @@ export class BotChallengeService implements OnApplicationShutdown {
     this.used.set(digest, now + 300_000);
     let result: Record<string, unknown>;
     try {
-      const reply = await boundedFetch(
-        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ secret: this.secret, response: token }),
-          signal: AbortSignal.timeout(3500),
-          redirect: 'error',
+      result = await externalServiceMetrics.observe(
+        'turnstile-verification',
+        async () => {
+          const reply = await boundedFetch(
+            'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ secret: this.secret, response: token }),
+              signal: AbortSignal.timeout(3500),
+              redirect: 'error',
+            },
+          );
+          if (!reply.ok) this.unavailable(response);
+          const parsed: unknown = await reply.json();
+          if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+            this.unavailable(response);
+          return parsed as Record<string, unknown>;
         },
+        (parsed) => parsed.success !== true,
       );
-      if (!reply.ok) this.unavailable(response);
-      const parsed: unknown = await reply.json();
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
-        this.unavailable(response);
-      result = parsed as Record<string, unknown>;
     } catch {
       this.unavailable(response);
     } finally {

@@ -1,4 +1,5 @@
 import { requestContext } from '../common/http/request-context.js';
+import { recordDatabaseTiming } from '../common/observability/api-observation.context.js';
 
 export type DatabaseWorkload = 'analytics' | 'orders' | 'other';
 const boundsMs = [5, 10, 25, 50, 100, 250, 500, 1000, 5000];
@@ -25,13 +26,16 @@ export class DatabaseQueryMetrics {
     const group =
       this.groups[requestContext.getStore()?.databaseWorkload ?? 'other'];
     const started = performance.now();
+    let failed = false;
     try {
       return await query();
     } catch (error) {
+      failed = true;
       group.failures++;
       throw error;
     } finally {
       const ms = performance.now() - started;
+      recordDatabaseTiming(ms, failed);
       group.count++;
       group.totalMs += ms;
       group.maxMs = Math.max(group.maxMs, ms);

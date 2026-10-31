@@ -34,6 +34,7 @@
     "test:load-capacity": "pnpm --filter api test:load-capacity",
     "test:latency-slo": "node --test scripts/latency-slo.test.mjs",
     "test:database-monitor": "pnpm --filter api test:database-monitor",
+    "test:observability-flood": "pnpm --filter api test:observability-flood",
     "test:monitoring:postgres": "pnpm --filter api test:monitoring:postgres",
     "monitor:database": "pnpm --filter api monitor:database",
     "check:latency-slo": "node scripts/check-latency-slo.mjs"
