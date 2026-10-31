@@ -38,12 +38,33 @@ export async function renderEdgeConfig(options) {
     throw new Error("workerUser must be an explicit Unix account name");
   const listenPort = port(options.port ?? (local ? 8080 : 443));
   const prefix = safePath(options.prefix, "prefix");
-  const upstream = options.upstream ?? "127.0.0.1:3000";
+  if (options.upstream !== undefined && options.upstreams !== undefined)
+    throw new Error("Choose upstream or upstreams, not both");
+  const upstreams = options.upstreams ?? [options.upstream ?? "127.0.0.1:3000"];
   if (
-    !/^(?:[a-z0-9]+(?:[.-][a-z0-9]+)*|\[[0-9a-f:]+\]):[0-9]+$/iu.test(upstream)
+    !Array.isArray(upstreams) ||
+    upstreams.length < 1 ||
+    upstreams.length > 8 ||
+    new Set(upstreams).size !== upstreams.length
   )
-    throw new Error("upstream must be host:port with no URL/path/credentials");
-  port(upstream.slice(upstream.lastIndexOf(":") + 1));
+    throw new Error("Provide one to eight unique upstreams");
+  const endpoint = (value) => {
+    if (
+      typeof value !== "string" ||
+      !/^(?:[a-z0-9]+(?:[.-][a-z0-9]+)*|\[[0-9a-f:]+\]):[0-9]+$/iu.test(value)
+    )
+      throw new Error(
+        "upstream must be host:port with no URL/path/credentials",
+      );
+    port(value.slice(value.lastIndexOf(":") + 1));
+    return value;
+  };
+  upstreams.forEach(endpoint);
+  if (upstreams.length > 1 && !options.authUpstream)
+    throw new Error(
+      "Multiple API upstreams require one explicit authUpstream while authentication protections are process-local",
+    );
+  const authUpstream = endpoint(options.authUpstream ?? upstreams[0]);
   if (local && !["127.0.0.1", "localhost"].includes(host))
     throw new Error("Local HTTP checks must use a loopback hostname");
   if (!local && ["localhost", "127.0.0.1", "0.0.0.0"].includes(host))
@@ -121,7 +142,8 @@ export async function renderEdgeConfig(options) {
     LISTEN: `${local ? "127.0.0.1:" : ""}${listenPort}`,
     SSL_LISTEN: local ? "" : " ssl",
     TLS: tls,
-    UPSTREAM: upstream,
+    UPSTREAM_SERVERS: upstreams.map((value) => `server ${value};`).join(" "),
+    AUTH_UPSTREAM: authUpstream,
     CORS_ORIGINS: corsOrigins
       .map((entry) => `        "${entry}" "${entry}";`)
       .join("\n"),
@@ -153,6 +175,7 @@ if (
   const names = {
     "--hostname": "hostname",
     "--upstream": "upstream",
+    "--auth-upstream": "authUpstream",
     "--prefix": "prefix",
     "--worker-user": "workerUser",
     "--certificate": "certificate",
@@ -161,6 +184,11 @@ if (
     "--output": "output",
   };
   for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--api-upstream") {
+      if (args[i + 1] === undefined) throw new Error("Missing API upstream");
+      (options.upstreams ??= []).push(args[++i]);
+      continue;
+    }
     if (args[i] === "--local-check") {
       options.localCheck = true;
       continue;

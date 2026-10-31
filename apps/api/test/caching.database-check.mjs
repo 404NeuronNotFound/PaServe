@@ -385,10 +385,12 @@ try {
         caches[0],
       );
       const before = caches[0].snapshot();
-      const jobs = Array.from({ length: 8 }, () => controlled.read(a.slug));
+      // This cache test holds the loader open. Stay inside the four-reader
+      // production gate; queued requests cannot reach the cache until release.
+      const jobs = Array.from({ length: 4 }, () => controlled.read(a.slug));
       try {
         const until = Date.now() + 3000;
-        while (caches[0].snapshot().coalesced < before.coalesced + 7) {
+        while (caches[0].snapshot().coalesced < before.coalesced + 3) {
           assert.ok(Date.now() < until, 'Followers did not coalesce');
           await delay(5);
         }

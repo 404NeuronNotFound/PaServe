@@ -10,6 +10,42 @@ const deployment = {
   frontendOrigins: ["https://app.example.test"],
 };
 
+test("multiple APIs require a single explicit auth owner and retain no-retry writes", async () => {
+  await assert.rejects(
+    renderEdgeConfig({
+      ...deployment,
+      upstreams: ["api-a:3000", "api-b:3000"],
+    }),
+    /authUpstream/,
+  );
+  const config = await renderEdgeConfig({
+    ...deployment,
+    upstreams: ["api-a:3000", "api-b:3000"],
+    authUpstream: "api-auth:3000",
+  });
+  assert.match(config, /least_conn; server api-a:3000; server api-b:3000;/);
+  assert.match(config, /upstream paserve_auth_origin \{ server api-auth:3000;/);
+  assert.match(
+    config,
+    /location ~\* \^\/api\/v1\/auth\(\/\|\$\) \{ proxy_pass http:\/\/paserve_auth_origin;/,
+  );
+  assert.match(config, /proxy_next_upstream off/);
+});
+
+test("upstream lists cannot inject directives, grow without bounds or mix legacy options", async () => {
+  for (const input of [
+    { upstreams: [] },
+    { upstreams: "api:3000" },
+    { upstreams: ["api:3000", "api:3000"] },
+    { upstream: "api:3000", upstreams: ["other:3000"] },
+    { upstreams: Array.from({ length: 9 }, (_, i) => `api-${i}:3000`) },
+    { upstreams: ["api:3000; include secret;"] },
+    { upstreams: ["api:3000"], authUpstream: "https://other:3000/path" },
+    { upstreams: ["api:3000"], authUpstream: "user:secret@other:3000" },
+  ])
+    await assert.rejects(renderEdgeConfig({ ...deployment, ...input }));
+});
+
 test("public configuration requires TLS material; plaintext check mode binds only loopback", async () => {
   await assert.rejects(
     renderEdgeConfig({ ...deployment, certificate: undefined }),

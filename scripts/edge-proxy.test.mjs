@@ -104,7 +104,11 @@ test(
     const workspaceRoot = await realpath(root);
     const privateRoot = await realpath(localRoot);
     const privateRelative = relative(workspaceRoot, privateRoot);
-    if (!privateRelative || privateRelative.startsWith("..") || isAbsolute(privateRelative))
+    if (
+      !privateRelative ||
+      privateRelative.startsWith("..") ||
+      isAbsolute(privateRelative)
+    )
       throw new Error("Refusing a test directory outside this workspace");
     const prefix = await mkdtemp(join(localRoot, "edge-check-"));
     for (const name of ["logs", "body", "proxy", "temp"])
@@ -112,7 +116,7 @@ test(
     const calls = [];
     const pending = [];
     let finishStream;
-    const origin = http.createServer((request, response) => {
+    const handleOrigin = (request, response) => {
       const call = {
         method: request.method,
         path: request.url,
@@ -152,8 +156,17 @@ test(
         response.setHeader("Content-Type", "application/json");
         response.end("{}");
       });
+    };
+    const origin = http.createServer((request, response) => {
+      response.setHeader("X-Fixture-Node", "first");
+      handleOrigin(request, response);
+    });
+    const secondOrigin = http.createServer((request, response) => {
+      response.setHeader("X-Fixture-Node", "second");
+      handleOrigin(request, response);
     });
     const upstreamPort = await listen(origin);
+    const secondPort = await listen(secondOrigin);
     const reservation = http.createServer();
     const port = await listen(reservation);
     await new Promise((done) => reservation.close(done));
@@ -170,7 +183,8 @@ test(
         localCheck: true,
         hostname: "127.0.0.1",
         port,
-        upstream: `127.0.0.1:${upstreamPort}`,
+        upstreams: [`127.0.0.1:${upstreamPort}`, `127.0.0.1:${secondPort}`],
+        authUpstream: `127.0.0.1:${upstreamPort}`,
         prefix,
         frontendOrigins: ["http://app.example.test"],
       }),
@@ -200,6 +214,23 @@ test(
       assert.ok(
         ready,
         `NGINX did not start: ${await readFile(join(prefix, "logs/error.log"), "utf8")}`,
+      );
+      await t.test(
+        "business requests use both origins while all authentication stays on its designated owner",
+        async () => {
+          const replies = await Promise.all(
+            Array.from({ length: 8 }, () => send(port, "/api/v1/menu/cafe")),
+          );
+          assert.deepEqual(
+            new Set(replies.map((reply) => reply.headers["x-fixture-node"])),
+            new Set(["first", "second"]),
+          );
+          for (const path of ["/api/v1/auth/session", "/api/v1/auth/profile"]) {
+            const reply = await send(port, path);
+            assert.equal(reply.status, 200);
+            assert.equal(reply.headers["x-fixture-node"], "first");
+          }
+        },
       );
       await t.test(
         "normal menu reads, CORS preflights and punctuation in query/JSON are preserved",
@@ -530,6 +561,33 @@ test(
           assert.equal((await send(port, "/api/v1/menu/cafe")).status, 200);
         },
       );
+      await t.test(
+        "losing the auth owner does not replay writes or move auth to a fresh risk bucket",
+        async () => {
+          origin.closeAllConnections();
+          await new Promise((done) => origin.close(done));
+          const write = await send(port, "/api/v1/auth/logout", {
+            method: "POST",
+          });
+          assert.equal(write.status, 502);
+          assert.equal(write.headers["x-fixture-node"], undefined);
+          // Reads may first encounter the failed business origin; do not retry it automatically.
+          const business = [];
+          for (let i = 0; i < 4; i++)
+            business.push(await send(port, "/api/v1/menu/cafe"));
+          assert.ok(
+            business.some(
+              (reply) =>
+                reply.status === 200 &&
+                reply.headers["x-fixture-node"] === "second",
+            ),
+          );
+          assert.ok(
+            business.every((reply) => [200, 502].includes(reply.status)),
+          );
+          assert.equal((await send(port, "/api/v1/auth/session")).status, 502);
+        },
+      );
     } finally {
       pending.splice(0).forEach((finish) => finish());
       finishStream?.();
@@ -545,11 +603,17 @@ test(
         }
       }
       origin.closeAllConnections();
+      secondOrigin.closeAllConnections();
       await new Promise((done) => origin.close(done));
+      await new Promise((done) => secondOrigin.close(done));
       // Recursive cleanup is restricted to the verified mkdtemp child of this workspace.
       const actualRoot = await realpath(localRoot);
       const rootRelative = relative(workspaceRoot, actualRoot);
-      if (!rootRelative || rootRelative.startsWith("..") || isAbsolute(rootRelative))
+      if (
+        !rootRelative ||
+        rootRelative.startsWith("..") ||
+        isAbsolute(rootRelative)
+      )
         throw new Error("Refusing cleanup outside this workspace");
       const actualPrefix = await realpath(prefix);
       const childPath = relative(actualRoot, actualPrefix);

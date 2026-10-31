@@ -82,8 +82,8 @@
           "count": 68,
           "failures": 12,
           "slow": 2,
-          "totalMs": 734.7090999999996,
-          "maxMs": 303.60059999999976,
+          "totalMs": 728.3203999999982,
+          "maxMs": 305.40200000000004,
           "boundsMs": [
             5,
             10,
@@ -111,8 +111,8 @@
       },
       "acquisitionTiming": {
         "count": 55,
-        "totalMs": 800.1940999999988,
-        "maxMs": 303.44979999999987,
+        "totalMs": 792.4464000000007,
+        "maxMs": 305.22590000000037,
         "boundsMs": [
           1,
           5,
@@ -129,8 +129,8 @@
           46,
           1,
           0,
-          0,
-          6,
+          1,
+          5,
           0,
           0,
           2,
@@ -230,8 +230,8 @@
           "count": 6,
           "failures": 0,
           "slow": 0,
-          "totalMs": 4.298400000000129,
-          "maxMs": 1.1141999999999825,
+          "totalMs": 2.9762000000005173,
+          "maxMs": 0.7043000000003303,
           "boundsMs": [
             5,
             10,
@@ -259,8 +259,8 @@
       },
       "acquisitionTiming": {
         "count": 2,
-        "totalMs": 67.8439000000003,
-        "maxMs": 36.49850000000015,
+        "totalMs": 62.1840000000002,
+        "maxMs": 33.1869999999999,
         "boundsMs": [
           1,
           5,
@@ -378,8 +378,8 @@
           "count": 8,
           "failures": 5,
           "slow": 0,
-          "totalMs": 464.0430000000001,
-          "maxMs": 213.0467000000001,
+          "totalMs": 353.36389999999983,
+          "maxMs": 151.4697000000001,
           "boundsMs": [
             5,
             10,
@@ -396,8 +396,8 @@
             0,
             0,
             0,
-            1,
             2,
+            1,
             0,
             0,
             0,
@@ -407,8 +407,8 @@
       },
       "acquisitionTiming": {
         "count": 8,
-        "totalMs": 291.74570000000017,
-        "maxMs": 156.25610000000006,
+        "totalMs": 180.0217,
+        "maxMs": 96.07159999999999,
         "boundsMs": [
           1,
           5,
@@ -426,9 +426,9 @@
           0,
           0,
           0,
+          2,
           1,
-          1,
-          1,
+          0,
           0,
           0,
           0,
@@ -526,8 +526,8 @@
           "count": 5,
           "failures": 1,
           "slow": 0,
-          "totalMs": 28.640799999999672,
-          "maxMs": 27.23799999999983,
+          "totalMs": 28.41469999999981,
+          "maxMs": 27.071799999999712,
           "boundsMs": [
             5,
             10,
@@ -555,8 +555,8 @@
       },
       "acquisitionTiming": {
         "count": 3,
-        "totalMs": 54.15199999999959,
-        "maxMs": 27.26449999999977,
+        "totalMs": 51.70029999999997,
+        "maxMs": 26.652599999999893,
         "boundsMs": [
           1,
           5,
@@ -674,8 +674,8 @@
           "count": 4,
           "failures": 0,
           "slow": 0,
-          "totalMs": 32.60920000000078,
-          "maxMs": 31.209200000000237,
+          "totalMs": 25.997600000000148,
+          "maxMs": 24.948599999999715,
           "boundsMs": [
             5,
             10,
@@ -690,8 +690,8 @@
           "buckets": [
             3,
             0,
-            0,
             1,
+            0,
             0,
             0,
             0,
@@ -703,8 +703,8 @@
       },
       "acquisitionTiming": {
         "count": 2,
-        "totalMs": 155.45680000000038,
-        "maxMs": 124.88049999999976,
+        "totalMs": 48.21090000000004,
+        "maxMs": 24.42370000000028,
         "boundsMs": [
           1,
           5,
@@ -721,10 +721,10 @@
           0,
           0,
           0,
+          2,
           0,
-          1,
           0,
-          1,
+          0,
           0,
           0,
           0,
@@ -753,32 +753,32 @@
     {
       "name": "cold-concurrent-queries-create-one-bounded-pool",
       "pass": true,
-      "elapsedMs": 285
+      "elapsedMs": 223
     },
     {
       "name": "sequential-tenant-queries-reuse-one-connection-and-preserve-scope",
       "pass": true,
-      "elapsedMs": 57
+      "elapsedMs": 55
     },
     {
       "name": "HTTP-requests-share-the-singleton-pool-across-tenants",
       "pass": true,
-      "elapsedMs": 112
+      "elapsedMs": 104
     },
     {
       "name": "saturated-pool-bounds-connections-and-waiters-with-retryable-HTTP-503",
       "pass": true,
-      "elapsedMs": 373
+      "elapsedMs": 370
     },
     {
       "name": "SQL-errors-and-transaction-rollback-return-their-checkouts",
       "pass": true,
-      "elapsedMs": 6
+      "elapsedMs": 5
     },
     {
       "name": "idle-backend-failure-is-observed-and-pool-recovers",
       "pass": true,
-      "elapsedMs": 48
+      "elapsedMs": 41
     },
     {
       "name": "two-client-pools-stay-within-the-declared-combined-budget",
@@ -788,7 +788,7 @@
     {
       "name": "disconnect-closes-owned-pool-and-reconnect-keeps-queue-bounds",
       "pass": true,
-      "elapsedMs": 369
+      "elapsedMs": 362
     },
     {
       "name": "application-shutdown-disposes-all-owned-connections",
@@ -798,17 +798,17 @@
     {
       "name": "idle-connections-are-reaped-without-a-minimum-prewarm",
       "pass": true,
-      "elapsedMs": 137
+      "elapsedMs": 135
     },
     {
       "name": "zero-waiting-policy-sheds-busy-checkouts-and-recovers",
       "pass": true,
-      "elapsedMs": 32
+      "elapsedMs": 29
     },
     {
       "name": "lifetime-expiry-does-not-kill-an-in-use-transaction",
       "pass": true,
-      "elapsedMs": 1367
+      "elapsedMs": 1258
     }
   ]
 }
