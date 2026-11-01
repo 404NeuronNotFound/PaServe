@@ -120,6 +120,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
           expect.any(AbortSignal),
           "",
           { table: label },
+          { page: 1 },
         ),
       );
     });
@@ -147,6 +148,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
             from: "2026-10-16",
             to: "2026-10-16",
           },
+          { page: 1 },
         ),
       );
       expect(screen.getByText(/Applied:.*Dine-in.*Patio %_/)).toBeVisible();
@@ -165,6 +167,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
           expect.any(AbortSignal),
           "ORD-000042",
           expect.objectContaining({ mode: "DINE_IN", table: "Patio %_" }),
+          { page: 1 },
         ),
       );
       fireEvent.click(
@@ -181,12 +184,26 @@ describe.each(["active", "completed", "cancelled"] as const)(
           expect.any(AbortSignal),
           "ORD-000042",
           {},
+          { page: 1 },
         ),
       );
       expect(screen.getByRole("searchbox")).toHaveValue("ORD-000042");
     });
     it("retains filters during paging and refresh, resetting the cursor for changed values", async () => {
-      requests[view].mockResolvedValue({ orders: [], nextCursor: "next" });
+      requests[view].mockImplementation(
+        async (_shop, _cursor, _signal, _term, _filters, paging) => ({
+          orders: [],
+          nextCursor: null,
+          pagination: {
+            page: paging?.page ?? 1,
+            pageSize: 12,
+            pageCount: 2,
+            total: 13,
+            snapshot: "2026-10-17T00:00:00.000Z",
+            hasNew: false,
+          },
+        }),
+      );
       setup(view);
       await waitFor(() =>
         expect(screen.getByRole("button", { name: "Next" })).toBeEnabled(),
@@ -199,10 +216,11 @@ describe.each(["active", "completed", "cancelled"] as const)(
       await screen.findByText("No matching orders on this page");
       expect(requests[view]).toHaveBeenLastCalledWith(
         "a",
-        "next",
+        null,
         expect.any(AbortSignal),
         "",
         { mode: "TAKEOUT" },
+        { page: 2, snapshot: "2026-10-17T00:00:00.000Z" },
       );
       fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
       await screen.findByText("No matching orders");
@@ -212,6 +230,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
         expect.any(AbortSignal),
         "",
         { mode: "TAKEOUT" },
+        { page: 1 },
       );
       fireEvent.click(screen.getByRole("button", { name: "Next" }));
       await screen.findByText("No matching orders on this page");
@@ -224,10 +243,11 @@ describe.each(["active", "completed", "cancelled"] as const)(
         expect.any(AbortSignal),
         "",
         { mode: "DINE_IN" },
+        { page: 1 },
       );
       expect(
         requests[view].mock.calls.some(
-          (call) => call[1] === "next" && call[4]?.mode === "DINE_IN",
+          (call) => call[5]?.page === 2 && call[4]?.mode === "DINE_IN",
         ),
       ).toBe(false);
     });
@@ -255,6 +275,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
           expect.any(AbortSignal),
           "",
           { mode: "TAKEOUT", from: "2026-10-17", to: "2026-10-17" },
+          { page: 1 },
         ),
       );
     });
@@ -277,6 +298,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
         expect.any(AbortSignal),
         "",
         { mode: "TAKEOUT" },
+        { page: 1 },
       );
       rendered.rerender(rendered.page("b"));
       await waitFor(() =>
@@ -286,6 +308,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
           expect.any(AbortSignal),
           "",
           {},
+          { page: 1 },
         ),
       );
       expect(
@@ -313,6 +336,7 @@ it("offers useful active statuses and every recorded payment method", async () =
       expect.any(AbortSignal),
       "",
       { status: "READY", paymentMethod: "GCASH_MANUAL" },
+      { page: 1 },
     ),
   );
   fireEvent.click(screen.getByRole("combobox", { name: "Payment method" }));
@@ -339,6 +363,7 @@ it("keeps fulfilled/rejected status fixed and omits irrelevant payment choices",
       expect.any(AbortSignal),
       "",
       { paymentMethod: "CARD_MANUAL" },
+      { page: 1 },
     ),
   );
   completed.unmount();

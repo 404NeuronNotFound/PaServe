@@ -185,6 +185,7 @@ it("lets the owner inspect the menu within the authenticated workspace", async (
     );
     expect(getMenu).toHaveBeenCalledWith("/menu/cafe-a", {
       signal: expect.any(AbortSignal),
+      timeout: 15000,
     });
     expect(logoutAccount).not.toHaveBeenCalled();
     expect(

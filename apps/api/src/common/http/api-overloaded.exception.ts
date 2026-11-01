@@ -1,9 +1,7 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
 export class ApiOverloadedException extends HttpException {
-  readonly retryAfter = 1;
-
-  constructor() {
+  constructor(readonly retryAfter = 1) {
     super(
       {
         code: 'API_OVERLOADED',

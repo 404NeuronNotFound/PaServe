@@ -40,3 +40,42 @@ it("holds the server cutoff across page reads and resets it on refresh or filter
   await act(() => view.result.current.load(read));
   expect(read).toHaveBeenLastCalledWith({ page: 1 });
 });
+
+it("discards snapshots from previous views and ignores a late previous-view response", async () => {
+  const pagination: HistoryPagination = {
+    page: 1,
+    pageSize: 12,
+    pageCount: 2,
+    total: 13,
+    snapshot: "2026-10-17T00:00:00.000Z",
+    hasNew: false,
+  };
+  const view = renderHook(({ scope }) => useNumberedHistory(scope), {
+    initialProps: { scope: "shop-a" },
+  });
+  let finishOld!: (value: { pagination: HistoryPagination }) => void;
+  const pending = view.result.current.load(
+    () =>
+      new Promise<{ pagination: HistoryPagination }>((resolve) => {
+        finishOld = resolve;
+      }),
+  );
+  view.rerender({ scope: "shop-b" });
+  const newPagination = { ...pagination, snapshot: "2026-10-18T00:00:00.000Z" };
+  const read = vi.fn().mockResolvedValue({ pagination: newPagination });
+  await act(() => view.result.current.load(read));
+  await act(async () => {
+    finishOld({ pagination });
+    await pending;
+  });
+  act(() => view.result.current.go(2));
+  await act(() => view.result.current.load(read));
+  expect(read).toHaveBeenLastCalledWith({
+    page: 2,
+    snapshot: newPagination.snapshot,
+  });
+  // Returning to an old view starts afresh; no historical cutoff is retained.
+  view.rerender({ scope: "shop-a" });
+  await act(() => view.result.current.load(read));
+  expect(read).toHaveBeenLastCalledWith({ page: 1 });
+});

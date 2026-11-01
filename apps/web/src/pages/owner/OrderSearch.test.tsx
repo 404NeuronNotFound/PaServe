@@ -116,6 +116,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
           expect.any(AbortSignal),
           "Patio",
           {},
+          { page: 1 },
         ),
       );
       expect(
@@ -156,6 +157,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
         expect.any(AbortSignal),
         "pAtIo 2",
         {},
+        { page: 1 },
       );
       expect(screen.getByRole("searchbox")).toHaveValue("pAtIo 2");
       expect(screen.getByText("Showing matches for “pAtIo 2”.")).toBeVisible();
@@ -167,12 +169,26 @@ describe.each(["active", "completed", "cancelled"] as const)(
           expect.any(AbortSignal),
           "",
           {},
+          { page: 1 },
         ),
       );
       expect(screen.getByRole("searchbox")).toHaveFocus();
     });
     it("keeps search during paging/refresh and resets the cursor atomically for a changed term", async () => {
-      requests[view].mockResolvedValue({ orders: [], nextCursor: "next" });
+      requests[view].mockImplementation(
+        async (_shop, _cursor, _signal, _term, _filters, paging) => ({
+          orders: [],
+          nextCursor: null,
+          pagination: {
+            page: paging?.page ?? 1,
+            pageSize: 12,
+            pageCount: 2,
+            total: 13,
+            snapshot: "2026-10-17T00:00:00.000Z",
+            hasNew: false,
+          },
+        }),
+      );
       setup(view);
       await waitFor(() =>
         expect(screen.getByRole("button", { name: "Next" })).toBeEnabled(),
@@ -183,10 +199,11 @@ describe.each(["active", "completed", "cancelled"] as const)(
       await screen.findByText("No matching orders on this page");
       expect(requests[view]).toHaveBeenLastCalledWith(
         "a",
-        "next",
+        null,
         expect.any(AbortSignal),
         "ORD",
         {},
+        { page: 2, snapshot: "2026-10-17T00:00:00.000Z" },
       );
       search("Table B");
       await screen.findByText("No matching orders");
@@ -196,10 +213,11 @@ describe.each(["active", "completed", "cancelled"] as const)(
         expect.any(AbortSignal),
         "Table B",
         {},
+        { page: 1 },
       );
       expect(
         requests[view].mock.calls.some(
-          (call) => call[1] === "next" && call[3] === "Table B",
+          (call) => call[5]?.page === 2 && call[3] === "Table B",
         ),
       ).toBe(false);
       fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
@@ -210,6 +228,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
         expect.any(AbortSignal),
         "Table B",
         {},
+        { page: 1 },
       );
     });
     it("keeps a failed search available for retry without reverting to unfiltered data", async () => {
@@ -227,6 +246,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
         expect.any(AbortSignal),
         "桌 2",
         {},
+        { page: 1 },
       );
     });
     it("validates length locally and clears the query when changing shops or roles", async () => {
@@ -248,6 +268,7 @@ describe.each(["active", "completed", "cancelled"] as const)(
           expect.any(AbortSignal),
           "",
           {},
+          { page: 1 },
         ),
       );
       rendered.rerender(rendered.page("b", "CASHIER"));

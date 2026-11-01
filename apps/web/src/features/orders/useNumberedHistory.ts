@@ -5,10 +5,16 @@ import type { HistoryPageRequest, HistoryPagination } from "@paserve/contracts";
 export function useNumberedHistory(scope: string) {
   const [selection, setSelection] = useState({ scope, page: 1, version: 0 });
   const current =
-    selection.scope === scope ? selection : { scope, page: 1, version: selection.version + 1 };
+    selection.scope === scope
+      ? selection
+      : { scope, page: 1, version: selection.version + 1 };
   if (selection.scope !== scope) setSelection(current);
   const version = current.version;
-  const snapshots = useRef(new Map<string, string>());
+  // Retain only the active view. Search/filter/refresh versions must not grow
+  // an unbounded history of snapshots during a long-running staff session.
+  const snapshot = useRef<{ key: string; value?: string } | undefined>(
+    undefined,
+  );
   const snapshotKey = JSON.stringify([scope, version]);
   const go = (page: number) => setSelection({ scope, page, version });
   return {
@@ -19,12 +25,16 @@ export function useNumberedHistory(scope: string) {
     async load<T extends { pagination?: HistoryPagination }>(
       read: (request: HistoryPageRequest) => Promise<T>,
     ) {
-      const snapshot = snapshots.current.get(snapshotKey);
+      if (snapshot.current?.key !== snapshotKey)
+        snapshot.current = { key: snapshotKey };
+      const entry = snapshot.current;
       const data = await read({
         page: current.page,
-        ...(snapshot ? { snapshot } : {}),
+        ...(entry.value ? { snapshot: entry.value } : {}),
       });
-      if (data.pagination) snapshots.current.set(snapshotKey, data.pagination.snapshot);
+      // A superseded request may still settle after the next view has loaded.
+      if (data.pagination && snapshot.current === entry)
+        entry.value = data.pagination.snapshot;
       return data;
     },
   };

@@ -25,9 +25,9 @@ import {
 import { RequestDeadlineService } from '../http/request-deadline.service.js';
 import { MENU_READ_CAPACITY } from './menu-read-capacity.js';
 
-const livenessKey = Symbol('paserve:liveness');
+export const CAPACITY_LIVENESS = Symbol('paserve:liveness');
 /** Only for a constant-time endpoint that never accesses dependencies. */
-export const CapacityLiveness = () => SetMetadata(livenessKey, true);
+export const CapacityLiveness = () => SetMetadata(CAPACITY_LIVENESS, true);
 
 @Injectable()
 export class ApiAdmissionGuard implements CanActivate {
@@ -39,7 +39,7 @@ export class ApiAdmissionGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
-    if (this.reflector.get<boolean>(livenessKey, context.getHandler()))
+    if (this.reflector.get<boolean>(CAPACITY_LIVENESS, context.getHandler()))
       return true;
     const request = context.switchToHttp().getRequest<AdmittedRequest>();
     const response = context.switchToHttp().getResponse<Response>();

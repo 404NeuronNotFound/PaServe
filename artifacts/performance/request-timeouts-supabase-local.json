@@ -1,5 +1,8 @@
 {
   "pass": true,
+  "runId": null,
+  "startedAt": "2026-11-01T00:58:28.125Z",
+  "finishedAt": "2026-11-01T00:58:42.135Z",
   "scope": "real-sdk-local-http-no-live-provider",
   "requestDeadlineMs": 400,
   "dependencyDeadlineMs": 10000,
@@ -7,43 +10,43 @@
     {
       "kind": "logo",
       "scenario": "delayed-success",
-      "elapsedMs": 89,
+      "elapsedMs": 118,
       "pass": true
     },
     {
       "kind": "banner",
-      "scenario": "delayed-success",
-      "elapsedMs": 63,
-      "pass": true
-    },
-    {
-      "kind": "product",
       "scenario": "delayed-success",
       "elapsedMs": 61,
       "pass": true
     },
     {
+      "kind": "product",
+      "scenario": "delayed-success",
+      "elapsedMs": 53,
+      "pass": true
+    },
+    {
       "kind": "logo",
       "scenario": "stalled-headers",
-      "elapsedMs": 472,
+      "elapsedMs": 480,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "stalled-headers",
-      "elapsedMs": 471,
+      "elapsedMs": 463,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "stalled-headers",
-      "elapsedMs": 488,
+      "elapsedMs": 475,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "stalled-body",
-      "elapsedMs": 477,
+      "elapsedMs": 473,
       "pass": true
     },
     {
@@ -55,25 +58,25 @@
     {
       "kind": "product",
       "scenario": "stalled-body",
-      "elapsedMs": 465,
+      "elapsedMs": 478,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "connection-reset",
-      "elapsedMs": 70,
+      "elapsedMs": 62,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "connection-reset",
-      "elapsedMs": 61,
+      "elapsedMs": 63,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "connection-reset",
-      "elapsedMs": 81,
+      "elapsedMs": 68,
       "pass": true
     },
     {
@@ -91,49 +94,49 @@
     {
       "kind": "product",
       "scenario": "provider-503",
-      "elapsedMs": 71,
+      "elapsedMs": 62,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "invalid-json",
-      "elapsedMs": 77,
+      "elapsedMs": 69,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "invalid-json",
-      "elapsedMs": 82,
+      "elapsedMs": 63,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "invalid-json",
-      "elapsedMs": 84,
+      "elapsedMs": 69,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "client-disconnect",
-      "elapsedMs": 33,
+      "elapsedMs": 26,
       "pass": true
     },
     {
       "kind": "logo",
       "scenario": "dependency-timeout-without-context",
-      "elapsedMs": 10015,
+      "elapsedMs": 10024,
       "pass": true
     },
     {
       "kind": "banner",
       "scenario": "dependency-timeout-without-context",
-      "elapsedMs": 10015,
+      "elapsedMs": 10025,
       "pass": true
     },
     {
       "kind": "product",
       "scenario": "dependency-timeout-without-context",
-      "elapsedMs": 10017,
+      "elapsedMs": 10028,
       "pass": true
     }
   ]

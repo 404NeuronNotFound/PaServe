@@ -17,6 +17,7 @@ import { createServer } from 'node:net';
 import { loadFixtureEnvironment } from './load-fixture-environment.mjs';
 import { soakProfile, soakSeconds } from './load-soak.profile.mjs';
 import { auditSoakDatabaseLog } from './load-soak.logs.mjs';
+import { finalizeLoadReport } from './load-fixture-results.mjs';
 
 const execute = promisify(execFile);
 const suite = process.argv[2] ?? 'timeouts';
@@ -387,20 +388,16 @@ try {
       }
       if (soak) report.databaseLogs = databaseLogs;
       if (soak) report.databaseWholeLog = databaseWholeLog;
-      report.pass = Boolean(
-        report.pass &&
-        loadSucceeded &&
-        stopped &&
-        removed &&
-        (!soak || databaseLogs?.pass),
-      );
-      report.status = report.pass ? 'complete' : 'failed';
-      if ((soak || suite === 'load-capacity') && !report.pass)
-        process.exitCode = 1;
-      report.cleanup = {
+      report = finalizeLoadReport(report, {
+        workloadSucceeded: loadSucceeded,
         postgresStopped: stopped,
         ownedDirectoryRemoved: removed,
-      };
+        requiresDatabaseLog: Boolean(soak),
+        databaseLogs,
+      });
+      // Every profile must fail the command when its final report fails,
+      // including a cleanup failure after successful traffic.
+      if (!report.pass) process.exitCode = 1;
       await writeFile(loadReport, JSON.stringify(report, null, 2) + '\n');
       if (soak || suite === 'load-capacity')
         await writeFile(

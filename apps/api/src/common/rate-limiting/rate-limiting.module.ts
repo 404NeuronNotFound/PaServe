@@ -10,13 +10,19 @@ import { ApiWorkInterceptor } from '../load-shedding/api-work.interceptor.js';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ApiRateLimitGuard } from './api-rate-limit.guard.js';
 import { RequestDeadlineService } from '../http/request-deadline.service.js';
+import { BoundedRateLimitStorage } from './bounded-rate-limit.storage.js';
 
 @Global()
 @Module({
   imports: [
     ConfigModule,
     JwtModule.register({}),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    ThrottlerModule.forRootAsync({
+      useFactory: () => ({
+        throttlers: [{ ttl: 60_000, limit: 120 }],
+        storage: new BoundedRateLimitStorage(),
+      }),
+    }),
   ],
   providers: [
     ApiCapacityService,

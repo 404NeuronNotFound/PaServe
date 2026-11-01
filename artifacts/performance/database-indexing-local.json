@@ -10,7 +10,7 @@
   "before": [
     {
       "name": "pending orders",
-      "executionMs": 1.384,
+      "executionMs": 1.496,
       "buffers": 198,
       "nodes": [
         {
@@ -39,7 +39,7 @@
     },
     {
       "name": "rejected history",
-      "executionMs": 3.024,
+      "executionMs": 3.046,
       "buffers": 198,
       "nodes": [
         {
@@ -68,7 +68,7 @@
     },
     {
       "name": "pending orders next page",
-      "executionMs": 1.359,
+      "executionMs": 1.35,
       "buffers": 198,
       "nodes": [
         {
@@ -97,7 +97,7 @@
     },
     {
       "name": "active orders",
-      "executionMs": 1.888,
+      "executionMs": 1.877,
       "buffers": 198,
       "nodes": [
         {
@@ -126,7 +126,7 @@
     },
     {
       "name": "categories",
-      "executionMs": 0.433,
+      "executionMs": 0.394,
       "buffers": 9,
       "nodes": [
         {
@@ -150,7 +150,7 @@
     },
     {
       "name": "product management",
-      "executionMs": 5.254,
+      "executionMs": 5.667,
       "buffers": 67,
       "nodes": [
         {
@@ -174,7 +174,7 @@
     },
     {
       "name": "public menu products",
-      "executionMs": 5.007,
+      "executionMs": 4.901,
       "buffers": 76,
       "nodes": [
         {
@@ -209,7 +209,7 @@
     },
     {
       "name": "category reorder",
-      "executionMs": 0.055,
+      "executionMs": 0.065,
       "buffers": 10,
       "nodes": [
         {
@@ -235,7 +235,7 @@
   "after": [
     {
       "name": "pending orders",
-      "executionMs": 0.065,
+      "executionMs": 0.071,
       "buffers": 13,
       "nodes": [
         {
@@ -254,7 +254,7 @@
     },
     {
       "name": "rejected history",
-      "executionMs": 0.042,
+      "executionMs": 0.045,
       "buffers": 5,
       "nodes": [
         {
@@ -273,7 +273,7 @@
     },
     {
       "name": "pending orders next page",
-      "executionMs": 0.096,
+      "executionMs": 0.102,
       "buffers": 70,
       "nodes": [
         {
@@ -292,7 +292,7 @@
     },
     {
       "name": "active orders",
-      "executionMs": 0.424,
+      "executionMs": 0.423,
       "buffers": 200,
       "nodes": [
         {
@@ -321,7 +321,7 @@
     },
     {
       "name": "categories",
-      "executionMs": 0.398,
+      "executionMs": 0.394,
       "buffers": 9,
       "nodes": [
         {
@@ -345,7 +345,7 @@
     },
     {
       "name": "product management",
-      "executionMs": 5.495,
+      "executionMs": 5.159,
       "buffers": 86,
       "nodes": [
         {
@@ -361,7 +361,7 @@
         {
           "type": "Bitmap Index Scan",
           "index": "products_shopId_idx",
-          "rows": 5025,
+          "rows": 5134,
           "removed": 0
         }
       ],
@@ -369,7 +369,7 @@
     },
     {
       "name": "public menu products",
-      "executionMs": 5.396,
+      "executionMs": 4.91,
       "buffers": 104,
       "nodes": [
         {
@@ -404,7 +404,7 @@
     },
     {
       "name": "category reorder",
-      "executionMs": 0.033,
+      "executionMs": 0.04,
       "buffers": 11,
       "nodes": [
         {
@@ -434,732 +434,732 @@
     "measuredSamplesPerState": 10,
     "warmupsPerState": 2,
     "committedBatchMedianMs": {
-      "baseline": 31.37985000000026,
-      "indexed": 33.98054999999931
+      "baseline": 31.820850000000064,
+      "indexed": 33.561650000000554
     },
     "comparison": [
       {
         "name": "order insert",
         "rowsPerSample": 100,
         "baseline": {
-          "medianExecutionMs": 8.6295,
-          "medianWalBytes": 125341,
-          "medianBuffers": 2659.5
+          "medianExecutionMs": 8.643,
+          "medianWalBytes": 127374.5,
+          "medianBuffers": 2663
         },
         "indexed": {
-          "medianExecutionMs": 9.5915,
-          "medianWalBytes": 139773,
-          "medianBuffers": 2969
+          "medianExecutionMs": 9.1695,
+          "medianWalBytes": 138767,
+          "medianBuffers": 2968
         },
-        "executionChangePercent": 11.147806941305971
+        "executionChangePercent": 6.091634849010741
       },
       {
         "name": "order status transition",
         "rowsPerSample": 100,
         "baseline": {
-          "medianExecutionMs": 7.791,
-          "medianWalBytes": 120742,
-          "medianBuffers": 3045.5
+          "medianExecutionMs": 7.473,
+          "medianWalBytes": 120942,
+          "medianBuffers": 3041.5
         },
         "indexed": {
-          "medianExecutionMs": 8.5105,
-          "medianWalBytes": 139952.5,
-          "medianBuffers": 3566
+          "medianExecutionMs": 8.1595,
+          "medianWalBytes": 139731,
+          "medianBuffers": 3564
         },
-        "executionChangePercent": 9.23501476062123
+        "executionChangePercent": 9.186404389134207
       },
       {
         "name": "product insert",
         "rowsPerSample": 100,
         "baseline": {
-          "medianExecutionMs": 3.4535,
-          "medianWalBytes": 54547,
-          "medianBuffers": 1282
-        },
-        "indexed": {
-          "medianExecutionMs": 4.009,
-          "medianWalBytes": 66610,
+          "medianExecutionMs": 3.9595000000000002,
+          "medianWalBytes": 64302,
           "medianBuffers": 1660
         },
-        "executionChangePercent": 16.08513102649487
+        "indexed": {
+          "medianExecutionMs": 4.4384999999999994,
+          "medianWalBytes": 82176,
+          "medianBuffers": 1962
+        },
+        "executionChangePercent": 12.09748705644651
       },
       {
         "name": "product reorder",
         "rowsPerSample": 100,
         "baseline": {
-          "medianExecutionMs": 6.143000000000001,
-          "medianWalBytes": 47019,
-          "medianBuffers": 1282.5
+          "medianExecutionMs": 7.034,
+          "medianWalBytes": 71638,
+          "medianBuffers": 1916.5
         },
         "indexed": {
-          "medianExecutionMs": 6.9885,
-          "medianWalBytes": 72211,
-          "medianBuffers": 1915
+          "medianExecutionMs": 7.3605,
+          "medianWalBytes": 83732.5,
+          "medianBuffers": 2217
         },
-        "executionChangePercent": 13.76363340387432
+        "executionChangePercent": 4.641740119419957
       }
     ],
     "raw": {
       "baseline": [
         {
-          "committedBatchMs": 29.424300000000585,
+          "committedBatchMs": 31.345900000000256,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 8.359,
-              "walBytes": 110967,
-              "buffers": 2639
-            },
-            {
-              "name": "order status transition",
-              "rows": 100,
-              "executionMs": 7.042,
-              "walBytes": 119184,
-              "buffers": 3088
-            },
-            {
-              "name": "product insert",
-              "rows": 100,
-              "executionMs": 3.373,
-              "walBytes": 54294,
-              "buffers": 1360
-            },
-            {
-              "name": "product reorder",
-              "rows": 100,
-              "executionMs": 6.2,
-              "walBytes": 56966,
-              "buffers": 1517
-            }
-          ]
-        },
-        {
-          "committedBatchMs": 30.339599999999336,
-          "operations": [
-            {
-              "name": "order insert",
-              "rows": 100,
-              "executionMs": 8.286,
-              "walBytes": 111325,
-              "buffers": 2675
-            },
-            {
-              "name": "order status transition",
-              "rows": 100,
-              "executionMs": 7.147,
-              "walBytes": 118120,
-              "buffers": 3065
-            },
-            {
-              "name": "product insert",
-              "rows": 100,
-              "executionMs": 3.474,
-              "walBytes": 54544,
-              "buffers": 1273
-            },
-            {
-              "name": "product reorder",
-              "rows": 100,
-              "executionMs": 6.086,
-              "walBytes": 47542,
-              "buffers": 1294
-            }
-          ]
-        },
-        {
-          "committedBatchMs": 35.56079999999929,
-          "operations": [
-            {
-              "name": "order insert",
-              "rows": 100,
-              "executionMs": 11.336,
-              "walBytes": 131515,
+              "executionMs": 8.532,
+              "walBytes": 127111,
               "buffers": 2647
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 7.762,
+              "executionMs": 7.43,
+              "walBytes": 119720,
+              "buffers": 3098
+            },
+            {
+              "name": "product insert",
+              "rows": 100,
+              "executionMs": 3.694,
+              "walBytes": 63826,
+              "buffers": 1657
+            },
+            {
+              "name": "product reorder",
+              "rows": 100,
+              "executionMs": 6.917,
+              "walBytes": 74132,
+              "buffers": 1932
+            }
+          ]
+        },
+        {
+          "committedBatchMs": 31.28360000000066,
+          "operations": [
+            {
+              "name": "order insert",
+              "rows": 100,
+              "executionMs": 8.64,
+              "walBytes": 135453,
+              "buffers": 2687
+            },
+            {
+              "name": "order status transition",
+              "rows": 100,
+              "executionMs": 6.915,
+              "walBytes": 118152,
+              "buffers": 3065
+            },
+            {
+              "name": "product insert",
+              "rows": 100,
+              "executionMs": 3.81,
+              "walBytes": 63922,
+              "buffers": 1658
+            },
+            {
+              "name": "product reorder",
+              "rows": 100,
+              "executionMs": 7.005,
+              "walBytes": 71376,
+              "buffers": 1916
+            }
+          ]
+        },
+        {
+          "committedBatchMs": 32.08010000000104,
+          "operations": [
+            {
+              "name": "order insert",
+              "rows": 100,
+              "executionMs": 9.451,
+              "walBytes": 163611,
+              "buffers": 2663
+            },
+            {
+              "name": "order status transition",
+              "rows": 100,
+              "executionMs": 6.596,
               "walBytes": 115977,
               "buffers": 2997
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.518,
-              "walBytes": 54394,
-              "buffers": 1283
+              "executionMs": 3.692,
+              "walBytes": 63854,
+              "buffers": 1658
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 7.048,
-              "walBytes": 47047,
-              "buffers": 1283
+              "executionMs": 7.155,
+              "walBytes": 71900,
+              "buffers": 1920
             }
           ]
         },
         {
-          "committedBatchMs": 32.10870000000068,
+          "committedBatchMs": 32.04659999999967,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 8.422,
-              "walBytes": 111414,
-              "buffers": 2706
+              "executionMs": 8.39,
+              "walBytes": 127638,
+              "buffers": 2714
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 7.82,
-              "walBytes": 122300,
-              "buffers": 3182
+              "executionMs": 7.42,
+              "walBytes": 122164,
+              "buffers": 3180
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.824,
-              "walBytes": 57259,
-              "buffers": 1252
+              "executionMs": 4.012,
+              "walBytes": 71902,
+              "buffers": 1662
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 6.569,
-              "walBytes": 46939,
-              "buffers": 1281
+              "executionMs": 7.429,
+              "walBytes": 75805,
+              "buffers": 1927
             }
           ]
         },
         {
-          "committedBatchMs": 33.57690000000002,
+          "committedBatchMs": 31.923500000000786,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 8.723,
+              "executionMs": 8.646,
               "walBytes": 112669,
               "buffers": 2645
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 9.037,
+              "executionMs": 7.923,
               "walBytes": 123961,
               "buffers": 3005
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.463,
-              "walBytes": 54390,
-              "buffers": 1282
+              "executionMs": 3.956,
+              "walBytes": 66286,
+              "buffers": 1660
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 6.692,
-              "walBytes": 47368,
-              "buffers": 1289
+              "executionMs": 6.629,
+              "walBytes": 67630,
+              "buffers": 1917
             }
           ]
         },
         {
-          "committedBatchMs": 29.513699999999517,
+          "committedBatchMs": 32.629399999999805,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 8.241,
-              "walBytes": 119167,
-              "buffers": 2644
+              "executionMs": 8.242,
+              "walBytes": 111167,
+              "buffers": 2640
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 7.545,
-              "walBytes": 117011,
+              "executionMs": 8.006,
+              "walBytes": 117123,
               "buffers": 3013
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.224,
-              "walBytes": 54334,
-              "buffers": 1282
+              "executionMs": 4.182,
+              "walBytes": 71298,
+              "buffers": 1662
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 5.906,
-              "walBytes": 46887,
-              "buffers": 1280
+              "executionMs": 7.063,
+              "walBytes": 82431,
+              "buffers": 1920
             }
           ]
         },
         {
-          "committedBatchMs": 31.234300000000076,
+          "committedBatchMs": 32.02490000000034,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 8.977,
-              "walBytes": 152350,
-              "buffers": 2726
+              "executionMs": 8.778,
+              "walBytes": 120382,
+              "buffers": 2710
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 8.996,
-              "walBytes": 124058,
-              "buffers": 3202
+              "executionMs": 7.962,
+              "walBytes": 123130,
+              "buffers": 3196
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.321,
-              "walBytes": 54669,
-              "buffers": 1251
+              "executionMs": 3.933,
+              "walBytes": 64302,
+              "buffers": 1660
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 5.995,
-              "walBytes": 46991,
-              "buffers": 1282
+              "executionMs": 6.784,
+              "walBytes": 67393,
+              "buffers": 1913
             }
           ]
         },
         {
-          "committedBatchMs": 32.10440000000017,
+          "committedBatchMs": 31.718199999999342,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 8.904,
-              "walBytes": 153473,
-              "buffers": 2667
+              "executionMs": 9.033,
+              "walBytes": 144865,
+              "buffers": 2663
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 8.015,
-              "walBytes": 125834,
-              "buffers": 3026
+              "executionMs": 7.516,
+              "walBytes": 125248,
+              "buffers": 3018
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.444,
-              "walBytes": 54550,
-              "buffers": 1282
+              "executionMs": 3.963,
+              "walBytes": 67458,
+              "buffers": 1660
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 6.586,
-              "walBytes": 48474,
-              "buffers": 1299
+              "executionMs": 7.004,
+              "walBytes": 67311,
+              "buffers": 1912
             }
           ]
         },
         {
-          "committedBatchMs": 31.525400000000445,
+          "committedBatchMs": 31.423899999999776,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 8.547,
-              "walBytes": 132233,
-              "buffers": 2724
+              "executionMs": 8.024,
+              "walBytes": 116249,
+              "buffers": 2716
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 8.294,
-              "walBytes": 123522,
-              "buffers": 3197
+              "executionMs": 7.643,
+              "walBytes": 122368,
+              "buffers": 3187
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.912,
-              "walBytes": 55030,
-              "buffers": 1286
+              "executionMs": 4.096,
+              "walBytes": 64302,
+              "buffers": 1660
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 5.979,
-              "walBytes": 46887,
-              "buffers": 1280
+              "executionMs": 7.34,
+              "walBytes": 75215,
+              "buffers": 1916
             }
           ]
         },
         {
-          "committedBatchMs": 29.090900000001056,
+          "committedBatchMs": 31.628899999999703,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 8.712,
-              "walBytes": 135575,
+              "executionMs": 8.668,
+              "walBytes": 135607,
               "buffers": 2652
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 7.035,
-              "walBytes": 116122,
-              "buffers": 3004
+              "executionMs": 7.216,
+              "walBytes": 116490,
+              "buffers": 3006
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.235,
-              "walBytes": 54557,
-              "buffers": 1251
+              "executionMs": 4.08,
+              "walBytes": 63638,
+              "buffers": 1658
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 5.869,
-              "walBytes": 46887,
-              "buffers": 1280
+              "executionMs": 7.257,
+              "walBytes": 67312,
+              "buffers": 1912
             }
           ]
         }
       ],
       "indexed": [
         {
-          "committedBatchMs": 34.30279999999948,
+          "committedBatchMs": 35.64190000000053,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 9.531,
-              "walBytes": 131109,
-              "buffers": 2960
+              "executionMs": 9.769,
+              "walBytes": 139221,
+              "buffers": 2964
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 9.476,
+              "executionMs": 9.462,
               "walBytes": 145154,
               "buffers": 3574
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 4.212,
-              "walBytes": 64822,
-              "buffers": 1660
+              "executionMs": 4.509,
+              "walBytes": 85358,
+              "buffers": 1962
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 6.721,
-              "walBytes": 72019,
-              "buffers": 1913
+              "executionMs": 7.609,
+              "walBytes": 93251,
+              "buffers": 2221
             }
           ]
         },
         {
-          "committedBatchMs": 33.658299999999144,
+          "committedBatchMs": 32.147899999999936,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 9.959,
-              "walBytes": 125969,
-              "buffers": 3006
+              "executionMs": 8.629,
+              "walBytes": 133857,
+              "buffers": 3010
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 7.607,
-              "walBytes": 137390,
+              "executionMs": 7.594,
+              "walBytes": 137406,
               "buffers": 3559
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.95,
-              "walBytes": 68398,
-              "buffers": 1660
+              "executionMs": 4.475,
+              "walBytes": 82350,
+              "buffers": 1964
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 7.014,
-              "walBytes": 72417,
-              "buffers": 1915
+              "executionMs": 7.077,
+              "walBytes": 81531,
+              "buffers": 2213
             }
           ]
         },
         {
-          "committedBatchMs": 36.03220000000147,
+          "committedBatchMs": 35.352600000000166,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 9.652,
-              "walBytes": 146493,
+              "executionMs": 9.524,
+              "walBytes": 146381,
               "buffers": 2966
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 9.413,
-              "walBytes": 141848,
-              "buffers": 3585
+              "executionMs": 9.468,
+              "walBytes": 141472,
+              "buffers": 3581
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 4.107,
-              "walBytes": 68454,
-              "buffers": 1660
+              "executionMs": 4.513,
+              "walBytes": 81706,
+              "buffers": 1962
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 7.934,
-              "walBytes": 75983,
-              "buffers": 1915
+              "executionMs": 7.433,
+              "walBytes": 93063,
+              "buffers": 2219
             }
           ]
         },
         {
-          "committedBatchMs": 35.024100000000544,
+          "committedBatchMs": 33.62490000000071,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 11.121,
-              "walBytes": 137949,
-              "buffers": 3012
+              "executionMs": 9.207,
+              "walBytes": 129837,
+              "buffers": 3008
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 8.128,
-              "walBytes": 141290,
-              "buffers": 3559
+              "executionMs": 7.851,
+              "walBytes": 141034,
+              "buffers": 3555
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 4.068,
-              "walBytes": 72366,
-              "buffers": 1662
+              "executionMs": 4.391,
+              "walBytes": 82002,
+              "buffers": 1962
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 6.867,
-              "walBytes": 72698,
-              "buffers": 1918
+              "executionMs": 7.214,
+              "walBytes": 85591,
+              "buffers": 2215
             }
           ]
         },
         {
-          "committedBatchMs": 32.43089999999938,
+          "committedBatchMs": 32.502700000000914,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 9.236,
-              "walBytes": 142097,
-              "buffers": 2964
+              "executionMs": 9.132,
+              "walBytes": 134145,
+              "buffers": 2960
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 7.796,
-              "walBytes": 137050,
-              "buffers": 3556
+              "executionMs": 7.877,
+              "walBytes": 136898,
+              "buffers": 3554
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.776,
-              "walBytes": 64558,
-              "buffers": 1658
+              "executionMs": 4.081,
+              "walBytes": 74082,
+              "buffers": 1958
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 6.999,
-              "walBytes": 68003,
-              "buffers": 1911
+              "executionMs": 6.983,
+              "walBytes": 77721,
+              "buffers": 2213
             }
           ]
         },
         {
-          "committedBatchMs": 37.62780000000021,
+          "committedBatchMs": 33.25929999999971,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 10.104,
-              "walBytes": 155225,
-              "buffers": 2970
+              "executionMs": 9.213,
+              "walBytes": 147193,
+              "buffers": 2966
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 8.541,
-              "walBytes": 141173,
+              "executionMs": 8.039,
+              "walBytes": 141253,
               "buffers": 3568
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 5.198,
-              "walBytes": 76930,
-              "buffers": 1664
+              "executionMs": 4.688,
+              "walBytes": 86406,
+              "buffers": 1964
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 8.352,
-              "walBytes": 88695,
-              "buffers": 1925
+              "executionMs": 7.686,
+              "walBytes": 98035,
+              "buffers": 2223
             }
           ]
         },
         {
-          "committedBatchMs": 37.73530000000028,
+          "committedBatchMs": 32.87259999999878,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 10.387,
-              "walBytes": 139765,
-              "buffers": 3014
+              "executionMs": 8.696,
+              "walBytes": 131653,
+              "buffers": 3010
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 9.455,
+              "executionMs": 7.951,
               "walBytes": 138122,
               "buffers": 3567
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 5.04,
-              "walBytes": 73554,
-              "buffers": 1666
+              "executionMs": 4.402,
+              "walBytes": 82578,
+              "buffers": 1964
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 7.343,
-              "walBytes": 71941,
-              "buffers": 1915
+              "executionMs": 7.689,
+              "walBytes": 81703,
+              "buffers": 2216
             }
           ]
         },
         {
-          "committedBatchMs": 32.785799999999654,
+          "committedBatchMs": 34.0619999999999,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 9.399,
-              "walBytes": 139781,
-              "buffers": 2962
+              "executionMs": 9.06,
+              "walBytes": 155893,
+              "buffers": 2970
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 8.764,
-              "walBytes": 138052,
-              "buffers": 3563
+              "executionMs": 8.28,
+              "walBytes": 137412,
+              "buffers": 3559
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.776,
-              "walBytes": 64438,
-              "buffers": 1658
+              "executionMs": 4.608,
+              "walBytes": 89190,
+              "buffers": 1966
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 6.75,
-              "walBytes": 68003,
-              "buffers": 1911
+              "executionMs": 7.658,
+              "walBytes": 96411,
+              "buffers": 2221
             }
           ]
         },
         {
-          "committedBatchMs": 31.521700000001147,
+          "committedBatchMs": 33.4984000000004,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 9.014,
-              "walBytes": 138425,
+              "executionMs": 8.967,
+              "walBytes": 138313,
               "buffers": 3012
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 8.217,
-              "walBytes": 138732,
-              "buffers": 3571
+              "executionMs": 8.712,
+              "walBytes": 138428,
+              "buffers": 3569
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.717,
-              "walBytes": 64550,
-              "buffers": 1658
+              "executionMs": 4.078,
+              "walBytes": 73966,
+              "buffers": 1958
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 6.622,
-              "walBytes": 68107,
-              "buffers": 1911
+              "executionMs": 7.288,
+              "walBytes": 81874,
+              "buffers": 2218
             }
           ]
         },
         {
-          "committedBatchMs": 32.9445999999989,
+          "committedBatchMs": 33.962399999998524,
           "operations": [
             {
               "name": "order insert",
               "rows": 100,
-              "executionMs": 9.478,
-              "walBytes": 152449,
-              "buffers": 2968
+              "executionMs": 9.276,
+              "walBytes": 144561,
+              "buffers": 2964
             },
             {
               "name": "order status transition",
               "rows": 100,
-              "executionMs": 8.48,
-              "walBytes": 141510,
-              "buffers": 3565
+              "executionMs": 8.811,
+              "walBytes": 141076,
+              "buffers": 3561
             },
             {
               "name": "product insert",
               "rows": 100,
-              "executionMs": 3.652,
-              "walBytes": 64438,
-              "buffers": 1658
+              "executionMs": 4.346,
+              "walBytes": 78286,
+              "buffers": 1960
             },
             {
               "name": "product reorder",
               "rows": 100,
-              "executionMs": 6.978,
-              "walBytes": 72403,
-              "buffers": 1917
+              "executionMs": 7.114,
+              "walBytes": 81377,
+              "buffers": 2213
             }
           ]
         }

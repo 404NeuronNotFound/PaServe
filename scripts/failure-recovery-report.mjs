@@ -120,6 +120,7 @@ async function fingerprint() {
       "apps/api/test/recovery-workload.client.mjs",
       "apps/api/test/failure-recovery.database-check.mjs",
       "apps/api/test/request-timeouts.local-postgres.mjs",
+      "apps/api/test/load-fixture-results.mjs",
       "apps/api/test/supabase-latency.e2e-spec.ts",
       "apps/api/test/request-timeouts.e2e-spec.ts",
     ].map((path) => resolve(root, path)),

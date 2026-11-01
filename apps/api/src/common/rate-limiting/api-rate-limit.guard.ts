@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
+import { CAPACITY_LIVENESS } from '../load-shedding/api-admission.guard.js';
 import {
   RATE_LIMIT_POLICY,
   AUTH_RATE_WINDOWS,
@@ -18,6 +19,15 @@ import {
 @Injectable()
 export class ApiRateLimitGuard extends ThrottlerGuard {
   override async canActivate(context: ExecutionContext): Promise<boolean> {
+    // The explicit constant-time liveness route must work even when source
+    // metadata is full. Readiness and all business routes retain their limits.
+    if (this.reflector.get<boolean>(CAPACITY_LIVENESS, context.getHandler())) {
+      context
+        .switchToHttp()
+        .getResponse<Response>()
+        .setHeader('Cache-Control', 'no-store');
+      return true;
+    }
     const name =
       this.reflector.getAllAndOverride<RateLimitPolicy>(RATE_LIMIT_POLICY, [
         context.getHandler(),

@@ -1,0 +1,680 @@
+{
+  "schemaVersion": 2,
+  "profile": {
+    "name": "failure-recovery",
+    "version": 2,
+    "workload": {
+      "version": 1,
+      "durationMs": 40000,
+      "requests": 4000,
+      "arrivalRps": 100,
+      "maxInFlight": 8,
+      "sourceAddresses": 32,
+      "requestDeadlineMs": 3000,
+      "maxDispatchLagMs": 100,
+      "mix": {
+        "read": 0.25,
+        "write": 0.25,
+        "readiness": 0.25,
+        "liveness": 0.25
+      },
+      "seed": {
+        "tables": 1,
+        "rows": 1,
+        "realTenants": 0
+      },
+      "sampleIntervalMs": 100,
+      "slowQueryThresholdMs": 100,
+      "calibrationQueryMs": 280
+    },
+    "database": {
+      "statementMs": 350,
+      "lockMs": 150,
+      "connectionMs": 200,
+      "poolMax": 2,
+      "maxWaiting": 1
+    },
+    "storage": {
+      "requestDeadlineMs": 400,
+      "dependencyDeadlineMs": 10000
+    },
+    "comparison": {
+      "relativeLimit": 1.5,
+      "additionalMs": 100
+    }
+  },
+  "status": "passed",
+  "pass": true,
+  "runId": "ab6fc591-6560-4ad8-8a3f-6a1c23db33e5",
+  "startedAt": "2026-11-01T01:21:38.898Z",
+  "finishedAt": "2026-11-01T01:23:16.669Z",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "osRelease": "10.0.26200",
+    "node": "v24.19.0",
+    "cpuModel": "AMD Ryzen 5 PRO 4650G with Radeon Graphics",
+    "logicalCpus": 12,
+    "memoryBytes": 16502763520,
+    "postgresVersion": "17.11",
+    "packages": {
+      "@prisma/client": "7.10.0",
+      "@supabase/supabase-js": "2.117.2",
+      "@nestjs/core": "12.1.2",
+      "vitest": "4.1.12"
+    }
+  },
+  "environmentKey": "331614e5760a971beb06fcb15c018cfe09887fdbe9118817625d5ee695d7a334",
+  "source": {
+    "fingerprint": "5a763544bf043919cfbc5fb31fd4d35319ddc4bed77a14b9d043c9051d596816",
+    "commit": "253a41ad9b2ce21df08be4471da1feec634d6e49",
+    "workingTree": "modified"
+  },
+  "stages": [
+    {
+      "name": "contracts-build",
+      "exitCode": 0,
+      "elapsedMs": 668
+    },
+    {
+      "name": "api-build",
+      "exitCode": 0,
+      "elapsedMs": 7241
+    },
+    {
+      "name": "postgres-recovery",
+      "exitCode": 0,
+      "elapsedMs": 69904
+    },
+    {
+      "name": "unit-regression",
+      "exitCode": 0,
+      "elapsedMs": 2271
+    },
+    {
+      "name": "http-regression",
+      "exitCode": 0,
+      "elapsedMs": 17441
+    }
+  ],
+  "regressions": {
+    "unit": {
+      "tests": 54,
+      "passed": 54,
+      "suites": [
+        "bot-challenge.service.spec.ts",
+        "new-order-events.service.spec.ts",
+        "public-menu.repository.spec.ts"
+      ]
+    },
+    "http": {
+      "tests": 26,
+      "passed": 26,
+      "suites": [
+        "request-timeouts.e2e-spec.ts",
+        "supabase-latency.e2e-spec.ts"
+      ]
+    }
+  },
+  "measurements": [
+    {
+      "id": "postgres:database-network-outage-keeps-liveness-up-and-readiness-failed",
+      "pass": true,
+      "elapsedMs": 111,
+      "samples": 1
+    },
+    {
+      "id": "postgres:healthy-baseline-and-readiness",
+      "pass": true,
+      "elapsedMs": 129,
+      "samples": 1
+    },
+    {
+      "id": "postgres:lock-contention-fails-boundedly-and-recovers-without-restart",
+      "pass": true,
+      "elapsedMs": 199,
+      "samples": 1
+    },
+    {
+      "id": "postgres:statement-timeout-rolls-back-a-partial-write-and-releases-capacity",
+      "pass": true,
+      "elapsedMs": 381,
+      "samples": 1
+    },
+    {
+      "id": "postgres:terminating-only-the-fixture-api-session-rolls-back-and-reconnects",
+      "pass": true,
+      "elapsedMs": 150,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:connection-reset",
+      "pass": true,
+      "elapsedMs": 55,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:delayed-success",
+      "pass": true,
+      "elapsedMs": 71,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:dependency-timeout-without-context",
+      "pass": true,
+      "elapsedMs": 10018,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:invalid-json",
+      "pass": true,
+      "elapsedMs": 62,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:provider-503",
+      "pass": true,
+      "elapsedMs": 56,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:stalled-body",
+      "pass": true,
+      "elapsedMs": 472,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:stalled-headers",
+      "pass": true,
+      "elapsedMs": 471,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:client-disconnect",
+      "pass": true,
+      "elapsedMs": 31,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:connection-reset",
+      "pass": true,
+      "elapsedMs": 61,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:delayed-success",
+      "pass": true,
+      "elapsedMs": 100,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:dependency-timeout-without-context",
+      "pass": true,
+      "elapsedMs": 10018,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:invalid-json",
+      "pass": true,
+      "elapsedMs": 69,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:provider-503",
+      "pass": true,
+      "elapsedMs": 69,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:stalled-body",
+      "pass": true,
+      "elapsedMs": 472,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:stalled-headers",
+      "pass": true,
+      "elapsedMs": 471,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:connection-reset",
+      "pass": true,
+      "elapsedMs": 63,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:delayed-success",
+      "pass": true,
+      "elapsedMs": 48,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:dependency-timeout-without-context",
+      "pass": true,
+      "elapsedMs": 10019,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:invalid-json",
+      "pass": true,
+      "elapsedMs": 82,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:provider-503",
+      "pass": true,
+      "elapsedMs": 70,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:stalled-body",
+      "pass": true,
+      "elapsedMs": 465,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:stalled-headers",
+      "pass": true,
+      "elapsedMs": 472,
+      "samples": 1
+    }
+  ],
+  "workload": {
+    "profile": {
+      "version": 1,
+      "durationMs": 40000,
+      "requests": 4000,
+      "arrivalRps": 100,
+      "maxInFlight": 8,
+      "sourceAddresses": 32,
+      "requestDeadlineMs": 3000,
+      "maxDispatchLagMs": 100,
+      "mix": {
+        "read": 0.25,
+        "write": 0.25,
+        "readiness": 0.25,
+        "liveness": 0.25
+      },
+      "seed": {
+        "tables": 1,
+        "rows": 1,
+        "realTenants": 0
+      },
+      "sampleIntervalMs": 100,
+      "slowQueryThresholdMs": 100,
+      "calibrationQueryMs": 280
+    },
+    "elapsedMs": 40002.950300000004,
+    "peakInFlight": 2,
+    "successRps": 99.99262479397674,
+    "completedRps": 99.99262479397674,
+    "workflows": {
+      "read": {
+        "scheduled": 1000,
+        "sent": 1000,
+        "completed": 1000,
+        "success": 1000,
+        "transportErrors": 0,
+        "unexpected": 0,
+        "missed": 0,
+        "successRps": 24.998156198494186,
+        "statuses": {
+          "200": 1000
+        },
+        "latency": {
+          "samples": 1000,
+          "p50Ms": 2.1318000000028405,
+          "p95Ms": 3.096799999999348,
+          "p99Ms": 3.5326999999997497,
+          "p95Evidence": true,
+          "p99Evidence": true
+        }
+      },
+      "write": {
+        "scheduled": 1000,
+        "sent": 1000,
+        "completed": 1000,
+        "success": 1000,
+        "transportErrors": 0,
+        "unexpected": 0,
+        "missed": 0,
+        "successRps": 24.998156198494186,
+        "statuses": {
+          "201": 1000
+        },
+        "latency": {
+          "samples": 1000,
+          "p50Ms": 2.3405000000002474,
+          "p95Ms": 3.3793000000005122,
+          "p99Ms": 4.031899999999993,
+          "p95Evidence": true,
+          "p99Evidence": true
+        }
+      },
+      "readiness": {
+        "scheduled": 1000,
+        "sent": 1000,
+        "completed": 1000,
+        "success": 1000,
+        "transportErrors": 0,
+        "unexpected": 0,
+        "missed": 0,
+        "successRps": 24.998156198494186,
+        "statuses": {
+          "200": 1000
+        },
+        "latency": {
+          "samples": 1000,
+          "p50Ms": 1.9210999999995693,
+          "p95Ms": 2.847200000000157,
+          "p99Ms": 3.516200000000026,
+          "p95Evidence": true,
+          "p99Evidence": true
+        }
+      },
+      "liveness": {
+        "scheduled": 1000,
+        "sent": 1000,
+        "completed": 1000,
+        "success": 1000,
+        "transportErrors": 0,
+        "unexpected": 0,
+        "missed": 0,
+        "successRps": 24.998156198494186,
+        "statuses": {
+          "200": 1000
+        },
+        "latency": {
+          "samples": 1000,
+          "p50Ms": 1.1267000000007101,
+          "p95Ms": 1.6122000000000298,
+          "p99Ms": 1.9659000000000333,
+          "p95Evidence": true,
+          "p99Evidence": true
+        }
+      }
+    },
+    "latency": {
+      "samples": 4000,
+      "p50Ms": 1.9369999999998981,
+      "p95Ms": 3.0348999999987427,
+      "p99Ms": 3.6131000000000313,
+      "p95Evidence": true,
+      "p99Evidence": true
+    },
+    "resources": {
+      "elapsedMs": 40102.4392,
+      "apiCpuCoreEquivalent": 0.17612395008630796,
+      "peakApiCpuCoreEquivalent": 1.2322470172228357,
+      "rssStartBytes": 164298752,
+      "rssPeakBytes": 250261504,
+      "rssEndBytes": 158986240,
+      "heapPeakBytes": 106664344,
+      "eventLoopP95Ms": 22.347775,
+      "apiPoolPeak": 2,
+      "apiPoolWaitingPeak": 0,
+      "apiPoolTotalAtEnd": 2,
+      "apiPoolIdleAtEnd": 2,
+      "apiPoolWaitingAtEnd": 0,
+      "databaseClientPeakIncludingMonitor": 3,
+      "databaseActivePeakExcludingMonitor": 1,
+      "lockWaiterPeak": 0,
+      "slowActivePeak": 1,
+      "slowObservationSamples": 2,
+      "completedSlowQueriesAt250Ms": 1,
+      "queryCount": 3001,
+      "queryFailures": 0
+    },
+    "monitoring": {
+      "intervalMs": 100,
+      "sampleFailures": 0,
+      "skipped": 0,
+      "sampleCount": 392
+    },
+    "resourceScope": "API/proxy/collector CPU and memory; separate load-client process; DB CPU not included.",
+    "verdicts": [
+      {
+        "id": "load:read",
+        "status": "PASS",
+        "reason": "Recorded successful-response percentiles; fixture p95/p99 guards 1000/1500 ms"
+      },
+      {
+        "id": "load:write",
+        "status": "PASS",
+        "reason": "Recorded successful-response percentiles; fixture p95/p99 guards 1000/1500 ms"
+      },
+      {
+        "id": "load:readiness",
+        "status": "PASS",
+        "reason": "Recorded successful-response percentiles; fixture p95/p99 guards 1000/1500 ms"
+      },
+      {
+        "id": "load:liveness",
+        "status": "PASS",
+        "reason": "Recorded successful-response percentiles; fixture p95/p99 guards 1000/1500 ms"
+      }
+    ]
+  },
+  "scenarioVerdicts": [
+    {
+      "id": "postgres:healthy-baseline-and-readiness",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "postgres:statement-timeout-rolls-back-a-partial-write-and-releases-capacity",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "postgres:lock-contention-fails-boundedly-and-recovers-without-restart",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "postgres:database-network-outage-keeps-liveness-up-and-readiness-failed",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "postgres:terminating-only-the-fixture-api-session-rolls-back-and-reconnects",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:logo:delayed-success",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:logo:stalled-headers",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:logo:stalled-body",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:logo:connection-reset",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:logo:provider-503",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:logo:invalid-json",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:logo:dependency-timeout-without-context",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:banner:delayed-success",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:banner:stalled-headers",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:banner:stalled-body",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:banner:connection-reset",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:banner:provider-503",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:banner:invalid-json",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:banner:dependency-timeout-without-context",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:product:delayed-success",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:product:stalled-headers",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:product:stalled-body",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:product:connection-reset",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:product:provider-503",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:product:invalid-json",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:product:dependency-timeout-without-context",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "storage:logo:client-disconnect",
+      "status": "PASS",
+      "reason": "Assertions and fixture completion verified"
+    },
+    {
+      "id": "load:read",
+      "status": "PASS",
+      "reason": "Recorded successful-response percentiles; fixture p95/p99 guards 1000/1500 ms"
+    },
+    {
+      "id": "load:write",
+      "status": "PASS",
+      "reason": "Recorded successful-response percentiles; fixture p95/p99 guards 1000/1500 ms"
+    },
+    {
+      "id": "load:readiness",
+      "status": "PASS",
+      "reason": "Recorded successful-response percentiles; fixture p95/p99 guards 1000/1500 ms"
+    },
+    {
+      "id": "load:liveness",
+      "status": "PASS",
+      "reason": "Recorded successful-response percentiles; fixture p95/p99 guards 1000/1500 ms"
+    }
+  ],
+  "findings": [
+    {
+      "id": "sql-pool-occupancy",
+      "type": "controlled dependency bottleneck",
+      "finding": "Long SQL and held write locks occupy finite pool capacity. A deliberate 280ms query calibrates detection; this is not a newly discovered production slow query.",
+      "fix": "Existing SQL/lock/acquisition deadlines and bounded pools retained; rollback and reconnection regression checks repeated.",
+      "evidence": [
+        "postgres:statement-timeout-rolls-back-a-partial-write-and-releases-capacity",
+        "postgres:lock-contention-fails-boundedly-and-recovers-without-restart"
+      ],
+      "retestRunId": "ab6fc591-6560-4ad8-8a3f-6a1c23db33e5",
+      "observedSlowSamples": 2
+    },
+    {
+      "id": "missing-performance-evidence",
+      "type": "reporting gap",
+      "finding": "Single fault observations did not establish latency tails, throughput or runtime utilization.",
+      "fix": "Added a fixed-rate 4000-request repeat workload, separate client process, 100ms API/DB monitoring and per-workflow percentile evidence.",
+      "evidence": [
+        "load:read",
+        "load:write",
+        "load:readiness",
+        "load:liveness"
+      ],
+      "retestRunId": "ab6fc591-6560-4ad8-8a3f-6a1c23db33e5"
+    },
+    {
+      "id": "incomplete-verdict-matrix",
+      "type": "reporting gap",
+      "finding": "Earlier reports represented only passing scenario rows.",
+      "fix": "Every expected scenario now has PASS/CONDITIONAL/FAIL; incomplete/unexecuted evidence stays conditional and failed captures cannot become baselines.",
+      "evidence": [
+        "evidence-validation"
+      ],
+      "retestRunId": "ab6fc591-6560-4ad8-8a3f-6a1c23db33e5"
+    },
+    {
+      "id": "cleanup-observation-race",
+      "type": "fixture defect",
+      "finding": "Initiating proxy socket destruction could be observed before close events completed.",
+      "fix": "Wait for both proxy halves to close and verify zero connections/waiters plus balanced leases. Critical fixture rerun after the fix.",
+      "evidence": [
+        "postgres-recovery",
+        "fixture-cleanup"
+      ],
+      "retestRunId": "ab6fc591-6560-4ad8-8a3f-6a1c23db33e5"
+    }
+  ],
+  "resources": {
+    "connections": 0,
+    "waiting": 0,
+    "proxySockets": 0,
+    "acquired": 3011,
+    "released": 3011
+  },
+  "cleanup": {
+    "postgresStopped": true,
+    "ownedDirectoryRemoved": true
+  },
+  "limitations": [
+    "Local fixtures only; CAPTCHA/realtime regression uses mocks.",
+    "Fault scenarios have one compound observation; repeated workload percentiles are recorded separately and are not production SLO proof.",
+    "No hosted disaster recovery, DNS/TLS, full PostgreSQL crash or production RTO/RPO claim."
+  ]
+}

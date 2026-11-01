@@ -1,0 +1,318 @@
+{
+  "version": 1,
+  "completedAt": "2026-11-01T01:28:11.366Z",
+  "localValidation": "PASS_AFTER_FIXES_AND_RETRIES",
+  "deploymentReadiness": "CONDITIONAL",
+  "source": {
+    "fingerprint": "5a763544bf043919cfbc5fb31fd4d35319ddc4bed77a14b9d043c9051d596816",
+    "commit": "253a41ad9b2ce21df08be4471da1feec634d6e49",
+    "workingTree": "modified"
+  },
+  "sourceHashes": {
+    "apps/api/src/common/rate-limiting/bounded-rate-limit.storage.ts": "f66a735dbcadf4f9f80773e856116cd7d6af692b40154261e1430a45d8f4007d",
+    "apps/api/src/common/rate-limiting/rate-limiting.module.ts": "1e7dd5406de8fe8051a1e14202be845875777a8c15e1f6f644526ffcc942fe41",
+    "apps/api/src/common/rate-limiting/api-rate-limit.guard.ts": "2a04c4a3a672d5e6970dc31375bd6a18cbbe76b5a837a6b1e9911841d967e726",
+    "apps/api/src/common/load-shedding/api-admission.guard.ts": "e204300f5e50607218a7d9039ed6badd4b6d1bceed99c9a64563c5fafe8ade06",
+    "apps/api/src/common/http/api-overloaded.exception.ts": "5e7d7fdff557bbb984211d6897686374522d4a01eacc6a052be779ffc255c9d8",
+    "apps/web/src/features/orders/useNumberedHistory.ts": "18f093b158f444bda54219787863bf132c6c6c4fe9aa3d643b8a150fdd3c59b2",
+    "apps/api/test/load-fixture-results.mjs": "1511b22bedb32c324396c8dec3fd118c636f1e3cdc2d08937802272eb3856c43",
+    "apps/api/test/request-timeouts.local-postgres.mjs": "99a27793c2b3e2501c29ece40ea2572fcf7bce46b28af9f32f61e709c0c820d1",
+    "scripts/failure-recovery-report.mjs": "5afc0dea395187b7a4a01e615599329a97588a3d336bc2577bb308af7a5164d1"
+  },
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "osRelease": "10.0.26200",
+    "node": "v24.19.0",
+    "cpuModel": "AMD Ryzen 5 PRO 4650G with Radeon Graphics",
+    "logicalCpus": 12,
+    "memoryBytes": 16502763520,
+    "postgresVersion": "17.11",
+    "packages": {
+      "@prisma/client": "7.10.0",
+      "@supabase/supabase-js": "2.117.2",
+      "@nestjs/core": "12.1.2",
+      "vitest": "4.1.12"
+    }
+  },
+  "coreTestCounts": {
+    "apiUnit": 1468,
+    "httpIntegration": 2182,
+    "frontend": 2264,
+    "finalBackpressureSubset": 39,
+    "loadSafety": 229,
+    "reportIntegrity": 23,
+    "nativeEdge": 17
+  },
+  "initialBatch": [
+    {
+      "name": "build",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\build.log",
+      "command": "pnpm --filter api build",
+      "startedAt": "2026-11-01T00:49:23.6231373Z",
+      "finishedAt": "2026-11-01T00:49:33.8620430Z",
+      "status": "PASS"
+    },
+    {
+      "name": "web-build-local",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\web-build-local.log",
+      "command": "pnpm --filter web build:local",
+      "startedAt": "2026-11-01T00:49:33.9343907Z",
+      "finishedAt": "2026-11-01T00:49:51.5741889Z",
+      "status": "PASS"
+    },
+    {
+      "name": "edge",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\edge.log",
+      "command": "pnpm test:edge",
+      "startedAt": "2026-11-01T00:49:51.5990907Z",
+      "finishedAt": "2026-11-01T00:49:58.9710711Z",
+      "status": "PASS"
+    },
+    {
+      "name": "hash-capacity",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\hash-capacity.log",
+      "command": "node test/password-capacity.benchmark.mjs",
+      "startedAt": "2026-11-01T00:49:58.9837884Z",
+      "finishedAt": "2026-11-01T00:50:03.5292574Z",
+      "status": "PASS"
+    },
+    {
+      "name": "hash-flood",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\hash-flood.log",
+      "command": "pnpm --filter api test:hash-login-flood",
+      "startedAt": "2026-11-01T00:50:03.5390781Z",
+      "finishedAt": "2026-11-01T00:50:19.5216142Z",
+      "status": "PASS"
+    },
+    {
+      "name": "timeouts",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\timeouts.log",
+      "command": "node test/request-timeouts.local-postgres.mjs timeouts",
+      "startedAt": "2026-11-01T00:50:19.5328570Z",
+      "finishedAt": "2026-11-01T00:50:50.7190970Z",
+      "status": "PASS"
+    },
+    {
+      "name": "idempotency",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\idempotency.log",
+      "command": "node test/request-timeouts.local-postgres.mjs idempotency",
+      "startedAt": "2026-11-01T00:50:50.7298901Z",
+      "finishedAt": "2026-11-01T00:51:22.6651585Z",
+      "status": "PASS"
+    },
+    {
+      "name": "pooling",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\pooling.log",
+      "command": "node test/request-timeouts.local-postgres.mjs pooling",
+      "startedAt": "2026-11-01T00:51:22.6711593Z",
+      "finishedAt": "2026-11-01T00:51:53.9702864Z",
+      "status": "PASS"
+    },
+    {
+      "name": "monitoring",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\monitoring.log",
+      "command": "node test/request-timeouts.local-postgres.mjs monitoring",
+      "startedAt": "2026-11-01T00:51:53.9855283Z",
+      "finishedAt": "2026-11-01T00:52:25.3360854Z",
+      "status": "PASS"
+    },
+    {
+      "name": "indexing",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\indexing.log",
+      "command": "node test/request-timeouts.local-postgres.mjs indexing",
+      "startedAt": "2026-11-01T00:52:25.3360854Z",
+      "finishedAt": "2026-11-01T00:53:08.0567996Z",
+      "status": "PASS"
+    },
+    {
+      "name": "tenants",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\tenants.log",
+      "command": "node test/request-timeouts.local-postgres.mjs tenants",
+      "startedAt": "2026-11-01T00:53:08.0667363Z",
+      "finishedAt": "2026-11-01T00:54:02.2826366Z",
+      "status": "PASS"
+    },
+    {
+      "name": "caching",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\caching.log",
+      "command": "node test/request-timeouts.local-postgres.mjs caching",
+      "startedAt": "2026-11-01T00:54:02.2932819Z",
+      "finishedAt": "2026-11-01T00:54:33.4945711Z",
+      "status": "PASS"
+    },
+    {
+      "name": "load",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\load.log",
+      "command": "node test/request-timeouts.local-postgres.mjs load",
+      "startedAt": "2026-11-01T00:54:33.5011197Z",
+      "finishedAt": "2026-11-01T00:55:51.0934056Z",
+      "status": "PASS"
+    },
+    {
+      "name": "load-search",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\load-search.log",
+      "command": "node test/request-timeouts.local-postgres.mjs load-search",
+      "startedAt": "2026-11-01T00:55:51.1002141Z",
+      "finishedAt": "2026-11-01T00:57:18.7701610Z",
+      "status": "PASS"
+    },
+    {
+      "name": "load-ramp",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\load-ramp.log",
+      "command": "node test/request-timeouts.local-postgres.mjs load-ramp",
+      "startedAt": "2026-11-01T00:57:18.7800916Z",
+      "finishedAt": "2026-11-01T01:01:37.7606453Z",
+      "status": "PASS"
+    },
+    {
+      "name": "load-login-flood",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\load-login-flood.log",
+      "command": "node test/request-timeouts.local-postgres.mjs load-login-flood",
+      "startedAt": "2026-11-01T01:01:37.7782270Z",
+      "finishedAt": "2026-11-01T01:03:24.7169749Z",
+      "status": "PASS"
+    },
+    {
+      "name": "load-menu-spike",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\load-menu-spike.log",
+      "command": "node test/request-timeouts.local-postgres.mjs load-menu-spike",
+      "startedAt": "2026-11-01T01:03:24.7306165Z",
+      "finishedAt": "2026-11-01T01:04:49.3347075Z",
+      "status": "PASS"
+    },
+    {
+      "name": "load-order-burst",
+      "exitCode": 1,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\load-order-burst.log",
+      "command": "node test/request-timeouts.local-postgres.mjs load-order-burst",
+      "startedAt": "2026-11-01T01:04:49.3628024Z",
+      "finishedAt": "2026-11-01T01:05:19.0930949Z",
+      "status": "FAIL"
+    },
+    {
+      "name": "load-spike",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\load-spike.log",
+      "command": "node test/request-timeouts.local-postgres.mjs load-spike",
+      "startedAt": "2026-11-01T01:05:19.1013177Z",
+      "finishedAt": "2026-11-01T01:07:16.0828380Z",
+      "status": "PASS"
+    },
+    {
+      "name": "load-soak-smoke",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\load-soak-smoke.log",
+      "command": "node test/request-timeouts.local-postgres.mjs load-soak-smoke",
+      "startedAt": "2026-11-01T01:07:16.1115056Z",
+      "finishedAt": "2026-11-01T01:10:14.4518319Z",
+      "status": "PASS"
+    },
+    {
+      "name": "load-capacity",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\load-capacity.log",
+      "command": "node test/request-timeouts.local-postgres.mjs load-capacity",
+      "startedAt": "2026-11-01T01:10:14.4687145Z",
+      "finishedAt": "2026-11-01T01:20:28.1491215Z",
+      "status": "PASS"
+    },
+    {
+      "name": "realtime-identities",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\realtime-identities.log",
+      "command": "node --test test/realtime-fanout.identity.test.mjs",
+      "startedAt": "2026-11-01T01:20:28.1674095Z",
+      "finishedAt": "2026-11-01T01:20:28.9335062Z",
+      "status": "PASS"
+    },
+    {
+      "name": "realtime-local",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\realtime-local.log",
+      "command": "node test/realtime-fanout.mjs local",
+      "startedAt": "2026-11-01T01:20:28.9381846Z",
+      "finishedAt": "2026-11-01T01:20:32.2712952Z",
+      "status": "PASS"
+    },
+    {
+      "name": "observability-flood",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\observability-flood.log",
+      "command": "node test/api-observability-flood.mjs",
+      "startedAt": "2026-11-01T01:20:32.2807718Z",
+      "finishedAt": "2026-11-01T01:21:38.7473092Z",
+      "status": "PASS"
+    },
+    {
+      "name": "failure-recovery",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\failure-recovery.log",
+      "command": "pnpm test:failure-recovery",
+      "startedAt": "2026-11-01T01:21:38.7601848Z",
+      "finishedAt": "2026-11-01T01:23:16.7201160Z",
+      "status": "PASS"
+    },
+    {
+      "name": "release-security",
+      "exitCode": 1,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\release-security.log",
+      "command": "pnpm --filter web test:security-release",
+      "startedAt": "2026-11-01T01:23:16.7268989Z",
+      "finishedAt": "2026-11-01T01:23:17.0441843Z",
+      "status": "FAIL"
+    },
+    {
+      "name": "secret-leaks",
+      "exitCode": 0,
+      "log": "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004923\\secret-leaks.log",
+      "command": "pnpm test:leaks",
+      "startedAt": "2026-11-01T01:23:17.0441843Z",
+      "finishedAt": "2026-11-01T01:23:17.5459202Z",
+      "status": "PASS"
+    }
+  ],
+  "stableOrderRetry": {
+    "name": "order-burst-retry",
+    "exitCode": 0,
+    "command": "node test/request-timeouts.local-postgres.mjs load-order-burst",
+    "startedAt": "2026-11-01T01:23:18.8716318Z",
+    "finishedAt": "2026-11-01T01:24:39.6228310Z",
+    "status": "PASS"
+  },
+  "releaseVerification": {
+    "localHeaders": 0,
+    "releaseBuild": 0,
+    "releaseHeaders": 0,
+    "restoredLocalBuild": 0,
+    "environmentFilesUnchanged": true,
+    "validationApiBase": "/api/v1"
+  },
+  "acceptanceReport": "artifacts/performance/acceptance/2026-11-01-c8c563e7-4090-457c-b191-5b034cbea21c.json",
+  "limitations": [
+    "Historical profiles retain their original dates, source schemas and scopes. This command does not rerun stress traffic or prove all tests pass on the current revision.",
+    "Provider limits and hosted peak traffic are not inferred from local PostgreSQL or synthetic data.",
+    "The combined soak verdict preserves failed/incomplete diagnostic runs rather than relabeling them.",
+    "Auth abuse/challenge state remains single-owner; multiple auth replicas and strict fleet-wide quotas require shared coordination.",
+    "Fresh soak was smoke only; no new hour-scale leak certification.",
+    "Scoped same-origin release configuration passed; final output restored to local configuration, with environment file unchanged.",
+    "Historical failed startup and expected local release refusal remain preserved."
+  ]
+}

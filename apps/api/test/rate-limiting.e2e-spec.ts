@@ -14,6 +14,7 @@ import { AuthService } from '../src/modules/auth/auth.service.js';
 import { configureTrustedProxy } from '../src/common/http/trusted-proxy.js';
 import { REFRESH_COOKIE } from '../src/modules/auth/tokens.service.js';
 import { resetRateLimits } from './rate-limit-test-utils.js';
+import { BoundedRateLimitStorage } from '../src/common/rate-limiting/bounded-rate-limit.storage.js';
 
 const id = '10000000-0000-4000-8000-000000000001';
 const payload = {
@@ -59,6 +60,64 @@ describe('rate limiting admission and recovery', () => {
   });
   const post = (shop = 'cafe') =>
     request(app.getHttpServer()).post(`/api/v1/menu/${shop}/orders`);
+
+  it('owns rate metadata per Nest application and closes without clearing another application', async () => {
+    await post().send({}).expect(400);
+    const original = app.get<ThrottlerStorageService>(ThrottlerStorage);
+    const secondModule = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(PrismaService).useValue({}).compile();
+    const second = secondModule.createNestApplication<NestExpressApplication>();
+    second.setGlobalPrefix('api/v1');
+    try {
+      await second.listen(0, '127.0.0.1');
+      const separate = second.get<ThrottlerStorageService>(ThrottlerStorage);
+      expect(separate).not.toBe(original);
+      await request(second.getHttpServer()).post('/api/v1/menu/cafe/orders').send({}).expect(400);
+      expect(separate.storage.size).toBe(2);
+    } finally { await second.close(); }
+    expect(original.storage.size).toBe(2);
+    await post().send({}).expect(400);
+  });
+
+  it('returns recoverable 503 at metadata capacity while preserving existing client budgets', async () => {
+    const storage = new BoundedRateLimitStorage(2);
+    const isolatedModule = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(PrismaService)
+      .useValue({})
+      .overrideProvider(ThrottlerStorage)
+      .useValue(storage)
+      .compile();
+    const isolated =
+      isolatedModule.createNestApplication<NestExpressApplication>();
+    isolated.setGlobalPrefix('api/v1');
+    try {
+      await isolated.listen(0, '127.0.0.1');
+      await request(isolated.getHttpServer())
+        .post('/api/v1/menu/cafe/orders')
+        .send({})
+        .expect(400);
+      const overflow = await request(isolated.getHttpServer())
+        .post('/api/v1/menu/another/orders')
+        .send({})
+        .expect(503);
+      expect(overflow.body.code).toBe('API_OVERLOADED');
+      expect(Number(overflow.headers['retry-after'])).toBe(60);
+      expect(overflow.headers['cache-control']).toBe('no-store');
+      const live = await request(isolated.getHttpServer())
+        .get('/api/v1/health/live')
+        .expect(200);
+      expect(live.headers['cache-control']).toBe('no-store');
+      await request(isolated.getHttpServer())
+        .post('/api/v1/menu/cafe/orders')
+        .send({})
+        .expect(400);
+      expect(storage.storage.size).toBe(2);
+    } finally {
+      await isolated.close();
+    }
+  });
 
   it('does not mint a new shop budget by changing UUID letter case', async () => {
     const shop = '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e';
@@ -135,7 +194,11 @@ describe('rate limiting admission and recovery', () => {
     expect(routes.get('GET')).toBeUndefined();
     // Password recovery is absent, not an unprotected feature. A future endpoint
     // must explicitly extend the abuse policies/tests before this scope can change.
-    expect([...routes.keys()].filter((route) => /auth\/.*(?:forgot|reset)/i.test(route))).toEqual([]);
+    expect(
+      [...routes.keys()].filter((route) =>
+        /auth\/.*(?:forgot|reset)/i.test(route),
+      ),
+    ).toEqual([]);
   });
   it.each([
     ['/api/v1/menu/cafe/orders/' + id + '/tracking-session', 'post', 30, 401],

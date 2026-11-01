@@ -38,7 +38,7 @@
   "snapshots": [
     {
       "database": {
-        "sampledAt": "2026-10-31T04:57:24.750Z",
+        "sampledAt": "2026-11-01T00:52:21.405Z",
         "statsReset": null,
         "activitiesTracked": true,
         "countsTracked": true,
@@ -68,11 +68,11 @@
         "status": "baseline"
       },
       "signals": [],
-      "collectorRoundTripMs": 8.381000000000029
+      "collectorRoundTripMs": 8.298700000000053
     },
     {
       "database": {
-        "sampledAt": "2026-10-31T04:57:25.910Z",
+        "sampledAt": "2026-11-01T00:52:22.568Z",
         "statsReset": null,
         "activitiesTracked": true,
         "countsTracked": true,
@@ -87,8 +87,8 @@
         "lockWaiters": 0,
         "ioWaiters": 0,
         "slowActiveQueries": 1,
-        "oldestActiveMs": 1155.103,
-        "oldestTransactionMs": 1155.127,
+        "oldestActiveMs": 1157.885,
+        "oldestTransactionMs": 1157.923,
         "commits": 4,
         "rollbacks": 0,
         "deadlocks": 0,
@@ -100,7 +100,7 @@
       },
       "interval": {
         "status": "ok",
-        "milliseconds": 1160,
+        "milliseconds": 1163,
         "delta": {
           "commits": 0,
           "rollbacks": 0,
@@ -117,11 +117,11 @@
       "signals": [
         "slow-active-queries"
       ],
-      "collectorRoundTripMs": 3.1067999999997937
+      "collectorRoundTripMs": 3.47199999999998
     },
     {
       "database": {
-        "sampledAt": "2026-10-31T04:57:26.405Z",
+        "sampledAt": "2026-11-01T00:52:23.054Z",
         "statsReset": null,
         "activitiesTracked": true,
         "countsTracked": true,
@@ -136,8 +136,8 @@
         "lockWaiters": 1,
         "ioWaiters": 0,
         "slowActiveQueries": 0,
-        "oldestActiveMs": 33.507,
-        "oldestTransactionMs": 35.581,
+        "oldestActiveMs": 32.237,
+        "oldestTransactionMs": 34.959,
         "commits": 8,
         "rollbacks": 1,
         "deadlocks": 0,
@@ -149,7 +149,7 @@
       },
       "interval": {
         "status": "ok",
-        "milliseconds": 495,
+        "milliseconds": 486,
         "delta": {
           "commits": 4,
           "rollbacks": 1,
@@ -160,18 +160,18 @@
           "blockReadMs": 0,
           "blockWriteMs": 0
         },
-        "transactionsPerSecond": 10.1010101010101,
+        "transactionsPerSecond": 10.2880658436214,
         "bufferHitRatio": 0.8912319644839067
       },
       "signals": [
         "lock-contention",
         "idle-transaction"
       ],
-      "collectorRoundTripMs": 3.673899999999776
+      "collectorRoundTripMs": 3.008900000000267
     },
     {
       "database": {
-        "sampledAt": "2026-10-31T04:57:26.410Z",
+        "sampledAt": "2026-11-01T00:52:23.060Z",
         "statsReset": null,
         "activitiesTracked": true,
         "countsTracked": true,
@@ -199,7 +199,7 @@
       },
       "interval": {
         "status": "ok",
-        "milliseconds": 5,
+        "milliseconds": 6,
         "delta": {
           "commits": 0,
           "rollbacks": 1,
@@ -210,11 +210,11 @@
           "blockReadMs": 0,
           "blockWriteMs": 0
         },
-        "transactionsPerSecond": 200,
+        "transactionsPerSecond": 166.66666666666666,
         "bufferHitRatio": 0.9824561403508771
       },
       "signals": [],
-      "collectorRoundTripMs": 3.5755999999996675
+      "collectorRoundTripMs": 2.5659999999998035
     },
     {
       "statements": {
@@ -224,9 +224,9 @@
           {
             "fingerprint": "-2749826580604107531",
             "calls": 1,
-            "totalExecutionMs": 1611.9668,
-            "meanExecutionMs": 1611.9668,
-            "maxExecutionMs": 1611.9668,
+            "totalExecutionMs": 1607.1297,
+            "meanExecutionMs": 1607.1297,
+            "maxExecutionMs": 1607.1297,
             "blocksHit": 0,
             "blocksRead": 0,
             "tempBlocksWritten": 0
@@ -234,9 +234,9 @@
           {
             "fingerprint": "-2292252540888213157",
             "calls": 2,
-            "totalExecutionMs": 34.680200000000006,
-            "meanExecutionMs": 17.3401,
-            "maxExecutionMs": 34.6373,
+            "totalExecutionMs": 32.9396,
+            "meanExecutionMs": 16.4698,
+            "maxExecutionMs": 32.8827,
             "blocksHit": 8,
             "blocksRead": 0,
             "tempBlocksWritten": 0
@@ -244,9 +244,9 @@
           {
             "fingerprint": "-2902937112829432096",
             "calls": 1,
-            "totalExecutionMs": 20.5728,
-            "meanExecutionMs": 20.5728,
-            "maxExecutionMs": 20.5728,
+            "totalExecutionMs": 31.314,
+            "meanExecutionMs": 31.314,
+            "maxExecutionMs": 31.314,
             "blocksHit": 3356,
             "blocksRead": 52,
             "tempBlocksWritten": 0
@@ -254,9 +254,9 @@
           {
             "fingerprint": "3294167460654545426",
             "calls": 1,
-            "totalExecutionMs": 6.2318,
-            "meanExecutionMs": 6.2318,
-            "maxExecutionMs": 6.2318,
+            "totalExecutionMs": 5.6985,
+            "meanExecutionMs": 5.6985,
+            "maxExecutionMs": 5.6985,
             "blocksHit": 362,
             "blocksRead": 88,
             "tempBlocksWritten": 0
@@ -264,39 +264,39 @@
           {
             "fingerprint": "9155229928969199436",
             "calls": 4,
-            "totalExecutionMs": 0.9569000000000001,
-            "meanExecutionMs": 0.23922500000000002,
-            "maxExecutionMs": 0.2615,
+            "totalExecutionMs": 0.8268,
+            "meanExecutionMs": 0.2067,
+            "maxExecutionMs": 0.24939999999999998,
             "blocksHit": 12,
             "blocksRead": 0,
             "tempBlocksWritten": 0
           },
           {
-            "fingerprint": "11924883668345799",
-            "calls": 1,
-            "totalExecutionMs": 0.4115,
-            "meanExecutionMs": 0.4115,
-            "maxExecutionMs": 0.4115,
-            "blocksHit": 10,
-            "blocksRead": 4,
-            "tempBlocksWritten": 0
-          },
-          {
             "fingerprint": "4683284888687938234",
             "calls": 1,
-            "totalExecutionMs": 0.3495,
-            "meanExecutionMs": 0.3495,
-            "maxExecutionMs": 0.3495,
+            "totalExecutionMs": 0.3429,
+            "meanExecutionMs": 0.3429,
+            "maxExecutionMs": 0.3429,
             "blocksHit": 3,
             "blocksRead": 1,
             "tempBlocksWritten": 0
           },
           {
+            "fingerprint": "11924883668345799",
+            "calls": 1,
+            "totalExecutionMs": 0.3301,
+            "meanExecutionMs": 0.3301,
+            "maxExecutionMs": 0.3301,
+            "blocksHit": 10,
+            "blocksRead": 4,
+            "tempBlocksWritten": 0
+          },
+          {
             "fingerprint": "8262515495673408305",
             "calls": 2,
-            "totalExecutionMs": 0.0587,
-            "meanExecutionMs": 0.02935,
-            "maxExecutionMs": 0.035800000000000005,
+            "totalExecutionMs": 0.057300000000000004,
+            "meanExecutionMs": 0.028650000000000002,
+            "maxExecutionMs": 0.0322,
             "blocksHit": 2,
             "blocksRead": 1,
             "tempBlocksWritten": 0
@@ -304,19 +304,19 @@
           {
             "fingerprint": "-7835111983797254704",
             "calls": 1,
-            "totalExecutionMs": 0.0153,
-            "meanExecutionMs": 0.0153,
-            "maxExecutionMs": 0.0153,
+            "totalExecutionMs": 0.016399999999999998,
+            "meanExecutionMs": 0.016399999999999998,
+            "maxExecutionMs": 0.016399999999999998,
             "blocksHit": 1,
             "blocksRead": 0,
             "tempBlocksWritten": 0
           },
           {
-            "fingerprint": "-2646723144215712964",
+            "fingerprint": "11701968915743190",
             "calls": 1,
-            "totalExecutionMs": 0.0023,
-            "meanExecutionMs": 0.0023,
-            "maxExecutionMs": 0.0023,
+            "totalExecutionMs": 0.003,
+            "meanExecutionMs": 0.003,
+            "maxExecutionMs": 0.003,
             "blocksHit": 0,
             "blocksRead": 0,
             "tempBlocksWritten": 0
@@ -326,7 +326,7 @@
     },
     {
       "database": {
-        "sampledAt": "2026-10-31T04:57:26.444Z",
+        "sampledAt": "2026-11-01T00:52:23.103Z",
         "statsReset": null,
         "activitiesTracked": true,
         "countsTracked": true,
@@ -354,7 +354,7 @@
       },
       "interval": {
         "status": "ok",
-        "milliseconds": 34,
+        "milliseconds": 43,
         "delta": {
           "commits": 2,
           "rollbacks": 0,
@@ -365,19 +365,19 @@
           "blockReadMs": 0,
           "blockWriteMs": 0
         },
-        "transactionsPerSecond": 58.8235294117647,
+        "transactionsPerSecond": 46.51162790697674,
         "bufferHitRatio": 0.9632237871674492
       },
       "signals": [
         "incomplete-visibility"
       ],
-      "collectorRoundTripMs": 4.244900000000143
+      "collectorRoundTripMs": 3.426300000000083
     },
     {
       "relations": {
         "status": "available",
         "scope": "public ordinary tables and indexes; physical allocated bytes",
-        "sampledAt": "2026-10-31T04:57:26.473Z",
+        "sampledAt": "2026-11-01T00:52:23.138Z",
         "rows": [
           {
             "relationId": "16384",
@@ -465,8 +465,8 @@
           "count": 4,
           "failures": 1,
           "slow": 1,
-          "totalMs": 309.0458000000003,
-          "maxMs": 301.92260000000033,
+          "totalMs": 309.66370000000006,
+          "maxMs": 303.6785,
           "boundsMs": [
             5,
             10,
@@ -495,8 +495,8 @@
           "count": 3,
           "failures": 0,
           "slow": 0,
-          "totalMs": 4.757000000000062,
-          "maxMs": 2.2053000000000793,
+          "totalMs": 4.0671000000002095,
+          "maxMs": 1.5803000000000793,
           "boundsMs": [
             5,
             10,

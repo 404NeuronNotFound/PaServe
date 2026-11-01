@@ -113,7 +113,7 @@ try {
       const rows = (await db.query(sql, values)).rows;
       assert.ok(
         rows.length > 0 && rows.every((row) => row.shopId === 's-1'),
-        `${name}: nonempty tenant-scoped fixture`,
+        `${String(name)}: nonempty tenant-scoped fixture`,
       );
       const explain = (
         await db.query('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ' + sql, values)
