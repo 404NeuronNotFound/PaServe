@@ -47,21 +47,35 @@ export function GoogleSignIn({
   keepSignedIn = false,
   disabled = false,
   onSuccess,
+  onReauthenticate,
 }: {
   names?: { firstName: string; lastName: string };
   keepSignedIn?: boolean;
   disabled?: boolean;
-  onSuccess: (session: LoginResponse) => void;
+  onSuccess?: (session: LoginResponse) => void;
+  onReauthenticate?: (credential: string) => Promise<void>;
 }) {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
   const container = useRef<HTMLDivElement>(null);
-  const latest = useRef({ names, keepSignedIn, onSuccess, disabled });
+  const latest = useRef({
+    names,
+    keepSignedIn,
+    onSuccess,
+    onReauthenticate,
+    disabled,
+  });
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const busy = useRef(false);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
-    latest.current = { names, keepSignedIn, onSuccess, disabled };
+    latest.current = {
+      names,
+      keepSignedIn,
+      onSuccess,
+      onReauthenticate,
+      disabled,
+    };
   });
   useEffect(() => {
     if (!clientId) return;
@@ -98,17 +112,20 @@ export function GoogleSignIn({
             busy.current = true;
             setPending(true);
             setError("");
-            void googleAccount({
-              credential: response.credential,
-              ...(current.names
-                ? {
-                    firstName: current.names.firstName.trim(),
-                    lastName: current.names.lastName.trim(),
-                  }
-                : { keepSignedIn: current.keepSignedIn }),
-            })
+            const operation = current.onReauthenticate
+              ? current.onReauthenticate(response.credential)
+              : googleAccount({
+                  credential: response.credential,
+                  ...(current.names
+                    ? {
+                        firstName: current.names.firstName.trim(),
+                        lastName: current.names.lastName.trim(),
+                      }
+                    : { keepSignedIn: current.keepSignedIn }),
+                });
+            void operation
               .then((session) => {
-                if (active) current.onSuccess(session);
+                if (active && session) current.onSuccess?.(session);
               })
               .catch((err: unknown) => {
                 if (active)
@@ -144,9 +161,11 @@ export function GoogleSignIn({
   return (
     <div className="google-auth" aria-busy={pending}>
       <p className="account-note">
-        {names
-          ? "Use your verified Google account"
-          : "Or sign in with your verified Google account"}
+        {onReauthenticate
+          ? "Confirm with your linked Google account"
+          : names
+            ? "Use your verified Google account"
+            : "Or sign in with your verified Google account"}
       </p>
       <div ref={container} hidden={pending || disabled} />
       {pending && <p role="status">Signing in with Google?</p>}

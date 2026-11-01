@@ -369,3 +369,196 @@
     font-size: var(--text-xs);
   }
 }
+
+/* Keep verification in the same readable column as the other profile forms. */
+.email-change-panel {
+  width: 100%;
+  max-width: 640px;
+  min-width: 0;
+  display: grid;
+  gap: var(--spacing-6);
+}
+.email-change-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: var(--spacing-5);
+  padding: var(--spacing-5);
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-inset);
+  background: var(--color-secondary);
+}
+.email-change-summary > div {
+  min-width: 0;
+}
+.email-change-summary dt {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-2);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+.email-change-summary dd {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: var(--line-body);
+  overflow-wrap: anywhere;
+}
+.email-change-address-status {
+  display: block;
+  font-weight: var(--weight-regular);
+  margin-top: var(--spacing-1);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  line-height: var(--line-body);
+}
+.email-change-panel fieldset {
+  gap: var(--spacing-5);
+  width: 100%;
+}
+.email-change-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-4);
+  padding: 0 0 var(--spacing-5);
+  margin: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--color-border);
+}
+.email-change-steps li {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+  font-size: var(--text-sm);
+  line-height: var(--line-body);
+  color: var(--color-muted);
+}
+.email-change-step-number {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.email-change-steps li[data-state="current"] {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+.email-change-steps li[data-state="current"] .email-change-step-number,
+.email-change-steps li[data-state="complete"] .email-change-step-number {
+  background: var(--color-lime);
+  color: var(--color-primary);
+  border-color: transparent;
+}
+.email-change-stage {
+  min-width: 0;
+}
+.email-change-eyebrow {
+  margin: 0 0 var(--spacing-2);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+}
+.email-change-stage h3 {
+  margin: 0 0 var(--spacing-2);
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: var(--line-heading);
+}
+.email-change-stage > p:last-child:not(.email-change-eyebrow) {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  line-height: var(--line-body);
+  overflow-wrap: anywhere;
+}
+.email-change-stage strong {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+.profile-settings-card .email-change-code {
+  max-width: 320px;
+  height: 56px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.22em;
+}
+.email-change-security-note {
+  display: flex;
+  align-items: start;
+  gap: var(--spacing-3);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  line-height: var(--line-body);
+}
+.email-change-security-note > svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+.email-change-security-note p {
+  margin: 0 0 var(--spacing-1);
+}
+.email-change-security-note span {
+  display: flex;
+  align-items: start;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-2);
+}
+.email-change-security-note span svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.email-change-feedback {
+  padding: var(--spacing-3) var(--spacing-4);
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-inset);
+  font-size: var(--text-sm);
+  line-height: var(--line-body);
+}
+.email-change-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  padding-top: var(--spacing-5);
+  border-top: 1px solid var(--color-border);
+}
+.email-change-actions > button {
+  min-height: 44px;
+}
+.email-change-cancel {
+  margin-inline-start: auto;
+}
+@container profile (max-width: 600px) {
+  .email-change-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-4);
+    padding: var(--spacing-4);
+  }
+  .email-change-stage h3 {
+    font-size: var(--text-xl);
+  }
+  .email-change-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .email-change-actions > button {
+    width: 100%;
+  }
+  .email-change-cancel {
+    margin-inline-start: 0;
+  }
+  .profile-settings-card .email-change-code {
+    max-width: 100%;
+  }
+}

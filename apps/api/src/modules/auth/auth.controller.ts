@@ -10,6 +10,12 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { EmailChangeService } from './email-change.service.js';
+import {
+  ConfirmEmailChangeDto,
+  EmailChangeCodeDto,
+  EmailChangeIdDto,
+} from './dto/email-change.dto.js';
 import { createHash, randomBytes } from 'node:crypto';
 import { IdentityService } from './identity.service.js';
 import {
@@ -56,6 +62,7 @@ export class AuthController {
     private readonly auth: AuthService,
     private readonly config: ConfigService,
     private readonly identity: IdentityService,
+    private readonly emailChanges: EmailChangeService,
   ) {}
 
   @Post('register')
@@ -226,9 +233,20 @@ export class AuthController {
     );
   }
 
+  @Get('email')
+  @RateLimit('session')
+  @UseGuards(JwtAuthGuard)
+  emailStatus(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.emailChanges.status(request.headers.authorization!.slice(7));
+  }
+
   @Post('email')
   @UseInterceptors(AuthWorkInterceptor)
-  @HttpCode(204)
+  @HttpCode(200)
   @RateLimit('accountUpdate')
   @UseGuards(AuthOriginGuard, JwtAuthGuard)
   async changeEmail(
@@ -236,12 +254,74 @@ export class AuthController {
     @Req() request: AuthenticatedRequest,
     @Res({ passthrough: true }) response: Response,
   ) {
-    await this.auth.changeCredentials(
+    response.setHeader('Cache-Control', 'no-store');
+    const nonce = request.headers.cookie
+      ?.split(';')
+      .map((value) => value.trim())
+      .find((value) => value.startsWith('paserve_google_nonce='))
+      ?.slice('paserve_google_nonce='.length);
+    try {
+      return await this.emailChanges.start(
+        request.headers.authorization!.slice(7),
+        dto,
+        nonce,
+      );
+    } finally {
+      response.clearCookie('paserve_google_nonce', this.cookieOptions());
+    }
+  }
+
+  @Post('email/confirm')
+  @UseInterceptors(AuthWorkInterceptor)
+  @HttpCode(200)
+  @RateLimit('accountUpdate')
+  @UseGuards(AuthOriginGuard, JwtAuthGuard)
+  async confirmEmail(
+    @Body() dto: ConfirmEmailChangeDto,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    const result = await this.emailChanges.confirm(
       request.headers.authorization!.slice(7),
       dto,
     );
-    response.clearCookie(REFRESH_COOKIE, this.cookieOptions());
+    if (result.completed)
+      response.clearCookie(REFRESH_COOKIE, this.cookieOptions());
+    return result;
+  }
+
+  @Post('email/resend')
+  @UseInterceptors(AuthWorkInterceptor)
+  @HttpCode(200)
+  @RateLimit('accountUpdate')
+  @UseGuards(AuthOriginGuard, JwtAuthGuard)
+  resendEmail(
+    @Body() dto: EmailChangeCodeDto,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     response.setHeader('Cache-Control', 'no-store');
+    return this.emailChanges.resend(
+      request.headers.authorization!.slice(7),
+      dto,
+    );
+  }
+
+  @Post('email/cancel')
+  @HttpCode(200)
+  @RateLimit('accountUpdate')
+  @UseGuards(AuthOriginGuard, JwtAuthGuard)
+  cancelEmail(
+    @Body() dto: EmailChangeIdDto,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.emailChanges.cancel(
+      request.headers.authorization!.slice(7),
+      dto.id,
+    );
   }
 
   @Post('password')

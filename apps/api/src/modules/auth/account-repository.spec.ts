@@ -107,9 +107,15 @@ describe('Atomic account updates', () => {
       'refresh-hash',
       expiresAt,
       'verified-hash',
+      'owner@example.com',
     );
     expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'self', isActive: true, passwordHash: 'verified-hash' },
+      where: {
+        id: 'self',
+        isActive: true,
+        passwordHash: 'verified-hash',
+        email: 'owner@example.com',
+      },
       data: {
         updatedAt: expect.any(Date),
         sessions: {

@@ -145,6 +145,7 @@ describe('Supabase Google account sessions', () => {
       'refresh-digest',
       expect.any(Date),
       'private-hash',
+      account.email,
     );
     expect(result.response.user.email).toBe(account.email);
     expect(result.keepSignedIn).toBe(true);

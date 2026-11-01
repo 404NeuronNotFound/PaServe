@@ -1,3 +1,4 @@
+import { EmailChangeService } from './email-change.service.js';
 import { WalkthroughController } from './walkthrough.controller.js';
 import { WalkthroughService } from './walkthrough.service.js';
 import { IdentityService } from './identity.service.js';
@@ -22,6 +23,7 @@ import {
   controllers: [AuthController, WalkthroughController],
   providers: [
     WalkthroughService,
+    EmailChangeService,
     IdentityService,
     PasswordHashService,
     BotChallengeService,

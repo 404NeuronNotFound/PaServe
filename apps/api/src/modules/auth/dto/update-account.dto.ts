@@ -8,6 +8,7 @@ import {
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
+  IsOptional,
   IsString,
   Matches,
   MaxLength,
@@ -42,16 +43,25 @@ class CurrentPasswordDto {
   currentPassword!: string;
 }
 
-export class ChangeEmailDto
-  extends CurrentPasswordDto
-  implements ChangeEmailRequest
-{
+export class ChangeEmailDto implements ChangeEmailRequest {
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )
   @IsEmail({}, { message: 'Enter a valid email address.' })
   @MaxLength(REGISTRATION_LIMITS.emailMax)
   email!: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(REGISTRATION_LIMITS.passwordMax)
+  currentPassword?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(16384)
+  credential?: string;
 }
 
 export class ChangePasswordDto

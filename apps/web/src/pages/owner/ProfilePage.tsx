@@ -37,9 +37,9 @@ import {
   currentUserKey,
   getCurrentUser,
   updateProfile,
-  changeEmail,
   changePassword,
 } from "../../features/auth/api/session";
+import { EmailChangePanel } from "../../features/auth/components/EmailChangePanel";
 import "./profile.css";
 
 function fieldError(error: unknown, field: string) {
@@ -175,8 +175,8 @@ function ProfileEditor({
   const lock = useRef(false);
   const [firstName, setFirstName] = useState(user.firstName ?? "");
   const [lastName, setLastName] = useState(user.lastName ?? "");
-  const [email, setEmail] = useState(user.email);
-  const [emailPassword, setEmailPassword] = useState("");
+  const [emailDirty, setEmailDirty] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -215,20 +215,14 @@ function ProfileEditor({
     },
   });
   const credentials = useMutation({
-    mutationFn: (kind: "email" | "password") =>
-      kind === "email"
-        ? changeEmail({ email, currentPassword: emailPassword })
-        : changePassword({ password, currentPassword }),
-    onSuccess: (_result, kind) => {
+    mutationFn: () => changePassword({ password, currentPassword }),
+    onSuccess: () => {
       guard.release();
-      setEmailPassword("");
       setCurrentPassword("");
       setPassword("");
       setConfirmation("");
       feedback.clearTransient();
-      feedback.toast(
-        `${kind === "email" ? "Email" : "Password"} updated. Sign in again to continue.`,
-      );
+      feedback.toast("Password updated. Sign in again to continue.");
       client.clear();
       void navigate("/login", { replace: true });
     },
@@ -236,22 +230,19 @@ function ProfileEditor({
       lock.current = false;
     },
   });
-  const busy = profileMutation.isPending || credentials.isPending;
+  const busy = profileMutation.isPending || credentials.isPending || emailBusy;
   const profileDirty =
     firstName !== (user.firstName ?? "") || lastName !== (user.lastName ?? "");
   const guard = useDraftGuard(
     profileDirty ||
-      email !== user.email ||
-      Boolean(emailPassword || currentPassword || password || confirmation),
+      emailDirty ||
+      Boolean(currentPassword || password || confirmation),
     busy,
   );
   useLayoutEffect(() => {
     releaseRef.current = guard.release;
   }, [releaseRef, guard.release]);
-  const emailError =
-    credentials.variables === "email" ? credentials.error : null;
-  const credentialError =
-    credentials.variables === "password" ? credentials.error : null;
+  const credentialError = credentials.error;
   const sections = [
     {
       id: "details",
@@ -265,7 +256,7 @@ function ProfileEditor({
       label: "Sign-in email",
       description: "Where you sign in",
       Icon: FiMail,
-      dirty: email !== user.email || Boolean(emailPassword),
+      dirty: emailDirty,
     },
     {
       id: "password",
@@ -275,13 +266,10 @@ function ProfileEditor({
       dirty: Boolean(currentPassword || password || confirmation),
     },
   ] as const;
-  function submitCredentials(kind: "email" | "password") {
+  function submitCredentials() {
     if (lock.current) return;
     setPasswordError("");
-    if (
-      kind === "password" &&
-      (password !== confirmation || !/\S/u.test(password))
-    ) {
+    if (password !== confirmation || !/\S/u.test(password)) {
       setPasswordError(
         password !== confirmation
           ? "Passwords do not match."
@@ -291,7 +279,7 @@ function ProfileEditor({
       return;
     }
     lock.current = true;
-    credentials.mutate(kind);
+    credentials.mutate();
   }
   return (
     <div className="profile-settings-page" ref={pageRef}>
@@ -510,59 +498,18 @@ function ProfileEditor({
                 <p>Use an address you own and can access.</p>
               </div>
             </header>
-            <form
-              aria-label="Change email"
-              onSubmit={(event) => {
-                event.preventDefault();
-                submitCredentials("email");
+            <EmailChangePanel
+              user={user}
+              onBusyChange={setEmailBusy}
+              onDirtyChange={setEmailDirty}
+              onCompleted={() => {
+                guard.release();
+                feedback.clearTransient();
+                feedback.toast("Email updated. Sign in again to continue.");
+                client.clear();
+                void navigate("/login", { replace: true });
               }}
-            >
-              <fieldset disabled={busy}>
-                <FormField
-                  id="profile-email"
-                  label="Email address"
-                  required
-                  error={fieldError(emailError, "email")}
-                >
-                  <Input
-                    id="profile-email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    required
-                    maxLength={REGISTRATION_LIMITS.emailMax}
-                    onChange={(event) => setEmail(event.target.value)}
-                  />
-                </FormField>
-                <PasswordField
-                  id="email-current-password"
-                  label="Current password for email change"
-                  value={emailPassword}
-                  onChange={setEmailPassword}
-                  error={fieldError(emailError, "currentPassword")}
-                />
-                <p className="profile-form-hint">
-                  <FiShield aria-hidden="true" />
-                  Changing your email signs you out on all devices. Sign in
-                  again with the new address.
-                </p>
-                {emailError && (
-                  <InlineMessage>{message(emailError)}</InlineMessage>
-                )}
-                <PendingButton
-                  className="primary-button"
-                  pending={
-                    credentials.isPending && credentials.variables === "email"
-                  }
-                  pendingLabel="Updating email…"
-                  disabled={
-                    email.trim().toLowerCase() === user.email.toLowerCase()
-                  }
-                >
-                  Update email
-                </PendingButton>
-              </fieldset>
-            </form>
+            />
           </section>
           <section
             className="profile-settings-card"
@@ -584,7 +531,7 @@ function ProfileEditor({
               aria-label="Change password"
               onSubmit={(event) => {
                 event.preventDefault();
-                submitCredentials("password");
+                submitCredentials();
               }}
             >
               <fieldset disabled={busy}>
@@ -625,10 +572,7 @@ function ProfileEditor({
                 )}
                 <PendingButton
                   className="primary-button"
-                  pending={
-                    credentials.isPending &&
-                    credentials.variables === "password"
-                  }
+                  pending={credentials.isPending}
                   pendingLabel="Updating password…"
                 >
                   Update password

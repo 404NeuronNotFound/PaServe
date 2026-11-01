@@ -5,6 +5,9 @@ import type {
   UpdateProfileRequest,
   UpdateProfileResponse,
   ChangeEmailRequest,
+  EmailChangeStatus,
+  ConfirmEmailChangeRequest,
+  ConfirmEmailChangeResponse,
   ChangePasswordRequest,
 } from "@paserve/contracts";
 import axios, { type InternalAxiosRequestConfig } from "axios";
@@ -192,10 +195,47 @@ export async function updateProfile(input: UpdateProfileRequest) {
   return data;
 }
 
+export async function getEmailChange() {
+  const { data } = await api.get<EmailChangeStatus>(
+    "/auth/email",
+    await accountRequest(),
+  );
+  return data;
+}
 export async function changeEmail(input: ChangeEmailRequest) {
+  const { data } = await api.post<EmailChangeStatus>(
+    "/auth/email",
+    input,
+    await accountRequest(),
+  );
+  return data;
+}
+export async function confirmEmailChange(input: ConfirmEmailChangeRequest) {
   const config = await accountRequest();
-  await withSessionLock(() => api.post("/auth/email", input, config));
-  finishSession();
+  const { data } = await withSessionLock(() =>
+    api.post<ConfirmEmailChangeResponse>("/auth/email/confirm", input, config),
+  );
+  if (data.completed) finishSession();
+  return data;
+}
+export async function resendEmailChange(input: {
+  id: string;
+  target: "current" | "new";
+}) {
+  const { data } = await api.post<EmailChangeStatus>(
+    "/auth/email/resend",
+    input,
+    await accountRequest(),
+  );
+  return data;
+}
+export async function cancelEmailChange(id: string) {
+  const { data } = await api.post<EmailChangeStatus>(
+    "/auth/email/cancel",
+    { id },
+    await accountRequest(),
+  );
+  return data;
 }
 
 export async function changePassword(input: ChangePasswordRequest) {

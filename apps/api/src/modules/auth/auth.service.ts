@@ -24,7 +24,6 @@ import type { RegisterDto } from './dto/register.dto.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type {
   UpdateProfileDto,
-  ChangeEmailDto,
   ChangePasswordDto,
 } from './dto/update-account.dto.js';
 import { TokensService, invalidSession } from './tokens.service.js';
@@ -89,6 +88,7 @@ export class AuthService {
         this.tokens.digest(pair.refreshToken),
         expiresAt,
         account.passwordHash,
+        account.email,
       );
     } catch (error) {
       if (
@@ -177,6 +177,7 @@ export class AuthService {
     if (!session) throw invalidSession();
     return {
       ...this.safeUser(session.user),
+      signInMethod: session.user.googleSubject ? 'google' : 'email',
       firstName: session.user.firstName,
       lastName: session.user.lastName,
       memberships: session.user.memberships.map((membership) => ({
@@ -213,10 +214,7 @@ export class AuthService {
     });
   }
 
-  async changeCredentials(
-    accessToken: string,
-    dto: ChangeEmailDto | ChangePasswordDto,
-  ) {
+  async changeCredentials(accessToken: string, dto: ChangePasswordDto) {
     const claims = await this.tokens.verify(accessToken, 'access');
     const account = await this.repository.findCredentialAccount(
       claims.sub,
@@ -234,25 +232,9 @@ export class AuthService {
         },
       });
     }
-    let data: { email?: string; passwordHash?: string; emailVerifiedAt?: null };
-    if ('email' in dto) {
-      const email = dto.email.trim().toLowerCase();
-      if (email === account.email.toLowerCase())
-        throw new BadRequestException('Enter a different email address.');
-      const existing = await this.repository.findAccountByEmail(email);
-      if (existing && existing.id !== account.id) throw this.emailConflict();
-      // Rehash even for an email change to invalidate a concurrently verified
-      // login using the previous address at the conditional session write.
-      data = {
-        email,
-        emailVerifiedAt: null,
-        passwordHash: await this.passwords.hash(dto.currentPassword),
-      };
-    } else {
-      if (await this.passwords.verify(account.passwordHash, dto.password))
-        throw new BadRequestException('Choose a different password.');
-      data = { passwordHash: await this.passwords.hash(dto.password) };
-    }
+    if (await this.passwords.verify(account.passwordHash, dto.password))
+      throw new BadRequestException('Choose a different password.');
+    const data = { passwordHash: await this.passwords.hash(dto.password) };
     try {
       throwIfRequestAborted();
       await this.repository.changeCredentials(

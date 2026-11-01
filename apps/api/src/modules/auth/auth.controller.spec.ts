@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { IdentityService } from './identity.service.js';
+import { EmailChangeService } from './email-change.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +16,7 @@ describe('AuthController', () => {
       imports: [RateLimitingModule],
       controllers: [AuthController],
       providers: [
+        { provide: EmailChangeService, useValue: {} },
         BotChallengeService,
         AuthAbuseProtection,
         { provide: AuthService, useValue: { register: vi.fn() } },

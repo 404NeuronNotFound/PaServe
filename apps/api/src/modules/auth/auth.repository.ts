@@ -24,7 +24,7 @@ export class AuthRepository {
   findCredentialAccount(userId: string, sessionId: string) {
     return this.prisma.user.findFirst({
       where: this.liveAccount(userId, sessionId),
-      select: { id: true, email: true, passwordHash: true },
+      select: { id: true, email: true, passwordHash: true, googleSubject: true },
     });
   }
 
@@ -131,11 +131,12 @@ export class AuthRepository {
     refreshTokenHash: string,
     expiresAt: Date,
     verifiedPasswordHash: string,
+    verifiedEmail: string,
   ) {
     // Lock the account and recheck the verified credential before issuing a
     // session, so an old-password login cannot race a credential change.
     return this.prisma.user.update({
-      where: { id: userId, isActive: true, passwordHash: verifiedPasswordHash },
+      where: { id: userId, isActive: true, passwordHash: verifiedPasswordHash, email: verifiedEmail },
       data: {
         updatedAt: new Date(),
         sessions: { create: { id, refreshTokenHash, expiresAt } },
@@ -159,6 +160,7 @@ export class AuthRepository {
             id: true,
             email: true,
             createdAt: true,
+            googleSubject: true,
             firstName: true,
             lastName: true,
             memberships: {

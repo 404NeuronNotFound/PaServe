@@ -27,7 +27,9 @@ const close = Object.getOwnPropertyDescriptor(
 beforeEach(() => {
   // The account header fetches its inbox. Keep this profile fixture isolated
   // from the running API so its fake token cannot trigger session recovery.
-  vi.spyOn(api, "get").mockResolvedValue({ data: { notifications: [], unreadCount: 0, nextCursor: null } });
+  vi.spyOn(api, "get").mockResolvedValue({
+    data: { notifications: [], unreadCount: 0, nextCursor: null },
+  });
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
     configurable: true,
     value: function (this: HTMLDialogElement) {
@@ -160,7 +162,9 @@ it("shows current-password errors without losing drafts or clearing the session"
     screen.getByLabelText("Current password for email change", { exact: true }),
     "incorrect-password",
   );
-  await user.click(screen.getByRole("button", { name: "Update email" }));
+  await user.click(
+    screen.getByRole("button", { name: "Send verification code" }),
+  );
   await waitFor(() =>
     expect(
       screen.getByLabelText("Current password for email change", {
@@ -172,65 +176,95 @@ it("shows current-password errors without losing drafts or clearing the session"
   expect(useSessionStore.getState().accessToken).toBe("test-token");
 });
 
-it.each(["email", "password"] as const)(
-  "clears private data and releases the navigation guard after changing %s",
-  async (kind) => {
-    const post = vi.spyOn(api, "post").mockResolvedValue({ status: 204 });
-    const { user, client, router } = setup();
-    await user.click(
-      screen.getByRole("tab", {
-        name: kind === "email" ? "Sign-in email" : "Password",
-      }),
-    );
-    if (kind === "email") {
-      await user.clear(screen.getByLabelText("Email address"));
-      await user.type(
-        screen.getByLabelText("Email address"),
-        "new@example.com",
-      );
-      await user.type(
-        screen.getByLabelText("Current password for email change", {
-          exact: true,
-        }),
-        "current-passphrase",
-      );
-    } else {
-      await user.type(
-        screen.getByLabelText("Current password", { exact: true }),
-        "current-passphrase",
-      );
-      await user.type(
-        screen.getByLabelText("New password", { exact: true }),
-        "a new long password",
-      );
-      await user.type(
-        screen.getByLabelText("Confirm new password", { exact: true }),
-        "a new long password",
-      );
-    }
-    await user.click(
-      screen.getByRole("button", {
-        name: kind === "email" ? "Update email" : "Update password",
-      }),
-    );
-    expect(
-      await screen.findByRole("heading", { name: "Sign in" }),
-    ).toBeVisible();
-    expect(post).toHaveBeenCalledWith(
-      `/auth/${kind}`,
-      expect.objectContaining({ currentPassword: "current-passphrase" }),
-      expect.objectContaining({
-        headers: {
-          "X-PaServe-Client": "web",
-          Authorization: "Bearer test-token",
-        },
-      }),
-    );
-    expect(router.state.location.pathname).toBe("/login");
-    expect(client.getQueryCache().getAll()).toHaveLength(0);
-    expect(useSessionStore.getState().accessToken).toBeNull();
-  },
-);
+it("clears private data and releases the navigation guard after changing password", async () => {
+  const post = vi.spyOn(api, "post").mockResolvedValue({ status: 204 });
+  const { user, client, router } = setup();
+  await user.click(screen.getByRole("tab", { name: "Password" }));
+  await user.type(
+    screen.getByLabelText("Current password", { exact: true }),
+    "current-passphrase",
+  );
+  await user.type(
+    screen.getByLabelText("New password", { exact: true }),
+    "a new long password",
+  );
+  await user.type(
+    screen.getByLabelText("Confirm new password", { exact: true }),
+    "a new long password",
+  );
+  await user.click(screen.getByRole("button", { name: "Update password" }));
+  expect(await screen.findByRole("heading", { name: "Sign in" })).toBeVisible();
+  expect(post).toHaveBeenCalledWith(
+    "/auth/password",
+    expect.objectContaining({ currentPassword: "current-passphrase" }),
+    expect.anything(),
+  );
+  expect(router.state.location.pathname).toBe("/login");
+  expect(client.getQueryCache().getAll()).toHaveLength(0);
+  expect(useSessionStore.getState().accessToken).toBeNull();
+});
+it("keeps the current identity until both email inboxes are confirmed, then clears private data", async () => {
+  const pending = {
+    id: "pending",
+    email: "new@example.com",
+    currentConfirmed: false,
+    newConfirmed: false,
+    expiresAt: new Date(Date.now() + 900000).toISOString(),
+    resendAt: new Date().toISOString(),
+  };
+  const post = vi.spyOn(api, "post").mockImplementation(async (url) => ({
+    data:
+      url === "/auth/email"
+        ? { pending }
+        : url === "/auth/email/confirm"
+          ? pending.currentConfirmed
+            ? { completed: true, pending: null }
+            : {
+                completed: false,
+                pending: { ...pending, currentConfirmed: true },
+              }
+          : {},
+  }));
+  const { user, client, router } = setup();
+  await user.click(screen.getByRole("tab", { name: "Sign-in email" }));
+  await user.clear(screen.getByLabelText("Email address"));
+  await user.type(screen.getByLabelText("Email address"), "new@example.com");
+  await user.type(
+    screen.getByLabelText("Current password for email change"),
+    "current-passphrase",
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Send verification code" }),
+  );
+  const firstCode = await screen.findByLabelText(
+    "Current email verification code",
+  );
+  expect(client.getQueryData(currentUserKey)).toMatchObject({
+    user: { email: "lia@example.com" },
+  });
+  expect(useSessionStore.getState().accessToken).toBe("test-token");
+  await user.type(firstCode, "123456");
+  await user.click(
+    screen.getByRole("button", { name: "Confirm current inbox" }),
+  );
+  await user.type(
+    await screen.findByLabelText("New email verification code"),
+    "654321",
+  );
+  pending.currentConfirmed = true;
+  await user.click(
+    screen.getByRole("button", { name: "Verify and change email" }),
+  );
+  expect(await screen.findByRole("heading", { name: "Sign in" })).toBeVisible();
+  expect(post).toHaveBeenLastCalledWith(
+    "/auth/email/confirm",
+    { id: "pending", target: "new", code: "654321" },
+    expect.anything(),
+  );
+  expect(router.state.location.pathname).toBe("/login");
+  expect(client.getQueryCache().getAll()).toHaveLength(0);
+  expect(useSessionStore.getState().accessToken).toBeNull();
+});
 
 it("keeps drafts when switching editors and supports keyboard section navigation", async () => {
   const { user } = setup();
@@ -266,4 +300,55 @@ it("protects unsaved details when using the sidebar", async () => {
   ).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Keep editing" }));
   expect(screen.getByLabelText("First name")).toHaveValue("Lia draft");
+});
+
+it("resumes a pending email change and cancels it without signing out", async () => {
+  const pending = {
+    id: "request-id",
+    email: "new@example.com",
+    currentConfirmed: true,
+    newConfirmed: false,
+    expiresAt: new Date(Date.now() + 900000).toISOString(),
+    resendAt: new Date(0).toISOString(),
+  };
+  const get = vi
+    .spyOn(api, "get")
+    .mockImplementation(async (url) => ({
+      data:
+        url === "/auth/email"
+          ? { pending }
+          : { notifications: [], unreadCount: 0 },
+    }));
+  const post = vi
+    .spyOn(api, "post")
+    .mockImplementation(async (url) => ({
+      data: url === "/auth/email/resend" ? { pending } : { pending: null },
+    }));
+  const { user, client } = setup();
+  await user.click(screen.getByRole("tab", { name: "Sign-in email" }));
+  expect(
+    await screen.findByLabelText("New email verification code"),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Resend code" }));
+  await waitFor(() =>
+    expect(post).toHaveBeenCalledWith(
+      "/auth/email/resend",
+      { id: "request-id", target: "new" },
+      expect.anything(),
+    ),
+  );
+  await user.click(screen.getByRole("button", { name: "Cancel email change" }));
+  expect(
+    await screen.findByRole("button", { name: "Send verification code" }),
+  ).toBeVisible();
+  expect(post).toHaveBeenLastCalledWith(
+    "/auth/email/cancel",
+    { id: "request-id" },
+    expect.anything(),
+  );
+  expect(client.getQueryData(currentUserKey)).toMatchObject({
+    user: { email: "lia@example.com" },
+  });
+  expect(useSessionStore.getState().accessToken).toBe("test-token");
+  expect(get).toHaveBeenCalledWith("/auth/email", expect.anything());
 });

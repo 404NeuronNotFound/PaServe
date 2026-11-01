@@ -92,3 +92,12 @@ it("does not load Google when the provider has not been configured", () => {
   expect(api.post).not.toHaveBeenCalled();
   expect(renderButton).not.toHaveBeenCalled();
 });
+
+it("reauthenticates a linked Google account without replacing the PaServe session", async () => {
+  const reauthenticate = vi.fn().mockResolvedValue(undefined);
+  render(<GoogleSignIn onReauthenticate={reauthenticate} />);
+  await waitFor(() => expect(renderButton).toHaveBeenCalled());
+  await act(async () => callback({ credential: "reauth-token" }));
+  expect(reauthenticate).toHaveBeenCalledExactlyOnceWith("reauth-token");
+  expect(googleAccount).not.toHaveBeenCalled();
+});

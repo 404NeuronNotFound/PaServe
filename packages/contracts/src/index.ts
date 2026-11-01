@@ -405,6 +405,7 @@ export interface CurrentUser extends RegisteredUser {
   firstName: string | null;
   lastName: string | null;
   memberships: UserMembership[];
+  signInMethod?: "email" | "google";
 }
 
 export interface CurrentUserResponse {
@@ -414,7 +415,14 @@ export interface CurrentUserResponse {
 export const ACCOUNT_LIMITS = { nameMax: 80 } as const;
 export interface UpdateProfileRequest { firstName: string; lastName: string }
 export interface UpdateProfileResponse { firstName: string | null; lastName: string | null }
-export interface ChangeEmailRequest { email: string; currentPassword: string }
+export interface ChangeEmailRequest { email: string; currentPassword?: string; credential?: string }
+export interface PendingEmailChange {
+  id: string; email: string; expiresAt: string; resendAt: string;
+  currentConfirmed: boolean; newConfirmed: boolean;
+}
+export interface EmailChangeStatus { pending: PendingEmailChange | null }
+export interface ConfirmEmailChangeRequest { id: string; target: "current" | "new"; code: string }
+export interface ConfirmEmailChangeResponse extends EmailChangeStatus { completed: boolean; }
 export interface ChangePasswordRequest { password: string; currentPassword: string }
 
 export interface ApiErrorResponse {

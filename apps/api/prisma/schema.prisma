@@ -36,6 +36,7 @@ model User {
   memberships ShopMember[]
   sessions    AuthSession[]
   walkthroughs WalkthroughProgress[]
+  emailChange PendingEmailChange?
 
   @@map("users")
 }
@@ -448,4 +449,19 @@ model WalkthroughProgress {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@id([userId, scope, version])
   @@map("walkthrough_progress")
+}
+
+model PendingEmailChange {
+  id String @id @default(uuid())
+  userId String @unique
+  oldEmail String @db.VarChar(254)
+  newEmail String @db.VarChar(254)
+  credentialStamp String @db.VarChar(64)
+  expiresAt DateTime
+  resendAt DateTime
+  attempts Int @default(0)
+  currentConfirmed Boolean @default(false)
+  newConfirmed Boolean @default(false)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("pending_email_changes")
 }
