@@ -132,7 +132,12 @@ const monitoringReport = resolve(
 );
 const recoveryReport = resolve(
   apiRoot,
-  '../../artifacts/performance/failure-recovery-postgres-local.json',
+  process.env.FAILURE_RECOVERY_POSTGRES_REPORT ??
+    '../../artifacts/performance/failure-recovery-postgres-local.json',
+);
+assert.ok(
+  recoveryReport.startsWith(resolve(apiRoot, '../../artifacts') + sep),
+  'Recovery report must stay in workspace artifacts',
 );
 async function cleanup() {
   if (initialized) {
@@ -230,7 +235,7 @@ try {
         : suite === 'idempotency'
           ? '../../artifacts/performance/idempotency-postgres-local.json'
           : suite === 'recovery'
-            ? '../../artifacts/performance/failure-recovery-postgres-local.json'
+            ? recoveryReport
             : suite === 'monitoring'
               ? '../../artifacts/performance/database-monitoring-local.json'
               : suite === 'indexing'

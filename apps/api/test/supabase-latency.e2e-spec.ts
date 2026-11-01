@@ -5,7 +5,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { createServer, request as httpRequest, type Server } from 'node:http';
 import type { AddressInfo, Socket } from 'node:net';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
@@ -30,6 +30,7 @@ const kinds: Kind[] = ['logo', 'banner', 'product'];
 const shop = '10000000-0000-4000-8000-000000000001';
 const product = '20000000-0000-4000-8000-000000000002';
 let config: ConfigService;
+const suiteStartedAt = new Date().toISOString();
 function storage(kind: Kind) {
   const buffer = Buffer.from('disposable storage transport fixture');
   switch (kind) {
@@ -190,12 +191,23 @@ describe('real Supabase SDK storage under local network faults', () => {
         import.meta.url,
       ),
     );
-    await mkdir(dirname(report), { recursive: true });
+    const output = resolve(
+      process.env.FAILURE_RECOVERY_STORAGE_REPORT ?? report,
+    );
+    const artifactRoot = resolve(
+      fileURLToPath(new URL('../../../artifacts/', import.meta.url)),
+    );
+    if (!output.startsWith(artifactRoot + sep))
+      throw new Error('Storage report must stay in workspace artifacts');
+    await mkdir(dirname(output), { recursive: true });
     await writeFile(
-      report,
+      output,
       JSON.stringify(
         {
           pass: rows.length === 22,
+          runId: process.env.FAILURE_RECOVERY_RUN_ID ?? null,
+          startedAt: suiteStartedAt,
+          finishedAt: new Date().toISOString(),
           scope: 'real-sdk-local-http-no-live-provider',
           requestDeadlineMs: 400,
           dependencyDeadlineMs: 10000,

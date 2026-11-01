@@ -10,8 +10,12 @@ import { Test } from '@nestjs/testing';
 import { AppModule } from '../dist/app.module.js';
 import { PrismaService } from '../dist/database/prisma.service.js';
 import { ApiCapacityService } from '../dist/common/load-shedding/api-capacity.service.js';
+import { recoveryWorkload } from './recovery-workload.mjs';
 
 const target = new URL(process.env.DATABASE_URL);
+const startedAt = new Date().toISOString();
+let postgresVersion;
+let workload;
 assert.ok(
   process.env.TIMEOUT_DB_LOCAL_FIXTURE === 'true' &&
     target.hostname === '127.0.0.1' &&
@@ -19,7 +23,12 @@ assert.ok(
     process.env.PASERVE_IGNORE_ENV_FILE === 'true',
   'Use the owned recovery runner',
 );
-const admin = new pg.Client({ connectionString: target.href });
+const admin = new pg.Client({
+  connectionString: target.href,
+  connectionTimeoutMillis: 3000,
+  statement_timeout: 1000,
+  query_timeout: 2000,
+});
 let reachable = true,
   app;
 const sockets = new Set();
@@ -45,7 +54,16 @@ const proxy = createServer((socket) => {
 const checks = [];
 async function check(name, work) {
   const start = performance.now();
-  await work();
+  try {
+    await work();
+  } catch (error) {
+    checks.push({
+      name,
+      pass: false,
+      elapsedMs: Math.round(performance.now() - start),
+    });
+    throw error;
+  }
   checks.push({
     name,
     pass: true,
@@ -127,6 +145,8 @@ const call = async (path, method = 'GET') => {
 };
 try {
   await admin.connect();
+  postgresVersion = (await admin.query('SHOW server_version')).rows[0]
+    .server_version;
   await admin.query(
     'CREATE TABLE recovery_fixture (id int PRIMARY KEY, value int NOT NULL); INSERT INTO recovery_fixture VALUES(1,1)',
   );
@@ -264,6 +284,25 @@ try {
       );
     },
   );
+  const beforeWorkloadValue = await value();
+  workload = await recoveryWorkload({ origin, prisma, admin });
+  assert.equal(
+    workload.pass,
+    true,
+    'Measured workload or resource monitoring failed',
+  );
+  assert.equal(
+    await value(),
+    beforeWorkloadValue + workload.workflows.write.success,
+  );
+  await until(() => {
+    const pool = prisma.databasePoolSnapshot();
+    return (
+      pool.total === pool.idle &&
+      pool.waiting === 0 &&
+      pool.acquired === pool.released
+    );
+  });
 } finally {
   reachable = true;
   await app?.close();
@@ -274,7 +313,24 @@ try {
   await until(() => sockets.size === 0);
   const pool = prisma?.databasePoolSnapshot();
   const report = {
-    pass: checks.length === 5 && pool?.total === 0 && sockets.size === 0,
+    runId: process.env.FAILURE_RECOVERY_RUN_ID ?? null,
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    postgresVersion,
+    profile: {
+      statementMs: 350,
+      lockMs: 150,
+      connectionMs: 200,
+      poolMax: 2,
+      maxWaiting: 1,
+    },
+    pass:
+      checks.length === 5 &&
+      checks.every((check) => check.pass) &&
+      workload?.pass === true &&
+      pool?.total === 0 &&
+      sockets.size === 0,
+    workload,
     scope:
       'owned disposable PostgreSQL, real Nest/Prisma and isolated loopback TCP fault proxy',
     checks,
