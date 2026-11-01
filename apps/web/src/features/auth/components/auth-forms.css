@@ -293,3 +293,14 @@
   gap: var(--spacing-2);
   white-space: normal;
 }
+
+.auth-recovery-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 44px;
+  align-self: flex-end;
+  margin-top: -12px;
+  font-size: 13px;
+  text-underline-offset: 4px;
+}

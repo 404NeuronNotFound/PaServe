@@ -4,6 +4,7 @@ export const SHOP_SLUG_MAX_LENGTH = 80;
 export const SHOP_SLUG_MAX_ATTEMPTS = 5;
 
 const reservedNames = new Set([
+  'forgot-password',
   'app',
   'api',
   'admin',

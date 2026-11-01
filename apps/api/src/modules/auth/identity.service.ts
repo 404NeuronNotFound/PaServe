@@ -105,6 +105,56 @@ export class IdentityService {
     };
   }
 
+  async sendRecoveryCode(email: string) {
+    const { error } = await this.client().auth.resetPasswordForEmail(email);
+    if (error) {
+      if (error.status === 429)
+        throw new HttpException(
+          {
+            code: 'EMAIL_RATE_LIMITED',
+            message: 'Please wait before requesting another reset code.',
+          },
+          429,
+        );
+      // Do not disclose whether an address belongs to a Supabase or PaServe account.
+      if (!['user_not_found', 'email_not_found'].includes(error.code ?? '')) {
+        this.logger.warn({
+          event: 'password_recovery_email_failed',
+          provider: 'supabase-auth',
+          reason: 'delivery_failed',
+        });
+        throw new ServiceUnavailableException({
+          code: 'EMAIL_UNAVAILABLE',
+          message:
+            'Password recovery email is temporarily unavailable. Please try again shortly.',
+        });
+      }
+    }
+    return {
+      message:
+        'If this email has a password account, you will receive a reset code. Check your inbox and spam folder.',
+    };
+  }
+
+  async verifyRecoveryCode(email: string, token: string) {
+    const { data, error } = await this.client().auth.verifyOtp({
+      email,
+      token,
+      type: 'recovery',
+    });
+    if (
+      error ||
+      !data.user?.email_confirmed_at ||
+      data.user.email?.toLowerCase() !== email
+    ) {
+      throw new BadRequestException({
+        code: 'INVALID_RECOVERY_CODE',
+        message:
+          'The reset code is invalid, expired, or already used. Request a new code and try again.',
+      });
+    }
+  }
+
   async verifyEmail(email: string, token: string) {
     const { data, error } = await this.client().auth.verifyOtp({
       email,

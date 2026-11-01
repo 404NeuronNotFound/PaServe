@@ -1,3 +1,5 @@
+import { PasswordRecoveryController } from './password-recovery.controller.js';
+import { PasswordRecoveryService } from './password-recovery.service.js';
 import { EmailChangeService } from './email-change.service.js';
 import { WalkthroughController } from './walkthrough.controller.js';
 import { WalkthroughService } from './walkthrough.service.js';
@@ -20,8 +22,13 @@ import {
 
 @Module({
   imports: [DatabaseModule, JwtModule.register({})],
-  controllers: [AuthController, WalkthroughController],
+  controllers: [
+    AuthController,
+    WalkthroughController,
+    PasswordRecoveryController,
+  ],
   providers: [
+    PasswordRecoveryService,
     WalkthroughService,
     EmailChangeService,
     IdentityService,

@@ -190,3 +190,9 @@ it("allows one pending request and announces progress", async () => {
   finish(session);
   await waitFor(() => expect(success).toHaveBeenCalled());
 });
+
+it("provides password recovery without submitting sign-in credentials", () => {
+  setup();
+  expect(screen.getByRole("link", { name: "Forgot password?" })).toHaveAttribute("href", "/forgot-password");
+  expect(login).not.toHaveBeenCalled();
+});

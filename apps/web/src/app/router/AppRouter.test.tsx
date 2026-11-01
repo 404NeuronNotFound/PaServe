@@ -466,3 +466,11 @@ it("keeps the connection route separate from public shop resolution", async () =
   expect(api.get).toHaveBeenCalledWith("/health");
   expect(getCurrentUser).not.toHaveBeenCalled();
 });
+
+it("opens password recovery publicly without resolving a shop or restoring a session", async () => {
+  renderAt("/forgot-password");
+  expect(await screen.findByRole("heading", { name: "Forgot your password?" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Send reset code" })).toBeInTheDocument();
+  expect(getCurrentUser).not.toHaveBeenCalled();
+  expect(api.get).not.toHaveBeenCalled();
+});

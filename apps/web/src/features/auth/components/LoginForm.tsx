@@ -242,6 +242,7 @@ export function LoginForm({
             </Button>
           </div>
         </FormField>
+        <a className="auth-recovery-link" href="/forgot-password">Forgot password?</a>
         <label className="login-session-choice">
           <Input
             type="checkbox"

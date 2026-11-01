@@ -16,6 +16,7 @@ describe('Shop slug generation', () => {
     ['app', 'app-shop'],
     ['login', 'login-shop'],
     ['register', 'register-shop'],
+    ['forgot-password', 'forgot-password-shop'],
     ['shops', 'shops-shop'],
     ['Menu', 'menu-shop'],
     ['Connection', 'connection-shop'],

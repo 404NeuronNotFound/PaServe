@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { IdentityService } from './identity.service.js';
 const fake = vi.hoisted(() => ({
   signInWithOtp: vi.fn(),
+  resetPasswordForEmail: vi.fn(),
   verifyOtp: vi.fn(),
   signInWithIdToken: vi.fn(),
   create: vi.fn(),
@@ -192,3 +193,37 @@ it.each([
     });
   },
 );
+
+it('uses the Supabase recovery email endpoint with a generic acknowledgement', async () => {
+  fake.resetPasswordForEmail.mockResolvedValue({ error: null });
+  const result = await service.sendRecoveryCode('owner@example.com');
+  expect(fake.resetPasswordForEmail).toHaveBeenCalledWith('owner@example.com');
+  expect(result.message).toContain('If this email');
+  expect(Object.keys(result)).toEqual(['message']);
+});
+it('accepts only confirmed matching recovery email proof and never returns a provider token', async () => {
+  fake.verifyOtp.mockResolvedValue({
+    data: {
+      user: { email: 'owner@example.com', email_confirmed_at: '2026-11-01' },
+      session: { access_token: 'private-token' },
+    },
+    error: null,
+  });
+  expect(
+    await service.verifyRecoveryCode('owner@example.com', '123456'),
+  ).toBeUndefined();
+  expect(fake.verifyOtp).toHaveBeenCalledWith({
+    email: 'owner@example.com',
+    token: '123456',
+    type: 'recovery',
+  });
+  fake.verifyOtp.mockResolvedValue({
+    data: {
+      user: { email: 'other@example.com', email_confirmed_at: '2026-11-01' },
+    },
+    error: null,
+  });
+  await expect(
+    service.verifyRecoveryCode('owner@example.com', '123456'),
+  ).rejects.toThrow('reset code');
+});

@@ -1,3 +1,4 @@
+import { ForgotPasswordPage } from "../../pages/public/ForgotPasswordPage";
 import { useEffect, useState } from "react";
 import { NavigationProtection } from "./NavigationProtection";
 import {
@@ -67,6 +68,7 @@ export function AppRouter() {
         />
         <Route path="/" element={<LandingPage />} />
         <Route path="/register" element={<AuthEntryRoute><RegisterPage /></AuthEntryRoute>} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/login" element={<AuthEntryRoute><LoginPage /></AuthEntryRoute>} />
         <Route path="/join/:shopId" element={<JoinShopPage />} />
         <Route
