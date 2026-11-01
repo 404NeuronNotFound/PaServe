@@ -8,7 +8,11 @@ import type {
   WalkthroughCompletionRequest,
   WalkthroughProgressResponse,
 } from '@paserve/contracts';
-import { WALKTHROUGH_VERSION } from '@paserve/contracts';
+import {
+  SHOP_WALKTHROUGH_PAGES,
+  canAccessWalkthroughPage,
+  WALKTHROUGH_VERSION,
+} from '@paserve/contracts';
 import { PrismaService } from '../../database/prisma.service.js';
 @Injectable()
 export class WalkthroughService {
@@ -22,6 +26,11 @@ export class WalkthroughService {
     return { completedScopes: rows.map((row) => row.scope) };
   }
   async complete(user: CurrentUser, input: WalkthroughCompletionRequest) {
+    if (
+      input.page &&
+      (input.kind !== 'shop' || !SHOP_WALKTHROUGH_PAGES.includes(input.page))
+    )
+      throw new BadRequestException('Choose a valid shop page walkthrough.');
     let scope = input.kind === 'places' ? 'places' : 'account';
     if (input.kind === 'shop') {
       const membership = user.memberships.find(
@@ -31,6 +40,13 @@ export class WalkthroughService {
         throw new ForbiddenException('This workspace is unavailable.');
       // Role and membership come from the live authenticated account, never the body.
       scope = 'shop:' + membership.shopId + ':' + membership.role;
+      if (input.page) {
+        if (!canAccessWalkthroughPage(membership.role, input.page))
+          throw new ForbiddenException(
+            'This guide is unavailable for your role.',
+          );
+        scope += ':page:' + input.page;
+      }
     } else if (input.shopId)
       throw new BadRequestException('Choose an account or shop walkthrough.');
     await this.prisma.walkthroughProgress.upsert({

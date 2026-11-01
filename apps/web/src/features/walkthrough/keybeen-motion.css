@@ -1,0 +1,20 @@
+.keybeen-breathing {
+  transform-box: view-box;
+  transform-origin: 50% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .keybeen-character .keybeen-breathing {
+    animation: keybeen-breathe 4200ms ease-in-out infinite;
+    animation-play-state: paused;
+  }
+  .keybeen-character[data-active="true"] .keybeen-breathing {
+    animation-play-state: running;
+  }
+}
+@keyframes keybeen-breathe {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.003, 1.008); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .keybeen-character .keybeen-breathing { animation: none; transform: none; }
+}

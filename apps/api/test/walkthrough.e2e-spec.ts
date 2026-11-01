@@ -86,3 +86,16 @@ it('passes the server identity and validated completion to the service', async (
     expect.objectContaining({ kind: 'account', outcome: 'completed' }),
   );
 });
+
+it('accepts only allowlisted page names in authenticated page-tour requests', async () => {
+  const shopId = '05bcdf9f-d1be-4669-a01c-0b657f5a2f8e';
+  await request(app.getHttpServer()).post('/api/v1/auth/walkthrough')
+    .set('Authorization', 'Bearer test').set('X-PaServe-Client', 'web')
+    .send({ kind: 'shop', shopId, page: 'products', outcome: 'completed' }).expect(200);
+  expect(complete).toHaveBeenCalledWith(self, expect.objectContaining({ page: 'products', shopId }));
+  complete.mockClear();
+  await request(app.getHttpServer()).post('/api/v1/auth/walkthrough')
+    .set('Authorization', 'Bearer test').set('X-PaServe-Client', 'web')
+    .send({ kind: 'shop', shopId, page: 'arbitrary-page', outcome: 'completed' }).expect(400);
+  expect(complete).not.toHaveBeenCalled();
+});

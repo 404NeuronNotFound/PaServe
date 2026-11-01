@@ -6,9 +6,22 @@ export type TourStep = {
   title: string;
   text: string;
   target?: string;
+  fallbackTarget?: string;
   pose?: KeybeenPose;
 };
 const copy: Record<string, [string, string]> = {
+  categories: [
+    "Categories, clear and simple",
+    "Group products clearly, check category visibility, then review their order sa menu. May separate guide sa page na ito.",
+  ],
+  "add-ons": [
+    "Extras with clear prices",
+    "Create shop add-ons, then enable the right ones sa product Customize page. Check extra charges and visibility muna.",
+  ],
+  "menu-preview": [
+    "Customer view muna",
+    "Check Menu preview before sharing your shop link. Review layout, prices, photos at choices without making a real payment.",
+  ],
   sales: [
     "Kamusta ang sales?",
     "Dito mo makikita ang sales reports. Piliin muna ang tamang date range para same tayo ng numbers, okay?",
@@ -112,9 +125,38 @@ export function shopSteps(
     ),
   );
   const priorities: Record<ShopRole, string[]> = {
-    OWNER: ["orders", "products", "staff", "sales", "settings"],
-    ADMIN: ["orders", "products", "staff", "sales", "settings"],
-    MANAGER: ["orders", "kitchen", "products", "tables"],
+    OWNER: [
+      "orders",
+      "cashier",
+      "kitchen",
+      "products",
+      "categories",
+      "add-ons",
+      "menu-preview",
+      "tables",
+      "staff",
+      "sales",
+      "settings",
+    ],
+    ADMIN: [
+      "orders",
+      "cashier",
+      "kitchen",
+      "products",
+      "categories",
+      "add-ons",
+      "tables",
+      "sales",
+    ],
+    MANAGER: [
+      "orders",
+      "cashier",
+      "kitchen",
+      "products",
+      "categories",
+      "add-ons",
+      "sales",
+    ],
     CASHIER: ["cashier"],
     KITCHEN: ["kitchen"],
   };
@@ -140,12 +182,13 @@ export function shopSteps(
         id: path,
         title: copy[path][0],
         text: copy[path][1],
-        target:
-          path === "products"
-            ? '[data-walkthrough="shop-group-menu"]'
-            : path === "staff" || path === "settings" || path === "tables"
-              ? '[data-walkthrough="shop-group-management"]'
-              : '[data-walkthrough="shop-' + path + '"]',
+        target: ["products", "categories", "add-ons", "menu-preview"].includes(
+          path,
+        )
+          ? '[data-walkthrough="shop-group-menu"]'
+          : path === "staff" || path === "settings" || path === "tables"
+            ? '[data-walkthrough="shop-group-management"]'
+            : '[data-walkthrough="shop-' + path + '"]',
       })),
     {
       id: "workspace",

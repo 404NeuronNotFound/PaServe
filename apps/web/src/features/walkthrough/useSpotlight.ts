@@ -29,7 +29,10 @@ export function useSpotlight(
   useLayoutEffect(() => {
     let frame = 0;
     const update = () => {
-      const target = step.target ? visible(step.target) : undefined;
+      const target = step.target
+        ? (visible(step.target) ??
+          (step.fallbackTarget ? visible(step.fallbackTarget) : undefined))
+        : undefined;
       const fallback =
         step.target && !target
           ? visible('[data-walkthrough="workspace-menu"]')
@@ -95,7 +98,9 @@ export function useSpotlight(
       frame = requestAnimationFrame(update);
     };
     const initial = step.target
-      ? (visible(step.target) ?? visible('[data-walkthrough="workspace-menu"]'))
+      ? (visible(step.target) ??
+        (step.fallbackTarget ? visible(step.fallbackTarget) : undefined) ??
+        visible('[data-walkthrough="workspace-menu"]'))
       : undefined;
     const initialBox = initial?.getBoundingClientRect();
     if (

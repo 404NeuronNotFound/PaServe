@@ -24,6 +24,105 @@ it("lists only this account's progress for the current walkthrough version", asy
     take: 1000,
   });
 });
+
+it('stores page completion separately for the live owner without changing the walkthrough version', async () => {
+  const owner = {
+    ...user,
+    memberships: [
+      { shopId: 'shop-a', role: 'OWNER', shop: { isActive: true } },
+    ],
+  } as CurrentUser;
+  await expect(
+    service.complete(owner, {
+      kind: 'shop',
+      shopId: 'shop-a',
+      page: 'products',
+      outcome: 'completed',
+    }),
+  ).resolves.toEqual({ scope: 'shop:shop-a:OWNER:page:products' });
+  expect(prisma.walkthroughProgress.upsert).toHaveBeenCalledWith(
+    expect.objectContaining({
+      create: {
+        userId: 'self',
+        scope: 'shop:shop-a:OWNER:page:products',
+        version: 1,
+        outcome: 'completed',
+      },
+    }),
+  );
+});
+it('does not accept page-guide progress for another role or an account scope', async () => {
+  await expect(
+    service.complete(user, {
+      kind: 'shop',
+      shopId: 'shop-a',
+      page: 'products',
+      outcome: 'skipped',
+    }),
+  ).rejects.toThrow('unavailable for your role');
+  await expect(
+    service.complete(user, {
+      kind: 'account',
+      page: 'products',
+      outcome: 'skipped',
+    }),
+  ).rejects.toThrow('valid shop page');
+  expect(prisma.walkthroughProgress.upsert).not.toHaveBeenCalled();
+});
+
+it.each(['ADMIN', 'MANAGER'] as const)(
+  'stores a catalog guide for the live %s membership',
+  async (role) => {
+    const member = {
+      ...user,
+      memberships: [{ shopId: 'shop-a', role, shop: { isActive: true } }],
+    } as CurrentUser;
+    await expect(
+      service.complete(member, {
+        kind: 'shop',
+        shopId: 'shop-a',
+        page: 'products',
+        outcome: 'completed',
+      }),
+    ).resolves.toEqual({ scope: `shop:shop-a:${role}:page:products` });
+  },
+);
+it('permits admin tables guidance but refuses manager and owner-sensitive page scopes', async () => {
+  const member = (role: 'ADMIN' | 'MANAGER') =>
+    ({
+      ...user,
+      memberships: [{ shopId: 'shop-a', role, shop: { isActive: true } }],
+    }) as CurrentUser;
+  await expect(
+    service.complete(member('ADMIN'), {
+      kind: 'shop',
+      shopId: 'shop-a',
+      page: 'tables',
+      outcome: 'skipped',
+    }),
+  ).resolves.toEqual({ scope: 'shop:shop-a:ADMIN:page:tables' });
+  prisma.walkthroughProgress.upsert.mockClear();
+  for (const role of ['ADMIN', 'MANAGER'] as const)
+    for (const page of ['staff', 'settings', 'menu-preview'] as const) {
+      await expect(
+        service.complete(member(role), {
+          kind: 'shop',
+          shopId: 'shop-a',
+          page,
+          outcome: 'completed',
+        }),
+      ).rejects.toThrow('unavailable for your role');
+    }
+  await expect(
+    service.complete(member('MANAGER'), {
+      kind: 'shop',
+      shopId: 'shop-a',
+      page: 'tables',
+      outcome: 'completed',
+    }),
+  ).rejects.toThrow('unavailable for your role');
+  expect(prisma.walkthroughProgress.upsert).not.toHaveBeenCalled();
+});
 it('saves skip/completion idempotently for the authenticated identity', async () => {
   await service.complete(user, { kind: 'account', outcome: 'skipped' });
   expect(prisma.walkthroughProgress.upsert).toHaveBeenCalledWith(

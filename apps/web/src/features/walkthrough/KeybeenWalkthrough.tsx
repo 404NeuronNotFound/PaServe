@@ -8,12 +8,16 @@ import {
 } from "@tanstack/react-query";
 import { FiArrowLeft, FiArrowRight, FiCheck } from "react-icons/fi";
 import type {
+  ShopWalkthroughPage,
   CurrentUser,
   UserMembership,
   WalkthroughCompletionRequest,
   WalkthroughProgressResponse,
 } from "@paserve/contracts";
-import { WALKTHROUGH_VERSION } from "@paserve/contracts";
+import {
+  WALKTHROUGH_VERSION,
+  canAccessWalkthroughPage,
+} from "@paserve/contracts";
 import { Button } from "../../components/ui/button";
 import {
   Dialog,
@@ -26,6 +30,7 @@ import { useSessionStore } from "../auth/stores/session";
 import { accountSteps, placesSteps, shopSteps, type TourStep } from "./steps";
 import { getWalkthroughProgress, finishWalkthrough } from "./api";
 import { dismissHere, dismissedHere } from "./progress";
+import { shopPageSteps } from "./owner-steps";
 import { KeybeenSprite } from "./KeybeenSprite";
 import { useSpotlight } from "./useSpotlight";
 import "./walkthrough.css";
@@ -34,15 +39,25 @@ export function KeybeenWalkthrough({
   user,
   membership,
   surface = "account",
+  page,
 }: {
   user: CurrentUser;
   membership?: UserMembership;
   surface?: "account" | "places";
+  page?: ShopWalkthroughPage;
 }) {
   const sessionToken = useSessionStore((state) => state.accessToken);
   if (!sessionToken) return null;
+  const permittedPage =
+    membership && page && canAccessWalkthroughPage(membership.role, page)
+      ? page
+      : undefined;
   const scope = membership
-    ? "shop:" + membership.shopId + ":" + membership.role
+    ? "shop:" +
+      membership.shopId +
+      ":" +
+      membership.role +
+      (permittedPage ? ":page:" + permittedPage : "")
     : surface;
   return (
     <ScopedWalkthrough
@@ -51,6 +66,7 @@ export function KeybeenWalkthrough({
       membership={membership}
       scope={scope}
       surface={surface}
+      page={permittedPage}
     />
   );
 }
@@ -59,11 +75,13 @@ function ScopedWalkthrough({
   membership,
   scope,
   surface,
+  page,
 }: {
   user: CurrentUser;
   membership?: UserMembership;
   scope: string;
   surface: "account" | "places";
+  page?: ShopWalkthroughPage;
 }) {
   const token = useSessionStore((state) => state.accessToken);
   const client = useQueryClient();
@@ -100,11 +118,13 @@ function ScopedWalkthrough({
   const steps = useMemo(
     () =>
       membership
-        ? shopSteps(membership.role, membership.shop.name, user.firstName)
+        ? page
+          ? shopPageSteps(page, membership.role)
+          : shopSteps(membership.role, membership.shop.name, user.firstName)
         : surface === "places"
           ? placesSteps(user.firstName)
           : accountSteps(user.firstName),
-    [membership, user.firstName, surface],
+    [membership, user.firstName, surface, page],
   );
   function finish(outcome: "completed" | "skipped") {
     if (finishing.current) return;
@@ -115,6 +135,7 @@ function ScopedWalkthrough({
       kind: membership ? "shop" : surface,
       outcome,
       ...(membership ? { shopId: membership.shopId } : {}),
+      ...(page ? { page } : {}),
     };
     completion.mutate(input);
   }
@@ -172,7 +193,7 @@ function OpenWalkthrough({
           onPointerDownOutside={(event) => event.preventDefault()}
         >
           <div className="keybeen-guide-body">
-            <KeybeenSprite pose={pose} />
+            <KeybeenSprite key={step.id} pose={pose} speech={step.text} />
             <div className="keybeen-speech">
               <p className="keybeen-eyebrow">KEYBEEN / PASERVE GUIDE</p>
               <p className="sr-only" role="status">

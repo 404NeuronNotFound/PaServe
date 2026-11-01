@@ -1,3 +1,4 @@
+import { ownerPageForPath } from "../../features/walkthrough/owner-steps";
 import { KeybeenWalkthrough } from "../../features/walkthrough/KeybeenWalkthrough";
 import { ShopLogo } from "../shops/ShopLogo";
 import { SkipLink } from "./SkipLink";
@@ -376,7 +377,7 @@ export function DashboardFrame({
         </main>
       </div>
       {user?.id && membership && (
-        <KeybeenWalkthrough user={user} membership={membership} />
+        <KeybeenWalkthrough user={user} membership={membership} page={ownerPageForPath(pathname)} />
       )}
     </div>
   );

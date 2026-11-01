@@ -109,6 +109,50 @@ it("never shows a tour when progress could not be checked", async () => {
   );
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
+
+it.each(["OWNER", "ADMIN", "MANAGER"] as const)(
+  "opens an independent products guide for %s",
+  async (role) => {
+    const account = user();
+    const membership = {
+      shopId: "shop-a",
+      role,
+      shop: { id: "shop-a", name: "Cafe", isActive: true },
+    } as CurrentUser["memberships"][number];
+    vi.mocked(getWalkthroughProgress).mockResolvedValue({
+      completedScopes: [`shop:shop-a:${role}`],
+    });
+    vi.mocked(finishWalkthrough).mockResolvedValue({
+      scope: `shop:shop-a:${role}:page:products`,
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <KeybeenWalkthrough
+          user={account}
+          membership={membership}
+          page="products"
+        />
+      </QueryClientProvider>,
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Your menu starts here" }),
+    ).toBeInTheDocument();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Skip tour" }));
+    await waitFor(() =>
+      expect(finishWalkthrough).toHaveBeenCalledWith({
+        kind: "shop",
+        shopId: "shop-a",
+        page: "products",
+        outcome: "skipped",
+      }),
+    );
+  },
+);
 it.each(["OWNER", "ADMIN", "MANAGER", "CASHIER", "KITCHEN"] as ShopRole[])(
   "builds a logical %s guide with a welcome and finish",
   (role) => {

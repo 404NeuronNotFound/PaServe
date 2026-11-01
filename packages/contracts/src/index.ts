@@ -1623,9 +1623,30 @@ export function isValidProductSelection(value: unknown): value is ProductSelecti
 }
 
 export const WALKTHROUGH_VERSION = 1;
+export const OWNER_WALKTHROUGH_PAGES = ["products", "product-customize", "categories", "add-ons", "menu-preview", "sales", "orders", "staff", "tables", "settings"] as const;
+export type OwnerWalkthroughPage = typeof OWNER_WALKTHROUGH_PAGES[number];
+export const SHOP_WALKTHROUGH_PAGES = OWNER_WALKTHROUGH_PAGES;
+export type ShopWalkthroughPage = OwnerWalkthroughPage;
+const WALKTHROUGH_PAGE_PERMISSIONS: Record<ShopWalkthroughPage, ShopPermission> = {
+  products: "shop.menu.manage",
+  "product-customize": "shop.menu.manage",
+  categories: "shop.menu.manage",
+  "add-ons": "shop.menu.manage",
+  "menu-preview": "shop.settings.manage",
+  sales: "shop.reports.read",
+  orders: "shop.orders.overview.read",
+  staff: "shop.staff.manage",
+  tables: "shop.operations.manage",
+  settings: "shop.settings.manage",
+};
+export function canAccessWalkthroughPage(role: ShopRole, page: ShopWalkthroughPage): boolean {
+  return (["OWNER", "ADMIN", "MANAGER"] as readonly ShopRole[]).includes(role) &&
+    SHOP_WALKTHROUGH_PAGES.includes(page) && hasShopPermission(role, WALKTHROUGH_PAGE_PERMISSIONS[page]);
+}
 export interface WalkthroughCompletionRequest {
   kind: "account" | "places" | "shop";
   shopId?: string;
+  page?: ShopWalkthroughPage;
   outcome: "completed" | "skipped";
 }
 export interface WalkthroughProgressResponse { completedScopes: string[]; }
