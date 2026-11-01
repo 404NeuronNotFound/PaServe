@@ -76,20 +76,6 @@
   border: 1px dashed var(--color-border);
   border-radius: 50%;
 }
-.selection-art-star {
-  position: absolute;
-  right: -12px;
-  bottom: 8px;
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: var(--color-lime);
-  color: #243329;
-  font-size: 40px;
-  transform: rotate(-12deg);
-}
 .selection-shops {
   border-top: 1px solid var(--color-border);
   padding-top: 28px;
@@ -230,13 +216,6 @@
   width: 30px;
   height: 30px;
   stroke-width: 1.5;
-}
-.selection-card-mark {
-  position: absolute;
-  top: 12px;
-  right: 18px;
-  color: var(--color-muted);
-  font-size: 28px;
 }
 .selection-card-content {
   display: flex;

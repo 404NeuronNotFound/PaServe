@@ -114,7 +114,6 @@ export function ShopSelectionPage() {
           <div className="selection-art" aria-hidden="true">
             <span className="selection-art-orbit" />
             <FiCoffee />
-            <span className="selection-art-star">✳</span>
           </div>
         </section>
         <section
@@ -176,7 +175,6 @@ export function ShopSelectionPage() {
                         name={membership.shop.name}
                         className="selection-card-emblem"
                       />
-                      <span className="selection-card-mark">✳</span>
                     </div>
                     <div className="selection-card-content">
                       <div className="selection-card-meta">

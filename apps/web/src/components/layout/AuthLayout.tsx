@@ -40,12 +40,7 @@ export function AuthLayout({
             A LITTLE MORE HUMAN.<span> A LOT MORE POSSIBILITY.</span>
           </div>
           <div className="welcome-content">
-            <p className="section-label">
-              <span className="little-star" aria-hidden="true">
-                ✳
-              </span>{" "}
-              FOR THE PEOPLE BEHIND THE COUNTER
-            </p>
+            <p className="section-label">FOR THE PEOPLE BEHIND THE COUNTER</p>
             <h2>
               Good days.
               <br />
@@ -58,7 +53,6 @@ export function AuthLayout({
             <div className="coffee-art" aria-hidden="true">
               <div className="art-disc" />
               <div className="art-orbit" />
-              <span className="art-spark">✳</span>
               <div className="art-stamp">
                 <span>BREW A</span>
                 <strong>better day.</strong>
@@ -103,7 +97,7 @@ export function AuthLayout({
                 />
               </svg>
               <span className="art-caption">
-                YOUR DAILY DOSE OF POSSIBILITY ↗
+                YOUR DAILY DOSE OF POSSIBILITY
               </span>
             </div>
             <div className="daily-note">

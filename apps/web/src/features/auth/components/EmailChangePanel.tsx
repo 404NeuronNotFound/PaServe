@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { FiCheck, FiClock, FiMail, FiShield } from "react-icons/fi";
+import {
+  FiCheck,
+  FiClock,
+  FiMail,
+  FiShield,
+  FiEye,
+  FiEyeOff,
+} from "react-icons/fi";
 import type {
   CurrentUser,
   EmailChangeStatus,
@@ -53,6 +60,7 @@ function EmailChangeEditor({
   const key = ["email-change", user.id] as const;
   const [email, setEmail] = useState(user.email);
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [code, setCode] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const input = useRef<HTMLInputElement>(null);
@@ -449,15 +457,36 @@ function EmailChangeEditor({
                 error={fieldError(begin.error, "currentPassword")}
                 required
               >
-                <Input
-                  id="email-current-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  maxLength={REGISTRATION_LIMITS.passwordMax}
-                  required
-                  onChange={(event) => setPassword(event.target.value)}
-                />
+                <div className="profile-password-control">
+                  <Input
+                    id="email-current-password"
+                    type={passwordVisible ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={password}
+                    maxLength={REGISTRATION_LIMITS.passwordMax}
+                    required
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={
+                      passwordVisible
+                        ? "Hide current password for email change"
+                        : "Show current password for email change"
+                    }
+                    aria-pressed={passwordVisible}
+                    aria-controls="email-current-password"
+                    onClick={() => setPasswordVisible((value) => !value)}
+                  >
+                    {passwordVisible ? (
+                      <FiEyeOff aria-hidden="true" />
+                    ) : (
+                      <FiEye aria-hidden="true" />
+                    )}
+                  </Button>
+                </div>
               </FormField>
             )}
             <p className="profile-form-hint">

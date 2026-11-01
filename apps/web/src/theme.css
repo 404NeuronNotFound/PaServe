@@ -138,11 +138,6 @@
   align-items: center;
   gap: 10px;
 }
-.little-star {
-  color: var(--color-lime);
-  font-size: var(--text-2xl);
-  line-height: 1;
-}
 .welcome-content h2 {
   max-width: 560px;
   margin: 0;
@@ -190,14 +185,6 @@
   inset: 20px -8px;
   border: 1px solid #46593e;
   border-radius: 50%;
-}
-.art-spark {
-  position: absolute;
-  right: -6px;
-  top: 22px;
-  font-size: 56px;
-  color: var(--color-lime);
-  transform: rotate(14deg);
 }
 .art-caption {
   position: absolute;
@@ -645,13 +632,6 @@
 .coffee-art svg {
   z-index: 1;
   transform: rotate(-12deg) scale(0.92);
-}
-.art-spark {
-  z-index: 2;
-  right: 6px;
-  top: 1px;
-  color: #f3f0e5;
-  font-size: 58px;
 }
 .art-stamp {
   position: absolute;
@@ -1169,11 +1149,6 @@
   .welcome-footer,
   .brand-edition {
     display: none;
-  }
-  .welcome-panel::after {
-    content: "✳";
-    color: var(--color-lime);
-    font-size: 32px;
   }
   .form-panel {
     flex: 1;
