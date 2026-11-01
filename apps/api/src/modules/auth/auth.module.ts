@@ -1,3 +1,5 @@
+import { WalkthroughController } from './walkthrough.controller.js';
+import { WalkthroughService } from './walkthrough.service.js';
 import { IdentityService } from './identity.service.js';
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller.js';
@@ -17,8 +19,9 @@ import {
 
 @Module({
   imports: [DatabaseModule, JwtModule.register({})],
-  controllers: [AuthController],
+  controllers: [AuthController, WalkthroughController],
   providers: [
+    WalkthroughService,
     IdentityService,
     PasswordHashService,
     BotChallengeService,

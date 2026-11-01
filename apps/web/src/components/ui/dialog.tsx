@@ -10,16 +10,18 @@ export const DialogDescription = Primitive.Description;
 export function DialogContent({
   className,
   portalContainer,
+  overlayClassName,
   closeDisabled = false,
   children,
   ...props
 }: ComponentProps<typeof Primitive.Content> & {
   portalContainer?: HTMLElement;
+  overlayClassName?: string;
   closeDisabled?: boolean;
 }) {
   return (
     <Primitive.Portal container={portalContainer}>
-      <Primitive.Overlay className="ui-modal-overlay" />
+      <Primitive.Overlay className={cn("ui-modal-overlay", overlayClassName)} />
       <Primitive.Content
         className={cn("ui-dialog-content", className)}
         {...props}

@@ -1,3 +1,4 @@
+import { KeybeenWalkthrough } from "../../features/walkthrough/KeybeenWalkthrough";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -51,8 +52,16 @@ export function AccountFrame({
   const profile = location.pathname.endsWith("/profile");
   const places = location.pathname.endsWith("/places");
   const inbox = location.pathname.endsWith("/notifications");
-  const currentDestination = profile ? "Your profile" : places ? "Your places" : inbox ? "Notifications" : "Overview";
-  const accountName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Your account";
+  const currentDestination = profile
+    ? "Your profile"
+    : places
+      ? "Your places"
+      : inbox
+        ? "Notifications"
+        : "Overview";
+  const accountName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    "Your account";
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem("paserve.sidebar.collapsed") === "true";
@@ -116,6 +125,7 @@ export function AccountFrame({
           </Link>
           <Link
             to="/app/account/profile"
+            data-walkthrough="account-profile"
             aria-current={profile ? "page" : undefined}
             title={rail ? "Your profile" : undefined}
             onClick={closeNavigation}
@@ -125,6 +135,7 @@ export function AccountFrame({
           </Link>
           <Link
             to="/app/account/places"
+            data-walkthrough="account-places"
             aria-current={places ? "page" : undefined}
             title={rail ? "Your places" : undefined}
             onClick={closeNavigation}
@@ -132,9 +143,14 @@ export function AccountFrame({
             <FiCoffee aria-hidden="true" />
             <span>Your places</span>
           </Link>
-          <Link to="/app/account/notifications" aria-current={inbox ? "page" : undefined}
-            title={rail ? "Notifications" : undefined} onClick={closeNavigation}>
-            <FiBell aria-hidden="true" /><span>Notifications</span>
+          <Link
+            to="/app/account/notifications"
+            aria-current={inbox ? "page" : undefined}
+            title={rail ? "Notifications" : undefined}
+            onClick={closeNavigation}
+          >
+            <FiBell aria-hidden="true" />
+            <span>Notifications</span>
           </Link>
         </div>
       </div>
@@ -155,10 +171,23 @@ export function AccountFrame({
         </Link>
         <span className="workspace-label">YOUR EVERYDAY SPACE</span>
         <div className="header-actions">
-          <Link className="account-notification-bell" to="/app/account/notifications"
-            aria-label={notifications.isError ? "Notifications, unavailable" : `Notifications, ${unreadCount} unread`} title="Notifications">
+          <Link
+            data-walkthrough="account-notifications"
+            className="account-notification-bell"
+            to="/app/account/notifications"
+            aria-label={
+              notifications.isError
+                ? "Notifications, unavailable"
+                : `Notifications, ${unreadCount} unread`
+            }
+            title="Notifications"
+          >
             <FiBell aria-hidden="true" />
-            {unreadCount > 0 && <span className="account-notification-count" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+            {unreadCount > 0 && (
+              <span className="account-notification-count" aria-hidden="true">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
           </Link>
           <AppearanceToggle />
           <Button
@@ -175,79 +204,98 @@ export function AccountFrame({
         </div>
       </header>
       <div className="dashboard-body">
-        {mobile && <Button variant="outline" size="inherit"
-          ref={trigger}
-          type="button"
-          className="dashboard-navigation-toggle"
-          aria-label="Navigation"
-          aria-haspopup={mobile ? "dialog" : undefined}
-          aria-expanded={open}
-          aria-controls={mobile ? "mobile-workspace-navigation" : "account-navigation"}
-          onClick={() => setOpen(!open)}
-        >
-          <span className="dashboard-mobile-location">
-            <small>YOUR SPACE</small>
-            <strong>{currentDestination}</strong>
-          </span>
-          <span className="dashboard-mobile-menu-label">
-            <FiMenu aria-hidden="true" /> Menu
-          </span>
-        </Button>}
-        {!mobile && <aside
-          id="account-navigation"
-          className="dashboard-sidebar dashboard-sidebar-premium"
-          data-open={open}
-          aria-label="Workspace navigation"
-          onKeyDown={(event) => {
-            if (event.key === "Escape" && mobile) {
-              setOpen(false);
-              trigger.current?.focus();
+        {mobile && (
+          <Button
+            variant="outline"
+            size="inherit"
+            ref={trigger}
+            type="button"
+            data-walkthrough="workspace-menu"
+            className="dashboard-navigation-toggle"
+            aria-label="Navigation"
+            aria-haspopup={mobile ? "dialog" : undefined}
+            aria-expanded={open}
+            aria-controls={
+              mobile ? "mobile-workspace-navigation" : "account-navigation"
             }
-          }}
-        >
-          <div className="dashboard-sidebar-toolbar">
-            <span className="dashboard-sidebar-label">YOUR SPACE</span>
-            <button
-              type="button"
-              className="dashboard-sidebar-collapse"
-              aria-label={rail ? "Expand sidebar" : "Collapse sidebar"}
-              title={rail ? "Expand sidebar" : "Collapse sidebar"}
-              aria-expanded={!rail}
-              aria-controls="account-navigation"
-              onClick={toggleSidebar}
-            >
-              {rail ? (
-                <FiChevronRight aria-hidden="true" />
-              ) : (
-                <FiChevronLeft aria-hidden="true" />
-              )}
-            </button>
-          </div>
-          <div className="dashboard-sidebar-identity">
-            <span className="dashboard-sidebar-emblem">
-              <FiUser aria-hidden="true" />
+            onClick={() => setOpen(!open)}
+          >
+            <span className="dashboard-mobile-location">
+              <small>YOUR SPACE</small>
+              <strong>{currentDestination}</strong>
             </span>
-            <div>
-              <strong>{accountName}</strong>
-              <p className="dashboard-shop-role">Personal account</p>
+            <span className="dashboard-mobile-menu-label">
+              <FiMenu aria-hidden="true" /> Menu
+            </span>
+          </Button>
+        )}
+        {!mobile && (
+          <aside
+            id="account-navigation"
+            className="dashboard-sidebar dashboard-sidebar-premium"
+            data-open={open}
+            aria-label="Workspace navigation"
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && mobile) {
+                setOpen(false);
+                trigger.current?.focus();
+              }
+            }}
+          >
+            <div className="dashboard-sidebar-toolbar">
+              <span className="dashboard-sidebar-label">YOUR SPACE</span>
+              <button
+                type="button"
+                className="dashboard-sidebar-collapse"
+                aria-label={rail ? "Expand sidebar" : "Collapse sidebar"}
+                title={rail ? "Expand sidebar" : "Collapse sidebar"}
+                aria-expanded={!rail}
+                aria-controls="account-navigation"
+                onClick={toggleSidebar}
+              >
+                {rail ? (
+                  <FiChevronRight aria-hidden="true" />
+                ) : (
+                  <FiChevronLeft aria-hidden="true" />
+                )}
+              </button>
             </div>
-          </div>
-          {accountNavigation}
-        </aside>}
-        {mobile && <MobileWorkspaceNavigation open={open} onClose={closeNavigation}
-          contextName={accountName} eyebrow="YOUR SPACE" title="Explore your space">
-          {accountNavigation}
-        </MobileWorkspaceNavigation>}
-        <main className="dashboard-content" id="account-content" tabIndex={-1}>
+            <div className="dashboard-sidebar-identity">
+              <span className="dashboard-sidebar-emblem">
+                <FiUser aria-hidden="true" />
+              </span>
+              <div>
+                <strong>{accountName}</strong>
+                <p className="dashboard-shop-role">Personal account</p>
+              </div>
+            </div>
+            {accountNavigation}
+          </aside>
+        )}
+        {mobile && (
+          <MobileWorkspaceNavigation
+            open={open}
+            onClose={closeNavigation}
+            contextName={accountName}
+            eyebrow="YOUR SPACE"
+            title="Explore your space"
+          >
+            {accountNavigation}
+          </MobileWorkspaceNavigation>
+        )}
+        <main
+          data-walkthrough="account-content"
+          className="dashboard-content"
+          id="account-content"
+          tabIndex={-1}
+        >
           <nav className="workspace-breadcrumbs" aria-label="Breadcrumb">
             <ol>
               <li>
                 <Link to="/app/account">Your account</Link>
               </li>
               <li>
-                <span aria-current="page">
-                  {currentDestination}
-                </span>
+                <span aria-current="page">{currentDestination}</span>
               </li>
             </ol>
           </nav>
@@ -259,6 +307,7 @@ export function AccountFrame({
           {children}
         </main>
       </div>
+      {user?.id && <KeybeenWalkthrough user={user} />}
     </div>
   );
 }

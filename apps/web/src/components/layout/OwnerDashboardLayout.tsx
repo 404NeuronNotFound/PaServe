@@ -1,3 +1,4 @@
+import { KeybeenWalkthrough } from "../../features/walkthrough/KeybeenWalkthrough";
 import { ShopLogo } from "../shops/ShopLogo";
 import { SkipLink } from "./SkipLink";
 import {
@@ -179,7 +180,7 @@ export function DashboardFrame({
           </span>
           PaServe<span className="wordmark-period">.</span>
         </Link>
-        <div className="dashboard-shop-control">
+        <div data-walkthrough="active-shop" className="dashboard-shop-control">
           {choices.length > 1 ? (
             <details
               ref={shopMenu}
@@ -281,6 +282,7 @@ export function DashboardFrame({
       </header>
       <div className="dashboard-body">
         <button
+          data-walkthrough="workspace-menu"
           className="secondary-button dashboard-navigation-toggle"
           ref={navigationTrigger}
           type="button"
@@ -366,12 +368,16 @@ export function DashboardFrame({
         <main
           className="dashboard-content"
           id="dashboard-content"
+          data-walkthrough="shop-content"
           tabIndex={-1}
         >
           <WorkspaceBreadcrumbs membership={membership} />
           {children}
         </main>
       </div>
+      {user?.id && membership && (
+        <KeybeenWalkthrough user={user} membership={membership} />
+      )}
     </div>
   );
 }

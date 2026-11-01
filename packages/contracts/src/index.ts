@@ -1613,3 +1613,11 @@ export function isValidProductSelection(value: unknown): value is ProductSelecti
   return isValidOrderQuantity(input.quantity) && ids(input.variantIds, ORDER_INPUT_LIMITS.variantsMax) &&
     ids(input.addOnIds, ADD_ON_LIMITS.selectionMax) && (input.notes === undefined || isValidCustomerNote(input.notes));
 }
+
+export const WALKTHROUGH_VERSION = 1;
+export interface WalkthroughCompletionRequest {
+  kind: "account" | "places" | "shop";
+  shopId?: string;
+  outcome: "completed" | "skipped";
+}
+export interface WalkthroughProgressResponse { completedScopes: string[]; }

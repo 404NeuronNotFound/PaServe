@@ -1,3 +1,4 @@
+import { KeybeenWalkthrough } from "../../features/walkthrough/KeybeenWalkthrough";
 import { Button } from "../../components/ui/button";
 import { SearchField } from "../../components/forms/SearchField";
 import { ShopLogo } from "../../components/shops/ShopLogo";
@@ -43,7 +44,9 @@ export function ResolveActiveShop() {
 }
 
 export function ShopSelectionPage() {
-  useEffect(() => { document.title = "Your shops ? PaServe"; }, []);
+  useEffect(() => {
+    document.title = "Your shops ? PaServe";
+  }, []);
   const user =
     useQueryClient().getQueryData<CurrentUserResponse>(currentUserKey)!.user;
   const shops = user.memberships.filter(
@@ -80,6 +83,7 @@ export function ShopSelectionPage() {
         <div className="header-actions">
           <AppearanceToggle />
           <Link
+            data-walkthrough="places-account"
             className="secondary-button selection-account-link"
             aria-label="Your account"
             to="/app/account"
@@ -99,7 +103,7 @@ export function ShopSelectionPage() {
               <span className="selection-dot" aria-hidden="true" /> YOUR PEOPLE
               & PLACES
             </p>
-            <h1 id="selection-title">
+            <h1 data-walkthrough="places-title" id="selection-title">
               Choose a <em>shop</em>
             </h1>
             <p className="selection-intro">
@@ -124,17 +128,23 @@ export function ShopSelectionPage() {
             </div>
             <div className="selection-tools">
               {shops.length > 0 && (
-                  <SearchField className="selection-search" label="Search shops"
-                    id="shop-search"
-                    ref={searchInput}
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search your shops…"
-                    aria-describedby="selection-search-hint"
-                    onClear={clearSearch}
-                  />
+                <SearchField
+                  className="selection-search"
+                  label="Search shops"
+                  id="shop-search"
+                  ref={searchInput}
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search your shops…"
+                  aria-describedby="selection-search-hint"
+                  onClear={clearSearch}
+                />
               )}
-              <Link className="primary-button" to="/app/onboarding/create-shop">
+              <Link
+                className="primary-button"
+                data-walkthrough="places-create"
+                to="/app/onboarding/create-shop"
+              >
                 <FiPlus aria-hidden="true" /> Create shop
               </Link>
             </div>
@@ -152,7 +162,7 @@ export function ShopSelectionPage() {
             </div>
           )}
           {visibleShops.length ? (
-            <ul className="selection-grid">
+            <ul data-walkthrough="places-list" className="selection-grid">
               {visibleShops.map((membership) => (
                 <li key={membership.id}>
                   <Link
@@ -161,7 +171,11 @@ export function ShopSelectionPage() {
                   >
                     <div className="selection-card-cover" aria-hidden="true">
                       <span className="selection-card-orbit" />
-                      <ShopLogo url={membership.shop.logoUrl} name={membership.shop.name} className="selection-card-emblem" />
+                      <ShopLogo
+                        url={membership.shop.logoUrl}
+                        name={membership.shop.name}
+                        className="selection-card-emblem"
+                      />
                       <span className="selection-card-mark">✳</span>
                     </div>
                     <div className="selection-card-content">
@@ -199,7 +213,9 @@ export function ShopSelectionPage() {
               <InlineMessage tone="info" className="selection-empty-message">
                 Try a different name, role or menu address.
               </InlineMessage>
-              <Button variant="outline" size="inherit"
+              <Button
+                variant="outline"
+                size="inherit"
                 className="secondary-button"
                 type="button"
                 onClick={clearSearch}
@@ -212,11 +228,18 @@ export function ShopSelectionPage() {
               <FiCoffee aria-hidden="true" />
               <h3>A fresh start for your next place.</h3>
               <p>No available shops yet. Create a shop to get started.</p>
-              <Link className="primary-button" to="/app/onboarding/create-shop">Set up your first shop</Link>
+              <Link
+                className="primary-button"
+                data-walkthrough="places-create"
+                to="/app/onboarding/create-shop"
+              >
+                Set up your first shop
+              </Link>
             </div>
           )}
         </section>
       </main>
+      {user.id && <KeybeenWalkthrough user={user} surface="places" />}
     </div>
   );
 }

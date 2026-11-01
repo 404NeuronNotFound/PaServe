@@ -1,0 +1,137 @@
+.ui-modal-overlay.keybeen-overlay-spotlight {
+  background: transparent;
+}
+.ui-modal-overlay.keybeen-overlay-welcome {
+  background: #101c1680;
+}
+.keybeen-spotlight {
+  position: fixed;
+  z-index: 205;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 2px solid var(--color-lime);
+  border-radius: var(--radius-inset);
+  outline: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 9999px #101c1680;
+}
+.ui-dialog-content.keybeen-guide {
+  z-index: 211;
+  left: var(--keybeen-card-left, 16px);
+  top: var(--keybeen-card-top, 16px);
+  transform: none;
+  width: min(560px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  overflow: hidden;
+}
+.keybeen-guide-body {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--spacing-4);
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: var(--spacing-6);
+}
+.keybeen-character {
+  width: 120px;
+  height: 200px;
+  align-self: end;
+  overflow: hidden;
+}
+.keybeen-character image {
+  image-rendering: pixelated;
+}
+.keybeen-speech {
+  min-width: 0;
+}
+.keybeen-eyebrow {
+  margin: 0 0 var(--spacing-2);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+  font-weight: var(--weight-semibold);
+}
+.keybeen-speech h2 {
+  margin: 0 0 var(--spacing-3);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: var(--line-heading);
+}
+.keybeen-speech > p:not(.keybeen-eyebrow):not(.sr-only) {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--line-body);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.keybeen-speech .keybeen-mobile-hint {
+  padding-top: var(--spacing-3);
+}
+.keybeen-guide-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-2);
+  flex-shrink: 0;
+  padding-top: var(--spacing-3);
+  border-top: 1px solid var(--color-border);
+}
+.keybeen-progress {
+  margin-right: auto;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+.keybeen-guide-actions .ui-button {
+  min-height: 44px;
+  white-space: normal;
+  padding-inline: var(--spacing-3);
+}
+@media (max-width: 600px) {
+  .keybeen-guide-body {
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: var(--spacing-3);
+    padding-right: var(--spacing-4);
+  }
+  .keybeen-character {
+    width: 80px;
+    height: 124px;
+  }
+  .keybeen-speech h2 {
+    font-size: var(--text-lg);
+  }
+  .ui-dialog-content.keybeen-guide > .keybeen-guide-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--spacing-2);
+  }
+  .keybeen-progress {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-height: 500px) {
+  .ui-dialog-content.keybeen-guide {
+    padding: var(--spacing-4);
+    gap: var(--spacing-2);
+  }
+  .keybeen-character {
+    height: 124px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .keybeen-character {
+    animation: keybeen-arrive 180ms ease-out;
+  }
+  @keyframes keybeen-arrive {
+    from {
+      transform: translateY(8px);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+}
