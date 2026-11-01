@@ -10,3 +10,5 @@ dist
 
 # Downloaded local test binaries and disposable edge test prefixes.
 .local-tools/
+
+artifacts/**/*.log
