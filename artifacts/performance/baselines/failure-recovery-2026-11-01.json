@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "name": "failure-recovery",
+    "version": 1,
+    "database": {
+      "statementMs": 350,
+      "lockMs": 150,
+      "connectionMs": 200,
+      "poolMax": 2,
+      "maxWaiting": 1
+    },
+    "storage": {
+      "requestDeadlineMs": 400,
+      "dependencyDeadlineMs": 10000
+    },
+    "comparison": {
+      "relativeLimit": 1.5,
+      "additionalMs": 100
+    }
+  },
+  "status": "passed",
+  "pass": true,
+  "runId": "665a31d4-1f18-471e-8597-66596249b959",
+  "startedAt": "2026-11-01T00:06:41.004Z",
+  "finishedAt": "2026-11-01T00:07:38.801Z",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "osRelease": "10.0.26200",
+    "node": "v24.19.0",
+    "cpuModel": "AMD Ryzen 5 PRO 4650G with Radeon Graphics",
+    "logicalCpus": 12,
+    "memoryBytes": 16502763520,
+    "postgresVersion": "17.11",
+    "packages": {
+      "@prisma/client": "7.10.0",
+      "@supabase/supabase-js": "2.117.2",
+      "@nestjs/core": "12.1.2",
+      "vitest": "4.1.12"
+    }
+  },
+  "environmentKey": "331614e5760a971beb06fcb15c018cfe09887fdbe9118817625d5ee695d7a334",
+  "source": {
+    "fingerprint": "3b65858c529bbe4395d08a9710c4d8362d0540ce84eb1020b6e7b9547ce39fd2",
+    "commit": "58d938a94616ae2078bf72feb14b715d186ca942",
+    "workingTree": "modified"
+  },
+  "stages": [
+    {
+      "name": "contracts-build",
+      "exitCode": 0,
+      "elapsedMs": 696
+    },
+    {
+      "name": "api-build",
+      "exitCode": 0,
+      "elapsedMs": 7568
+    },
+    {
+      "name": "postgres-recovery",
+      "exitCode": 0,
+      "elapsedMs": 29487
+    },
+    {
+      "name": "unit-regression",
+      "exitCode": 0,
+      "elapsedMs": 2263
+    },
+    {
+      "name": "http-regression",
+      "exitCode": 0,
+      "elapsedMs": 17525
+    }
+  ],
+  "regressions": {
+    "unit": {
+      "tests": 54,
+      "passed": 54,
+      "suites": [
+        "bot-challenge.service.spec.ts",
+        "new-order-events.service.spec.ts",
+        "public-menu.repository.spec.ts"
+      ]
+    },
+    "http": {
+      "tests": 26,
+      "passed": 26,
+      "suites": [
+        "request-timeouts.e2e-spec.ts",
+        "supabase-latency.e2e-spec.ts"
+      ]
+    }
+  },
+  "measurements": [
+    {
+      "id": "postgres:database-network-outage-keeps-liveness-up-and-readiness-failed",
+      "pass": true,
+      "elapsedMs": 97,
+      "samples": 1
+    },
+    {
+      "id": "postgres:healthy-baseline-and-readiness",
+      "pass": true,
+      "elapsedMs": 129,
+      "samples": 1
+    },
+    {
+      "id": "postgres:lock-contention-fails-boundedly-and-recovers-without-restart",
+      "pass": true,
+      "elapsedMs": 200,
+      "samples": 1
+    },
+    {
+      "id": "postgres:statement-timeout-rolls-back-a-partial-write-and-releases-capacity",
+      "pass": true,
+      "elapsedMs": 383,
+      "samples": 1
+    },
+    {
+      "id": "postgres:terminating-only-the-fixture-api-session-rolls-back-and-reconnects",
+      "pass": true,
+      "elapsedMs": 47,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:connection-reset",
+      "pass": true,
+      "elapsedMs": 57,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:delayed-success",
+      "pass": true,
+      "elapsedMs": 71,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:dependency-timeout-without-context",
+      "pass": true,
+      "elapsedMs": 10016,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:invalid-json",
+      "pass": true,
+      "elapsedMs": 70,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:provider-503",
+      "pass": true,
+      "elapsedMs": 69,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:stalled-body",
+      "pass": true,
+      "elapsedMs": 480,
+      "samples": 1
+    },
+    {
+      "id": "storage:banner:stalled-headers",
+      "pass": true,
+      "elapsedMs": 477,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:client-disconnect",
+      "pass": true,
+      "elapsedMs": 26,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:connection-reset",
+      "pass": true,
+      "elapsedMs": 74,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:delayed-success",
+      "pass": true,
+      "elapsedMs": 98,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:dependency-timeout-without-context",
+      "pass": true,
+      "elapsedMs": 10016,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:invalid-json",
+      "pass": true,
+      "elapsedMs": 72,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:provider-503",
+      "pass": true,
+      "elapsedMs": 78,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:stalled-body",
+      "pass": true,
+      "elapsedMs": 471,
+      "samples": 1
+    },
+    {
+      "id": "storage:logo:stalled-headers",
+      "pass": true,
+      "elapsedMs": 483,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:connection-reset",
+      "pass": true,
+      "elapsedMs": 54,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:delayed-success",
+      "pass": true,
+      "elapsedMs": 68,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:dependency-timeout-without-context",
+      "pass": true,
+      "elapsedMs": 10018,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:invalid-json",
+      "pass": true,
+      "elapsedMs": 68,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:provider-503",
+      "pass": true,
+      "elapsedMs": 71,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:stalled-body",
+      "pass": true,
+      "elapsedMs": 473,
+      "samples": 1
+    },
+    {
+      "id": "storage:product:stalled-headers",
+      "pass": true,
+      "elapsedMs": 462,
+      "samples": 1
+    }
+  ],
+  "resources": {
+    "connections": 0,
+    "waiting": 0,
+    "proxySockets": 0,
+    "acquired": 10,
+    "released": 10
+  },
+  "cleanup": {
+    "postgresStopped": true,
+    "ownedDirectoryRemoved": true
+  },
+  "limitations": [
+    "Local fixtures only; CAPTCHA/realtime regression uses mocks.",
+    "One observation per scenario; durations include checks/recovery and are not p95/p99 or isolated dependency latency.",
+    "No hosted disaster recovery, DNS/TLS, full PostgreSQL crash or production RTO/RPO claim."
+  ]
+}

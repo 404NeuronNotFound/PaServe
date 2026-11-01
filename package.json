@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "pnpm --filter api test --maxWorkers=2 && pnpm --filter api test:e2e --maxWorkers=2 && pnpm --filter web test --maxWorkers=2 && pnpm test:search-load-metrics && pnpm test:latency-slo && pnpm test:failure-recovery:report && pnpm test:database-monitor && pnpm test:load-env:safety && pnpm test:edge:config",
+    "test": "pnpm --filter api test --maxWorkers=2 && pnpm --filter api test:e2e --maxWorkers=2 && pnpm --filter web test --maxWorkers=2 && pnpm test:search-load-metrics && pnpm test:latency-slo && pnpm test:failure-recovery:report && pnpm test:database-monitor && pnpm test:load-env:safety && pnpm test:edge:config && pnpm test:performance-acceptance",
     "lint": "pnpm --filter api lint && pnpm --filter web lint",
     "build": "pnpm --filter api build && pnpm --filter web build",
     "verify": "pnpm lint && pnpm test && pnpm build && pnpm --filter web test:security-release && pnpm test:leaks && pnpm audit --audit-level=low",
@@ -41,7 +41,9 @@
     "test:failure-recovery:report": "node --test scripts/failure-recovery-results.test.mjs",
     "test:monitoring:postgres": "pnpm --filter api test:monitoring:postgres",
     "monitor:database": "pnpm --filter api monitor:database",
-    "check:latency-slo": "node scripts/check-latency-slo.mjs"
+    "check:latency-slo": "node scripts/check-latency-slo.mjs",
+    "check:performance-acceptance": "node scripts/performance-acceptance.mjs",
+    "test:performance-acceptance": "node --test scripts/critical-endpoint-slos.test.mjs scripts/performance-acceptance.test.mjs"
   },
   "keywords": [],
   "author": "",
