@@ -25,8 +25,13 @@ try {
           new AuthRepository(tx),
           new TokensService(new JwtService(), new ConfigService()),
           new PasswordHashService(new ConfigService()),
+          // The database fixture tests local persistence, without sending real mail.
+          { verifyEmail: async () => {} },
         );
         const registered = await auth.register({
+          firstName: 'Fixture',
+          lastName: 'Account',
+          verificationCode: '123456',
           email: ` ${email.toUpperCase()} `,
           password,
         });
@@ -38,6 +43,9 @@ try {
         assert.equal(await verify(account.passwordHash, password), true);
         assert.deepEqual(
           await auth.register({
+            firstName: 'Fixture',
+            lastName: 'Account',
+            verificationCode: '123456',
             email: email.toUpperCase(),
             password: 'a different submitted password',
           }),

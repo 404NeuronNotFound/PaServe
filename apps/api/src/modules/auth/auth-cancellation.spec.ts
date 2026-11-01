@@ -1,3 +1,4 @@
+import type { IdentityService } from './identity.service.js';
 import { AuthService } from './auth.service.js';
 import type { AuthRepository } from './auth.repository.js';
 import type { TokensService } from './tokens.service.js';
@@ -14,13 +15,11 @@ describe('cancelled auth native work', () => {
         finish = resolve;
       });
       const repository = {
-        findLoginAccount: vi
-          .fn()
-          .mockResolvedValue({
-            id: 'fixture',
-            isActive: true,
-            passwordHash: 'fixture-digest',
-          }),
+        findLoginAccount: vi.fn().mockResolvedValue({
+          id: 'fixture',
+          isActive: true,
+          passwordHash: 'fixture-digest',
+        }),
         createAccount: vi.fn(),
         createSession: vi.fn(),
       };
@@ -40,9 +39,13 @@ describe('cancelled auth native work', () => {
         repository as unknown as AuthRepository,
         tokens as unknown as TokensService,
         passwords as unknown as PasswordHashService,
+        { verifyEmail: async () => {} } as unknown as IdentityService,
       );
       const result = requestContext.run({ signal: cancelled.signal }, () =>
         auth[operation]({
+          firstName: 'Ada',
+          lastName: 'Lovelace',
+          verificationCode: '123456',
           email: 'fixture@example.invalid',
           password: 'fixture-only-password',
         }),

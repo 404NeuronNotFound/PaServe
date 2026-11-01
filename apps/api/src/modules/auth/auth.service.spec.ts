@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { REGISTRATION_ACKNOWLEDGEMENT } from '@paserve/contracts';
 import { verify } from 'argon2';
+import { IdentityService } from './identity.service.js';
 import { AuthService } from './auth.service.js';
 import { AuthRepository } from './auth.repository.js';
 import { TokensService } from './tokens.service.js';
@@ -17,6 +18,10 @@ describe('AuthService registration', () => {
     const module = await Test.createTestingModule({
       providers: [
         AuthService,
+        {
+          provide: IdentityService,
+          useValue: { verifyEmail: vi.fn().mockResolvedValue(undefined) },
+        },
         PasswordHashService,
         ConfigService,
         { provide: AuthRepository, useValue: repository },
@@ -43,6 +48,9 @@ describe('AuthService registration', () => {
       },
     );
     const result = await service.register({
+      firstName: ' Ada ',
+      lastName: ' Lovelace ',
+      verificationCode: '123456',
       email: ' Owner@Example.com ',
       password,
     });
@@ -55,6 +63,9 @@ describe('AuthService registration', () => {
     repository.createAccount.mockResolvedValue({ count: 0 });
     await expect(
       service.register({
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        verificationCode: '123456',
         email: 'owner@example.com',
         password: 'a long passphrase',
       }),
@@ -62,6 +73,7 @@ describe('AuthService registration', () => {
     expect(repository.createAccount).toHaveBeenCalledWith(
       'owner@example.com',
       expect.stringMatching(/^\$argon2id\$/),
+      { firstName: 'Ada', lastName: 'Lovelace' },
     );
     expect(repository.findAccountByEmail).not.toHaveBeenCalled();
   });
@@ -72,9 +84,129 @@ describe('AuthService registration', () => {
     );
     await expect(
       service.register({
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        verificationCode: '123456',
         email: 'owner@example.com',
         password: 'a long passphrase',
       }),
     ).rejects.toThrow('Database unavailable');
+  });
+});
+
+describe('Supabase Google account sessions', () => {
+  const repository = {
+    findGoogleAccount: vi.fn(),
+    createGoogleAccount: vi.fn(),
+    createSession: vi.fn(),
+  };
+  const identity = { verifyGoogle: vi.fn() };
+  const tokens = { issue: vi.fn(), digest: vi.fn() };
+  const passwords = { hash: vi.fn() };
+  let service: AuthService;
+  const account = {
+    id: 'local-user',
+    email: 'owner@gmail.com',
+    passwordHash: 'private-hash',
+    createdAt: new Date(),
+    isActive: true,
+  };
+  beforeEach(() => {
+    vi.resetAllMocks();
+    service = new AuthService(
+      repository as unknown as AuthRepository,
+      tokens as unknown as TokensService,
+      passwords as unknown as PasswordHashService,
+      identity as unknown as IdentityService,
+    );
+    identity.verifyGoogle.mockResolvedValue({
+      subject: 'google-subject',
+      email: 'owner@gmail.com',
+    });
+    repository.findGoogleAccount.mockResolvedValue(account);
+    tokens.issue.mockResolvedValue({
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      expiresIn: 900,
+    });
+    tokens.digest.mockReturnValue('refresh-digest');
+    passwords.hash.mockResolvedValue('generated-hash');
+  });
+  it('issues an existing PaServe session only after Supabase verifies Google', async () => {
+    const result = await service.google(
+      { credential: 'token', keepSignedIn: true },
+      'nonce',
+    );
+    expect(identity.verifyGoogle).toHaveBeenCalledWith('token', 'nonce');
+    expect(repository.findGoogleAccount).toHaveBeenCalledWith('google-subject');
+    expect(repository.createSession).toHaveBeenCalledWith(
+      expect.any(String),
+      account.id,
+      'refresh-digest',
+      expect.any(Date),
+      'private-hash',
+    );
+    expect(result.response.user.email).toBe(account.email);
+    expect(result.keepSignedIn).toBe(true);
+  });
+  it('requires names and registration for a new Google account', async () => {
+    repository.findGoogleAccount.mockResolvedValue(null);
+    await expect(
+      service.google({ credential: 'token' }, 'nonce'),
+    ).rejects.toThrow();
+    expect(repository.createGoogleAccount).not.toHaveBeenCalled();
+    expect(repository.createSession).not.toHaveBeenCalled();
+    repository.createGoogleAccount.mockResolvedValue(account);
+    await service.google(
+      { credential: 'token', firstName: 'Ada', lastName: 'Lovelace' },
+      'nonce',
+    );
+    expect(repository.createGoogleAccount).toHaveBeenCalledWith(
+      'google-subject',
+      'owner@gmail.com',
+      'generated-hash',
+      { firstName: 'Ada', lastName: 'Lovelace' },
+    );
+  });
+  it('does not create a session for disabled, conflicting or unverified accounts', async () => {
+    repository.findGoogleAccount.mockResolvedValue({
+      ...account,
+      isActive: false,
+    });
+    await expect(
+      service.google({ credential: 'token' }, 'nonce'),
+    ).rejects.toThrow();
+    repository.findGoogleAccount.mockResolvedValue(null);
+    repository.createGoogleAccount.mockResolvedValue(null);
+    await expect(
+      service.google(
+        { credential: 'token', firstName: 'Ada', lastName: 'Lovelace' },
+        'nonce',
+      ),
+    ).rejects.toThrow();
+    identity.verifyGoogle.mockRejectedValue(new Error('invalid identity'));
+    await expect(
+      service.google({ credential: 'token' }, 'nonce'),
+    ).rejects.toThrow();
+    expect(repository.createSession).not.toHaveBeenCalled();
+  });
+  it('does not hash or create an email account when Supabase rejects ownership proof', async () => {
+    const verifyEmail = vi.fn().mockRejectedValue(new Error('invalid code'));
+    service = new AuthService(
+      repository as unknown as AuthRepository,
+      tokens as unknown as TokensService,
+      passwords as unknown as PasswordHashService,
+      { verifyEmail } as unknown as IdentityService,
+    );
+    await expect(
+      service.register({
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        email: 'owner@example.com',
+        password: 'long passphrase',
+        verificationCode: '123456',
+      }),
+    ).rejects.toThrow('invalid code');
+    expect(passwords.hash).not.toHaveBeenCalled();
   });
 });

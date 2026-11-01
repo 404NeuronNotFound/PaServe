@@ -4,6 +4,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
+import { IdentityService } from '../src/modules/auth/identity.service.js';
 import { AuthRepository } from '../src/modules/auth/auth.repository.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { ApiRateLimitGuard } from '../src/common/rate-limiting/api-rate-limit.guard.js';
@@ -13,12 +14,17 @@ describe('POST /api/v1/auth/register', () => {
   let app: INestApplication<App>;
   const repository = { findAccountByEmail: vi.fn(), createAccount: vi.fn() };
   const input = {
+    firstName: 'Ada',
+    lastName: 'Lovelace',
+    verificationCode: '123456',
     email: 'owner@example.com',
     password: 'a valid long passphrase',
   };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(IdentityService)
+      .useValue({ verifyEmail: vi.fn().mockResolvedValue(undefined) })
       .overrideProvider(AuthRepository)
       .useValue(repository)
       .overrideProvider(PrismaService)
@@ -54,6 +60,7 @@ describe('POST /api/v1/auth/register', () => {
     expect(repository.createAccount).toHaveBeenCalledWith(
       input.email,
       expect.stringMatching(/^\$argon2id\$/),
+      { firstName: 'Ada', lastName: 'Lovelace' },
     );
   });
 
@@ -93,6 +100,7 @@ describe('POST /api/v1/auth/register', () => {
     expect(repository.createAccount).toHaveBeenCalledWith(
       input.email,
       expect.stringMatching(/^\$argon2id\$/),
+      { firstName: 'Ada', lastName: 'Lovelace' },
     );
     expect(repository.findAccountByEmail).not.toHaveBeenCalled();
   });
@@ -129,6 +137,8 @@ it('throttles registration before querying accounts or hashing passwords', async
   const module = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(PrismaService)
     .useValue({})
+    .overrideProvider(IdentityService)
+    .useValue({ verifyEmail: vi.fn().mockResolvedValue(undefined) })
     .overrideProvider(AuthRepository)
     .useValue(repository)
     .compile();

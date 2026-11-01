@@ -51,7 +51,17 @@ describe('login flood isolation', () => {
       .post(`/api/v1/auth/${path}`)
       .set('X-Forwarded-For', `192.0.2.${ip}`)
       .set('X-PaServe-Client', 'web')
-      .send({ email, password: 'a long valid password' });
+      .send({
+        email,
+        password: 'a long valid password',
+        ...(path === 'register'
+          ? {
+              firstName: 'Ada',
+              lastName: 'Lovelace',
+              verificationCode: '123456',
+            }
+          : {}),
+      });
 
   it('keeps normalized-account enforcement source-scoped so distributed failures cannot block a clean victim', async () => {
     for (let i = 1; i <= 20; i++) {

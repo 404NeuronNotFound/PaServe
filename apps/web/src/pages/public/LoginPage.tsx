@@ -17,7 +17,7 @@ export function LoginPage() {
   const returnTo = signInDestination(requestedPath);
   const queryClient = useQueryClient();
   return (
-    <AuthLayout headingId="login-heading">
+    <AuthLayout variant="login" headingId="login-heading">
       <p className="section-label">Welcome back</p>
       <h1 id="login-heading">Sign in to PaServe</h1>
       <p className="form-intro">Use your email and password to continue.</p>

@@ -88,6 +88,13 @@ describe('progressive authentication challenge HTTP boundary', () => {
       .send({
         email,
         password: 'valid password fixture',
+        ...(path === 'register'
+          ? {
+              firstName: 'Ada',
+              lastName: 'Lovelace',
+              verificationCode: '123456',
+            }
+          : {}),
         ...(token ? { challengeToken: token } : {}),
       });
   const failThree = async () => {

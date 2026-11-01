@@ -24,6 +24,8 @@ enum ProductStatus {
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
+  googleSubject String? @unique
+  emailVerifiedAt DateTime?
   passwordHash String
   isActive     Boolean  @default(true)
   firstName    String?

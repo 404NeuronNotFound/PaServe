@@ -186,3 +186,15 @@ describe("frontend deployment security policy", () => {
     expect(() => frontendSecurity({ CSP_REPORT_ONLY: "yes" })).toThrow();
   });
 });
+
+
+it('permits only the required Google GIS sources and popups when configured', () => {
+  const security = frontendSecurity({ ...env, VITE_GOOGLE_CLIENT_ID: 'google-client' });
+  const csp = directives(security.headers['Content-Security-Policy']);
+  expect(csp['script-src']).toContain('https://accounts.google.com/gsi/client');
+  expect(csp['script-src']).not.toContain("'unsafe-inline'");
+  expect(csp['frame-src']).toContain('https://accounts.google.com/gsi/');
+  expect(csp['connect-src']).toContain('https://accounts.google.com/gsi/');
+  expect(csp['style-src-elem']).toContain('https://accounts.google.com/gsi/style');
+  expect(security.headers['Cross-Origin-Opener-Policy']).toBe('same-origin-allow-popups');
+});

@@ -1,3 +1,4 @@
+import { IdentityService } from './identity.service.js';
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
@@ -18,6 +19,7 @@ import {
   imports: [DatabaseModule, JwtModule.register({})],
   controllers: [AuthController],
   providers: [
+    IdentityService,
     PasswordHashService,
     BotChallengeService,
     AuthAbuseProtection,

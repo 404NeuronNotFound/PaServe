@@ -47,6 +47,27 @@ export async function loginAccount(
   return data;
 }
 
+export async function googleAccount(input: {
+  credential: string;
+  firstName?: string;
+  lastName?: string;
+  keepSignedIn?: boolean;
+}): Promise<LoginResponse> {
+  const version = useSessionStore.getState().version;
+  const { data } = await withSessionLock(() =>
+    api.post<LoginResponse>(
+      input.firstName !== undefined
+        ? "/auth/google/register"
+        : "/auth/google/login",
+      input,
+      cookieRequest,
+    ),
+  );
+  requireSessionVersion(version);
+  useSessionStore.getState().setAccessToken(data.accessToken);
+  return data;
+}
+
 export function refreshSession(): Promise<LoginResponse> {
   if (logoutPromise) {
     return Promise.reject(new Error("Sign-out is in progress."));

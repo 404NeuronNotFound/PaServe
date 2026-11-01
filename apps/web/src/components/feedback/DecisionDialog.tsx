@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { Button } from "../ui/button";
 import { InlineMessage } from "./InlineMessage";
 import { FiTrash2 } from "react-icons/fi";
 import { PendingButton } from "./PendingButton";
@@ -81,7 +82,8 @@ function OpenDecisionDialog({
   }
 
   async function confirm() {
-    if (confirmDisabled || running.current || closing || closeTimer.current) return;
+    if (confirmDisabled || running.current || closing || closeTimer.current)
+      return;
     running.current = true;
     setPending(true);
     setError("");
@@ -120,17 +122,23 @@ function OpenDecisionDialog({
       )}
       <h2 id={titleId}>{title}</h2>
       <p id={descriptionId}>{description}</p>
-      {error && <InlineMessage ref={errorSummary} tabIndex={-1}>{error}</InlineMessage>}
+      {error && (
+        <InlineMessage ref={errorSummary} tabIndex={-1}>
+          {error}
+        </InlineMessage>
+      )}
       <div className="feedback-dialog-actions">
-        <button
+        <Button
           ref={cancel}
-          className="secondary-button feedback-dialog-cancel"
+          variant="outline"
+          size="inherit"
+          className="feedback-dialog-cancel"
           type="button"
           disabled={pending || closing}
           onClick={finishClose}
         >
           {cancelLabel}
-        </button>
+        </Button>
         <PendingButton
           className={`primary-button${destructive ? " feedback-destructive" : ""}`}
           pending={pending}

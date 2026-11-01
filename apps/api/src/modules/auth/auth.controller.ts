@@ -10,6 +10,13 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { createHash, randomBytes } from 'node:crypto';
+import { IdentityService } from './identity.service.js';
+import {
+  EmailCodeDto,
+  GoogleLoginDto,
+  GoogleRegisterDto,
+} from './dto/identity.dto.js';
 import { ConfigService } from '@nestjs/config';
 import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 import type { Request, Response, CookieOptions } from 'express';
@@ -48,6 +55,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly config: ConfigService,
+    private readonly identity: IdentityService,
   ) {}
 
   @Post('register')
@@ -55,6 +63,77 @@ export class AuthController {
   @UseInterceptors(AuthWorkInterceptor)
   register(@Body() dto: RegisterDto) {
     return this.auth.register(dto);
+  }
+
+  @Post('email-code')
+  @UseInterceptors(AuthWorkInterceptor)
+  @HttpCode(200)
+  @RateLimit('register')
+  @UseGuards(AuthOriginGuard)
+  emailCode(@Body() dto: EmailCodeDto) {
+    return this.identity.sendCode(dto.email);
+  }
+
+  @Post('google/challenge')
+  @HttpCode(200)
+  @RateLimit('session')
+  @UseGuards(AuthOriginGuard)
+  googleChallenge(
+    @Body() _dto: EmptyDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const nonce = randomBytes(32).toString('hex');
+    response.cookie('paserve_google_nonce', nonce, {
+      ...this.cookieOptions(),
+      maxAge: 10 * 60_000,
+    });
+    response.setHeader('Cache-Control', 'no-store');
+    return { nonce: createHash('sha256').update(nonce).digest('hex') };
+  }
+
+  @Post('google/login')
+  @HttpCode(200)
+  @RateLimit('login')
+  @UseGuards(AuthOriginGuard)
+  async googleLogin(
+    @Body() dto: GoogleLoginDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.googleSession(dto, request, response);
+  }
+
+  @Post('google/register')
+  @HttpCode(200)
+  @RateLimit('register')
+  @UseGuards(AuthOriginGuard)
+  async googleRegister(
+    @Body() dto: GoogleRegisterDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.googleSession(dto, request, response);
+  }
+
+  private async googleSession(
+    dto: GoogleLoginDto | GoogleRegisterDto,
+    request: Request,
+    response: Response,
+  ) {
+    const nonce = request.headers.cookie
+      ?.split(';')
+      .map((value) => value.trim())
+      .find((value) => value.startsWith('paserve_google_nonce='))
+      ?.slice('paserve_google_nonce='.length);
+    const result = await this.auth.google(dto, nonce);
+    response.clearCookie('paserve_google_nonce', this.cookieOptions());
+    this.setSessionCookie(
+      response,
+      result.refreshToken,
+      result.expiresAt,
+      result.keepSignedIn,
+    );
+    return result.response;
   }
 
   @Post('login')

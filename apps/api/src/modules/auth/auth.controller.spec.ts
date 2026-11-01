@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { IdentityService } from './identity.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { ConfigService } from '@nestjs/config';
@@ -18,6 +19,7 @@ describe('AuthController', () => {
         AuthAbuseProtection,
         { provide: AuthService, useValue: { register: vi.fn() } },
         ConfigService,
+        { provide: IdentityService, useValue: {} },
       ],
     }).compile();
 

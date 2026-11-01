@@ -25,10 +25,19 @@ describe('Atomic account updates', () => {
   it('ignores duplicate registration atomically without overwriting existing credentials', async () => {
     prisma.user.createMany.mockResolvedValue({ count: 0 });
     await expect(
-      repository.createAccount('owner@example.com', 'new-hash'),
+      repository.createAccount('owner@example.com', 'new-hash', {
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+      }),
     ).resolves.toEqual({ count: 0 });
     expect(prisma.user.createMany).toHaveBeenCalledWith({
-      data: { email: 'owner@example.com', passwordHash: 'new-hash' },
+      data: {
+        email: 'owner@example.com',
+        passwordHash: 'new-hash',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        emailVerifiedAt: expect.any(Date),
+      },
       skipDuplicates: true,
     });
     expect(prisma.user.update).not.toHaveBeenCalled();

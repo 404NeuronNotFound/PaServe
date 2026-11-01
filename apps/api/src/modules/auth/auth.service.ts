@@ -10,6 +10,8 @@ import type {
   LoginResponse,
   CurrentUser,
 } from '@paserve/contracts';
+import { IdentityService } from './identity.service.js';
+import type { GoogleLoginDto, GoogleRegisterDto } from './dto/identity.dto.js';
 import { randomUUID } from 'node:crypto';
 import { PasswordHashService } from './password-hash.service.js';
 import {
@@ -34,6 +36,7 @@ export class AuthService {
     private readonly repository: AuthRepository,
     private readonly tokens: TokensService,
     private readonly passwords: PasswordHashService,
+    private readonly identity: IdentityService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -55,8 +58,19 @@ export class AuthService {
           'Email or password is incorrect, or the account is unavailable.',
       });
     }
+    return this.startSession(account, dto.keepSignedIn === true);
+  }
+
+  private async startSession(
+    account: {
+      id: string;
+      email: string;
+      passwordHash: string;
+      createdAt: Date;
+    },
+    keepSignedIn: boolean,
+  ) {
     const sessionId = randomUUID();
-    const keepSignedIn = dto.keepSignedIn === true;
     const lifetime = keepSignedIn
       ? SESSION_LIMITS.personalSeconds
       : SESSION_LIMITS.sharedSeconds;
@@ -90,6 +104,32 @@ export class AuthService {
       expiresAt,
       keepSignedIn,
     };
+  }
+
+  async google(
+    dto: GoogleLoginDto | GoogleRegisterDto,
+    nonce: string | undefined,
+  ) {
+    const identity = await this.identity.verifyGoogle(dto.credential, nonce);
+    let account = await this.repository.findGoogleAccount(identity.subject);
+    if (!account && 'firstName' in dto) {
+      account = await this.repository.createGoogleAccount(
+        identity.subject,
+        identity.email,
+        await this.passwords.hash(randomUUID() + randomUUID()),
+        { firstName: dto.firstName, lastName: dto.lastName },
+      );
+    }
+    if (!account || !account.isActive)
+      throw new UnauthorizedException({
+        code: 'GOOGLE_ACCOUNT_UNAVAILABLE',
+        message:
+          'No available Google account was found. Create an account with Google first, or sign in with your existing email and password.',
+      });
+    return this.startSession(
+      account,
+      'keepSignedIn' in dto && dto.keepSignedIn === true,
+    );
   }
 
   async refresh(refreshToken: string) {
@@ -194,7 +234,7 @@ export class AuthService {
         },
       });
     }
-    let data: { email?: string; passwordHash?: string };
+    let data: { email?: string; passwordHash?: string; emailVerifiedAt?: null };
     if ('email' in dto) {
       const email = dto.email.trim().toLowerCase();
       if (email === account.email.toLowerCase())
@@ -205,6 +245,7 @@ export class AuthService {
       // login using the previous address at the conditional session write.
       data = {
         email,
+        emailVerifiedAt: null,
         passwordHash: await this.passwords.hash(dto.currentPassword),
       };
     } else {
@@ -257,11 +298,15 @@ export class AuthService {
 
   async register(dto: RegisterDto): Promise<RegisterResponse> {
     const email = dto.email.trim().toLowerCase();
-    // Always hash, then perform the same conflict-safe INSERT. No account-existence
-    // fast path, user details, or duplicate-specific response is exposed publicly.
+    // Supabase owns challenge expiry, retry limits and single-use consumption.
+    await this.identity.verifyEmail(email, dto.verificationCode);
+    // No account-existence fast path or duplicate-specific response is exposed.
     const passwordHash = await this.passwords.hash(dto.password);
     throwIfRequestAborted();
-    await this.repository.createAccount(email, passwordHash);
+    await this.repository.createAccount(email, passwordHash, {
+      firstName: dto.firstName.trim(),
+      lastName: dto.lastName.trim(),
+    });
     return { message: REGISTRATION_ACKNOWLEDGEMENT };
   }
 

@@ -5,6 +5,7 @@ import { hash, verify } from 'argon2';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
+import { IdentityService } from '../src/modules/auth/identity.service.js';
 import { AuthRepository } from '../src/modules/auth/auth.repository.js';
 import { PasswordHashService } from '../src/modules/auth/password-hash.service.js';
 import { resetRateLimits } from './rate-limit-test-utils.js';
@@ -23,6 +24,8 @@ describe('native hashing saturation HTTP contract', () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
       .useValue({})
+      .overrideProvider(IdentityService)
+      .useValue({ verifyEmail: async () => {} })
       .overrideProvider(AuthRepository)
       .useValue(repository)
       .overrideProvider(ConfigService)
@@ -43,13 +46,11 @@ describe('native hashing saturation HTTP contract', () => {
   });
   beforeEach(() => {
     resetRateLimits(app);
-    repository.findLoginAccount
-      .mockReset()
-      .mockResolvedValue({
-        id: 'fixture',
-        isActive: true,
-        passwordHash: digest,
-      });
+    repository.findLoginAccount.mockReset().mockResolvedValue({
+      id: 'fixture',
+      isActive: true,
+      passwordHash: digest,
+    });
     repository.createSession.mockReset();
     repository.createAccount.mockReset();
     vi.mocked(hash).mockClear().mockResolvedValue(digest);
@@ -84,7 +85,13 @@ describe('native hashing saturation HTTP contract', () => {
       await request(app.getHttpServer()).get('/api/v1').expect(200);
       await request(app.getHttpServer())
         .post('/api/v1/auth/register')
-        .send({ email: 'new@example.test', password: 'valid fixture password' })
+        .send({
+          email: 'new@example.test',
+          password: 'valid fixture password',
+          firstName: 'Fixture',
+          lastName: 'Account',
+          verificationCode: '123456',
+        })
         .expect(429);
       expect(repository.createAccount).not.toHaveBeenCalled();
       expect(passwords.snapshot().active).toBe(1);

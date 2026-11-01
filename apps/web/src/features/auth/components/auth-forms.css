@@ -1,0 +1,295 @@
+/* Shared sign-in/sign-up treatment using the auth shell and Day/Night tokens. */
+.auth-page--entry .form-content {
+  max-width: 500px;
+}
+.auth-page--entry .form-emblem {
+  display: none;
+}
+.auth-page--entry .form-content > .section-label {
+  margin-bottom: var(--spacing-3);
+}
+.auth-page--entry .form-intro {
+  margin-block: var(--spacing-3) var(--spacing-5);
+}
+.auth-form-card {
+  min-width: 0;
+  gap: var(--spacing-4);
+  padding: var(--spacing-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.registration-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-4);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.registration-steps li {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding-bottom: var(--spacing-3);
+  border-bottom: 2px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: var(--line-control);
+}
+.registration-steps li > span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+.registration-steps li svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+.registration-steps .is-current,
+.registration-steps .is-complete {
+  color: var(--color-text);
+  border-color: var(--color-action);
+}
+.registration-steps .is-current > span,
+.registration-steps .is-complete > span {
+  color: var(--color-on-action);
+  background: var(--color-action);
+  border-color: var(--color-action);
+}
+.auth-required-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+.registration-name-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-4);
+  align-items: start;
+}
+.auth-form-card .field {
+  min-width: 0;
+}
+.auth-form-card .form-field[data-required] > label::after {
+  content: none;
+}
+.auth-form-card .field label {
+  margin: 0;
+}
+.auth-form-card .field input {
+  height: 48px;
+}
+.auth-form-card .field-hint,
+.auth-form-card .field-error {
+  margin: 0;
+}
+.auth-form-card .password-toggle {
+  top: 2px;
+  right: 2px;
+}
+.auth-form-card .primary-button {
+  min-height: 48px;
+  margin-top: var(--spacing-1);
+  padding-block: var(--spacing-3);
+}
+.auth-form-card .google-auth .account-note {
+  margin-top: 0;
+}
+.ui-dialog-content.registration-verification-dialog {
+  display: flex;
+  flex-direction: column;
+  left: var(--verification-dialog-left, 50%);
+  width: var(--verification-dialog-width, min(480px, calc(100vw - 32px)));
+  gap: var(--spacing-3);
+  overflow: hidden;
+}
+.registration-verification-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding-right: var(--spacing-8);
+  flex-shrink: 0;
+}
+.registration-verification-title svg {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  flex-shrink: 0;
+}
+.registration-verification-title h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: var(--line-heading);
+}
+.registration-verification-description {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  line-height: var(--line-body);
+  overflow-wrap: anywhere;
+  flex-shrink: 0;
+}
+.registration-verification-description strong {
+  display: block;
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+.registration-verification-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-height: 0;
+}
+.registration-verification-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--spacing-1);
+  margin: calc(-1 * var(--spacing-1));
+  overscroll-behavior: contain;
+}
+.registration-verification-body .field label {
+  margin: 0;
+}
+.registration-verification-help {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  line-height: var(--line-body);
+}
+.registration-code-input {
+  font-family: var(--font-mono);
+}
+.registration-verification-body .registration-code-reset {
+  align-self: flex-start;
+  min-height: var(--control-target-min);
+  padding-inline: 0;
+  white-space: normal;
+  text-align: start;
+}
+.registration-verification-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+.registration-verification-secondary > .ui-button {
+  min-height: var(--control-target-min);
+  padding-inline: 0;
+  white-space: normal;
+}
+.registration-verification-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--spacing-3);
+  padding-top: var(--spacing-3);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.registration-verification-actions .ui-button {
+  min-width: 0;
+  min-height: 48px;
+  margin: 0;
+  white-space: normal;
+}
+@media (max-width: 560px) {
+  .registration-verification-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 420px) {
+  .auth-form-card {
+    padding: var(--spacing-4);
+  }
+  .registration-name-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .registration-steps {
+    gap: var(--spacing-2);
+  }
+}
+@media (max-height: 700px) {
+  .auth-page--entry .form-content {
+    padding-block: var(--spacing-4);
+  }
+  .auth-form-card {
+    padding: var(--spacing-4);
+    gap: var(--spacing-3);
+  }
+}
+
+@media (max-height: 520px) {
+  .ui-dialog-content.registration-verification-dialog {
+    padding: var(--spacing-4);
+    gap: var(--spacing-2);
+  }
+  .registration-verification-title h2 {
+    font-size: var(--text-lg);
+  }
+  .registration-verification-actions {
+    padding-top: var(--spacing-2);
+  }
+}
+
+.auth-form-card .google-auth {
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+}
+.auth-form-card .login-session-hint {
+  margin-top: calc(-1 * var(--spacing-2));
+}
+
+.registration-complete {
+  display: flex;
+  flex-direction: column;
+}
+.registration-complete-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text);
+  background: var(--color-secondary);
+}
+.registration-complete-icon svg {
+  width: 28px;
+  height: 28px;
+}
+.registration-complete > .section-label {
+  margin: 0;
+  color: var(--color-muted);
+}
+.registration-complete h1 {
+  margin: 0;
+}
+.registration-complete-message {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  line-height: var(--line-body);
+  overflow-wrap: anywhere;
+}
+.registration-complete-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+}
+.registration-complete-actions .ui-button {
+  width: 100%;
+  margin: 0;
+  gap: var(--spacing-2);
+  white-space: normal;
+}

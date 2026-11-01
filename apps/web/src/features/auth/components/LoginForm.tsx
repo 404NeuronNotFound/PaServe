@@ -1,3 +1,5 @@
+import "./auth-forms.css";
+import { GoogleSignIn } from "./GoogleSignIn";
 import { FormField } from "../../../components/forms/FormField";
 import { Input } from "../../../components/ui/input";
 import { Button } from "../../../components/ui/button";
@@ -133,14 +135,21 @@ export function LoginForm({
         {mutation.isPending ? "Signing you in. Please wait." : ""}
       </p>
       <form
-        className="registration-form"
+        className="registration-form auth-form-card"
         noValidate
         aria-busy={mutation.isPending}
         onSubmit={(event) => {
           void submit(event);
         }}
       >
-        <FormField id="login-email" label="Email address" error={errors.email} errorId="login-email-error" required>
+        <p className="auth-required-note">Email and password are required.</p>
+        <FormField
+          id="login-email"
+          label="Email address"
+          error={errors.email}
+          errorId="login-email-error"
+          required
+        >
           <Input
             ref={emailRef}
             id="login-email"
@@ -175,7 +184,13 @@ export function LoginForm({
             aria-describedby={errors.email ? "login-email-error" : undefined}
           />
         </FormField>
-        <FormField id="login-password" label="Password" error={errors.password} errorId="login-password-error" required>
+        <FormField
+          id="login-password"
+          label="Password"
+          error={errors.password}
+          errorId="login-password-error"
+          required
+        >
           <div className="password-input">
             <Input
               ref={passwordRef}
@@ -208,7 +223,9 @@ export function LoginForm({
                 errors.password ? "login-password-error" : undefined
               }
             />
-            <Button variant="ghost" size="inherit"
+            <Button
+              variant="ghost"
+              size="inherit"
               className="password-toggle"
               type="button"
               disabled={mutation.isPending}
@@ -226,23 +243,42 @@ export function LoginForm({
           </div>
         </FormField>
         <label className="login-session-choice">
-          <Input type="checkbox" name="keepSignedIn" checked={keepSignedIn} disabled={mutation.isPending} onChange={(event) => setKeepSignedIn(event.target.checked)} aria-describedby="login-session-hint" />
+          <Input
+            type="checkbox"
+            name="keepSignedIn"
+            checked={keepSignedIn}
+            disabled={mutation.isPending}
+            onChange={(event) => setKeepSignedIn(event.target.checked)}
+            aria-describedby="login-session-hint"
+          />
           <span>Keep me signed in</span>
         </label>
         <p id="login-session-hint" className="login-session-hint">
-          {keepSignedIn ? "Personal device: stay signed in for up to 7 days. Turn this off on shared devices." : "Shared device: sign in for up to 8 hours. Leave this off on cashier and kitchen devices."}
+          {keepSignedIn
+            ? "Personal device: stay signed in for up to 7 days. Turn this off on shared devices."
+            : "Shared device: sign in for up to 8 hours. Leave this off on cashier and kitchen devices."}
         </p>
         {formError && (
           <InlineMessage ref={errorRef} tabIndex={-1}>
             {formError}
           </InlineMessage>
         )}
-        {challenge.required && <BotChallenge key={challenge.version} action="login" onToken={challenge.onToken} />}
-        <Button variant="default" size="inherit"
+        {challenge.required && (
+          <BotChallenge
+            key={challenge.version}
+            action="login"
+            onToken={challenge.onToken}
+          />
+        )}
+        <Button
+          variant="default"
+          size="inherit"
           aria-busy={mutation.isPending}
           className="primary-button"
           type="submit"
-          disabled={mutation.isPending || (challenge.required && !challenge.token)}
+          disabled={
+            mutation.isPending || (challenge.required && !challenge.token)
+          }
         >
           {mutation.isPending ? "Signing in…" : "Sign in"}
           {mutation.isPending ? (
@@ -251,6 +287,11 @@ export function LoginForm({
             <FiArrowRight className="button-icon" aria-hidden="true" />
           )}
         </Button>
+        <GoogleSignIn
+          keepSignedIn={keepSignedIn}
+          disabled={mutation.isPending}
+          onSuccess={onSuccess}
+        />
       </form>
     </>
   );

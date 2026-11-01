@@ -49,7 +49,7 @@ export class AuthRepository {
     userId: string,
     sessionId: string,
     previousHash: string,
-    data: { email?: string; passwordHash?: string },
+    data: { email?: string; passwordHash?: string; emailVerifiedAt?: null },
   ) {
     return this.prisma.$transaction(async (tx) => {
       // Compare the verified hash and live session again at the write boundary.
@@ -75,13 +75,41 @@ export class AuthRepository {
     });
   }
 
-  createAccount(email: string, passwordHash: string) {
-    // ON CONFLICT DO NOTHING preserves existing credentials and avoids both
-    // duplicate-specific errors and aborting an enclosing PostgreSQL transaction.
+  createAccount(
+    email: string,
+    passwordHash: string,
+    names: { firstName: string; lastName: string },
+  ) {
+    // Supabase has verified email ownership before this conflict-safe insert.
+    // Duplicate attempts preserve existing credentials and do not disclose users.
     return this.prisma.user.createMany({
-      data: { email, passwordHash },
+      data: { email, passwordHash, ...names, emailVerifiedAt: new Date() },
       skipDuplicates: true,
     });
+  }
+
+  findGoogleAccount(subject: string) {
+    return this.prisma.user.findUnique({ where: { googleSubject: subject } });
+  }
+
+  async createGoogleAccount(
+    subject: string,
+    email: string,
+    passwordHash: string,
+    names: { firstName: string; lastName: string },
+  ) {
+    // Never attach a Google identity to an existing password account by email.
+    await this.prisma.user.createMany({
+      data: {
+        googleSubject: subject,
+        email,
+        passwordHash,
+        ...names,
+        emailVerifiedAt: new Date(),
+      },
+      skipDuplicates: true,
+    });
+    return this.findGoogleAccount(subject);
   }
 
   findLoginAccount(email: string) {

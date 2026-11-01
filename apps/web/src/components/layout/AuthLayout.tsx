@@ -8,17 +8,25 @@ export function AuthLayout({
   children,
   headingId,
   skipLabel = "Skip to sign in",
+  variant,
 }: {
+  variant?: "register" | "login";
   children: ReactNode;
   headingId: string;
   skipLabel?: string;
 }) {
   return (
     <>
-      <SkipLink targetId="auth-content">
-        {skipLabel}
-      </SkipLink>
-      <main className="auth-page">
+      <SkipLink targetId="auth-content">{skipLabel}</SkipLink>
+      <main
+        className={[
+          "auth-page",
+          variant && "auth-page--entry",
+          variant && "auth-page--" + variant,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <aside className="welcome-panel" aria-label="About PaServe">
           <Link className="wordmark" to="/" aria-label="PaServe home">
             <span className="brand-symbol">

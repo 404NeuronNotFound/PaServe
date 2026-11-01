@@ -9,3 +9,18 @@ export async function registerAccount(
   });
   return data;
 }
+
+export async function requestEmailCode(
+  email: string,
+  challengeToken?: string,
+): Promise<{ message: string }> {
+  const { data } = await api.post(
+    "/auth/email-code",
+    { email, ...(challengeToken ? { challengeToken } : {}) },
+    {
+      headers: { "X-PaServe-Client": "web" },
+      timeout: AUTH_REQUEST_TIMEOUT_MS,
+    },
+  );
+  return data;
+}

@@ -84,8 +84,7 @@ export function frontendSecurity(
   ];
   // CSP host-source grammar does not support bracketed IPv6 literals.
   // Use localhost (which can resolve to IPv6) or IPv4 for development HMR.
-  if (development)
-    connections.push("ws://localhost:*", "ws://127.0.0.1:*");
+  if (development) connections.push("ws://localhost:*", "ws://127.0.0.1:*");
   const directives: Record<string, string[]> = {
     "default-src": ["'none'"],
     "base-uri": ["'none'"],
@@ -121,11 +120,24 @@ export function frontendSecurity(
   };
   // Lazy authentication challenge only; no inline-script or wildcard allowance.
   if (env.VITE_TURNSTILE_SITE_KEY?.trim()) {
-    if (production && /^[123]x0{10}/u.test(env.VITE_TURNSTILE_SITE_KEY.trim())) throw new Error("Turnstile testing keys are not allowed in release builds.");
+    if (production && /^[123]x0{10}/u.test(env.VITE_TURNSTILE_SITE_KEY.trim()))
+      throw new Error(
+        "Turnstile testing keys are not allowed in release builds.",
+      );
     directives["script-src"].push("https://challenges.cloudflare.com");
     directives["frame-src"] = [
-      ...(development ? ["'self'"] : []), "https://challenges.cloudflare.com",
+      ...(development ? ["'self'"] : []),
+      "https://challenges.cloudflare.com",
     ];
+  }
+  if (env.VITE_GOOGLE_CLIENT_ID?.trim()) {
+    directives["script-src"].push("https://accounts.google.com/gsi/client");
+    directives["connect-src"].push("https://accounts.google.com/gsi/");
+    directives["frame-src"] = [
+      ...directives["frame-src"].filter((value) => value !== "'none'"),
+      "https://accounts.google.com/gsi/",
+    ];
+    directives["style-src-elem"].push("https://accounts.google.com/gsi/style");
   }
   const serialize = (meta = false) =>
     Object.entries(directives)
@@ -144,7 +156,9 @@ export function frontendSecurity(
     "X-XSS-Protection": "0",
     "X-Download-Options": "noopen",
     "Referrer-Policy": "no-referrer",
-    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Opener-Policy": env.VITE_GOOGLE_CLIENT_ID?.trim()
+      ? "same-origin-allow-popups"
+      : "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Origin-Agent-Cluster": "?1",
     "X-Permitted-Cross-Domain-Policies": "none",

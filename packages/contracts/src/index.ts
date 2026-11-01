@@ -5,6 +5,9 @@ export const REGISTRATION_LIMITS = {
 } as const;
 
 export interface RegisterRequest {
+  firstName: string;
+  lastName: string;
+  verificationCode: string;
   challengeToken?: string;
   email: string;
   password: string;

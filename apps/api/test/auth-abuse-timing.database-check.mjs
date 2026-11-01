@@ -34,8 +34,16 @@ try {
           new AuthRepository(tx),
           {},
           new PasswordHashService(new ConfigService()),
+          // The database fixture tests local persistence, without sending real mail.
+          { verifyEmail: async () => {} },
         );
-        const acknowledgement = await auth.register({ email, password });
+        const acknowledgement = await auth.register({
+          firstName: 'Fixture',
+          lastName: 'Account',
+          verificationCode: '123456',
+          email,
+          password,
+        });
         const before = await tx.user.findUniqueOrThrow({ where: { email } });
         const missing = `missing-${marker}@example.invalid`;
         const timings = {
@@ -100,6 +108,9 @@ try {
           for (const name of pair)
             await measure(name, async () => {
               const result = await auth.register({
+                firstName: 'Fixture',
+                lastName: 'Account',
+                verificationCode: '123456',
                 email:
                   name === 'duplicateRegistration'
                     ? email.toUpperCase()
