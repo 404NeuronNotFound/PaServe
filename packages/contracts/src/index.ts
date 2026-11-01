@@ -1629,3 +1629,7 @@ export interface WalkthroughCompletionRequest {
   outcome: "completed" | "skipped";
 }
 export interface WalkthroughProgressResponse { completedScopes: string[]; }
+
+export interface ForgotPasswordRequest { email: string; challengeToken?: string; }
+export interface ResetPasswordRequest extends ForgotPasswordRequest { code: string; password: string; }
+export interface PasswordRecoveryResponse { message: string; }
