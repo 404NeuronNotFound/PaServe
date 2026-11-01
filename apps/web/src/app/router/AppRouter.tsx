@@ -4,10 +4,10 @@ import {
   createBrowserRouter,
   createRoutesFromElements,
   RouterProvider,
-  Navigate,
   Outlet,
   Route,
 } from "react-router-dom";
+import { LandingPage } from "../../pages/public/LandingPage";
 import { RegisterPage } from "../../pages/public/RegisterPage";
 import { PublicMenuPage } from "../../pages/public/PublicMenuPage";
 import { CustomerOrderPage } from "../../pages/public/CustomerOrderPage";
@@ -65,7 +65,7 @@ export function AppRouter() {
           path="/menu/:shopSlug/orders/:orderId"
           element={<CustomerOrderPage />}
         />
-        <Route path="/" element={<Navigate to="/register" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/register" element={<AuthEntryRoute><RegisterPage /></AuthEntryRoute>} />
         <Route path="/login" element={<AuthEntryRoute><LoginPage /></AuthEntryRoute>} />
         <Route path="/join/:shopId" element={<JoinShopPage />} />

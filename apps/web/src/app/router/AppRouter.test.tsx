@@ -140,7 +140,7 @@ it("keeps registration accessible when no valid session exists", async () => {
   expect(getCurrentUser).toHaveBeenCalled();
 });
 
-it.each(["/login", "/register", "/"])("restores a valid session when reopening %s", async (path) => {
+it.each(["/login", "/register"])("restores a valid session when reopening %s", async (path) => {
   vi.mocked(getCurrentUser).mockResolvedValue({ user: { id: "user", email: "owner@example.com", firstName: null, lastName: null, createdAt: "2026-10-08T00:00:00Z", memberships: [] } });
   renderAt(path);
   expect(await screen.findByText("owner@example.com")).toBeInTheDocument();
@@ -440,13 +440,19 @@ it("keeps sign in accessible without a valid session", async () => {
   expect(getCurrentUser).toHaveBeenCalled();
 });
 
-it("keeps the root registration destination", async () => {
+it("opens the public landing page without authentication or shop resolution", async () => {
   renderAt("/");
-  expect(
-    await screen.findByRole("heading", { name: "Public registration" }),
-  ).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /Less.*asan na/ })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Set up your shop/ })).toHaveAttribute("href", "/register");
   expect(api.get).not.toHaveBeenCalled();
-  expect(getCurrentUser).toHaveBeenCalled();
+  expect(getCurrentUser).not.toHaveBeenCalled();
+});
+it("keeps the landing page public when a session already exists", async () => {
+  vi.mocked(getCurrentUser).mockResolvedValue({ user: { id: "user", email: "owner@example.com", firstName: null, lastName: null, createdAt: "2026-10-08", memberships: [] } });
+  renderAt("/");
+  expect(await screen.findByRole("heading", { name: /Less.*asan na/ })).toBeInTheDocument();
+  expect(window.location.pathname).toBe("/");
+  expect(getCurrentUser).not.toHaveBeenCalled();
 });
 
 it("keeps the connection route separate from public shop resolution", async () => {

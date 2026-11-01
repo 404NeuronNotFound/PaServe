@@ -1,0 +1,136 @@
+/* Role-specific workspaces, with the same materials as the product shell. */
+.landing-team .landing-role-tabs .ui-tabs-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  width: 100%;
+  gap: 4px;
+  padding: 5px;
+  margin-bottom: 40px;
+}
+.landing-team .landing-role-tabs .ui-tabs-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 10px;
+}
+.landing-role-tabs .ui-tabs-trigger > svg { width: 18px; height: 18px; stroke-width: 1.5; }
+.landing-role-tabs .ui-tabs-trigger[data-state="active"] { box-shadow: 0 2px 5px #15251b0d; }
+.landing-team .landing-role-tabs .ui-tabs-content[data-state="active"] { gap: clamp(32px, 5vw, 80px); }
+.landing-team .landing-role-copy h3 { font-size: clamp(32px, 3vw, 44px); max-width: 440px; }
+.landing-team .landing-role-copy ul { margin-top: 28px; }
+.landing-team .landing-role-copy li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-bottom: 0;
+  padding-block: 10px;
+}
+.landing-role-copy li svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 4px; color: var(--color-muted); }
+.landing-team .landing-workspace-sample {
+  margin-right: 0;
+  border-radius: 18px;
+  box-shadow: 0 5px 0 var(--color-secondary), 0 6px 0 var(--color-border), 0 20px 34px #15251b0d;
+}
+.landing-team .landing-workspace-masthead { padding: 16px 20px; }
+.team-preview-brand { display: inline-flex; align-items: center; gap: 9px; }
+.team-preview-brand svg { width: 20px; height: 20px; stroke-width: 1.5; }
+.team-access-label { display: inline-flex; align-items: center; gap: 6px; }
+.team-access-label svg { width: 13px; height: 13px; }
+.team-preview-shell { display: grid; grid-template-columns: 56px minmax(0, 1fr); }
+.team-preview-rail {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 7px;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-canvas);
+}
+.team-preview-rail > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--color-muted);
+}
+.team-preview-rail > span[data-current="true"] { background: var(--color-secondary); color: var(--color-text); border: 1px solid var(--color-border); }
+.team-preview-rail svg { width: 16px; height: 16px; stroke-width: 1.5; }
+.team-preview-rail .team-rail-person { margin-top: auto; border: 1px solid var(--color-border); border-radius: 50%; font-size: 11px; }
+.landing-team .landing-workspace-content { padding: 24px; }
+.landing-team .landing-workspace-content h4 { font-size: 34px; }
+.team-workspace-divider {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+.landing-team .team-workspace-modules {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-block: 14px 20px;
+}
+.landing-team .team-workspace-modules li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  min-height: 116px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-canvas);
+}
+.landing-team .team-workspace-modules .team-module-icon { color: var(--color-text); }
+.team-module-icon svg { width: 20px; height: 20px; stroke-width: 1.5; }
+.team-workspace-modules li small { display: block; margin-bottom: 5px; font-family: var(--font-mono); font-size: 8px; color: var(--color-muted); }
+.team-workspace-modules li strong { display: block; font-size: 12px; line-height: 1.5; font-weight: var(--weight-medium); }
+.team-workspace-modules li > svg { position: absolute; right: 12px; top: 14px; width: 12px; height: 12px; color: var(--color-muted); }
+.landing-team .team-workspace-modules[data-layout="workflow"] { grid-template-columns: minmax(0, 1fr); }
+.landing-team .team-workspace-modules[data-layout="workflow"] li { flex-direction: row; align-items: center; min-height: 60px; gap: 14px; padding-block: 10px; }
+.team-workspace-modules[data-layout="workflow"] li > svg { top: 24px; }
+.landing-team .landing-sample-note { display: flex; align-items: center; gap: 7px; font-size: 10px; }
+.landing-sample-note svg { width: 12px; height: 12px; flex-shrink: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .landing-role-tabs .ui-tabs-content[data-state="active"] .team-preview-shell {
+    animation: workspace-focus 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes workspace-focus {
+    from { transform: perspective(1000px) rotateY(-2deg) scale(0.99); }
+    to { transform: perspective(1000px) rotateY(0deg) scale(1); }
+  }
+}
+@media (max-width: 899px) and (min-width: 601px) {
+  .team-preview-shell { grid-template-columns: 42px minmax(0, 1fr); }
+  .team-preview-rail { padding-inline: 4px; }
+  .team-preview-rail > span { width: 30px; }
+  .landing-team .landing-workspace-content { padding: 16px; }
+  .landing-team .team-workspace-modules { gap: 6px; }
+  .landing-team .team-workspace-modules li { padding: 10px; }
+}
+@media (max-width: 600px) {
+  .landing-team .landing-role-tabs .ui-tabs-list { gap: 2px; padding: 4px; margin-bottom: 28px; }
+  .landing-team .landing-role-tabs .ui-tabs-trigger { flex-direction: column; gap: 7px; min-height: 64px; padding: 9px 2px; font-size: 10px; }
+  .landing-role-tabs .ui-tabs-trigger > svg { width: 17px; height: 17px; }
+  .team-preview-shell { grid-template-columns: 42px minmax(0, 1fr); }
+  .team-preview-rail { padding: 16px 4px; }
+  .team-preview-rail > span { width: 30px; height: 32px; }
+  .landing-team .landing-workspace-content { padding: 18px 14px; }
+  .landing-team .landing-workspace-content h4 { font-size: 29px; }
+  .landing-team .team-workspace-modules { gap: 8px; }
+  .landing-team .team-workspace-modules li { min-height: 112px; padding: 10px; }
+  .team-workspace-modules li strong { font-size: 11px; }
+  .landing-team .landing-sample-note { align-items: flex-start; line-height: 1.6; }
+}
