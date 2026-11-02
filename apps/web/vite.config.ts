@@ -2,6 +2,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import { frontendSecurity } from "./security/policy.ts";
 import { securityHeadersPlugin } from "./security/vite-plugin.ts";
+import { publicEnvironmentNames } from "./security/public-environment.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -20,6 +21,9 @@ export default defineConfig(({ mode, command, isPreview }) => {
   if (camera && !existsSync(resolve(certificates, "server.pem")))
     throw new Error("Run python scripts/setup-local-https.py from the project root first.");
   return {
+    // Expose only PaServe's approved app settings, never Vercel's injected
+    // VITE_VERCEL_* build/observability metadata or the full VITE_ namespace.
+    envPrefix: [...publicEnvironmentNames],
     plugins: [react(), securityHeadersPlugin(security), {
       name: "paserve-local-camera-certificate",
       configureServer(server) {

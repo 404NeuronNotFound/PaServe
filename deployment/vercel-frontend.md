@@ -36,10 +36,13 @@ Production frontend environment variables:
 Do not copy backend secrets, database URLs, service-role keys or Brevo SMTP keys
 into the frontend project. Private environment files are not committed.
 
-Vercel automatically supplies public framework metadata such as
-`VITE_VERCEL_GIT_REPO_ID`, deployment URLs and commit information. The build guard
-accepts the documented metadata names while still checking their values for
-private credentials. Other `VITE_VERCEL_*` names are not automatically trusted.
+Vercel automatically supplies framework metadata such as repository IDs,
+deployment URLs and `VITE_VERCEL_OBSERVABILITY_CLIENT_CONFIG`. Vite now exports
+only PaServe's eight approved application settings; platform metadata stays in
+the build process and is excluded from `import.meta.env` in the browser. New
+non-credential `VITE_VERCEL_*` metadata does not require a source allowlist update.
+Credential-like variable names and private values are still rejected, including
+when placed in platform metadata fields.
 See [Vercel framework variables](https://vercel.com/docs/environment-variables/framework-environment-variables).
 
 The committed host CSP was generated from current public frontend configuration.

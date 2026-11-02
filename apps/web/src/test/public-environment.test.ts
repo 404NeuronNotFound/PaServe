@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { resolveConfig } from "vite";
+import { resolve } from "node:path";
 import { validatePublicEnvironment } from "../../security/public-environment";
 
 const jwt = (role: string) =>
@@ -8,6 +10,45 @@ const jwt = (role: string) =>
     "fixture-signature",
   ].join(".");
 describe("public frontend credential boundary", () => {
+  it("accepts new non-credential Vercel build fields including observability configuration", () => {
+    expect(() =>
+      validatePublicEnvironment({
+        VITE_VERCEL_OBSERVABILITY_CLIENT_CONFIG:
+          '{"fixture":"build-only-observability"}',
+        VITE_VERCEL_FUTURE_BUILD_METADATA: "build-only-platform-value",
+      }),
+    ).not.toThrow();
+  });
+
+  it("excludes all Vercel metadata from Vite's actual browser environment", async () => {
+    vi.stubEnv("VITE_API_URL", "/api/v1");
+    vi.stubEnv("CSP_REPORT_ONLY", "false");
+    vi.stubEnv("VITE_VERCEL_GIT_REPO_ID", "123456789");
+    vi.stubEnv(
+      "VITE_VERCEL_OBSERVABILITY_CLIENT_CONFIG",
+      '{"fixture":"build-only-observability"}',
+    );
+    vi.stubEnv(
+      "VITE_VERCEL_FUTURE_BUILD_METADATA",
+      "build-only-platform-value",
+    );
+    try {
+      const config = await resolveConfig(
+        {
+          configFile: resolve("vite.config.ts"),
+          envFile: false,
+          mode: "production",
+        },
+        "build",
+      );
+      expect(config.env.VITE_API_URL).toBe("/api/v1");
+      expect(
+        Object.keys(config.env).some((name) => name.startsWith("VITE_VERCEL_")),
+      ).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
   it("accepts Vercel's automatic public deployment metadata", () => {
     expect(() =>
       validatePublicEnvironment({
