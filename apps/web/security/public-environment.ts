@@ -7,6 +7,24 @@ const publicNames = new Set([
   "VITE_CSP_IMAGE_ORIGINS",
   "VITE_CSP_CONNECT_ORIGINS",
   "VITE_GOOGLE_CLIENT_ID",
+  // Documented, public Vercel framework metadata. Keep this explicit: a
+  // VITE_VERCEL_* prefix must never become a wildcard exemption for credentials.
+  "VITE_VERCEL_ENV",
+  "VITE_VERCEL_TARGET_ENV",
+  "VITE_VERCEL_URL",
+  "VITE_VERCEL_BRANCH_URL",
+  "VITE_VERCEL_PROJECT_PRODUCTION_URL",
+  "VITE_VERCEL_HASH_SALT",
+  "VITE_VERCEL_GIT_PROVIDER",
+  "VITE_VERCEL_GIT_REPO_SLUG",
+  "VITE_VERCEL_GIT_REPO_OWNER",
+  "VITE_VERCEL_GIT_REPO_ID",
+  "VITE_VERCEL_GIT_COMMIT_REF",
+  "VITE_VERCEL_GIT_COMMIT_SHA",
+  "VITE_VERCEL_GIT_COMMIT_MESSAGE",
+  "VITE_VERCEL_GIT_COMMIT_AUTHOR_LOGIN",
+  "VITE_VERCEL_GIT_COMMIT_AUTHOR_NAME",
+  "VITE_VERCEL_GIT_PULL_REQUEST_ID",
 ]);
 
 /** Vite embeds VITE_ values in browser bundles; private credentials cannot be hidden there. */

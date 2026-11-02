@@ -36,6 +36,12 @@ Production frontend environment variables:
 Do not copy backend secrets, database URLs, service-role keys or Brevo SMTP keys
 into the frontend project. Private environment files are not committed.
 
+Vercel automatically supplies public framework metadata such as
+`VITE_VERCEL_GIT_REPO_ID`, deployment URLs and commit information. The build guard
+accepts the documented metadata names while still checking their values for
+private credentials. Other `VITE_VERCEL_*` names are not automatically trusted.
+See [Vercel framework variables](https://vercel.com/docs/environment-variables/framework-environment-variables).
+
 The committed host CSP was generated from current public frontend configuration.
 If enabling Google, Turnstile or extra CSP origins, regenerate it with the same
 frontend environment before deploying, then commit the reviewed configuration:

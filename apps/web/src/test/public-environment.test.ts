@@ -8,6 +8,55 @@ const jwt = (role: string) =>
     "fixture-signature",
   ].join(".");
 describe("public frontend credential boundary", () => {
+  it("accepts Vercel's automatic public deployment metadata", () => {
+    expect(() =>
+      validatePublicEnvironment({
+        VITE_VERCEL_ENV: "production",
+        VITE_VERCEL_TARGET_ENV: "production",
+        VITE_VERCEL_URL: "app.example.test",
+        VITE_VERCEL_BRANCH_URL: "app-production.example.test",
+        VITE_VERCEL_PROJECT_PRODUCTION_URL: "app.example.test",
+        VITE_VERCEL_HASH_SALT: "public-platform-hash-salt",
+        VITE_VERCEL_GIT_PROVIDER: "github",
+        VITE_VERCEL_GIT_REPO_SLUG: "PaServe",
+        VITE_VERCEL_GIT_REPO_OWNER: "404NeuronNotFound",
+        VITE_VERCEL_GIT_REPO_ID: "123456789",
+        VITE_VERCEL_GIT_COMMIT_REF: "production",
+        VITE_VERCEL_GIT_COMMIT_SHA: "a".repeat(40),
+        VITE_VERCEL_GIT_COMMIT_MESSAGE: "Deploy frontend",
+        VITE_VERCEL_GIT_COMMIT_AUTHOR_LOGIN: "fixture-developer",
+        VITE_VERCEL_GIT_COMMIT_AUTHOR_NAME: "Fixture Developer",
+        VITE_VERCEL_GIT_PULL_REQUEST_ID: "42",
+      }),
+    ).not.toThrow();
+  });
+
+  it.each([
+    "VITE_VERCEL_API_KEY",
+    "VITE_VERCEL_SECRET",
+    "VITE_VERCEL_OIDC_TOKEN",
+  ])("still rejects unapproved platform-prefixed credentials: %s", (name) => {
+    expect(() =>
+      validatePublicEnvironment({
+        [name]: "runtime-only-sensitive-fixture-value",
+      }),
+    ).toThrow("not approved");
+  });
+
+  it("continues checking approved metadata values for copied private credentials", () => {
+    const credential = "runtime-only-sensitive-fixture-value";
+    expect(() =>
+      validatePublicEnvironment({
+        BREVO_API_KEY: credential,
+        VITE_VERCEL_GIT_COMMIT_MESSAGE: credential,
+      }),
+    ).toThrow("private credential");
+    expect(() =>
+      validatePublicEnvironment({
+        VITE_VERCEL_GIT_COMMIT_MESSAGE: ["sb", "secret", "fixture"].join("_"),
+      }),
+    ).toThrow("private credential");
+  });
   it("permits public Supabase anon/publishable keys and public client identifiers", () => {
     expect(() =>
       validatePublicEnvironment({
