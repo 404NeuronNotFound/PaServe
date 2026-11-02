@@ -11,7 +11,7 @@
     "test:leaks": "node scripts/security-leaks.mjs",
     "audit:secrets": "python scripts/audit-secrets.py",
     "deployment:vercel": "node scripts/prepare-vercel.mjs",
-    "test:deployment": "node --test scripts/prepare-vercel.test.mjs scripts/release-readiness.test.mjs",
+    "test:deployment": "node --test scripts/prepare-vercel.test.mjs scripts/release-readiness.test.mjs apps/api/test/vercel-module-interop.test.mjs",
     "release:check": "node scripts/release-readiness.mjs",
     "test:release-readiness": "node --test scripts/release-readiness.test.mjs",
     "seed": "pnpm --filter api seed",

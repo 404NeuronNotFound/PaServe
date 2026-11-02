@@ -29,6 +29,16 @@ dashboard deployment. Use a separate project/database for deliberate previews.
 
 ## API runtime settings
 
+The API package declares Node 24 directly because this project's Root Directory
+is `apps/api`. Its `vercel.json` also sets the non-secret runtime flag
+`NODE_OPTIONS=--experimental-require-module`. Vercel disables this feature by
+default; CommonJS dependencies such as throttler/JWT need it to load NestJS 12's
+ESM packages. If managing `NODE_OPTIONS` in project settings, retain that flag
+alongside any other required options and redeploy. Regression checks reproduce
+the disabled-feature crash and load the real dependencies with the deployed flag.
+
+See [Vercel's module interoperability setting](https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration#experimental-nodejs-require-of-es-module).
+
 Production templates are in `apps/api/.env.production.example` and
 `apps/web/.env.production.example`. Copy them to ignored `.env.production` files
 and fill real settings; template files contain no credentials or usable domains.
