@@ -1,8 +1,0 @@
-{
-  "scope": "process-only certificate-verified database connection probe",
-  "persistedConfigurationChanged": false,
-  "schemaChanged": false,
-  "result": "failed",
-  "code": "SELF_SIGNED_CERT_IN_CHAIN",
-  "verificationDisabled": false
-}

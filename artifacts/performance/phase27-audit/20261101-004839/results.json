@@ -1,9 +1,0 @@
-﻿{
-    "name":  "build",
-    "exitCode":  1,
-    "log":  "C:\\Users\\Admin\\MyDevProjects\\PaServe\\artifacts\\performance\\phase27-audit\\20261101-004839\\build.log",
-    "command":  "pnpm build",
-    "startedAt":  "2026-11-01T00:48:39.3117777Z",
-    "finishedAt":  "2026-11-01T00:49:07.0195591Z",
-    "status":  "FAIL"
-}

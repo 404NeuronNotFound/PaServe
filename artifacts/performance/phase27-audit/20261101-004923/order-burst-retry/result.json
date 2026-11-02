@@ -1,8 +1,0 @@
-﻿{
-    "name":  "order-burst-retry",
-    "exitCode":  0,
-    "command":  "node test/request-timeouts.local-postgres.mjs load-order-burst",
-    "startedAt":  "2026-11-01T01:23:18.8716318Z",
-    "finishedAt":  "2026-11-01T01:24:39.6228310Z",
-    "status":  "PASS"
-}

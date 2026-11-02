@@ -8,11 +8,8 @@
     "dev:camera": "pnpm --filter @paserve/contracts build && vite --mode camera --host 0.0.0.0 --port 5443 --strictPort",
     "build": "pnpm --filter @paserve/contracts build && tsc -b && vite build",
     "build:local": "pnpm --filter @paserve/contracts build && tsc -b && vite build --mode local-build",
-    "lint": "eslint . && node test/ui-conventions.check.mjs",
-    "preview": "vite preview",
-    "test:security-headers": "node test/security-headers.check.mjs",
-    "test:security-release": "node test/security-headers.check.mjs --release",
-    "test": "pnpm --filter @paserve/contracts build && vitest run"
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@paserve/contracts": "workspace:*",
@@ -37,9 +34,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@testing-library/jest-dom": "^7.0.1",
-    "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^24.13.3",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.18",
@@ -50,11 +44,9 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.6",
     "globals": "^17.12.0",
-    "jsdom": "^30.1.2",
     "sharp": "^0.35.5",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.69.0",
-    "vite": "^8.3.0",
-    "vitest": "^5.0.3"
+    "vite": "^8.3.0"
   }
 }

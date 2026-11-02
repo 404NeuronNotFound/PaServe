@@ -21,3 +21,10 @@ dist
 .local-tools/
 
 artifacts/**/*.log
+
+# Generated development evidence stays on main, outside the release checkout.
+/artifacts/
+/apps/api/artifacts/
+**/coverage/
+**/test-results/
+**/playwright-report/
