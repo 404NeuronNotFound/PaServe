@@ -95,6 +95,13 @@ and the separate Prisma migration CLI configuration.
 
 ## Shared protection
 
+For the initial deployment testing phase, `apps/api/vercel.json` explicitly sets
+`AUTH_BOT_CHALLENGE_ENABLED=false`. Turnstile credentials are not required in this
+mode. Route and authentication rate limits and PostgreSQL shared security state
+remain enabled. Re-enable challenges after configuring the API's Turnstile secret
+and hostname, the frontend sitekey, and matching frontend security headers.
+Keep any Vercel dashboard override consistent with this setting.
+
 After backup/restore review, apply **all** pending migrations once in a controlled
 release job, including `20261102020000_shared_security_state`. Nothing here runs
 migrations on startup or alters the live database.

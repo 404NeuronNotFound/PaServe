@@ -1,7 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nestjs",
-  "env": { "NODE_OPTIONS": "--experimental-require-module" },
+  "env": {
+    "NODE_OPTIONS": "--experimental-require-module",
+    "AUTH_BOT_CHALLENGE_ENABLED": "false"
+  },
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "buildCommand": "cd ../.. && pnpm --filter api build",
   "git": { "deploymentEnabled": { "*": false, "production": true } }
