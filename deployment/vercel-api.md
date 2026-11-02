@@ -15,8 +15,11 @@ dashboard deployment. Use a separate project/database for deliberate previews.
 - API: Root Directory **apps/api**, framework **NestJS**, Node **24.x**.
   Enable inclusion of source files outside the Root Directory, because the build
   uses the workspace contracts. `apps/api/vercel.json` builds contracts, generates
-  Prisma and builds Nest, and gives `src/main.ts` a 120-second duration. Vercel
-  detects this entrypoint; do not add an old catch-all `@vercel/node` adapter.
+  Prisma and builds Nest. The NestJS preset detects `src/main.ts`; no raw-file
+  `functions` override is needed. A `functions.src/main.ts` pattern was rejected
+  by Vercel CLI 65.4.0 with `unused_function`. Configure the project's default
+  maximum function duration to at least 120 seconds in Vercel settings to cover
+  bounded SSE setup/stream cleanup. Do not add an old catch-all `@vercel/node` adapter.
   Keep dev dependencies available during build and retain generated Prisma/native
   Argon2/sharp dependencies in the traced output. Verify the real Vercel build.
 - Point the frontend API rewrite at the API project's real stable HTTPS domain.

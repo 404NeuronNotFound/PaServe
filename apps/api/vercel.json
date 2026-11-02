@@ -3,8 +3,5 @@
   "framework": "nestjs",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "buildCommand": "cd ../.. && pnpm --filter api build",
-  "functions": {
-    "src/main.ts": { "maxDuration": 120, "includeFiles": "src/generated/prisma/**" }
-  },
   "git": { "deploymentEnabled": { "*": false, "production": true } }
 }
