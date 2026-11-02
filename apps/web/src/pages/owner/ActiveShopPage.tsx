@@ -7,6 +7,7 @@ import { FiArrowUpRight, FiSettings, FiUsers, FiUser } from "react-icons/fi";
 import { useActiveShop, shopPath } from "../../features/shops/active-shop";
 import { navigationForRole } from "../../components/layout/workspace-navigation";
 import "../../components/layout/workspace-navigation.css";
+import { PublicMenuQr } from "./PublicMenuQr";
 
 const taskDescriptions: Record<string, string> = {
   sales: "View performance",
@@ -18,7 +19,8 @@ const taskDescriptions: Record<string, string> = {
 
 export function ActiveShopPage() {
   const membership = useActiveShop();
-  const accessNotice = (useLocation().state as { accessNotice?: string } | null)?.accessNotice;
+  const accessNotice = (useLocation().state as { accessNotice?: string } | null)
+    ?.accessNotice;
   const tasks = navigationForRole(membership.role).flatMap((group) =>
     group.items.filter((item) =>
       group.id === "daily" ? Boolean(item.path) : item.path === "products",
@@ -35,7 +37,9 @@ export function ActiveShopPage() {
   }, [membership.shop.name]);
   return (
     <section className="shop-context-content shop-overview">
-      {accessNotice && <InlineMessage tone="warning">{accessNotice}</InlineMessage>}
+      {accessNotice && (
+        <InlineMessage tone="warning">{accessNotice}</InlineMessage>
+      )}
       <div className="shop-overview-hero">
         <div>
           <p className="section-label">YOUR WORKSPACE</p>
@@ -60,7 +64,10 @@ export function ActiveShopPage() {
       <div className="shop-overview-address">
         <span className="section-label">YOUR MENU IDENTITY</span>
         <strong>/{membership.shop.slug}</strong>
-        <Link to={publicMenuPath}>View public menu</Link>
+        <div className="public-menu-qr-share">
+          <Link to={publicMenuPath}>View public menu</Link>
+          <PublicMenuQr shopSlug={membership.shop.slug} />
+        </div>
       </div>
       {tasks.length > 0 && (
         <nav className="workspace-quick-tasks" aria-label="Common tasks">

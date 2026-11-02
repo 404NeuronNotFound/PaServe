@@ -46,6 +46,7 @@ describe('Login and session HTTP flow', () => {
   };
   const safeCurrentUser = {
     ...safeUser,
+    signInMethod: 'email',
     firstName: null,
     lastName: null,
     memberships: [],
@@ -235,6 +236,7 @@ describe('Login and session HTTP flow', () => {
       .expect(200, {
         user: {
           ...safeUser,
+          signInMethod: 'email',
           firstName: 'Alex',
           lastName: 'Owner',
           memberships: [

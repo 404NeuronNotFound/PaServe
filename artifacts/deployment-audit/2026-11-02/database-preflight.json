@@ -1,0 +1,11 @@
+{
+  "readOnlyTransaction": true,
+  "clientTls": false,
+  "cacheTable": false,
+  "policyColumns": 0,
+  "invalidShops": 0,
+  "invalidCategories": 0,
+  "invalidProducts": 0,
+  "requestAliases": 0,
+  "paymentAliases": 0
+}

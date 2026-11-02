@@ -8,6 +8,8 @@ are superseded.
 - Reuse `src/theme.css` tokens, the existing shells, controls, Feather icons,
   and `AppearanceToggle`. Adapt the layout to the task while keeping the same
   espresso/cream/lime identity and typography.
+- Use existing SVG icons for functional controls. Avoid emoji and Unicode pictograms
+  as interface icons or decorative marks; their appearance can vary on iOS.
 - Preserve short-height layouts, mobile usability, 44px primary touch targets,
   keyboard focus, and reduced-motion support. Keep overflow accessible for
   long content and errors.

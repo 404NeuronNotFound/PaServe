@@ -2,7 +2,7 @@ import { Button } from "../../components/ui/button";
 import { MenuSkeleton } from "../../components/feedback/LoadingSkeleton";
 import { useEffect, useState } from "react";
 import { ErrorState } from "../../components/feedback/ErrorState";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { loadMenuPages } from "../../lib/api/collection-pages";
@@ -10,7 +10,10 @@ import "./public-menu.css";
 import { PublicMenuView } from "./PublicMenuView";
 import { useMenuAvailability } from "../../features/products/useMenuAvailability";
 import { saveOrderReceipt } from "../../features/cart/order-receipt";
-import { readMenuLayoutHint, rememberMenuLayoutHint } from "../../features/shops/menu-layout-hint";
+import {
+  readMenuLayoutHint,
+  rememberMenuLayoutHint,
+} from "../../features/shops/menu-layout-hint";
 import {
   useCustomerTables,
   customerTableCode,
@@ -19,33 +22,44 @@ import {
 
 export function PublicMenuPage() {
   const { shopSlug = "", tableCode } = useParams();
+  const [search] = useSearchParams();
+  const pickup = !tableCode && search.get("service") === "pickup";
   return (
     <PublicMenuSession
-      key={`${shopSlug}:${tableCode ?? "browse"}`}
+      key={`${shopSlug}:${tableCode ?? (pickup ? "pickup" : "browse")}`}
       shopSlug={shopSlug}
       tableCode={tableCode}
+      pickup={pickup}
     />
   );
 }
 function PublicMenuSession({
   shopSlug,
   tableCode,
+  pickup,
 }: {
   shopSlug: string;
   tableCode?: string;
+  pickup: boolean;
 }) {
   const navigate = useNavigate();
   useMenuAvailability(shopSlug);
   const [code, setCode] = useState(
     () =>
       tableCode ??
-      customerTableCode(useCustomerTables.getState().codes, shopSlug),
+      (pickup
+        ? undefined
+        : customerTableCode(useCustomerTables.getState().codes, shopSlug)),
   );
   const menu = useQuery({
     queryKey: code
       ? ["public-menu", shopSlug, "table", code]
       : ["public-menu", shopSlug],
-    queryFn: ({ signal }) => loadMenuPages(`/menu/${encodeURIComponent(shopSlug)}${code ? `/table/${encodeURIComponent(code)}` : ""}`, signal),
+    queryFn: ({ signal }) =>
+      loadMenuPages(
+        `/menu/${encodeURIComponent(shopSlug)}${code ? `/table/${encodeURIComponent(code)}` : ""}`,
+        signal,
+      ),
     retry: false,
     // Only public pickup display data gets a short warm cache. Table resolution
     // still validates immediately; quotes and checkout remain authoritative.
@@ -98,26 +112,39 @@ function PublicMenuSession({
   useEffect(() => {
     if (menu.isSuccess && contextMatches) rememberMenuLayoutHint(menu.data);
   }, [menu.isSuccess, menu.data, contextMatches]);
-  if (menu.isPending)
-    return (
-      <MenuSkeleton {...readMenuLayoutHint(shopSlug)} />
-    );
+  if (menu.isPending) return <MenuSkeleton {...readMenuLayoutHint(shopSlug)} />;
   if (menu.isError || !contextMatches)
     return (
       <main className="public-menu">
         <h1>{code ? "Table menu unavailable" : "Menu unavailable"}</h1>
         {!contextMatches ? (
-          <p role="alert">{code
-            ? "This table link is unavailable. Ask staff for the current QR code."
-            : "This menu is unavailable. Ask the shop for its current menu link."}</p>
+          <p role="alert">
+            {code
+              ? "This table link is unavailable. Ask staff for the current QR code."
+              : "This menu is unavailable. Ask the shop for its current menu link."}
+          </p>
         ) : (
-          <ErrorState error={menu.error} resource={code ? "this table menu" : "this menu"} action="load"
-            publicView pending={menu.isFetching} onRetry={() => menu.refetch()} retryLabel="Try again"
+          <ErrorState
+            error={menu.error}
+            resource={code ? "this table menu" : "this menu"}
+            action="load"
+            publicView
+            pending={menu.isFetching}
+            onRetry={() => menu.refetch()}
+            retryLabel="Try again"
             permissionMessage="This menu is unavailable. Ask the shop staff to check the link."
-            unavailableMessage={code ? "This table link is unavailable. Ask staff for the current QR code." : "This menu is unavailable. Ask the shop for its current menu link."} />
+            unavailableMessage={
+              code
+                ? "This table link is unavailable. Ask staff for the current QR code."
+                : "This menu is unavailable. Ask the shop for its current menu link."
+            }
+          />
         )}
         {code && (
-          <Button variant="outline" size="inherit" type="submit"
+          <Button
+            variant="outline"
+            size="inherit"
+            type="submit"
             className="secondary-button"
             onClick={() => {
               useCustomerTables.getState().clear(shopSlug);

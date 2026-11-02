@@ -1,0 +1,125 @@
+﻿{
+  "advisories": {
+    "1243687": {
+      "findings": [
+        {
+          "version": "6.16.0",
+          "paths": [
+            "apps__api>@nestjs/platform-express>express>qs",
+            "apps__api>@nestjs/throttler>@nestjs/core>@nestjs/platform-express>express>qs",
+            "apps__api>@nestjs/core>@nestjs/platform-express>express>qs",
+            "apps__api>@nestjs/testing>@nestjs/core>@nestjs/platform-express>express>qs",
+            "apps__api>@nestjs/testing>@nestjs/platform-express>express>qs",
+            "apps__api>supertest>superagent>qs"
+          ],
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ],
+      "id": 1243687,
+      "title": "qs : qs.stringify with arrayFormat 'comma' throws an uncaught TypeError on array elements carrying a non-callable own toString (DoS)",
+      "module_name": "qs",
+      "vulnerable_versions": ">=6.7.0 <=6.16.0",
+      "patched_versions": ">=6.16.1",
+      "severity": "moderate",
+      "cwe": "CWE-248, CWE-704",
+      "github_advisory_id": "GHSA-6pq8-jhm2-2vcw",
+      "url": "https://github.com/advisories/GHSA-6pq8-jhm2-2vcw"
+    },
+    "1244003": {
+      "findings": [
+        {
+          "version": "1.16.1",
+          "paths": [
+            "apps__web>axios>follow-redirects"
+          ],
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ],
+      "id": 1244003,
+      "title": "follow-redirects: Cross-realm sensitiveHeaders arrays are discarded and custom credentials can follow redirects",
+      "module_name": "follow-redirects",
+      "vulnerable_versions": ">=1.16.0 <=1.16.1",
+      "patched_versions": ">=1.16.2",
+      "severity": "high",
+      "cwe": "CWE-201",
+      "github_advisory_id": "GHSA-mrwp-f3q8-3g9p",
+      "url": "https://github.com/advisories/GHSA-mrwp-f3q8-3g9p"
+    },
+    "1244012": {
+      "findings": [
+        {
+          "version": "10.2.6",
+          "paths": [
+            "apps__api>@nestjs/cli>minimatch",
+            "apps__web>@eslint/js>eslint>@eslint/config-array>minimatch",
+            "apps__web>@eslint/js>eslint>minimatch",
+            "apps__web>eslint>@eslint/config-array>minimatch",
+            "apps__web>eslint>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/type-utils>@typescript-eslint/utils>@eslint-community/eslint-utils>eslint>@eslint/config-array>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/type-utils>@typescript-eslint/utils>@eslint-community/eslint-utils>eslint>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/type-utils>@typescript-eslint/utils>@typescript-eslint/typescript-estree>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/type-utils>@typescript-eslint/utils>eslint>@eslint/config-array>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/type-utils>@typescript-eslint/utils>eslint>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/type-utils>eslint>@eslint/config-array>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/type-utils>eslint>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/type-utils>@typescript-eslint/typescript-estree>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>eslint>@eslint/config-array>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>eslint>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/parser>eslint>@eslint/config-array>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/parser>eslint>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/parser>@typescript-eslint/typescript-estree>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/utils>@eslint-community/eslint-utils>eslint>@eslint/config-array>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/utils>@eslint-community/eslint-utils>eslint>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/utils>@typescript-eslint/typescript-estree>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/utils>eslint>@eslint/config-array>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/eslint-plugin>@typescript-eslint/utils>eslint>minimatch",
+            "apps__web>typescript-eslint>eslint>@eslint/config-array>minimatch",
+            "apps__web>typescript-eslint>eslint>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/utils>@eslint-community/eslint-utils>eslint>@eslint/config-array>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/utils>@eslint-community/eslint-utils>eslint>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/utils>@typescript-eslint/typescript-estree>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/utils>eslint>@eslint/config-array>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/utils>eslint>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/typescript-estree>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/parser>eslint>@eslint/config-array>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/parser>eslint>minimatch",
+            "apps__web>typescript-eslint>@typescript-eslint/parser>@typescript-eslint/typescript-estree>minimatch",
+            "apps__web>eslint-plugin-react-hooks>eslint>@eslint/config-array>minimatch",
+            "apps__web>eslint-plugin-react-hooks>eslint>minimatch",
+            "apps__web>eslint-plugin-react-refresh>eslint>@eslint/config-array>minimatch",
+            "apps__web>eslint-plugin-react-refresh>eslint>minimatch"
+          ],
+          "dev": true,
+          "optional": false,
+          "bundled": false
+        }
+      ],
+      "id": 1244012,
+      "title": "minimatch has potential denial of service via globparts amplification",
+      "module_name": "minimatch",
+      "vulnerable_versions": "<11.0.1",
+      "patched_versions": ">=11.0.1",
+      "severity": "moderate",
+      "cwe": "CWE-405",
+      "github_advisory_id": "GHSA-g3hv-75wg-m249",
+      "url": "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 2,
+      "high": 1,
+      "critical": 0
+    },
+    "dependencies": 270,
+    "devDependencies": 531,
+    "optionalDependencies": 123,
+    "totalDependencies": 843
+  }
+}

@@ -64,17 +64,26 @@ describe('rate limiting admission and recovery', () => {
   it('owns rate metadata per Nest application and closes without clearing another application', async () => {
     await post().send({}).expect(400);
     const original = app.get<ThrottlerStorageService>(ThrottlerStorage);
-    const secondModule = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(PrismaService).useValue({}).compile();
+    const secondModule = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(PrismaService)
+      .useValue({})
+      .compile();
     const second = secondModule.createNestApplication<NestExpressApplication>();
     second.setGlobalPrefix('api/v1');
     try {
       await second.listen(0, '127.0.0.1');
       const separate = second.get<ThrottlerStorageService>(ThrottlerStorage);
       expect(separate).not.toBe(original);
-      await request(second.getHttpServer()).post('/api/v1/menu/cafe/orders').send({}).expect(400);
+      await request(second.getHttpServer())
+        .post('/api/v1/menu/cafe/orders')
+        .send({})
+        .expect(400);
       expect(separate.storage.size).toBe(2);
-    } finally { await second.close(); }
+    } finally {
+      await second.close();
+    }
     expect(original.storage.size).toBe(2);
     await post().send({}).expect(400);
   });
@@ -192,13 +201,8 @@ describe('rate limiting admission and recovery', () => {
     for (const [route, policy] of Object.entries(expected))
       expect(routes.get(route), route).toBe(policy);
     expect(routes.get('GET')).toBeUndefined();
-    // Password recovery is absent, not an unprotected feature. A future endpoint
-    // must explicitly extend the abuse policies/tests before this scope can change.
-    expect(
-      [...routes.keys()].filter((route) =>
-        /auth\/.*(?:forgot|reset)/i.test(route),
-      ),
-    ).toEqual([]);
+    expect(routes.get('POST auth/forgot-password')).toBe('register');
+    expect(routes.get('POST auth/reset-password')).toBe('register');
   });
   it.each([
     ['/api/v1/menu/cafe/orders/' + id + '/tracking-session', 'post', 30, 401],

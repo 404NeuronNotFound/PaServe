@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-02",
+  "decision": "HOLD",
+  "mainTests": {
+    "apiUnit": 1529,
+    "apiHttp": 2219,
+    "web": 2383,
+    "total": 6131
+  },
+  "routes": {
+    "count": 131,
+    "controllers": 36,
+    "sourceOnly": true
+  },
+  "dependencyAdvisories": {
+    "before": {
+      "high": 1,
+      "moderate": 2
+    },
+    "after": 0
+  },
+  "pendingMigrations": [
+    "20261019000000_validation_hardening",
+    "20261028090000_idempotency_key_identity",
+    "20261028100000_tenant_query_indexes",
+    "20261029090000_collection_paging_indexes",
+    "20261029100000_public_menu_cache_versions",
+    "20261102010000_registration_policy"
+  ],
+  "actualReleaseEnvironment": "fails-loopback-api-guard",
+  "releasePolicyProof": "passes-process-only-same-origin-configuration",
+  "deployedHostVerified": false,
+  "productionSchemaChanged": false,
+  "emailsSent": false
+}

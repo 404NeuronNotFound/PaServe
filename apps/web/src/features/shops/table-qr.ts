@@ -12,6 +12,11 @@ export function tableCustomerUrl(
   code: string,
   origin: string,
 ): string {
+  return new URL(publicTablePath(shopSlug, code), customerWebsiteOrigin(origin))
+    .href;
+}
+
+export function customerWebsiteOrigin(origin: string): string {
   const base = new URL(origin);
   if (
     !["https:", "http:"].includes(base.protocol) ||
@@ -25,7 +30,7 @@ export function tableCustomerUrl(
       "Use a valid public website origin, such as https://menu.example.com.",
     );
   }
-  return new URL(publicTablePath(shopSlug, code), base.origin).href;
+  return base.origin;
 }
 
 export async function generateTableQr(

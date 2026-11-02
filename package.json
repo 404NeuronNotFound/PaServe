@@ -7,8 +7,10 @@
     "test": "pnpm --filter api test --maxWorkers=2 && pnpm --filter api test:e2e --maxWorkers=2 && pnpm --filter web test --maxWorkers=2 && pnpm test:search-load-metrics && pnpm test:latency-slo && pnpm test:failure-recovery:report && pnpm test:database-monitor && pnpm test:load-env:safety && pnpm test:edge:config && pnpm test:performance-acceptance",
     "lint": "pnpm --filter api lint && pnpm --filter web lint",
     "build": "pnpm --filter api build && pnpm --filter web build",
-    "verify": "pnpm lint && pnpm test && pnpm build && pnpm --filter web test:security-release && pnpm test:leaks && pnpm audit --audit-level=low",
+    "verify": "pnpm --filter api db:generate && pnpm lint && pnpm test:deployment && pnpm test && pnpm build && pnpm --filter web test:security-release && pnpm test:leaks && pnpm audit --audit-level=low",
     "test:leaks": "node scripts/security-leaks.mjs",
+    "deployment:vercel": "node scripts/prepare-vercel.mjs",
+    "test:deployment": "node --test scripts/prepare-vercel.test.mjs",
     "seed": "pnpm --filter api seed",
     "seed:dry-run": "pnpm --filter api seed:dry-run",
     "test:search-load": "node scripts/order-search-load.mjs",
@@ -56,5 +58,8 @@
     }
   },
   "packageManager": "pnpm@12.9.1",
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  }
 }

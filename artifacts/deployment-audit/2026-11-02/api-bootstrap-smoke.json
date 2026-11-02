@@ -1,0 +1,8 @@
+{
+  "scope": "isolated built-entrypoint smoke with intentionally unavailable dummy database; not a live-host test",
+  "liveness": 200,
+  "readiness": 503,
+  "root": 200,
+  "securityHeaders": true,
+  "cacheControl": "no-store"
+}

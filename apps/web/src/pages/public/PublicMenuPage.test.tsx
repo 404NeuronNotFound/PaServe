@@ -1,25 +1,41 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { PublicMenuPage } from "./PublicMenuPage";
 import { subscribeOrderStream } from "../../features/orders/new-order-events";
 import { api } from "../../lib/api/client";
 import { rememberMenuLayoutHint } from "../../features/shops/menu-layout-hint";
+import { useCustomerTables } from "../../features/shops/customer-table";
 
-vi.mock("../../features/orders/new-order-events", () => ({subscribeOrderStream: vi.fn(() => vi.fn())}));
+vi.mock("../../features/orders/new-order-events", () => ({
+  subscribeOrderStream: vi.fn(() => vi.fn()),
+}));
 vi.mock("../../lib/api/client", () => ({ api: { get: vi.fn() } }));
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  useCustomerTables.setState({ codes: {}, resolved: {} });
   sessionStorage.removeItem("paserve.public-menu-layout.v1");
 });
-function setup(client = new QueryClient()) {
+function setup(client = new QueryClient(), entry = "/cafe") {
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/cafe"]}>
+      <MemoryRouter initialEntries={[entry]}>
         <Routes>
           <Route path="/:shopSlug" element={<PublicMenuPage />} />
+          <Route path="/menu/:shopSlug" element={<PublicMenuPage />} />
+          <Route
+            path="/:shopSlug/table/:tableCode"
+            element={<PublicMenuPage />}
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -38,26 +54,68 @@ const menu = {
   featuredProducts: [],
 };
 
+it("opens the public pickup QR without reusing a remembered dine-in table", async () => {
+  useCustomerTables.setState({
+    codes: { cafe: "T12" },
+    resolved: { cafe: { shopSlug: "cafe", code: "T12", number: "12" } },
+  });
+  vi.mocked(api.get).mockResolvedValue({ data: menu });
+  setup(new QueryClient(), "/menu/cafe?service=pickup");
+  await screen.findByRole("heading", { name: "Cafe" });
+  expect(vi.mocked(api.get).mock.calls[0][0]).toBe("/menu/cafe");
+  expect(
+    vi
+      .mocked(api.get)
+      .mock.calls.every(([url]) => !String(url).includes("/table/")),
+  ).toBe(true);
+  expect(screen.queryByText("Table 12")).not.toBeInTheDocument();
+});
+
+it("keeps explicit table links bound to their table even if a pickup parameter is appended", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: { ...menu, table: { shopSlug: "cafe", code: "T12", number: "12" } },
+  });
+  setup(new QueryClient(), "/cafe/table/T12?service=pickup");
+  await screen.findByRole("heading", { name: "Cafe" });
+  expect(vi.mocked(api.get).mock.calls[0][0]).toBe("/menu/cafe/table/T12");
+});
+
 it("replaces the initial skeleton with content and keeps content during background refresh", async () => {
   let complete!: (response: { data: typeof menu }) => void;
-  vi.mocked(api.get).mockReturnValueOnce(new Promise((resolve) => { complete = resolve; }));
+  vi.mocked(api.get).mockReturnValueOnce(
+    new Promise((resolve) => {
+      complete = resolve;
+    }),
+  );
   const client = setup();
   expect(screen.getByRole("status")).toHaveTextContent("Loading menu");
   expect(screen.queryByRole("heading")).not.toBeInTheDocument();
   expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  expect(screen.getByRole("main").querySelector('[aria-busy="true"]')).not.toBeNull();
+  expect(
+    screen.getByRole("main").querySelector('[aria-busy="true"]'),
+  ).not.toBeNull();
   expect(screen.getByRole("main")).toHaveAttribute("data-layout", "loading");
   expect(document.querySelector(".menu-product-card")).toBeNull();
 
-  await act(async () => { complete({ data: menu }); });
+  await act(async () => {
+    complete({ data: menu });
+  });
   await screen.findByRole("heading", { name: "Cafe" });
   expect(screen.queryByText("Loading menu…")).not.toBeInTheDocument();
 
-  vi.mocked(api.get).mockReturnValueOnce(new Promise((resolve) => { complete = resolve; }));
-  act(() => { void client.invalidateQueries({ queryKey: ["public-menu", "cafe"] }); });
+  vi.mocked(api.get).mockReturnValueOnce(
+    new Promise((resolve) => {
+      complete = resolve;
+    }),
+  );
+  act(() => {
+    void client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+  });
   expect(screen.getByRole("heading", { name: "Cafe" })).toBeInTheDocument();
   expect(screen.queryByText("Loading menu…")).not.toBeInTheDocument();
-  await act(async () => { complete({ data: menu }); });
+  await act(async () => {
+    complete({ data: menu });
+  });
 });
 
 it("replaces a failed initial skeleton with the existing retry action", async () => {
@@ -71,31 +129,61 @@ it("replaces a failed initial skeleton with the existing retry action", async ()
   await screen.findByRole("heading", { name: "Cafe" });
 });
 
-it.each(["grid", "list", "compact"] as const)("keeps the known %s geometry during a repeat visit", async (menuLayout) => {
-  const response = { ...menu, shop: { ...menu.shop, menuLayout, bannerUrl: "https://example.com/banner.webp" } };
-  rememberMenuLayoutHint(response);
-  let complete!: (result: { data: typeof response }) => void;
-  vi.mocked(api.get).mockReturnValueOnce(new Promise((resolve) => { complete = resolve; }));
-  setup();
-  expect(screen.getByRole("main")).toHaveAttribute("data-layout", menuLayout);
-  expect(document.querySelector(".menu-shop-hero .shop-banner")).not.toBeNull();
-  await act(async () => complete({ data: response }));
-  await screen.findByRole("heading", { name: "Cafe" });
-  expect(screen.getByRole("main")).toHaveAttribute("data-layout", menuLayout);
-  expect(document.querySelector(".menu-shop-hero .shop-banner")).not.toBeNull();
-  expect(document.querySelector(".loading-skeleton")).toBeNull();
-});
+it.each(["grid", "list", "compact"] as const)(
+  "keeps the known %s geometry during a repeat visit",
+  async (menuLayout) => {
+    const response = {
+      ...menu,
+      shop: {
+        ...menu.shop,
+        menuLayout,
+        bannerUrl: "https://example.com/banner.webp",
+      },
+    };
+    rememberMenuLayoutHint(response);
+    let complete!: (result: { data: typeof response }) => void;
+    vi.mocked(api.get).mockReturnValueOnce(
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+    );
+    setup();
+    expect(screen.getByRole("main")).toHaveAttribute("data-layout", menuLayout);
+    expect(
+      document.querySelector(".menu-shop-hero .shop-banner"),
+    ).not.toBeNull();
+    await act(async () => complete({ data: response }));
+    await screen.findByRole("heading", { name: "Cafe" });
+    expect(screen.getByRole("main")).toHaveAttribute("data-layout", menuLayout);
+    expect(
+      document.querySelector(".menu-shop-hero .shop-banner"),
+    ).not.toBeNull();
+    expect(document.querySelector(".loading-skeleton")).toBeNull();
+  },
+);
 
 it.each(["grid", "list", "compact"])(
   "renders category descriptions in configured order and reflects visibility/order refreshes in %s",
   async (menuLayout) => {
     const category = (id: string, name: string, sortOrder: number) => ({
-      id, name, slug: id, description: `${name} description`, sortOrder,
+      id,
+      name,
+      slug: id,
+      description: `${name} description`,
+      sortOrder,
     });
     const product = (id: string, categoryId: string | null) => ({
-      id, categoryId, name: id, slug: id, price: "20.00", description: null,
-      imageUrl: null, status: "AVAILABLE", isOrderable: true,
-      isFeatured: false, sortOrder: 0,
+      id,
+      categoryId,
+      name: id,
+      slug: id,
+      price: "20.00",
+      description: null,
+      imageUrl: null,
+      status: "AVAILABLE",
+      isOrderable: true,
+      isFeatured: false,
+      sortOrder: 0,
     });
     const desserts = category("desserts", "Zesty desserts", 0);
     const drinks = category("drinks", "Artisan drinks", 1);
@@ -103,35 +191,79 @@ it.each(["grid", "list", "compact"])(
     const pastry = product("Pastry", "desserts");
     const coffee = product("Coffee", "drinks");
     const miscellaneous = product("Miscellaneous", null);
-    const data = { ...menu, shop: { ...menu.shop, menuLayout },
+    const data = {
+      ...menu,
+      shop: { ...menu.shop, menuLayout },
       categories: [desserts, drinks, empty],
       products: [coffee, miscellaneous, pastry],
     };
     vi.mocked(api.get).mockResolvedValue({ data });
     const client = setup();
     await screen.findByRole("heading", { name: "Cafe" });
-    const headings = () => screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
-    expect(headings()).toEqual(["Zesty desserts", "Artisan drinks", "Uncategorized"]);
+    const headings = () =>
+      screen
+        .getAllByRole("heading", { level: 2 })
+        .map((heading) => heading.textContent);
+    expect(headings()).toEqual([
+      "Zesty desserts",
+      "Artisan drinks",
+      "Uncategorized",
+    ]);
     expect(screen.getByText("Zesty desserts description")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Empty category" })).not.toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Zesty desserts" })).getByRole("heading", { name: "Pastry" })).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Artisan drinks" })).getByRole("heading", { name: "Coffee" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Empty category" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Zesty desserts" })).getByRole(
+        "heading",
+        { name: "Pastry" },
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Artisan drinks" })).getByRole(
+        "heading",
+        { name: "Coffee" },
+      ),
+    ).toBeInTheDocument();
 
     // The public API omits hidden categories and their products.
-    vi.mocked(api.get).mockResolvedValue({ data: { ...data,
-      categories: [drinks, empty], products: [coffee, miscellaneous],
-    } });
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        ...data,
+        categories: [drinks, empty],
+        products: [coffee, miscellaneous],
+      },
+    });
     await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
-    await vi.waitFor(() => expect(headings()).toEqual(["Artisan drinks", "Uncategorized"]));
-    expect(screen.queryByText("Zesty desserts description")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Pastry" })).not.toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(headings()).toEqual(["Artisan drinks", "Uncategorized"]),
+    );
+    expect(
+      screen.queryByText("Zesty desserts description"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Pastry" }),
+    ).not.toBeInTheDocument();
 
     // Showing it again with a new configured order restores the correct section.
-    vi.mocked(api.get).mockResolvedValue({ data: { ...data,
-      categories: [{ ...drinks, sortOrder: 0 }, { ...desserts, sortOrder: 1 }, empty],
-    } });
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        ...data,
+        categories: [
+          { ...drinks, sortOrder: 0 },
+          { ...desserts, sortOrder: 1 },
+          empty,
+        ],
+      },
+    });
     await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
-    await vi.waitFor(() => expect(headings()).toEqual(["Artisan drinks", "Zesty desserts", "Uncategorized"]));
+    await vi.waitFor(() =>
+      expect(headings()).toEqual([
+        "Artisan drinks",
+        "Zesty desserts",
+        "Uncategorized",
+      ]),
+    );
     expect(screen.getByRole("heading", { name: "Pastry" })).toBeInTheDocument();
   },
 );
@@ -141,43 +273,87 @@ it("keeps a menu without visible categories usable", async () => {
   setup();
   await screen.findByRole("heading", { name: "Cafe" });
   expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
-  expect(screen.getByText("No items are available on this menu yet.")).toBeInTheDocument();
+  expect(
+    screen.getByText("No items are available on this menu yet."),
+  ).toBeInTheDocument();
 });
 
 it.each(["grid", "list", "compact"])(
   "removes excluded products from categories and Featured after a public refetch in %s",
   async (menuLayout) => {
-    const make = (id: string, categoryId: string | null, isFeatured = false) => ({
-      id, name: id, slug: id, categoryId, description: `${id} description`,
-      price: "1234.50", imageUrl: null, status: "AVAILABLE",
-      isOrderable: true, isFeatured, sortOrder: 0,
+    const make = (
+      id: string,
+      categoryId: string | null,
+      isFeatured = false,
+    ) => ({
+      id,
+      name: id,
+      slug: id,
+      categoryId,
+      description: `${id} description`,
+      price: "1234.50",
+      imageUrl: null,
+      status: "AVAILABLE",
+      isOrderable: true,
+      isFeatured,
+      sortOrder: 0,
     });
     const retained = make("Retained drink", "drinks");
     const hidden = make("Now hidden", "drinks", true);
     const archived = make("Now archived", "drinks", true);
     const deleted = make("Now deleted", "drinks", true);
     const uncategorized = make("Uncategorized item", null);
-    const data = { ...menu, shop: { ...menu.shop, menuLayout },
-      categories: [{ id: "drinks", name: "Drinks", slug: "drinks", description: null, sortOrder: 0 }],
+    const data = {
+      ...menu,
+      shop: { ...menu.shop, menuLayout },
+      categories: [
+        {
+          id: "drinks",
+          name: "Drinks",
+          slug: "drinks",
+          description: null,
+          sortOrder: 0,
+        },
+      ],
       products: [retained, hidden, archived, deleted, uncategorized],
       featuredProducts: [hidden, archived, deleted],
     };
     vi.mocked(api.get).mockResolvedValue({ data });
     const client = setup();
     await screen.findByRole("heading", { name: "Retained drink" });
-    expect(screen.getByRole("region", { name: "Featured" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Featured" }),
+    ).toBeInTheDocument();
     // Fresh public API responses omit hidden, archived, and physically deleted records.
-    vi.mocked(api.get).mockResolvedValue({ data: {
-      ...data, products: [retained, uncategorized], featuredProducts: [],
-    } });
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        ...data,
+        products: [retained, uncategorized],
+        featuredProducts: [],
+      },
+    });
     await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
-    await vi.waitFor(() => expect(screen.queryByRole("region", { name: "Featured" })).not.toBeInTheDocument());
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole("region", { name: "Featured" }),
+      ).not.toBeInTheDocument(),
+    );
     for (const name of ["Now hidden", "Now archived", "Now deleted"]) {
       expect(screen.queryByRole("heading", { name })).not.toBeInTheDocument();
       expect(screen.queryByText(`${name} description`)).not.toBeInTheDocument();
     }
-    expect(within(screen.getByRole("region", { name: "Drinks" })).getByRole("heading", { name: "Retained drink" })).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Uncategorized" })).getByRole("heading", { name: "Uncategorized item" })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Drinks" })).getByRole(
+        "heading",
+        { name: "Retained drink" },
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Uncategorized" })).getByRole(
+        "heading",
+        { name: "Uncategorized item" },
+      ),
+    ).toBeInTheDocument();
     expect(screen.getAllByText(/1,234\.50/)).toHaveLength(2);
   },
 );
@@ -199,8 +375,14 @@ it.each(["grid", "list", "compact"])(
     vi.mocked(api.get).mockResolvedValue({ data: branded });
     const client = setup();
     await screen.findByRole("heading", { name: "Cafe" });
-    expect(screen.getByRole("img", { name: "Cafe logo" })).toHaveAttribute("src", branded.shop.logoUrl);
-    expect(screen.getByRole("img", { name: "Cafe banner" })).toHaveAttribute("src", branded.shop.bannerUrl);
+    expect(screen.getByRole("img", { name: "Cafe logo" })).toHaveAttribute(
+      "src",
+      branded.shop.logoUrl,
+    );
+    expect(screen.getByRole("img", { name: "Cafe banner" })).toHaveAttribute(
+      "src",
+      branded.shop.bannerUrl,
+    );
     expect(screen.getByText("Coffee by the sea")).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-layout", menuLayout);
     const theme = () => screen.getByRole("main").style;
@@ -225,21 +407,51 @@ it.each(["grid", "list", "compact"])(
     fireEvent.error(screen.getByRole("img", { name: "Cafe banner" }));
     vi.mocked(api.get).mockResolvedValue({ data: updated });
     await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
-    await vi.waitFor(() => expect(screen.getByRole("img", { name: "Cafe logo" })).toHaveAttribute("src", updated.shop.logoUrl));
-    expect(screen.getByRole("img", { name: "Cafe banner" })).toHaveAttribute("src", updated.shop.bannerUrl);
-    expect(screen.getByRole("main")).toHaveAttribute("data-layout", updated.shop.menuLayout);
+    await vi.waitFor(() =>
+      expect(screen.getByRole("img", { name: "Cafe logo" })).toHaveAttribute(
+        "src",
+        updated.shop.logoUrl,
+      ),
+    );
+    expect(screen.getByRole("img", { name: "Cafe banner" })).toHaveAttribute(
+      "src",
+      updated.shop.bannerUrl,
+    );
+    expect(screen.getByRole("main")).toHaveAttribute(
+      "data-layout",
+      updated.shop.menuLayout,
+    );
     expect(theme().getPropertyValue("--menu-primary")).toBe("#123456");
     expect(theme().getPropertyValue("--menu-accent")).toBe("#ABCDEF");
-    expect(document.documentElement.style.getPropertyValue("--menu-primary")).toBe("");
-    expect(document.documentElement.style.getPropertyValue("--menu-accent")).toBe("");
+    expect(
+      document.documentElement.style.getPropertyValue("--menu-primary"),
+    ).toBe("");
+    expect(
+      document.documentElement.style.getPropertyValue("--menu-accent"),
+    ).toBe("");
 
-    vi.mocked(api.get).mockResolvedValue({ data: { ...menu, shop: {
-      ...menu.shop, logoUrl: null, bannerUrl: null, primaryColor: "invalid",
-      accentColor: "url(unsafe)", menuLayout: "unsupported",
-    } } });
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        ...menu,
+        shop: {
+          ...menu.shop,
+          logoUrl: null,
+          bannerUrl: null,
+          primaryColor: "invalid",
+          accentColor: "url(unsafe)",
+          menuLayout: "unsupported",
+        },
+      },
+    });
     await client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
-    await vi.waitFor(() => expect(screen.queryByRole("img", { name: "Cafe logo" })).not.toBeInTheDocument());
-    expect(screen.queryByRole("img", { name: "Cafe banner" })).not.toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole("img", { name: "Cafe logo" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole("img", { name: "Cafe banner" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Cafe" })).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveAttribute("data-layout", "list");
     expect(theme().getPropertyValue("--menu-primary")).toBe("#243329");
@@ -414,35 +626,66 @@ it("renders saved category and product order with sold-out labels", async () => 
   ).toEqual(["Coffee", "Tea"]);
   expect(screen.getByText("Sold out")).toBeInTheDocument();
 });
-it.each(["grid", "list", "compact"])("loads configured product order for independent customer sessions in %s layout", async (menuLayout) => {
-  const coffee = { id: "coffee", name: "Coffee", categoryId: "drinks", sortOrder: 0, price: "12.50", description: null, imageUrl: null, status: "AVAILABLE" };
-  const tea = { ...coffee, id: "tea", name: "Tea", sortOrder: 1, status: "SOLD_OUT" };
-  const meal = { ...coffee, id: "meal", name: "Meal", categoryId: "meals" };
-  const data = (products: typeof coffee[]) => ({
-    ...menu, shop: { ...menu.shop, menuLayout },
-    categories: [{ id: "drinks", name: "Drinks" }, { id: "meals", name: "Meals" }], products,
-  });
-  vi.mocked(api.get).mockResolvedValue({ data: data([coffee, meal, tea]) });
-  const firstClient = setup();
-  await screen.findByRole("heading", { name: "Tea" });
-  const names = (region: string) => within(screen.getByRole("region", { name: region })).getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
-  expect(names("Drinks")).toEqual(["Coffee", "Tea"]);
-  cleanup();
-  firstClient.clear();
-  vi.mocked(api.get).mockResolvedValue({ data: data([{ ...tea, sortOrder: 0 }, meal, { ...coffee, sortOrder: 1 }]) });
-  // Each mount has its own QueryClient, as with separate customers or a reload.
-  for (let visitor = 0; visitor < 2; visitor++) {
-    const client = setup();
+it.each(["grid", "list", "compact"])(
+  "loads configured product order for independent customer sessions in %s layout",
+  async (menuLayout) => {
+    const coffee = {
+      id: "coffee",
+      name: "Coffee",
+      categoryId: "drinks",
+      sortOrder: 0,
+      price: "12.50",
+      description: null,
+      imageUrl: null,
+      status: "AVAILABLE",
+    };
+    const tea = {
+      ...coffee,
+      id: "tea",
+      name: "Tea",
+      sortOrder: 1,
+      status: "SOLD_OUT",
+    };
+    const meal = { ...coffee, id: "meal", name: "Meal", categoryId: "meals" };
+    const data = (products: (typeof coffee)[]) => ({
+      ...menu,
+      shop: { ...menu.shop, menuLayout },
+      categories: [
+        { id: "drinks", name: "Drinks" },
+        { id: "meals", name: "Meals" },
+      ],
+      products,
+    });
+    vi.mocked(api.get).mockResolvedValue({ data: data([coffee, meal, tea]) });
+    const firstClient = setup();
     await screen.findByRole("heading", { name: "Tea" });
-    expect(names("Drinks")).toEqual(["Tea", "Coffee"]);
-    expect(names("Meals")).toEqual(["Meal"]);
-    expect(screen.getByText("Sold out")).toBeInTheDocument();
+    const names = (region: string) =>
+      within(screen.getByRole("region", { name: region }))
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent);
+    expect(names("Drinks")).toEqual(["Coffee", "Tea"]);
     cleanup();
-    client.clear();
-  }
-  expect(api.get).toHaveBeenCalledTimes(3);
-  expect(api.get).toHaveBeenLastCalledWith("/menu/cafe", { signal: expect.any(AbortSignal), timeout: 15_000 });
-});
+    firstClient.clear();
+    vi.mocked(api.get).mockResolvedValue({
+      data: data([{ ...tea, sortOrder: 0 }, meal, { ...coffee, sortOrder: 1 }]),
+    });
+    // Each mount has its own QueryClient, as with separate customers or a reload.
+    for (let visitor = 0; visitor < 2; visitor++) {
+      const client = setup();
+      await screen.findByRole("heading", { name: "Tea" });
+      expect(names("Drinks")).toEqual(["Tea", "Coffee"]);
+      expect(names("Meals")).toEqual(["Meal"]);
+      expect(screen.getByText("Sold out")).toBeInTheDocument();
+      cleanup();
+      client.clear();
+    }
+    expect(api.get).toHaveBeenCalledTimes(3);
+    expect(api.get).toHaveBeenLastCalledWith("/menu/cafe", {
+      signal: expect.any(AbortSignal),
+      timeout: 15_000,
+    });
+  },
+);
 it("shows a recovery state for unavailable menus", async () => {
   vi.mocked(api.get).mockRejectedValue({
     isAxiosError: true,
@@ -499,30 +742,64 @@ it("hides a broken banner while keeping the logo and menu available", async () =
   expect(screen.getByRole("heading", { name: "Cafe" })).toBeInTheDocument();
 });
 
-it.each(["grid", "list", "compact"])("updates sold-out featured and ordinary cards on an event in %s without refresh", async (menuLayout) => {
-  const product = {id: "coffee", categoryId: null, name: "Coffee", slug: "coffee", price: "20.00", description: null, imageUrl: null, status: "AVAILABLE", isOrderable: true, isFeatured: true, sortOrder: 0};
-  const available = {...menu, shop: {...menu.shop, menuLayout}, products: [product], featuredProducts: [product]};
-  vi.mocked(api.get).mockResolvedValue({data: available});
-  setup();
-  await screen.findByRole("heading", {name: "Cafe"});
-  const search = screen.getByRole("searchbox");
-  fireEvent.change(search, {target: {value: "Coffee"}});
-  const sold = {...product, status: "SOLD_OUT", isOrderable: false};
-  vi.mocked(api.get).mockResolvedValue({data: {...available, products: [sold], featuredProducts: [sold]}});
-  const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
-  for(let i=0;i<3;i++) notify("product_sold_out", {shopSlug: "cafe"});
-  await vi.waitFor(() => expect(screen.getAllByText("Sold out")).toHaveLength(2));
-  expect(search).toHaveValue("Coffee");
-  expect(screen.getAllByRole("button", {name: "View details for Coffee"})).toHaveLength(2);
-  expect(vi.mocked(subscribeOrderStream).mock.calls[0].slice(0,3)).toEqual(["/menu/cafe/availability-events", {shopSlug: "cafe"}, ["product_sold_out", "product_available"]]);
-  vi.mocked(api.get).mockResolvedValue({data: available});
-  for(let i=0;i<3;i++) notify("product_available", {shopSlug: "cafe"});
-  await vi.waitFor(() => expect(screen.queryByText("Sold out")).not.toBeInTheDocument());
-  expect(screen.getAllByRole("button", {name: "Add Coffee"})).toHaveLength(2);
-  expect(search).toHaveValue("Coffee");
-
-});
-
+it.each(["grid", "list", "compact"])(
+  "updates sold-out featured and ordinary cards on an event in %s without refresh",
+  async (menuLayout) => {
+    const product = {
+      id: "coffee",
+      categoryId: null,
+      name: "Coffee",
+      slug: "coffee",
+      price: "20.00",
+      description: null,
+      imageUrl: null,
+      status: "AVAILABLE",
+      isOrderable: true,
+      isFeatured: true,
+      sortOrder: 0,
+    };
+    const available = {
+      ...menu,
+      shop: { ...menu.shop, menuLayout },
+      products: [product],
+      featuredProducts: [product],
+    };
+    vi.mocked(api.get).mockResolvedValue({ data: available });
+    setup();
+    await screen.findByRole("heading", { name: "Cafe" });
+    const search = screen.getByRole("searchbox");
+    fireEvent.change(search, { target: { value: "Coffee" } });
+    const sold = { ...product, status: "SOLD_OUT", isOrderable: false };
+    vi.mocked(api.get).mockResolvedValue({
+      data: { ...available, products: [sold], featuredProducts: [sold] },
+    });
+    const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
+    for (let i = 0; i < 3; i++)
+      notify("product_sold_out", { shopSlug: "cafe" });
+    await vi.waitFor(() =>
+      expect(screen.getAllByText("Sold out")).toHaveLength(2),
+    );
+    expect(search).toHaveValue("Coffee");
+    expect(
+      screen.getAllByRole("button", { name: "View details for Coffee" }),
+    ).toHaveLength(2);
+    expect(vi.mocked(subscribeOrderStream).mock.calls[0].slice(0, 3)).toEqual([
+      "/menu/cafe/availability-events",
+      { shopSlug: "cafe" },
+      ["product_sold_out", "product_available"],
+    ]);
+    vi.mocked(api.get).mockResolvedValue({ data: available });
+    for (let i = 0; i < 3; i++)
+      notify("product_available", { shopSlug: "cafe" });
+    await vi.waitFor(() =>
+      expect(screen.queryByText("Sold out")).not.toBeInTheDocument(),
+    );
+    expect(screen.getAllByRole("button", { name: "Add Coffee" })).toHaveLength(
+      2,
+    );
+    expect(search).toHaveValue("Coffee");
+  },
+);
 
 it("reuses a warm pickup display cache but revalidates immediately on an availability event", async () => {
   const client = new QueryClient();
@@ -530,7 +807,9 @@ it("reuses a warm pickup display cache but revalidates immediately on an availab
   setup(client);
   expect(screen.getByRole("heading", { name: "Cafe" })).toBeVisible();
   expect(api.get).not.toHaveBeenCalled();
-  vi.mocked(api.get).mockResolvedValue({ data: { ...menu, shop: { ...menu.shop, name: "Updated Cafe" } } });
+  vi.mocked(api.get).mockResolvedValue({
+    data: { ...menu, shop: { ...menu.shop, name: "Updated Cafe" } },
+  });
   const notify = vi.mocked(subscribeOrderStream).mock.calls[0][4];
   act(() => notify("product_available", { shopSlug: "cafe" }));
   await screen.findByRole("heading", { name: "Updated Cafe" });
@@ -538,21 +817,42 @@ it("reuses a warm pickup display cache but revalidates immediately on an availab
 });
 
 it("keeps public navigation and search mounted while an availability read is slow", async () => {
-  const coffee = { id: "coffee", categoryId: null, name: "Coffee", slug: "coffee", price: "20.00", description: null, imageUrl: null, status: "AVAILABLE", isOrderable: true, isFeatured: false, sortOrder: 0 };
+  const coffee = {
+    id: "coffee",
+    categoryId: null,
+    name: "Coffee",
+    slug: "coffee",
+    price: "20.00",
+    description: null,
+    imageUrl: null,
+    status: "AVAILABLE",
+    isOrderable: true,
+    isFeatured: false,
+    sortOrder: 0,
+  };
   const response = { ...menu, products: [coffee] };
   vi.mocked(api.get).mockResolvedValueOnce({ data: response });
   const client = setup();
   await screen.findByRole("heading", { name: "Cafe" });
   const search = screen.getByRole("searchbox");
   let finish!: (value: { data: typeof response }) => void;
-  vi.mocked(api.get).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+  vi.mocked(api.get).mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
   let refresh!: Promise<void>;
-  act(() => { refresh = client.invalidateQueries({ queryKey: ["public-menu", "cafe"] }); });
+  act(() => {
+    refresh = client.invalidateQueries({ queryKey: ["public-menu", "cafe"] });
+  });
   fireEvent.change(search, { target: { value: "Coffee" } });
   expect(screen.getByRole("searchbox")).toBe(search);
   expect(search).toHaveValue("Coffee");
   expect(screen.getByRole("button", { name: "View cart (0)" })).toBeEnabled();
   expect(screen.getByRole("button", { name: "Add Coffee" })).toBeEnabled();
-  await act(async () => { finish({ data: response }); await refresh; });
+  await act(async () => {
+    finish({ data: response });
+    await refresh;
+  });
   expect(screen.getByRole("searchbox")).toBe(search);
 });

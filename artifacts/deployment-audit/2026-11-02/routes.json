@@ -1,0 +1,1496 @@
+{
+  "scope": "source-declared routes; not a deployed-host scan",
+  "warnings": [],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1",
+      "controller": "AppController",
+      "handler": "getRoot",
+      "source": "src/app.controller.ts",
+      "policies": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health",
+      "controller": "AppController",
+      "handler": "health",
+      "source": "src/app.controller.ts",
+      "policies": [
+        "@CapacityReadiness()"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health/live",
+      "controller": "AppController",
+      "handler": "live",
+      "source": "src/app.controller.ts",
+      "policies": [
+        "@CapacityLiveness()"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/shops/:shopId/add-ons/:addOnId",
+      "controller": "AddOnsController",
+      "handler": "delete",
+      "source": "src/modules/add-ons/add-ons.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@HttpCode(204)",
+        "@ShopResource('addOn', 'addOnId')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/add-ons/oat-milk",
+      "controller": "AddOnsController",
+      "handler": "createOatMilk",
+      "source": "src/modules/add-ons/add-ons.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/add-ons/extra-shot",
+      "controller": "AddOnsController",
+      "handler": "createExtraShot",
+      "source": "src/modules/add-ons/add-ons.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/add-ons",
+      "controller": "AddOnsController",
+      "handler": "list",
+      "source": "src/modules/add-ons/add-ons.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/add-ons",
+      "controller": "AddOnsController",
+      "handler": "create",
+      "source": "src/modules/add-ons/add-ons.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/add-ons/:addOnId",
+      "controller": "AddOnsController",
+      "handler": "update",
+      "source": "src/modules/add-ons/add-ons.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('addOn', 'addOnId')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/products/:productId/add-ons",
+      "controller": "ProductAddOnsController",
+      "handler": "list",
+      "source": "src/modules/add-ons/add-ons.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/products/:productId/add-ons",
+      "controller": "ProductAddOnsController",
+      "handler": "assign",
+      "source": "src/modules/add-ons/add-ons.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/shops/:shopId/products/:productId/add-ons/:addOnId",
+      "controller": "ProductAddOnsController",
+      "handler": "unassign",
+      "source": "src/modules/add-ons/add-ons.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/menu/:shopSlug/products/:productId/add-ons",
+      "controller": "PublicAddOnsController",
+      "handler": "list",
+      "source": "src/modules/add-ons/add-ons.controller.ts",
+      "policies": [
+        "@RateLimit('publicRead')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/menu/:shopSlug/products/:productId/add-ons/quote",
+      "controller": "PublicAddOnsController",
+      "handler": "quote",
+      "source": "src/modules/add-ons/add-ons.controller.ts",
+      "policies": [
+        "@RateLimit('publicRead')",
+        "@RateLimit('quote')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "controller": "AuthController",
+      "handler": "register",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@RateLimit('register')",
+        "@UseInterceptors(AuthWorkInterceptor)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/email-code",
+      "controller": "AuthController",
+      "handler": "emailCode",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@UseInterceptors(AuthWorkInterceptor)",
+        "@HttpCode(200)",
+        "@RateLimit('register')",
+        "@UseGuards(AuthOriginGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/google/challenge",
+      "controller": "AuthController",
+      "handler": "googleChallenge",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@HttpCode(200)",
+        "@RateLimit('session')",
+        "@UseGuards(AuthOriginGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/google/login",
+      "controller": "AuthController",
+      "handler": "googleLogin",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@HttpCode(200)",
+        "@RateLimit('login')",
+        "@UseGuards(AuthOriginGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/google/register",
+      "controller": "AuthController",
+      "handler": "googleRegister",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@HttpCode(200)",
+        "@RateLimit('register')",
+        "@UseGuards(AuthOriginGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "controller": "AuthController",
+      "handler": "login",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@HttpCode(200)",
+        "@UseGuards(AuthOriginGuard)",
+        "@RateLimit('login')",
+        "@UseInterceptors(AuthWorkInterceptor)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "controller": "AuthController",
+      "handler": "refresh",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@RateLimit('refresh')",
+        "@HttpCode(200)",
+        "@UseGuards(AuthOriginGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "controller": "AuthController",
+      "handler": "logout",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@RateLimit('logout')",
+        "@HttpCode(204)",
+        "@UseGuards(AuthOriginGuard)"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "controller": "AuthController",
+      "handler": "me",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@RateLimit('session')",
+        "@UseGuards(JwtAuthGuard)"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/auth/profile",
+      "controller": "AuthController",
+      "handler": "updateProfile",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@RateLimit('accountUpdate')",
+        "@UseGuards(AuthOriginGuard, JwtAuthGuard)"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/email",
+      "controller": "AuthController",
+      "handler": "emailStatus",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@RateLimit('session')",
+        "@UseGuards(JwtAuthGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/email",
+      "controller": "AuthController",
+      "handler": "changeEmail",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@UseInterceptors(AuthWorkInterceptor)",
+        "@HttpCode(200)",
+        "@RateLimit('accountUpdate')",
+        "@UseGuards(AuthOriginGuard, JwtAuthGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/email/confirm",
+      "controller": "AuthController",
+      "handler": "confirmEmail",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@UseInterceptors(AuthWorkInterceptor)",
+        "@HttpCode(200)",
+        "@RateLimit('accountUpdate')",
+        "@UseGuards(AuthOriginGuard, JwtAuthGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/email/resend",
+      "controller": "AuthController",
+      "handler": "resendEmail",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@UseInterceptors(AuthWorkInterceptor)",
+        "@HttpCode(200)",
+        "@RateLimit('accountUpdate')",
+        "@UseGuards(AuthOriginGuard, JwtAuthGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/email/cancel",
+      "controller": "AuthController",
+      "handler": "cancelEmail",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@HttpCode(200)",
+        "@RateLimit('accountUpdate')",
+        "@UseGuards(AuthOriginGuard, JwtAuthGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/password",
+      "controller": "AuthController",
+      "handler": "changePassword",
+      "source": "src/modules/auth/auth.controller.ts",
+      "policies": [
+        "@UseInterceptors(AuthWorkInterceptor)",
+        "@HttpCode(204)",
+        "@RateLimit('accountUpdate')",
+        "@UseGuards(AuthOriginGuard, JwtAuthGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/forgot-password",
+      "controller": "PasswordRecoveryController",
+      "handler": "request",
+      "source": "src/modules/auth/password-recovery.controller.ts",
+      "policies": [
+        "@UseGuards(AuthOriginGuard)",
+        "@UseInterceptors(AuthWorkInterceptor)",
+        "@HttpCode(200)",
+        "@RateLimit('register')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/reset-password",
+      "controller": "PasswordRecoveryController",
+      "handler": "reset",
+      "source": "src/modules/auth/password-recovery.controller.ts",
+      "policies": [
+        "@UseGuards(AuthOriginGuard)",
+        "@UseInterceptors(AuthWorkInterceptor)",
+        "@HttpCode(200)",
+        "@RateLimit('register')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/walkthrough",
+      "controller": "WalkthroughController",
+      "handler": "progress",
+      "source": "src/modules/auth/walkthrough.controller.ts",
+      "policies": [
+        "@RateLimit('session')",
+        "@UseGuards(JwtAuthGuard)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/walkthrough",
+      "controller": "WalkthroughController",
+      "handler": "complete",
+      "source": "src/modules/auth/walkthrough.controller.ts",
+      "policies": [
+        "@HttpCode(200)",
+        "@RateLimit('accountUpdate')",
+        "@UseGuards(AuthOriginGuard, JwtAuthGuard)"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/categories/reorder",
+      "controller": "CategoriesController",
+      "handler": "reorder",
+      "source": "src/modules/categories/categories.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/categories/:categoryId/visibility",
+      "controller": "CategoriesController",
+      "handler": "setVisibility",
+      "source": "src/modules/categories/categories.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('category', 'categoryId')"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/shops/:shopId/categories/:categoryId",
+      "controller": "CategoriesController",
+      "handler": "delete",
+      "source": "src/modules/categories/categories.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@HttpCode(204)",
+        "@ShopResource('category', 'categoryId')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/categories/:categoryId",
+      "controller": "CategoriesController",
+      "handler": "update",
+      "source": "src/modules/categories/categories.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('category', 'categoryId')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/categories",
+      "controller": "CategoriesController",
+      "handler": "list",
+      "source": "src/modules/categories/categories.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/categories",
+      "controller": "CategoriesController",
+      "handler": "create",
+      "source": "src/modules/categories/categories.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/menu/:shopSlug/availability-events",
+      "controller": "PublicMenuEventsController",
+      "handler": "stream",
+      "source": "src/modules/categories/public-menu-events.controller.ts",
+      "policies": [
+        "@RateLimit('stream')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/menu/:shopSlug/table/:tableCode",
+      "controller": "PublicMenuController",
+      "handler": "readTable",
+      "source": "src/modules/categories/public-menu.controller.ts",
+      "policies": [
+        "@MenuReadCapacity()",
+        "@RateLimit('publicRead')",
+        "@RateLimit('tableContext')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/menu/:shopSlug",
+      "controller": "PublicMenuController",
+      "handler": "read",
+      "source": "src/modules/categories/public-menu.controller.ts",
+      "policies": [
+        "@MenuReadCapacity()",
+        "@RateLimit('publicRead')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/orders/active",
+      "controller": "ActiveOrdersController",
+      "handler": "list",
+      "source": "src/modules/orders/active-orders.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@Permissions('shop.orders.overview.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/orders/cancelled",
+      "controller": "CancelledOrdersController",
+      "handler": "list",
+      "source": "src/modules/orders/cancelled-orders.controller.ts",
+      "policies": [
+        "@Permissions('shop.orders.overview.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/cashier-review/lookup-number",
+      "controller": "CashPaymentController",
+      "handler": "lookupCashier",
+      "source": "src/modules/orders/cash-payment.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@RateLimit('staffVerification')",
+        "@HttpCode(200)",
+        "@Permissions('shop.payments.record', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/cashier-review",
+      "controller": "CashPaymentController",
+      "handler": "reviewCashier",
+      "source": "src/modules/orders/cash-payment.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@Permissions('shop.payments.record', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/create-payment",
+      "controller": "CashPaymentController",
+      "handler": "create",
+      "source": "src/modules/orders/cash-payment.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@HttpCode(200)",
+        "@Permissions(\n    'shop.payments.record',\n    'shop.orders.read',\n    'shop.orders.confirm',\n  )"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/other-payment",
+      "controller": "CashPaymentController",
+      "handler": "recordOther",
+      "source": "src/modules/orders/cash-payment.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@HttpCode(200)",
+        "@Permissions('shop.payments.record', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/card-manual-payment",
+      "controller": "CashPaymentController",
+      "handler": "recordCard",
+      "source": "src/modules/orders/cash-payment.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@HttpCode(200)",
+        "@Permissions('shop.payments.record', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/gcash-manual-payment",
+      "controller": "CashPaymentController",
+      "handler": "recordGcash",
+      "source": "src/modules/orders/cash-payment.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@HttpCode(200)",
+        "@Permissions('shop.payments.record', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/cash-payment/lookup-number",
+      "controller": "CashPaymentController",
+      "handler": "lookup",
+      "source": "src/modules/orders/cash-payment.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@RateLimit('staffVerification')",
+        "@HttpCode(200)",
+        "@Permissions('shop.payments.record', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/cash-payment",
+      "controller": "CashPaymentController",
+      "handler": "review",
+      "source": "src/modules/orders/cash-payment.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@Permissions('shop.payments.record', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/cash-payment",
+      "controller": "CashPaymentController",
+      "handler": "collect",
+      "source": "src/modules/orders/cash-payment.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@HttpCode(200)",
+        "@Permissions('shop.payments.record', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/orders/completed",
+      "controller": "CompletedOrdersController",
+      "handler": "list",
+      "source": "src/modules/orders/completed-orders.controller.ts",
+      "policies": [
+        "@Permissions('shop.orders.overview.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/reports/sales-trends",
+      "controller": "CompletedSalesController",
+      "handler": "salesTrends",
+      "source": "src/modules/orders/completed-sales.controller.ts",
+      "policies": [
+        "@RateLimit('reports')",
+        "@Permissions('shop.reports.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/reports/average-prep-time",
+      "controller": "CompletedSalesController",
+      "handler": "averagePrepTime",
+      "source": "src/modules/orders/completed-sales.controller.ts",
+      "policies": [
+        "@RateLimit('reports')",
+        "@Permissions('shop.reports.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/reports/peak-hours",
+      "controller": "CompletedSalesController",
+      "handler": "peakHours",
+      "source": "src/modules/orders/completed-sales.controller.ts",
+      "policies": [
+        "@RateLimit('reports')",
+        "@Permissions('shop.reports.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/reports/top-products",
+      "controller": "CompletedSalesController",
+      "handler": "topProducts",
+      "source": "src/modules/orders/completed-sales.controller.ts",
+      "policies": [
+        "@RateLimit('reports')",
+        "@Permissions('shop.reports.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/reports/custom-sales",
+      "controller": "CompletedSalesController",
+      "handler": "custom",
+      "source": "src/modules/orders/completed-sales.controller.ts",
+      "policies": [
+        "@RateLimit('reports')",
+        "@Permissions('shop.reports.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/reports/monthly-analytics",
+      "controller": "CompletedSalesController",
+      "handler": "monthlyAnalytics",
+      "source": "src/modules/orders/completed-sales.controller.ts",
+      "policies": [
+        "@RateLimit('reports')",
+        "@Permissions('shop.reports.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/reports/weekly-analytics",
+      "controller": "CompletedSalesController",
+      "handler": "weeklyAnalytics",
+      "source": "src/modules/orders/completed-sales.controller.ts",
+      "policies": [
+        "@RateLimit('reports')",
+        "@Permissions('shop.reports.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/reports/daily-analytics",
+      "controller": "CompletedSalesController",
+      "handler": "dailyAnalytics",
+      "source": "src/modules/orders/completed-sales.controller.ts",
+      "policies": [
+        "@RateLimit('reports')",
+        "@Permissions('shop.reports.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/reports/daily-sales",
+      "controller": "CompletedSalesController",
+      "handler": "daily",
+      "source": "src/modules/orders/completed-sales.controller.ts",
+      "policies": [
+        "@RateLimit('reports')",
+        "@Permissions('shop.reports.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/reports/completed-sales",
+      "controller": "CompletedSalesController",
+      "handler": "summary",
+      "source": "src/modules/orders/completed-sales.controller.ts",
+      "policies": [
+        "@RateLimit('reports')",
+        "@Permissions('shop.reports.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/menu/:shopSlug/orders/:orderId/status",
+      "controller": "CustomerOrderStatusController",
+      "handler": "read",
+      "source": "src/modules/orders/confirmed-order-events.controller.ts",
+      "policies": [
+        "@RateLimit('receiptRead')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/menu/:shopSlug/orders/:orderId/tracking-session",
+      "controller": "CustomerOrderStatusController",
+      "handler": "establish",
+      "source": "src/modules/orders/confirmed-order-events.controller.ts",
+      "policies": [
+        "@RateLimit('receiptRead')",
+        "@RateLimit('receiptProof')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/menu/:shopSlug/orders/:orderId/tracking-link",
+      "controller": "CustomerOrderStatusController",
+      "handler": "share",
+      "source": "src/modules/orders/confirmed-order-events.controller.ts",
+      "policies": [
+        "@RateLimit('receiptRead')",
+        "@RateLimit('receiptProof')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/menu/:shopSlug/orders/:orderId/events",
+      "controller": "CustomerOrderStatusController",
+      "handler": "stream",
+      "source": "src/modules/orders/confirmed-order-events.controller.ts",
+      "policies": [
+        "@RateLimit('receiptRead')",
+        "@RateLimit('stream')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/orders/confirmed-events",
+      "controller": "ConfirmedOrderEventsController",
+      "handler": "stream",
+      "source": "src/modules/orders/confirmed-order-events.controller.ts",
+      "policies": [
+        "@RateLimit('stream')",
+        "@Permissions('shop.orders.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/orders/preparation-events",
+      "controller": "ConfirmedOrderEventsController",
+      "handler": "preparationStream",
+      "source": "src/modules/orders/confirmed-order-events.controller.ts",
+      "policies": [
+        "@RateLimit('stream')",
+        "@Permissions('shop.preparation.queue.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/orders/events",
+      "controller": "NewOrderEventsController",
+      "handler": "stream",
+      "source": "src/modules/orders/new-order-events.controller.ts",
+      "policies": [
+        "@RateLimit('stream')",
+        "@Roles(...SHOP_ROLES)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/confirm-number",
+      "controller": "OrderDecisionController",
+      "handler": "confirmNumber",
+      "source": "src/modules/orders/order-decision.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@HttpCode(200)",
+        "@Permissions('shop.orders.confirm', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/reject-number",
+      "controller": "OrderDecisionController",
+      "handler": "rejectNumber",
+      "source": "src/modules/orders/order-decision.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@HttpCode(200)",
+        "@Permissions('shop.orders.reject', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/confirm",
+      "controller": "OrderDecisionController",
+      "handler": "confirm",
+      "source": "src/modules/orders/order-decision.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@RateLimit('staffVerification')",
+        "@HttpCode(200)",
+        "@Permissions('shop.orders.confirm', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/reject",
+      "controller": "OrderDecisionController",
+      "handler": "reject",
+      "source": "src/modules/orders/order-decision.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('orderAction')",
+        "@RateLimit('staffVerification')",
+        "@HttpCode(200)",
+        "@Permissions('shop.orders.reject', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/lookup-number",
+      "controller": "OrderQrController",
+      "handler": "lookup",
+      "source": "src/modules/orders/order-qr.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('staffVerification')",
+        "@HttpCode(200)",
+        "@Permissions('shop.orders.qr.scan', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/scan-qr",
+      "controller": "OrderQrController",
+      "handler": "scan",
+      "source": "src/modules/orders/order-qr.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('staffVerification')",
+        "@HttpCode(200)",
+        "@Permissions('shop.orders.qr.scan', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/verify-qr",
+      "controller": "OrderQrController",
+      "handler": "verify",
+      "source": "src/modules/orders/order-qr.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@RateLimit('staffVerification')",
+        "@HttpCode(200)",
+        "@Permissions('shop.orders.qr.scan', 'shop.orders.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/menu/:shopSlug/orders",
+      "controller": "OrdersController",
+      "handler": "create",
+      "source": "src/modules/orders/orders.module.ts",
+      "policies": [
+        "@RateLimit('orderCreate')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/details",
+      "controller": "OwnerOrderDetailsController",
+      "handler": "get",
+      "source": "src/modules/orders/owner-order-details.controller.ts",
+      "policies": [
+        "@Permissions('shop.orders.overview.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/complete",
+      "controller": "PreparationCompleteController",
+      "handler": "complete",
+      "source": "src/modules/orders/preparation-complete.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@HttpCode(200)",
+        "@Permissions('shop.preparation.status.update')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/preparation/completed",
+      "controller": "PreparationQueueController",
+      "handler": "completed",
+      "source": "src/modules/orders/preparation-queue.controller.ts",
+      "policies": [
+        "@Permissions('shop.preparation.queue.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/preparation/ready",
+      "controller": "PreparationQueueController",
+      "handler": "ready",
+      "source": "src/modules/orders/preparation-queue.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@Permissions('shop.preparation.queue.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/preparation/queue",
+      "controller": "PreparationQueueController",
+      "handler": "list",
+      "source": "src/modules/orders/preparation-queue.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@Permissions('shop.preparation.queue.read')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/preparation/preparing",
+      "controller": "PreparationQueueController",
+      "handler": "preparing",
+      "source": "src/modules/orders/preparation-queue.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@Permissions('shop.preparation.queue.read')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/mark-ready",
+      "controller": "PreparationReadyController",
+      "handler": "ready",
+      "source": "src/modules/orders/preparation-ready.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@HttpCode(200)",
+        "@Permissions('shop.preparation.status.update')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/orders/:orderId/start-preparing",
+      "controller": "PreparationStartController",
+      "handler": "start",
+      "source": "src/modules/orders/preparation-start.controller.ts",
+      "policies": [
+        "@CriticalCapacity()",
+        "@HttpCode(200)",
+        "@Permissions('shop.preparation.status.update')"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/shops/:shopId/products/:productId/variants/:variantId",
+      "controller": "ProductVariantsController",
+      "handler": "deleteVariant",
+      "source": "src/modules/products/product-variants.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')",
+        "@HttpCode(204)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/products/:productId/variants/large",
+      "controller": "ProductVariantsController",
+      "handler": "createLarge",
+      "source": "src/modules/products/product-variants.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/products/:productId/variants/regular",
+      "controller": "ProductVariantsController",
+      "handler": "createRegular",
+      "source": "src/modules/products/product-variants.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/products/:productId/variants",
+      "controller": "ProductVariantsController",
+      "handler": "list",
+      "source": "src/modules/products/product-variants.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/products/:productId/option-groups",
+      "controller": "ProductVariantsController",
+      "handler": "createGroup",
+      "source": "src/modules/products/product-variants.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/products/:productId/variants",
+      "controller": "ProductVariantsController",
+      "handler": "createVariant",
+      "source": "src/modules/products/product-variants.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/products/:productId/option-groups/:optionGroupId",
+      "controller": "ProductVariantsController",
+      "handler": "updateGroup",
+      "source": "src/modules/products/product-variants.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/products/:productId/variants/:variantId",
+      "controller": "ProductVariantsController",
+      "handler": "updateVariant",
+      "source": "src/modules/products/product-variants.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/products/reorder",
+      "controller": "ProductsController",
+      "handler": "reorder",
+      "source": "src/modules/products/products.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/products/featured/reorder",
+      "controller": "ProductsController",
+      "handler": "reorderFeatured",
+      "source": "src/modules/products/products.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/products/:productId/featured",
+      "controller": "ProductsController",
+      "handler": "setFeatured",
+      "source": "src/modules/products/products.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/products/:productId/available",
+      "controller": "ProductsController",
+      "handler": "setAvailable",
+      "source": "src/modules/products/products.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@Permissions('shop.menu.availability.update')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/products/:productId/hidden",
+      "controller": "ProductsController",
+      "handler": "setHidden",
+      "source": "src/modules/products/products.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/products/:productId/sold-out",
+      "controller": "ProductsController",
+      "handler": "setSoldOut",
+      "source": "src/modules/products/products.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@Permissions('shop.menu.availability.update')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/products/:productId/image",
+      "controller": "ProductsController",
+      "handler": "uploadImage",
+      "source": "src/modules/products/products.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@RateLimit('upload')",
+        "@ShopResource('product', 'productId')",
+        "@UseInterceptors(\n    FileInterceptor('file', {\n      limits: {\n        // Busboy truncates at its limit; allow the inclusive maximum through to validation.\n        fileSize: PRODUCT_IMAGE_LIMITS.maxBytes + 1,\n        files: 1,\n        fields: 0,\n        parts: 2,\n      },\n    }),\n  )"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/products/:productId/archive",
+      "controller": "ProductsController",
+      "handler": "setArchived",
+      "source": "src/modules/products/products.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/products/:productId",
+      "controller": "ProductsController",
+      "handler": "update",
+      "source": "src/modules/products/products.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')",
+        "@ShopResource('product', 'productId')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/products",
+      "controller": "ProductsController",
+      "handler": "create",
+      "source": "src/modules/products/products.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/products",
+      "controller": "ProductsController",
+      "handler": "list",
+      "source": "src/modules/products/products.controller.ts",
+      "policies": [
+        "@Permissions('shop.menu.manage')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/menu/:shopSlug/products/:productId",
+      "controller": "PublicProductController",
+      "handler": "details",
+      "source": "src/modules/products/public-product.controller.ts",
+      "policies": [
+        "@RateLimit('publicRead')",
+        "@MenuReadCapacity()"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/menu/:shopSlug/products/:productId/quote",
+      "controller": "PublicProductController",
+      "handler": "quote",
+      "source": "src/modules/products/public-product.controller.ts",
+      "policies": [
+        "@RateLimit('publicRead')",
+        "@RateLimit('quote')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/banner",
+      "controller": "ShopBannerController",
+      "handler": "upload",
+      "source": "src/modules/shops/shop-banner.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@Permissions('shop.settings.manage')",
+        "@RateLimit('upload')",
+        "@UseInterceptors(\n    FileInterceptor('file', {\n      limits: {\n        // Busboy truncates at its limit; allow the inclusive maximum through to validation.\n        fileSize: SHOP_BANNER_LIMITS.maxBytes + 1,\n        files: 1,\n        fields: 0,\n        parts: 2,\n      },\n    }),\n  )"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/shops/:shopId/logo",
+      "controller": "ShopLogoController",
+      "handler": "delete",
+      "source": "src/modules/shops/shop-logo.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@Permissions('shop.settings.manage')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/logo",
+      "controller": "ShopLogoController",
+      "handler": "upload",
+      "source": "src/modules/shops/shop-logo.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@Permissions('shop.settings.manage')",
+        "@RateLimit('upload')",
+        "@UseInterceptors(\n    FileInterceptor('file', {\n      limits: {\n        // Busboy truncates at its limit; allow the inclusive maximum through to validation.\n        fileSize: SHOP_LOGO_LIMITS.maxBytes + 1,\n        files: 1,\n        fields: 0,\n        parts: 2,\n      },\n    }),\n  )"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/settings",
+      "controller": "ShopsController",
+      "handler": "settings",
+      "source": "src/modules/shops/shops.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@Permissions('shop.settings.manage')"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId",
+      "controller": "ShopsController",
+      "handler": "updateSettings",
+      "source": "src/modules/shops/shops.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@Permissions('shop.settings.manage')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/membership",
+      "controller": "ShopsController",
+      "handler": "membership",
+      "source": "src/modules/shops/shops.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@ShopMember()"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops",
+      "controller": "ShopsController",
+      "handler": "create",
+      "source": "src/modules/shops/shops.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@RateLimit('shopCreate')"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/account/notifications",
+      "controller": "AccountNotificationsController",
+      "handler": "list",
+      "source": "src/modules/staff/account-notifications.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/account/notifications/read",
+      "controller": "AccountNotificationsController",
+      "handler": "readAll",
+      "source": "src/modules/staff/account-notifications.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@HttpCode(204)"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/account/notifications/:id/read",
+      "controller": "AccountNotificationsController",
+      "handler": "read",
+      "source": "src/modules/staff/account-notifications.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@HttpCode(204)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/account/notifications/invitations/:shopId/:id/accept",
+      "controller": "AccountNotificationsController",
+      "handler": "accept",
+      "source": "src/modules/staff/account-notifications.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@RateLimit('invitationProof')",
+        "@HttpCode(200)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/account/notifications/invitations/:shopId/:id/decline",
+      "controller": "AccountNotificationsController",
+      "handler": "decline",
+      "source": "src/modules/staff/account-notifications.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@RateLimit('invitationProof')",
+        "@HttpCode(204)"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/staff",
+      "controller": "StaffController",
+      "handler": "list",
+      "source": "src/modules/staff/staff.controller.ts",
+      "policies": [
+        "@Permissions('shop.staff.manage')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/staff/invitations",
+      "controller": "StaffController",
+      "handler": "invite",
+      "source": "src/modules/staff/staff.controller.ts",
+      "policies": [
+        "@Permissions('shop.staff.manage')",
+        "@RateLimit('invitationCreate')"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/shops/:shopId/staff/invitations/:invitationId",
+      "controller": "StaffController",
+      "handler": "revoke",
+      "source": "src/modules/staff/staff.controller.ts",
+      "policies": [
+        "@Permissions('shop.staff.manage')",
+        "@HttpCode(204)"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/staff/members/:memberId",
+      "controller": "StaffController",
+      "handler": "changeRole",
+      "source": "src/modules/staff/staff.controller.ts",
+      "policies": [
+        "@Permissions('shop.staff.manage')",
+        "@HttpCode(204)"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/:shopId/staff/members/:memberId/access",
+      "controller": "StaffController",
+      "handler": "setAccess",
+      "source": "src/modules/staff/staff.controller.ts",
+      "policies": [
+        "@Permissions('shop.staff.manage')",
+        "@HttpCode(204)"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/shops/:shopId/staff/members/:memberId",
+      "controller": "StaffController",
+      "handler": "remove",
+      "source": "src/modules/staff/staff.controller.ts",
+      "policies": [
+        "@Permissions('shop.staff.manage')",
+        "@HttpCode(204)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/staff-invitations/:shopId/preview",
+      "controller": "StaffInvitationController",
+      "handler": "preview",
+      "source": "src/modules/staff/staff.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@RateLimit('invitationProof')",
+        "@HttpCode(200)"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/staff-invitations/:shopId/accept",
+      "controller": "StaffInvitationController",
+      "handler": "accept",
+      "source": "src/modules/staff/staff.controller.ts",
+      "policies": [
+        "@UseGuards(JwtAuthGuard)",
+        "@RateLimit('invitationProof')",
+        "@HttpCode(200)"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/:shopId/tables",
+      "controller": "TablesController",
+      "handler": "list",
+      "source": "src/modules/tables/tables.controller.ts",
+      "policies": [
+        "@Permissions('shop.operations.manage')"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/:shopId/tables",
+      "controller": "TablesController",
+      "handler": "create",
+      "source": "src/modules/tables/tables.controller.ts",
+      "policies": [
+        "@Permissions('shop.operations.manage')"
+      ]
+    }
+  ]
+}
