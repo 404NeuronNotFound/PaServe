@@ -1,6 +1,15 @@
 .env
 .env.*
 !.env.example
+!.env.*.example
+
+# Host-local configuration and private signing/export credentials.
+.vercel/
+.aws/
+*.key
+*.p12
+*.pfx
+__pycache__/
 
 node_modules
 dist

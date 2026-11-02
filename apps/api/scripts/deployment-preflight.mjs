@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import pg from 'pg';
 import { writeFile } from 'node:fs/promises';
+import { databaseConnection } from '../src/database/database-connection.ts';
 
 // SELECT-only checks, additionally protected by an explicit read-only transaction.
 const client = new pg.Client({
-  connectionString:
-    process.env.DIRECT_DATABASE_URL?.trim() || process.env.DATABASE_URL,
+  ...databaseConnection(process.env, true),
   connectionTimeoutMillis: 5000,
 });
 try {
@@ -19,6 +19,12 @@ try {
   const report = {
     readOnlyTransaction: true,
     clientTls: client.connection?.stream?.encrypted === true,
+    clientTlsAuthorized: client.connection?.stream?.authorized === true,
+    sharedSecurityTable: (
+      await query(
+        "SELECT to_regclass('public.security_state') IS NOT NULL AS present",
+      )
+    )[0].present,
     cacheTable: (
       await query(
         "SELECT to_regclass('public.menu_cache_versions') IS NOT NULL AS present",

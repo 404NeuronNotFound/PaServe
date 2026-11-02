@@ -228,6 +228,8 @@ try {
   const env = {
     ...process.env,
     DATABASE_URL: `postgresql://timeout_fixture:${password}@127.0.0.1:${port}/postgres`,
+    DATABASE_CA_CERT: '',
+    DATABASE_CA_CERT_PATH: '',
     TIMEOUT_DB_LOCAL_FIXTURE: 'true',
     TIMEOUT_DB_REPORT: resolve(
       apiRoot,

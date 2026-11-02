@@ -85,6 +85,8 @@ try {
   );
   // Exercise the actual compiled Prisma adapter and state service on two pools.
   process.env.DATABASE_URL = `postgresql://security_fixture@127.0.0.1:${port}/postgres`;
+  delete process.env.DATABASE_CA_CERT;
+  delete process.env.DATABASE_CA_CERT_PATH;
   const { PrismaService } = await import('../dist/database/prisma.service.js');
   const { SharedSecurityState } =
     await import('../dist/common/rate-limiting/shared-security-state.js');

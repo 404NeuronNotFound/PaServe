@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const require = createRequire(join(root, 'apps/api/package.json'));
 const { parse } = require('dotenv');
-const sensitive = /(?:SECRET|PASSWORD|DATABASE_URL|DIRECT_URL|SERVICE_ROLE|PRIVATE_KEY)/u;
+const sensitive = /(?:SECRET|PASSWORD|DATABASE_URL|DIRECT_URL|SERVICE_ROLE|PRIVATE_KEY|API_KEY|ACCESS_TOKEN|REFRESH_TOKEN|SMTP_KEY)/u;
 let backend = {};
 try { backend = parse(await readFile(join(root, 'apps/api/.env'))); }
 catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -27,7 +27,7 @@ async function scan(path) {
   if (secrets.some((secret) => content.includes(secret)))
     failures.add(`${path}: contains a configured backend secret`);
   if (/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/u.test(content) ||
-      /\bsb_secret_[A-Za-z0-9_-]{20,}/u.test(content))
+      /\b(?:sb_secret_|xkeysib-|xsmtpsib-)[A-Za-z0-9_-]{20,}/u.test(content))
     failures.add(`${path}: contains private key material`);
   for (const token of content.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/gu) ?? []) {
     try {

@@ -4,6 +4,7 @@ import { databaseTimeouts } from './database-timeouts.js';
 import { BoundedPgAdapter } from './bounded-pg.adapter.js';
 import { databasePoolPolicy } from './database-pool.policy.js';
 import { validateVercelRuntime } from './vercel-runtime.policy.js';
+import { databaseConnection } from './database-connection.js';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleDestroy {
@@ -19,7 +20,7 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
     const deadlines = databaseTimeouts(process.env);
     const adapter = new BoundedPgAdapter(
       {
-        connectionString,
+        ...databaseConnection(process.env),
         ...deadlines.pool,
       },
       databasePoolPolicy(process.env),

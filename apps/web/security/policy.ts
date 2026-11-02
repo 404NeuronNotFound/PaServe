@@ -1,3 +1,5 @@
+import { validatePublicEnvironment } from "./public-environment.ts";
+
 type Environment = Record<string, string | undefined>;
 export type HeaderMap = Record<string, string>;
 
@@ -61,6 +63,7 @@ export function frontendSecurity(
   development = false,
   production = !development,
 ) {
+  validatePublicEnvironment(env);
   const api = env.VITE_API_URL?.trim();
   // Relative API paths intentionally use the document origin; protocol-relative URLs are rejected.
   const apiOrigins =
