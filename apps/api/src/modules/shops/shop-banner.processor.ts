@@ -27,7 +27,7 @@ export class ShopBannerProcessor {
       () =>
         new PayloadTooLargeException({
           code: 'SHOP_BANNER_TOO_LARGE',
-          message: 'Choose an image no larger than 5 MB.',
+          message: 'Choose an image no larger than 4 MB.',
         }),
     );
     try {

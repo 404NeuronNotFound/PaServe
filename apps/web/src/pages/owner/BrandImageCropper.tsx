@@ -114,7 +114,7 @@ export function BrandImageCropper({
         setPending(false);
         if (!blob || blob.size > limits.maxBytes) {
           setError(
-            "This crop could not be prepared within 5 MB. Choose a different image.",
+            "This crop could not be prepared within 4 MB. Choose a different image.",
           );
           return;
         }

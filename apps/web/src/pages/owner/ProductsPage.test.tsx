@@ -1037,13 +1037,13 @@ it("validates file size and type before uploading", async () => {
   fireEvent.change(modal.getByLabelText(/Photo.*optional/), {
     target: {
       files: [
-        new File([new Uint8Array(5 * 1024 * 1024 + 1)], "big.png", {
+        new File([new Uint8Array(4 * 1024 * 1024 + 1)], "big.png", {
           type: "image/png",
         }),
       ],
     },
   });
-  expect(modal.getByText(/between 1 byte and 5 MB/)).toBeInTheDocument();
+  expect(modal.getByText(/between 1 byte and 4 MB/)).toBeInTheDocument();
   expect(uploadProductImage).not.toHaveBeenCalled();
 });
 it("keeps the previous image and selected file on upload failure", async () => {

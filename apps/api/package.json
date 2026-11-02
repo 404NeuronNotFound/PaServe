@@ -46,6 +46,7 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "pnpm --filter @paserve/contracts build && vitest run --config ./vitest.config.e2e.ts",
     "test:realtime": "vitest run --config ./vitest.config.realtime.ts",
+    "test:security:postgres": "pnpm build && node test/shared-security-state.postgres.mjs",
     "postinstall": "prisma skills sync || exit 0",
     "seed:build": "pnpm --filter @paserve/contracts build && tsc -p tsconfig.seed.json",
     "seed": "pnpm seed:build && node .seed-build/prisma/seed.js",

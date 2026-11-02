@@ -3,6 +3,7 @@ import { HttpException } from '@nestjs/common';
 import { performance } from 'node:perf_hooks';
 import type { Response } from 'express';
 import { AuthAbuseProtection } from './auth-abuse-protection.js';
+import type { SharedSecurityState } from '../../common/rate-limiting/shared-security-state.js';
 
 describe('authentication resource admission', () => {
   let now: number;
@@ -103,5 +104,34 @@ describe('authentication resource admission', () => {
     const state = JSON.stringify([...Reflect.get(protection, 'accounts')]);
     expect(state).not.toContain('private');
     expect(state).toMatch(/[a-f0-9]{64}/u);
+  });
+
+  it('checks shared global and normalized source/account budgets before local work', async () => {
+    const operate = vi
+      .fn()
+      .mockResolvedValueOnce({ accepted: true })
+      .mockResolvedValueOnce({ accepted: false, retry: 17 });
+    const shared = new AuthAbuseProtection(new ConfigService(), {
+      enabled: true,
+      operate,
+    } as unknown as SharedSecurityState);
+    await expect(
+      shared.acquireShared(response, ' OWNER@Test.com ', '192.0.2.1'),
+    ).rejects.toMatchObject({ status: 429 });
+    expect(operate).toHaveBeenNthCalledWith(
+      1,
+      'auth:global',
+      'rate',
+      60000,
+      60,
+    );
+    expect(operate).toHaveBeenNthCalledWith(
+      2,
+      'auth:source-account:["192.0.2.1","owner@test.com"]',
+      'rate',
+      60000,
+      20,
+    );
+    expect(setHeader).toHaveBeenCalledWith('Retry-After', 17);
   });
 });

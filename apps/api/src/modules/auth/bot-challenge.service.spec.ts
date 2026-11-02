@@ -3,6 +3,8 @@ import { UnauthorizedException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { performance } from 'node:perf_hooks';
 import { BotChallengeService } from './bot-challenge.service.js';
+import type { SharedSecurityState } from '../../common/rate-limiting/shared-security-state.js';
+import { createHash } from 'node:crypto';
 
 describe('progressive challenge policy and server verification', () => {
   let service: BotChallengeService;
@@ -64,6 +66,65 @@ describe('progressive challenge policy and server verification', () => {
       response,
     );
     expect(provider).not.toHaveBeenCalled();
+  });
+
+  it('shares risk identities and reserves a challenge once across independent API instances', async () => {
+    const reserved = new Set<string>();
+    const operate = vi.fn(async (key: string, operation: string) => {
+      if (operation === 'read') return { hits: 3, retry: 60, accepted: true };
+      if (operation === 'reserve') {
+        const accepted = !reserved.has(key);
+        reserved.add(key);
+        return { hits: 1, retry: 300, accepted };
+      }
+      return { hits: 1, retry: 60, accepted: true };
+    });
+    const state = {
+      enabled: true,
+      key: (value: string) => createHash('sha256').update(value).digest('hex'),
+      operate,
+    } as unknown as SharedSecurityState;
+    const a = new BotChallengeService(new ConfigService(config), state);
+    const b = new BotChallengeService(new ConfigService(config), state);
+    const risk = a.assess(request(), 'login');
+    expect(risk).toEqual(b.assess(request(), 'login'));
+    await a.sharedFinished(risk, new UnauthorizedException());
+    expect(operate.mock.calls.filter((call) => call[1] === 'hit')).toHaveLength(
+      3,
+    );
+    const checks = await Promise.allSettled([
+      a.check(risk, 'same-proof', response),
+      b.check(risk, 'same-proof', response),
+    ]);
+    expect(checks.filter((check) => check.status === 'fulfilled')).toHaveLength(
+      1,
+    );
+    expect(provider).toHaveBeenCalledOnce();
+    await b.sharedFinished(risk);
+    expect(
+      operate.mock.calls.filter((call) => call[1] === 'delete'),
+    ).toHaveLength(2);
+  });
+
+  it('does not call the provider when the shared verification budget is exhausted', async () => {
+    const operate = vi.fn(async (_key: string, operation: string) => ({
+      hits: 3,
+      retry: 8,
+      accepted: operation === 'read',
+    }));
+    const state = {
+      enabled: true,
+      key: (value: string) => createHash('sha256').update(value).digest('hex'),
+      operate,
+    } as unknown as SharedSecurityState;
+    const shared = new BotChallengeService(new ConfigService(config), state);
+    await expect(
+      shared.check(shared.assess(request(), 'login'), 'proof', response),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(provider).not.toHaveBeenCalled();
+    expect(operate.mock.calls.some((call) => call[1] === 'reserve')).toBe(
+      false,
+    );
   });
   it('requires proof after three IP failures even when the email changes', async () => {
     suspicious();

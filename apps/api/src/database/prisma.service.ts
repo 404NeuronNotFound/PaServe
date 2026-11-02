@@ -3,11 +3,13 @@ import { PrismaClient } from '../generated/prisma/client.js';
 import { databaseTimeouts } from './database-timeouts.js';
 import { BoundedPgAdapter } from './bounded-pg.adapter.js';
 import { databasePoolPolicy } from './database-pool.policy.js';
+import { validateVercelRuntime } from './vercel-runtime.policy.js';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleDestroy {
   private readonly poolAdapter: BoundedPgAdapter;
   constructor() {
+    validateVercelRuntime(process.env);
     const connectionString = process.env.DATABASE_URL;
 
     if (!connectionString) {

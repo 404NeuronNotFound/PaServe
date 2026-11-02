@@ -52,7 +52,7 @@ export function ProductPhotoPicker({
     )
       ? "Choose a JPEG, PNG or WebP image."
       : !selected.size || selected.size > PRODUCT_IMAGE_LIMITS.maxBytes
-        ? "Choose an image between 1 byte and 5 MB."
+        ? "Choose an image between 1 byte and 4 MB."
         : "";
     setPreview(
       !message && URL.createObjectURL ? URL.createObjectURL(selected) : "",
@@ -159,7 +159,7 @@ export function ProductPhotoPicker({
         </span>
       </Button>
       <p id={`${id}-hint`} className="field-hint">
-        JPEG, PNG or WebP, up to 5 MB. {hint}
+        JPEG, PNG or WebP, up to 4 MB. {hint}
       </p>
       {file && (
         <div className="product-photo-selection">

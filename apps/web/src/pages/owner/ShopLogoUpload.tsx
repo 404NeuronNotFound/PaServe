@@ -179,9 +179,9 @@ export function ShopLogoUpload({
           setRefreshRequired(false);
           message =
             status === 413
-              ? "Choose a logo no larger than 5 MB."
+              ? "Choose a logo no larger than 4 MB."
               : status === 400
-                ? "Choose a valid JPEG, PNG or WebP logo, up to 5 MB and 16 megapixels."
+                ? "Choose a valid JPEG, PNG or WebP logo, up to 4 MB and 16 megapixels."
                 : "Logo uploads are unavailable. Your current logo is kept. Please try again later.";
         } else if ([401, 403, 404].includes(status))
           message =

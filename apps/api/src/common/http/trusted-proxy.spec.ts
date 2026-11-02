@@ -2,6 +2,19 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { configureTrustedProxy } from './trusted-proxy.js';
 
 describe('explicit trusted proxy configuration', () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it('trusts only the adjacent managed ingress on Vercel and rejects mixed topology', () => {
+    vi.stubEnv('VERCEL', '1');
+    const set = vi.fn();
+    configureTrustedProxy({ set } as unknown as NestExpressApplication, '');
+    expect(set).toHaveBeenCalledWith('trust proxy', 1);
+    expect(() =>
+      configureTrustedProxy(
+        { set } as unknown as NestExpressApplication,
+        '127.0.0.1',
+      ),
+    ).toThrow('Do not combine');
+  });
   it.each(['', '   '])(
     'disables proxy trust for an empty configuration',
     (value) => {

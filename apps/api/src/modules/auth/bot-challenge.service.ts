@@ -1,6 +1,7 @@
 import {
   HttpException,
   Injectable,
+  Optional,
   type OnApplicationShutdown,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +11,7 @@ import { performance } from 'node:perf_hooks';
 import type { Request, Response } from 'express';
 import { boundedFetch } from '../../common/http/request-context.js';
 import { externalServiceMetrics } from '../../common/observability/external-service.metrics.js';
+import { SharedSecurityState } from '../../common/rate-limiting/shared-security-state.js';
 
 type Action = 'login' | 'register';
 type Risk = {
@@ -34,7 +36,10 @@ export class BotChallengeService implements OnApplicationShutdown {
   private budget = 10;
   private updated = performance.now();
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    @Optional() private readonly shared?: SharedSecurityState,
+  ) {
     const production = config.get<string>('NODE_ENV') === 'production';
     const setting =
       config.get<string>('AUTH_BOT_CHALLENGE_ENABLED') ?? String(production);
@@ -63,6 +68,7 @@ export class BotChallengeService implements OnApplicationShutdown {
   }
 
   private digest(value: string) {
+    if (this.shared?.enabled) return this.shared.key(`bot:${value}`);
     return createHmac('sha256', this.salt).update(value).digest('hex');
   }
 
@@ -178,7 +184,11 @@ export class BotChallengeService implements OnApplicationShutdown {
     token: unknown,
     response: Response,
   ): Promise<void> {
-    if (!risk || !this.required(risk)) return;
+    if (!risk) return;
+    const required = this.shared?.enabled
+      ? await this.sharedRequired(risk)
+      : this.required(risk);
+    if (!required) return;
     response.setHeader('Cache-Control', 'no-store');
     if (typeof token !== 'string' || !token.trim() || token.length > 2048)
       this.challenge();
@@ -196,6 +206,27 @@ export class BotChallengeService implements OnApplicationShutdown {
     this.used.set(digest, now + 300_000);
     let result: Record<string, unknown>;
     try {
+      if (this.shared?.enabled) {
+        const budget = await this.shared.operate(
+          'bot:provider-budget',
+          'rate',
+          10_000,
+          10,
+        );
+        if (!budget.accepted) this.unavailable(response);
+      }
+      if (
+        this.shared?.enabled &&
+        !(
+          await this.shared.operate(
+            `bot:token:${digest}`,
+            'reserve',
+            300_000,
+            1,
+          )
+        ).accepted
+      )
+        this.challenge();
       result = await externalServiceMetrics.observe(
         'turnstile-verification',
         async () => {
@@ -217,7 +248,8 @@ export class BotChallengeService implements OnApplicationShutdown {
         },
         (parsed) => parsed.success !== true,
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.unavailable(response);
     } finally {
       this.verifying -= 1;
@@ -248,6 +280,35 @@ export class BotChallengeService implements OnApplicationShutdown {
       age > 300_000
     )
       this.challenge();
+  }
+
+  private async sharedRequired(risk: Risk) {
+    const read = async (key?: string) =>
+      key ? (await this.shared!.operate(`bot:risk:${key}`, 'read')).hits : 0;
+    const [ip, account, source] = await Promise.all([
+      read(risk.ip),
+      read(risk.account),
+      read(risk.sourceAccount),
+    ]);
+    return (
+      ip >= (risk.action === 'login' ? 3 : 2) || (account >= 5 && source > 0)
+    );
+  }
+
+  async sharedStarted(risk?: Risk) {
+    if (this.shared?.enabled && risk?.action === 'register')
+      await this.shared.operate(`bot:risk:${risk.ip}`, 'hit');
+  }
+
+  async sharedFinished(risk: Risk | undefined, error?: unknown) {
+    if (!this.shared?.enabled || risk?.action !== 'login') return;
+    if (error === undefined) {
+      for (const key of [risk.ip, risk.sourceAccount])
+        if (key) await this.shared.operate(`bot:risk:${key}`, 'delete');
+    } else if (error instanceof HttpException && error.getStatus() === 401) {
+      for (const key of [risk.ip, risk.account, risk.sourceAccount])
+        if (key) await this.shared.operate(`bot:risk:${key}`, 'hit');
+    }
   }
 
   onApplicationShutdown() {

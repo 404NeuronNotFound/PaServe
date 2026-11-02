@@ -11,6 +11,11 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { ApiRateLimitGuard } from './api-rate-limit.guard.js';
 import { RequestDeadlineService } from '../http/request-deadline.service.js';
 import { BoundedRateLimitStorage } from './bounded-rate-limit.storage.js';
+import { SharedSecurityState } from './shared-security-state.js';
+import { PostgresRateLimitStorage } from './postgres-rate-limit.storage.js';
+import { DatabaseModule } from '../../database/database.module.js';
+import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../../database/prisma.service.js';
 
 @Global()
 @Module({
@@ -18,13 +23,19 @@ import { BoundedRateLimitStorage } from './bounded-rate-limit.storage.js';
     ConfigModule,
     JwtModule.register({}),
     ThrottlerModule.forRootAsync({
-      useFactory: () => ({
+      imports: [ConfigModule, DatabaseModule],
+      inject: [ConfigService, PrismaService],
+      useFactory: (config: ConfigService, db: PrismaService) => ({
         throttlers: [{ ttl: 60_000, limit: 120 }],
-        storage: new BoundedRateLimitStorage(),
+        storage:
+          config.get<string>('SECURITY_STATE_MODE') === 'postgres'
+            ? new PostgresRateLimitStorage(new SharedSecurityState(config, db))
+            : new BoundedRateLimitStorage(),
       }),
     }),
   ],
   providers: [
+    SharedSecurityState,
     ApiCapacityService,
     TrafficFairnessService,
     RequestDeadlineService,
@@ -34,6 +45,11 @@ import { BoundedRateLimitStorage } from './bounded-rate-limit.storage.js';
     ApiRateLimitGuard,
     { provide: APP_GUARD, useExisting: ApiRateLimitGuard },
   ],
-  exports: [ApiRateLimitGuard, ThrottlerModule, ApiCapacityService],
+  exports: [
+    ApiRateLimitGuard,
+    ThrottlerModule,
+    ApiCapacityService,
+    SharedSecurityState,
+  ],
 })
 export class RateLimitingModule {}

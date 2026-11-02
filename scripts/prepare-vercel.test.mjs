@@ -9,6 +9,7 @@ const env = {
 test("routes API before the SPA and emits actual Vercel headers including OAuth popup policy", () => {
   const result = vercelConfiguration(env, "https://api.example.test");
   assert.equal(result.outputDirectory, "apps/web/dist");
+  assert.deepEqual(result.git.deploymentEnabled, { "*": false, production: true });
   assert.equal(
     result.rewrites[0].destination,
     "https://api.example.test/api/v1/:path*",

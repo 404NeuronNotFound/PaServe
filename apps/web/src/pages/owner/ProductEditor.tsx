@@ -256,7 +256,7 @@ export function ProductEditor({
             "Product created. Photo uploads are unavailable. Retry the upload or choose Done to add it later.";
         if (code === 400 || code === 413)
           message =
-            "Product created. Choose a valid JPEG, PNG or WebP photo up to 5 MB and 16 megapixels.";
+            "Product created. Choose a valid JPEG, PNG or WebP photo up to 4 MB and 16 megapixels.";
         if (failure.response?.data?.code === "PRODUCT_IMAGE_SAVE_UNCERTAIN") {
           setUnavailable(true);
           message =

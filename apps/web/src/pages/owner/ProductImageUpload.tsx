@@ -119,10 +119,10 @@ export function ProductImageUpload({
         )
           setRefreshRequired(false);
         if (failure.response.status === 413)
-          message = "Choose an image no larger than 5 MB.";
+          message = "Choose an image no larger than 4 MB.";
         else if (failure.response.status === 400)
           message =
-            "Choose a valid JPEG, PNG or WebP image (up to 5 MB and 16 megapixels).";
+            "Choose a valid JPEG, PNG or WebP image (up to 4 MB and 16 megapixels).";
         else if ([401, 403, 404].includes(failure.response.status))
           message =
             "The product or your access changed. Close this form and refresh products.";

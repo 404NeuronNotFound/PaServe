@@ -27,7 +27,7 @@ export class ProductImageProcessor {
       () =>
         new PayloadTooLargeException({
           code: 'PRODUCT_IMAGE_TOO_LARGE',
-          message: 'Choose an image no larger than 5 MB.',
+          message: 'Choose an image no larger than 4 MB.',
         }),
     );
     try {

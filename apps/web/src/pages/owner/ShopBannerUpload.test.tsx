@@ -138,14 +138,14 @@ it("rejects oversized and unsupported selections without uploading", () => {
   fireEvent.change(screen.getByLabelText(/Banner.*optional/), {
     target: {
       files: [
-        new File([new Uint8Array(5 * 1024 * 1024 + 1)], "large.png", {
+        new File([new Uint8Array(4 * 1024 * 1024 + 1)], "large.png", {
           type: "image/png",
         }),
       ],
     },
   });
   expect(
-    screen.getByText("Choose an image between 1 byte and 5 MB."),
+    screen.getByText("Choose an image between 1 byte and 4 MB."),
   ).toBeInTheDocument();
   expect(uploadShopBanner).not.toHaveBeenCalled();
 });

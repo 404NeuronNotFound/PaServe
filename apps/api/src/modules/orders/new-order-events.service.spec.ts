@@ -5,6 +5,7 @@ import type { AuthService } from '../auth/auth.service.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 import type { ShopMembersRepository } from '../shop-members/shop-members.repository.js';
 import { NewOrderEventsService } from './new-order-events.service.js';
+import { REQUEST_WORK } from '../../common/load-shedding/request-work.js';
 
 const fake = vi.hoisted(() => ({ create: vi.fn() }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: fake.create }));
@@ -23,7 +24,7 @@ class Stream extends EventEmitter {
 describe('New order staff subscriptions', () => {
   const auth = { currentUser: vi.fn() };
   const members = { requirePermission: vi.fn() };
-  const config = { getOrThrow: vi.fn((key: string) => key) };
+  const config = { getOrThrow: vi.fn((key: string) => key), get: vi.fn() };
   let service: NewOrderEventsService;
   let broadcast: (message: { payload: unknown; event?: string }) => void;
   let status: (value: string) => void;
@@ -51,6 +52,7 @@ describe('New order staff subscriptions', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    config.get.mockReturnValue(undefined);
     auth.currentUser.mockResolvedValue({ id: 'actor-a' });
     members.requirePermission.mockResolvedValue({ role: 'KITCHEN' });
     client.channel.mockReturnValue(channel);
@@ -101,6 +103,28 @@ describe('New order staff subscriptions', () => {
       'shop.preparation.queue.read',
     );
     stream.emit('close');
+  });
+
+  it('keeps Vercel invocation alive until the bounded stream closes', async () => {
+    config.get.mockReturnValue('1');
+    const stream = new Stream();
+    const clearDeadline = vi.fn();
+    Object.assign(stream, { req: { [REQUEST_WORK]: { clearDeadline } } });
+    let settled = false;
+    const work = service
+      .stream('token', 'shop-a', 'kitchen', stream as unknown as Response)
+      .then(() => {
+        settled = true;
+      });
+    await flush();
+    expect(stream.flushHeaders).toHaveBeenCalledOnce();
+    expect(clearDeadline).toHaveBeenCalledOnce();
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await work;
+    expect(stream.end).toHaveBeenCalledOnce();
+    expect(client.removeChannel).toHaveBeenCalledWith(channel);
+    expect(settled).toBe(true);
   });
 
   it('checks cashier read permission before subscribing', async () => {

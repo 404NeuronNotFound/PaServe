@@ -562,7 +562,7 @@ export const normalizeShopPrimaryColor = (value: string): string =>
   value.trim().toUpperCase();
 
 export const SHOP_LOGO_LIMITS = {
-  maxBytes: 5 * 1024 * 1024,
+  maxBytes: 4 * 1024 * 1024,
   maxPixels: 16_000_000,
   maxDimension: 8192,
   outputDimension: 512,
@@ -574,7 +574,7 @@ export interface ShopLogoResponse {
 }
 
 export const SHOP_BANNER_LIMITS = {
-  maxBytes: 5 * 1024 * 1024,
+  maxBytes: 4 * 1024 * 1024,
   maxPixels: 16_000_000,
   maxDimension: 8192,
   outputWidth: 1920,
@@ -626,7 +626,7 @@ export const PRODUCT_LIMITS = {
 } as const;
 export const PRODUCT_STATUSES = ["AVAILABLE", "SOLD_OUT", "HIDDEN"] as const;
 export const PRODUCT_IMAGE_LIMITS = {
-  maxBytes: 5 * 1024 * 1024,
+  maxBytes: 4 * 1024 * 1024,
   maxPixels: 16_000_000,
   maxDimension: 8192,
 } as const;

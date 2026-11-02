@@ -144,9 +144,9 @@ export function ShopBannerUpload({
           setRefreshRequired(false);
           message =
             status === 413
-              ? "Choose a banner no larger than 5 MB."
+              ? "Choose a banner no larger than 4 MB."
               : status === 400
-                ? "Choose a valid JPEG, PNG or WebP banner, up to 5 MB and 16 megapixels."
+                ? "Choose a valid JPEG, PNG or WebP banner, up to 4 MB and 16 megapixels."
                 : "Banner uploads are unavailable. Your current banner is kept. Please try again later.";
         } else if ([401, 403, 404].includes(status))
           message =
@@ -174,7 +174,7 @@ export function ShopBannerUpload({
       error={error}
       pending={pending}
       progress={progress}
-      hint={`JPEG, PNG or WebP, up to 5 MB and 16 megapixels. Crop to a wide, 3:1 frame; wide screens may crop the top and bottom. Your image saves separately from business details for ${name}.`}
+      hint={`JPEG, PNG or WebP, up to 4 MB and 16 megapixels. Crop to a wide, 3:1 frame; wide screens may crop the top and bottom. Your image saves separately from business details for ${name}.`}
       onCropping={(value) => {
         if (value) setSaved(false);
         setCropping(value);

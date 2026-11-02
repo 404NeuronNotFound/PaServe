@@ -130,10 +130,10 @@ describe('shop logo upload', () => {
     await post(shopId, false).attach('file', image, 'logo.png').expect(401);
     expect(storage.upload).not.toHaveBeenCalled();
   });
-  it('accepts a valid image at the inclusive 5 MiB upload limit', async () => {
+  it('accepts a valid image at the inclusive 4 MiB upload limit', async () => {
     const buffer = Buffer.concat([
       image,
-      Buffer.alloc(5 * 1024 * 1024 - image.length),
+      Buffer.alloc(4 * 1024 * 1024 - image.length),
     ]);
     await post()
       .attach('file', buffer, {
@@ -178,7 +178,7 @@ describe('shop logo upload', () => {
   });
   it('rejects oversized files', async () => {
     await post()
-      .attach('file', Buffer.alloc(5 * 1024 * 1024 + 1), {
+      .attach('file', Buffer.alloc(4 * 1024 * 1024 + 1), {
         filename: 'large.png',
         contentType: 'image/png',
       })

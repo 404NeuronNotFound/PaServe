@@ -117,7 +117,7 @@ describe('product image decoding', () => {
   it('enforces the byte limit from both the buffer and multipart size', async () => {
     await expect(
       processor.process({
-        buffer: Buffer.alloc(5 * 1024 * 1024 + 1),
+        buffer: Buffer.alloc(4 * 1024 * 1024 + 1),
         size: 1,
         originalname: 'image.png',
         mimetype: 'image/png',
@@ -126,7 +126,7 @@ describe('product image decoding', () => {
     await expect(
       processor.process({
         buffer: Buffer.from('x'),
-        size: 5 * 1024 * 1024 + 1,
+        size: 4 * 1024 * 1024 + 1,
         originalname: 'image.png',
         mimetype: 'image/png',
       }),

@@ -1,6 +1,7 @@
 import {
   HttpException,
   Injectable,
+  Optional,
   type CallHandler,
   type ExecutionContext,
   type NestInterceptor,
@@ -11,7 +12,8 @@ import { createHmac, randomBytes } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import type { Request, Response } from 'express';
 import { normalizeIp } from '@nestjs/throttler';
-import { defer, finalize, mergeMap, tap } from 'rxjs';
+import { catchError, defer, finalize, mergeMap, tap, throwError } from 'rxjs';
+import { SharedSecurityState } from '../../common/rate-limiting/shared-security-state.js';
 import { RATE_LIMIT_POLICY } from '../../common/rate-limiting/rate-limit.policy.js';
 import { BotChallengeService } from './bot-challenge.service.js';
 
@@ -19,7 +21,7 @@ const WINDOW_MS = 60_000;
 const ACCOUNT_ATTEMPTS = 20;
 const MAX_ACCOUNTS = 10_000;
 
-/** Local admission only. Replicas must also share an edge/distributed budget. */
+/** Local CPU admission plus optional shared attempt budgets for multiple instances. */
 @Injectable()
 export class AuthAbuseProtection implements OnApplicationShutdown {
   private readonly salt = randomBytes(32);
@@ -33,9 +35,36 @@ export class AuthAbuseProtection implements OnApplicationShutdown {
   private readonly concurrency: number;
   private readonly perMinute: number;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    @Optional() private readonly shared?: SharedSecurityState,
+  ) {
     this.concurrency = this.setting(config, 'AUTH_MAX_CONCURRENT', 2, 32);
     this.perMinute = this.setting(config, 'AUTH_ATTEMPTS_PER_MINUTE', 60, 6000);
+  }
+
+  async acquireShared(
+    response: Response,
+    loginEmail: unknown,
+    sourceIp: string,
+  ) {
+    if (!this.shared?.enabled) return;
+    const global = await this.shared.operate(
+      'auth:global',
+      'rate',
+      WINDOW_MS,
+      this.perMinute,
+    );
+    if (!global.accepted) this.reject(response, global.retry);
+    if (typeof loginEmail === 'string' && loginEmail.length <= 512) {
+      const account = await this.shared.operate(
+        `auth:source-account:${JSON.stringify([normalizeIp(sourceIp), loginEmail.trim().toLowerCase()])}`,
+        'rate',
+        WINDOW_MS,
+        ACCOUNT_ATTEMPTS,
+      );
+      if (!account.accepted) this.reject(response, account.retry);
+    }
   }
 
   private setting(
@@ -157,7 +186,14 @@ export class AuthWorkInterceptor implements NestInterceptor {
     const token: unknown = (
       request.body as { challengeToken?: unknown } | undefined
     )?.challengeToken;
-    return defer(() => this.challenge.check(risk, token, response)).pipe(
+    return defer(async () => {
+      await this.challenge.check(risk, token, response);
+      await this.protection.acquireShared(
+        response,
+        email,
+        request.ip ?? request.socket.remoteAddress ?? 'unknown',
+      );
+    }).pipe(
       mergeMap(() => {
         const release = this.protection.acquire(
           response,
@@ -166,7 +202,21 @@ export class AuthWorkInterceptor implements NestInterceptor {
         );
         this.challenge.started(risk);
         // finalize covers validation errors, thrown handlers and normal completion.
-        return defer(() => next.handle()).pipe(
+        return defer(async () => {
+          await this.challenge.sharedStarted(risk);
+        }).pipe(
+          mergeMap(() => next.handle()),
+          mergeMap((value: unknown) =>
+            defer(async () => {
+              await this.challenge.sharedFinished(risk);
+              return value;
+            }),
+          ),
+          catchError((error: unknown) =>
+            defer(() => this.challenge.sharedFinished(risk, error)).pipe(
+              mergeMap(() => throwError(() => error)),
+            ),
+          ),
           tap({
             next: () => this.challenge.succeeded(risk),
             error: (error: unknown) => this.challenge.failed(risk, error),

@@ -32,6 +32,7 @@ export function vercelConfiguration(env, backendOrigin) {
   return {
     $schema: "https://openapi.vercel.sh/vercel.json",
     framework: "vite",
+    git: { deploymentEnabled: { "*": false, production: true } },
     installCommand: "pnpm install --frozen-lockfile",
     buildCommand: "pnpm --filter web build",
     outputDirectory: "apps/web/dist",

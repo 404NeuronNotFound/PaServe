@@ -11,6 +11,10 @@ import {
   type SupabaseClient,
 } from '@supabase/supabase-js';
 import type { Response } from 'express';
+import {
+  REQUEST_WORK,
+  type AdmittedRequest,
+} from '../../common/load-shedding/request-work.js';
 import { AuthService } from '../auth/auth.service.js';
 import { ShopMembersService } from '../shop-members/shop-members.service.js';
 
@@ -201,6 +205,10 @@ export class NewOrderEventsService implements OnModuleDestroy {
     let heartbeat: ReturnType<typeof setInterval> | undefined;
     let expiry: ReturnType<typeof setTimeout> | undefined;
     let opened = false;
+    let finish: (() => void) | undefined;
+    const finished = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
     let initial: 'resync' | 'unavailable' | undefined;
     const close = () => {
       if (closed) return;
@@ -210,6 +218,7 @@ export class NewOrderEventsService implements OnModuleDestroy {
       unlisten?.();
       this.streams.delete(close);
       response.end();
+      finish?.();
     };
     const deliver = async (
       event: RelayEvent | 'heartbeat',
@@ -271,6 +280,10 @@ export class NewOrderEventsService implements OnModuleDestroy {
       response.setHeader('Cache-Control', 'no-store');
       response.setHeader('X-Accel-Buffering', 'no');
       response.flushHeaders();
+      // Setup deadline ends when headers open, rather than at stream shutdown.
+      (response.req as AdmittedRequest | undefined)?.[
+        REQUEST_WORK
+      ]?.clearDeadline();
       opened = true;
       if (initial) void deliver(initial);
       heartbeat = setInterval(() => {
@@ -278,6 +291,9 @@ export class NewOrderEventsService implements OnModuleDestroy {
       }, 15_000);
       // Bound connection lifetime. Reconnection uses the current browser token.
       expiry = setTimeout(close, 60_000);
+      // Keep the request invocation alive until cleanup. Serverless runtimes
+      // must not freeze our subscription/timers while an SSE response is open.
+      if (this.config.get<string>('VERCEL') === '1') await finished;
     } catch {
       if (response.headersSent) close();
       else {

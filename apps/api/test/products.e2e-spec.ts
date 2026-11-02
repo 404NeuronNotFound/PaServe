@@ -553,10 +553,10 @@ describe('tenant-scoped product creation', () => {
     await imageRequest().attach('file', png, 'a.png').expect(404);
     expect(uploadImage).not.toHaveBeenCalled();
   });
-  it('accepts a valid image at the inclusive 5 MiB upload limit', async () => {
+  it('accepts a valid image at the inclusive 4 MiB upload limit', async () => {
     const buffer = Buffer.concat([
       png,
-      Buffer.alloc(5 * 1024 * 1024 - png.length),
+      Buffer.alloc(4 * 1024 * 1024 - png.length),
     ]);
     await imageRequest()
       .attach('file', buffer, {
@@ -587,7 +587,7 @@ describe('tenant-scoped product creation', () => {
       .attach('file', png, { filename: 'a.jpg', contentType: 'image/jpeg' })
       .expect(400);
     await imageRequest()
-      .attach('file', Buffer.alloc(5 * 1024 * 1024 + 1), {
+      .attach('file', Buffer.alloc(4 * 1024 * 1024 + 1), {
         filename: 'a.png',
         contentType: 'image/png',
       })

@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthAbuseProtection } from './auth-abuse-protection.js';
 import { BotChallengeService } from './bot-challenge.service.js';
 import { RateLimitingModule } from '../../common/rate-limiting/rate-limiting.module.js';
+import { PrismaService } from '../../database/prisma.service.js';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -23,7 +24,10 @@ describe('AuthController', () => {
         ConfigService,
         { provide: IdentityService, useValue: {} },
       ],
-    }).compile();
+    })
+      .overrideProvider(PrismaService)
+      .useValue({})
+      .compile();
 
     controller = module.get<AuthController>(AuthController);
   });

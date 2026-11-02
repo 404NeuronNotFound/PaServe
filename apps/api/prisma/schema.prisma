@@ -469,3 +469,13 @@ model PendingEmailChange {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@map("pending_email_changes")
 }
+// Private transient security state. All mutations use the atomic SQL function.
+model SecurityState {
+  key      String   @id
+  hits     Int      @default(0)
+  expires  DateTime @db.Timestamptz(6)
+  arrivals DateTime[] @default([]) @db.Timestamptz(6)
+
+  @@index([expires], map: "security_state_expiry")
+  @@map("security_state")
+}
