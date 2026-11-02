@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
-import type { LoginResponse } from "@paserve/contracts";
+import {
+  hasRegistrationPolicy,
+  type LoginResponse,
+  type RegistrationPolicy,
+} from "@paserve/contracts";
 import { googleAccount } from "../api/session";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../../lib/api/client";
 import { InlineMessage } from "../../../components/feedback/InlineMessage";
@@ -44,12 +48,14 @@ function loadGoogle() {
 
 export function GoogleSignIn({
   names,
+  policy,
   keepSignedIn = false,
   disabled = false,
   onSuccess,
   onReauthenticate,
 }: {
   names?: { firstName: string; lastName: string };
+  policy?: RegistrationPolicy;
   keepSignedIn?: boolean;
   disabled?: boolean;
   onSuccess?: (session: LoginResponse) => void;
@@ -59,6 +65,7 @@ export function GoogleSignIn({
   const container = useRef<HTMLDivElement>(null);
   const latest = useRef({
     names,
+    policy,
     keepSignedIn,
     onSuccess,
     onReauthenticate,
@@ -71,6 +78,7 @@ export function GoogleSignIn({
   useEffect(() => {
     latest.current = {
       names,
+      policy,
       keepSignedIn,
       onSuccess,
       onReauthenticate,
@@ -99,6 +107,12 @@ export function GoogleSignIn({
           callback: (response) => {
             if (!active || busy.current || latest.current.disabled) return;
             const current = latest.current;
+            if (current.names && !hasRegistrationPolicy(current.policy)) {
+              setError(
+                "Confirm adult eligibility, accept the Terms, and acknowledge the Privacy Notice first.",
+              );
+              return;
+            }
             if (
               current.names &&
               (!current.names.firstName.trim() ||
@@ -120,6 +134,7 @@ export function GoogleSignIn({
                     ? {
                         firstName: current.names.firstName.trim(),
                         lastName: current.names.lastName.trim(),
+                        ...current.policy,
                       }
                     : { keepSignedIn: current.keepSignedIn }),
                 });
@@ -167,7 +182,15 @@ export function GoogleSignIn({
             ? "Use your verified Google account"
             : "Or sign in with your verified Google account"}
       </p>
-      <div ref={container} hidden={pending || disabled} />
+      {names && !policy && (
+        <p className="account-note">
+          Complete the three declarations above to continue with Google.
+        </p>
+      )}
+      <div
+        ref={container}
+        hidden={pending || disabled || Boolean(names && !policy)}
+      />
       {pending && <p role="status">Signing in with Google?</p>}
       {error && (
         <>

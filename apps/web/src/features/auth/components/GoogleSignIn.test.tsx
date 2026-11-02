@@ -58,6 +58,12 @@ it("uses the server challenge in the Google button and exchanges a credential fo
 it("requires names for Google registration without requiring an email password", async () => {
   const view = render(
     <GoogleSignIn
+      policy={{
+        policyVersion: "2026-11-02",
+        adultConfirmed: true,
+        termsAccepted: true,
+        privacyAcknowledged: true,
+      }}
       names={{ firstName: "", lastName: "" }}
       onSuccess={vi.fn()}
     />,
@@ -70,6 +76,12 @@ it("requires names for Google registration without requiring an email password",
   expect(googleAccount).not.toHaveBeenCalled();
   view.rerender(
     <GoogleSignIn
+      policy={{
+        policyVersion: "2026-11-02",
+        adultConfirmed: true,
+        termsAccepted: true,
+        privacyAcknowledged: true,
+      }}
       names={{ firstName: " Ada ", lastName: " Lovelace " }}
       onSuccess={vi.fn()}
     />,
@@ -80,6 +92,10 @@ it("requires names for Google registration without requiring an email password",
   await act(async () => callback({ credential: "token" }));
   expect(googleAccount).toHaveBeenCalledWith({
     credential: "token",
+    policyVersion: "2026-11-02",
+    adultConfirmed: true,
+    termsAccepted: true,
+    privacyAcknowledged: true,
     firstName: "Ada",
     lastName: "Lovelace",
   });
@@ -91,6 +107,32 @@ it("does not load Google when the provider has not been configured", () => {
   render(<GoogleSignIn onSuccess={vi.fn()} />);
   expect(api.post).not.toHaveBeenCalled();
   expect(renderButton).not.toHaveBeenCalled();
+});
+
+it("blocks a provider callback without all signup declarations, including after they are withdrawn", async () => {
+  const names = { firstName: "Ada", lastName: "Lovelace" };
+  const view = render(<GoogleSignIn names={names} onSuccess={vi.fn()} />);
+  await waitFor(() => expect(renderButton).toHaveBeenCalled());
+  await act(async () => callback({ credential: "test-token" }));
+  expect(googleAccount).not.toHaveBeenCalled();
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Confirm adult eligibility",
+  );
+  view.rerender(
+    <GoogleSignIn
+      names={names}
+      policy={{
+        policyVersion: "2026-11-02",
+        adultConfirmed: true,
+        termsAccepted: true,
+        privacyAcknowledged: true,
+      }}
+      onSuccess={vi.fn()}
+    />,
+  );
+  view.rerender(<GoogleSignIn names={names} onSuccess={vi.fn()} />);
+  await act(async () => callback({ credential: "test-token" }));
+  expect(googleAccount).not.toHaveBeenCalled();
 });
 
 it("reauthenticates a linked Google account without replacing the PaServe session", async () => {

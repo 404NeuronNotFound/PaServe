@@ -9,6 +9,7 @@ import type {
   ConfirmEmailChangeRequest,
   ConfirmEmailChangeResponse,
   ChangePasswordRequest,
+  RegistrationPolicy,
 } from "@paserve/contracts";
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../../lib/api/client";
@@ -50,12 +51,14 @@ export async function loginAccount(
   return data;
 }
 
-export async function googleAccount(input: {
-  credential: string;
-  firstName?: string;
-  lastName?: string;
-  keepSignedIn?: boolean;
-}): Promise<LoginResponse> {
+export async function googleAccount(
+  input: {
+    credential: string;
+    firstName?: string;
+    lastName?: string;
+    keepSignedIn?: boolean;
+  } & Partial<RegistrationPolicy>,
+): Promise<LoginResponse> {
   const version = useSessionStore.getState().version;
   const { data } = await withSessionLock(() =>
     api.post<LoginResponse>(

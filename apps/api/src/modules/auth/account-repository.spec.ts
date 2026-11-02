@@ -9,7 +9,12 @@ describe('Atomic account updates', () => {
   };
   const prisma = {
     $transaction: vi.fn(),
-    user: { update: vi.fn(), updateMany: vi.fn(), createMany: vi.fn() },
+    user: {
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      createMany: vi.fn(),
+      findUnique: vi.fn(),
+    },
   };
   let repository: AuthRepository;
   beforeEach(async () => {
@@ -37,11 +42,35 @@ describe('Atomic account updates', () => {
         firstName: 'Ada',
         lastName: 'Lovelace',
         emailVerifiedAt: expect.any(Date),
+        registrationPolicyVersion: '2026-11-02',
+        termsAcceptedAt: expect.any(Date),
+        privacyAcknowledgedAt: expect.any(Date),
+        adultDeclaredAt: expect.any(Date),
       },
       skipDuplicates: true,
     });
     expect(prisma.user.update).not.toHaveBeenCalled();
     expect(prisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('records the same server-owned policy metadata for a new Google account', async () => {
+    prisma.user.createMany.mockResolvedValue({ count: 1 });
+    prisma.user.findUnique.mockResolvedValue({ id: 'google-user' });
+    await repository.createGoogleAccount('subject', 'owner@gmail.com', 'hash', {
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+    });
+    expect(prisma.user.createMany).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        googleSubject: 'subject',
+        registrationPolicyVersion: '2026-11-02',
+        termsAcceptedAt: expect.any(Date),
+        privacyAcknowledgedAt: expect.any(Date),
+        adultDeclaredAt: expect.any(Date),
+      }),
+      skipDuplicates: true,
+    });
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
   it('conditions credential writes on the live identity, session and verified hash, then revokes every session atomically', async () => {
     tx.user.updateMany.mockResolvedValue({ count: 1 });

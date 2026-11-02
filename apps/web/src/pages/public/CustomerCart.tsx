@@ -234,6 +234,7 @@ export function CustomerCart({
                 {review ? "We check this total before saving. Price changes require another review. The cashier will confirm your order and collect payment." : PRICE_PREVIEW_NOTICE}
               </p>
             </div>
+            {!!items.length && <p className="field-hint">The shop receives your order details to prepare and fulfil it. Keep unnecessary personal information out of notes. Under 18? Ask a parent or guardian to help with your purchase. Read the <a href="/terms" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Notice</a>.</p>}
             <CustomerOrder
               key={shop.slug}
               shopSlug={shop.slug}

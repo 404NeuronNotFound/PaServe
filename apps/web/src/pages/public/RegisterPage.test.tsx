@@ -33,6 +33,7 @@ it("moves keyboard focus to the success heading after account creation", async (
   await user.type(screen.getByLabelText("First name"), "Ada");
   await user.type(screen.getByLabelText("Last name"), "Lovelace");
   await user.type(screen.getByLabelText("Email address"), "owner@example.com");
+  await user.click(screen.getByRole("button", { name: "Continue" }));
   await user.type(
     screen.getByLabelText("Password", { exact: true }),
     "a long test passphrase",
@@ -41,6 +42,9 @@ it("moves keyboard focus to the success heading after account creation", async (
     screen.getByLabelText("Confirm password"),
     "a long test passphrase",
   );
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  for (const checkbox of screen.getAllByRole("checkbox"))
+    await user.click(checkbox);
   await user.click(screen.getByRole("button", { name: "Create account" }));
   await user.type(
     await screen.findByLabelText("Email verification code"),

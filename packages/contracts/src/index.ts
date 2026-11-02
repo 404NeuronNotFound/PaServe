@@ -4,7 +4,22 @@ export const REGISTRATION_LIMITS = {
   passwordMax: 128,
 } as const;
 
-export interface RegisterRequest {
+export const REGISTRATION_POLICY_VERSION = "2026-11-02" as const;
+export interface RegistrationPolicy {
+  policyVersion: typeof REGISTRATION_POLICY_VERSION;
+  adultConfirmed: true;
+  termsAccepted: true;
+  privacyAcknowledged: true;
+}
+export function hasRegistrationPolicy(value: unknown): value is RegistrationPolicy {
+  if (!value || typeof value !== "object") return false;
+  const policy = value as Partial<RegistrationPolicy>;
+  return policy.policyVersion === REGISTRATION_POLICY_VERSION &&
+    policy.adultConfirmed === true && policy.termsAccepted === true &&
+    policy.privacyAcknowledged === true;
+}
+
+export interface RegisterRequest extends RegistrationPolicy {
   firstName: string;
   lastName: string;
   verificationCode: string;

@@ -32,6 +32,11 @@ import { registerAccount, requestEmailCode } from "../api/register";
 import { InlineMessage } from "../../../components/feedback/InlineMessage";
 import { BotChallenge } from "./BotChallenge";
 import { useBotChallenge } from "./useBotChallenge";
+import { RegistrationPolicyFields } from "./RegistrationPolicyFields";
+import {
+  emptyPolicyChoices,
+  acceptedRegistrationPolicy,
+} from "../registration-policy";
 import {
   validateRegistration,
   type RegistrationErrors,
@@ -52,7 +57,12 @@ export function RegistrationForm({
     password: "",
     confirmPassword: "",
   });
+  const [step, setStep] = useState(0);
+  const [method, setMethod] = useState<"email" | "google">("email");
+  const stepHeading = useRef<HTMLHeadingElement>(null);
   const [verificationOpen, setVerificationOpen] = useState(false);
+  const [policyChoices, setPolicyChoices] = useState(emptyPolicyChoices);
+  const policy = acceptedRegistrationPolicy(policyChoices);
   const codeRef = useRef<HTMLInputElement>(null);
   const mainActionRef = useRef<HTMLButtonElement>(null);
   const [verificationRequested, setVerificationRequested] = useState(false);
@@ -83,9 +93,14 @@ export function RegistrationForm({
   });
   const pending = mutation.isPending || sendingCode;
   const navigationGuard = useDraftGuard(
-    Object.values(fields).some(Boolean),
+    Object.values(fields).some(Boolean) ||
+      Object.values(policyChoices).some(Boolean),
     pending,
   );
+
+  useEffect(() => {
+    stepHeading.current?.focus({ preventScroll: true });
+  }, [step]);
 
   useEffect(() => {
     if (!pending && pendingFocus.current) {
@@ -97,7 +112,29 @@ export function RegistrationForm({
           ?.focus();
       pendingFocus.current = null;
     }
-  }, [errors, formError, pending, verificationOpen]);
+  }, [errors, formError, pending, verificationOpen, step]);
+
+  function fieldStep(field: keyof RegistrationFields) {
+    return field === "password" || field === "confirmPassword" ? 1 : 0;
+  }
+  function moveStep(next: number) {
+    setFormError("");
+    setStep(next);
+  }
+  function chooseGoogle() {
+    const all = validateRegistration(fields);
+    const next = {
+      ...(all.firstName ? { firstName: all.firstName } : {}),
+      ...(all.lastName ? { lastName: all.lastName } : {}),
+    };
+    setErrors(next);
+    if (Object.keys(next).length) {
+      pendingFocus.current = all.firstName ? "firstName" : "lastName";
+      return;
+    }
+    setMethod("google");
+    moveStep(2);
+  }
 
   function updateField(field: keyof RegistrationFields, value: string) {
     if (field === "email") {
@@ -127,6 +164,27 @@ export function RegistrationForm({
   async function submit(event: FormEvent<HTMLFormElement>, verify = false) {
     event.preventDefault();
     if (submitting.current) return;
+    if (!verify && step < 2) {
+      const all = validateRegistration(fields);
+      const keys: (keyof RegistrationFields)[] =
+        step === 0
+          ? ["firstName", "lastName", "email"]
+          : ["password", "confirmPassword"];
+      const next: RegistrationErrors = {};
+      for (const key of keys) {
+        touched.current[key] = true;
+        if (all[key]) next[key] = all[key];
+      }
+      setErrors(next);
+      if (Object.keys(next).length) {
+        pendingFocus.current = keys.find((key) => next[key])!;
+        return;
+      }
+      setMethod("email");
+      moveStep(step + 1);
+      return;
+    }
+    if (method === "google") return;
     if (
       (verify || !verificationRequested) &&
       challenge.required &&
@@ -145,9 +203,20 @@ export function RegistrationForm({
     setFormError("");
     if (Object.keys(nextErrors).length) {
       setVerificationOpen(false);
+      setStep(
+        fieldStep(Object.keys(nextErrors)[0] as keyof RegistrationFields),
+      );
       pendingFocus.current = Object.keys(
         nextErrors,
       )[0] as keyof RegistrationFields;
+      return;
+    }
+    if (!policy) {
+      setVerificationOpen(false);
+      setFormError(
+        "Confirm you are 18 or older, agree to the Terms, and acknowledge the Privacy Notice before continuing.",
+      );
+      pendingFocus.current = "form";
       return;
     }
     if (verificationRequested && !verify) {
@@ -162,6 +231,7 @@ export function RegistrationForm({
         setSendingCode(true);
         const proof = await requestEmailCode(
           submittedEmail,
+          policy,
           challenge.token || undefined,
         );
         setVerificationOpen(true);
@@ -176,6 +246,7 @@ export function RegistrationForm({
         return;
       }
       const result = await mutation.mutateAsync({
+        ...policy,
         firstName: fields.firstName.trim(),
         lastName: fields.lastName.trim(),
         verificationCode,
@@ -191,6 +262,7 @@ export function RegistrationForm({
         confirmPassword: "",
       });
       setVerificationOpen(false);
+      setStep(0);
       mutation.reset();
       navigationGuard.release();
       onSuccess(result, submittedEmail);
@@ -210,11 +282,23 @@ export function RegistrationForm({
           email: details?.email?.[0],
           password: details?.password?.[0],
         });
-        setFormError("Please check your email and password.");
+        const policyRejected = [
+          "policyVersion",
+          "adultConfirmed",
+          "termsAccepted",
+          "privacyAcknowledged",
+        ].some((key) => details?.[key]?.length);
+        setFormError(
+          policyRejected
+            ? "Registration requirements have changed. Reload this page, review the current Terms and Privacy Notice, then try again."
+            : "Please check your email and password.",
+        );
         const invalidField = (
           ["firstName", "lastName", "email", "password"] as const
         ).find((key) => details?.[key]?.length);
-        if (invalidField) setVerificationOpen(false);
+        if (invalidField || policyRejected) setVerificationOpen(false);
+        if (invalidField) setStep(fieldStep(invalidField));
+        else if (policyRejected) setStep(2);
         pendingFocus.current = invalidField ?? "form";
       } else if (
         isAxiosError<ApiErrorResponse>(error) &&
@@ -259,13 +343,19 @@ export function RegistrationForm({
   }
 
   async function resendCode() {
-    if (submitting.current || (challenge.required && !challenge.token)) return;
+    if (
+      !policy ||
+      submitting.current ||
+      (challenge.required && !challenge.token)
+    )
+      return;
     submitting.current = true;
     setSendingCode(true);
     setFormError("");
     try {
       const result = await requestEmailCode(
         fields.email.trim().toLowerCase(),
+        policy,
         challenge.token || undefined,
       );
       setCodeMessage(result.message);
@@ -311,54 +401,256 @@ export function RegistrationForm({
         noValidate
         aria-busy={pending}
       >
-        <ol className="registration-steps" aria-label="Registration progress">
-          <li
-            className={!verificationRequested ? "is-current" : "is-complete"}
-            aria-current={!verificationRequested ? "step" : undefined}
-          >
-            <span aria-hidden="true">
-              {verificationRequested ? <FiCheck /> : "1"}
-            </span>{" "}
-            Account details
-          </li>
-          <li
-            className={verificationRequested ? "is-current" : undefined}
-            aria-current={verificationRequested ? "step" : undefined}
-          >
-            <span aria-hidden="true">2</span> Verify email
-          </li>
+        <ol
+          className={`registration-steps ${method === "email" ? "registration-steps--compact" : ""}`}
+          aria-label="Registration progress"
+        >
+          {(method === "google" ? [0, 2] : [0, 1, 2]).map((index, position) => (
+            <li
+              key={index}
+              className={
+                index === step
+                  ? "is-current"
+                  : index < step
+                    ? "is-complete"
+                    : undefined
+              }
+              aria-current={index === step ? "step" : undefined}
+            >
+              <span aria-hidden="true">
+                {index < step ? <FiCheck /> : position + 1}
+              </span>
+              {["Details", "Password", "Confirm"][index]}
+            </li>
+          ))}
         </ol>
-        <p className="auth-required-note">All fields are required.</p>
-        <div className="registration-name-row">
-          {(["firstName", "lastName"] as const).map((field) => (
+        <h2 className="registration-step-title" ref={stepHeading} tabIndex={-1}>
+          {["Your details", "Set a password", "Confirm and continue"][step]}
+        </h2>
+        {step === 0 && (
+          <>
+            <div className="registration-name-row">
+              {(["firstName", "lastName"] as const).map((field) => (
+                <FormField
+                  key={field}
+                  id={field}
+                  label={field === "firstName" ? "First name" : "Last name"}
+                  error={errors[field]}
+                  errorId={`${field}-error`}
+                  required
+                >
+                  <Input
+                    id={field}
+                    name={field}
+                    autoComplete={
+                      field === "firstName" ? "given-name" : "family-name"
+                    }
+                    required
+                    maxLength={ACCOUNT_LIMITS.nameMax}
+                    value={fields[field]}
+                    onChange={(event) => updateField(field, event.target.value)}
+                    onBlur={() => validateField(field)}
+                    disabled={mutation.isPending || sendingCode}
+                    aria-invalid={Boolean(errors[field])}
+                    aria-describedby={
+                      errors[field] ? `${field}-error` : undefined
+                    }
+                  />
+                </FormField>
+              ))}
+            </div>
             <FormField
-              key={field}
-              id={field}
-              label={field === "firstName" ? "First name" : "Last name"}
-              error={errors[field]}
-              errorId={`${field}-error`}
+              id="email"
+              label="Email address"
+              error={errors.email}
+              errorId="email-error"
               required
             >
               <Input
-                id={field}
-                name={field}
-                autoComplete={
-                  field === "firstName" ? "given-name" : "family-name"
-                }
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                inputMode="email"
                 required
-                maxLength={ACCOUNT_LIMITS.nameMax}
-                value={fields[field]}
-                onChange={(event) => updateField(field, event.target.value)}
-                onBlur={() => validateField(field)}
-                disabled={mutation.isPending || sendingCode}
-                aria-invalid={Boolean(errors[field])}
-                aria-describedby={errors[field] ? `${field}-error` : undefined}
+                maxLength={REGISTRATION_LIMITS.emailMax}
+                placeholder="you@example.com"
+                value={fields.email}
+                onChange={(event) => updateField("email", event.target.value)}
+                onBlur={() => validateField("email")}
+                disabled={pending}
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? "email-error" : undefined}
               />
             </FormField>
-          ))}
+            {onGoogleSuccess && import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending}
+                onClick={chooseGoogle}
+              >
+                Use Google instead
+              </Button>
+            )}
+          </>
+        )}
+        {step === 1 && (
+          <>
+            <FormField
+              id="password"
+              label="Password"
+              error={errors.password}
+              errorId="password-error"
+              required
+              hint={
+                <>
+                  Use {REGISTRATION_LIMITS.passwordMin}&ndash;
+                  {REGISTRATION_LIMITS.passwordMax} characters.
+                </>
+              }
+            >
+              <div className="password-input">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPasswords ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  minLength={REGISTRATION_LIMITS.passwordMin}
+                  maxLength={REGISTRATION_LIMITS.passwordMax}
+                  value={fields.password}
+                  onChange={(event) =>
+                    updateField("password", event.target.value)
+                  }
+                  onBlur={() => validateField("password")}
+                  disabled={pending}
+                  aria-invalid={Boolean(errors.password)}
+                  aria-describedby={`password-hint${errors.password ? " password-error" : ""}`}
+                />
+                <Button
+                  variant="ghost"
+                  size="inherit"
+                  className="password-toggle"
+                  type="button"
+                  aria-label={
+                    showPasswords ? "Hide passwords" : "Show passwords"
+                  }
+                  aria-pressed={showPasswords}
+                  aria-controls="password confirmPassword"
+                  disabled={pending}
+                  onClick={() => setShowPasswords((current) => !current)}
+                >
+                  {showPasswords ? (
+                    <FiEyeOff aria-hidden="true" />
+                  ) : (
+                    <FiEye aria-hidden="true" />
+                  )}
+                </Button>
+              </div>
+            </FormField>
+            <FormField
+              id="confirmPassword"
+              label="Confirm password"
+              error={errors.confirmPassword}
+              errorId="confirm-error"
+              required
+            >
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showPasswords ? "text" : "password"}
+                autoComplete="new-password"
+                required
+                maxLength={REGISTRATION_LIMITS.passwordMax}
+                value={fields.confirmPassword}
+                onChange={(event) =>
+                  updateField("confirmPassword", event.target.value)
+                }
+                onBlur={() => validateField("confirmPassword")}
+                disabled={pending}
+                aria-invalid={Boolean(errors.confirmPassword)}
+                aria-describedby={
+                  errors.confirmPassword ? "confirm-error" : undefined
+                }
+              />
+            </FormField>
+          </>
+        )}
+        {step === 2 && (
+          <>
+            <RegistrationPolicyFields
+              choices={policyChoices}
+              disabled={pending}
+              onChange={(choices) => {
+                setPolicyChoices(choices);
+                setFormError("");
+              }}
+            />
+          </>
+        )}
+        {formError && !verificationOpen && (
+          <InlineMessage ref={formErrorRef} tabIndex={-1}>
+            {formError}
+          </InlineMessage>
+        )}
+        {step === 2 &&
+          method === "email" &&
+          challenge.required &&
+          !verificationOpen && (
+            <BotChallenge
+              key={challenge.version}
+              action="register"
+              onToken={challenge.onToken}
+            />
+          )}
+        <div className="registration-step-actions">
+          {step > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={() => moveStep(method === "google" ? 0 : step - 1)}
+            >
+              Back
+            </Button>
+          )}
+          {(step < 2 || method === "email") && (
+            <Button
+              ref={mainActionRef}
+              variant="default"
+              size="inherit"
+              aria-busy={pending}
+              className="primary-button"
+              type="submit"
+              disabled={
+                pending ||
+                (step === 2 && challenge.required && !challenge.token)
+              }
+            >
+              {step < 2
+                ? "Continue"
+                : pending
+                  ? "Creating account…"
+                  : verificationRequested
+                    ? "Continue verification"
+                    : "Create account"}
+              {pending ? (
+                <FiLoader
+                  className="button-icon is-spinning"
+                  aria-hidden="true"
+                />
+              ) : (
+                <FiArrowRight className="button-icon" aria-hidden="true" />
+              )}
+            </Button>
+          )}
         </div>
-        {onGoogleSuccess && (
+        {step === 2 && method === "google" && onGoogleSuccess && (
           <GoogleSignIn
+            policy={policy}
             names={{ firstName: fields.firstName, lastName: fields.lastName }}
             disabled={mutation.isPending || sendingCode}
             onSuccess={(session) => {
@@ -367,141 +659,6 @@ export function RegistrationForm({
             }}
           />
         )}
-        {onGoogleSuccess && import.meta.env.VITE_GOOGLE_CLIENT_ID && (
-          <p className="account-note">Or create your account with email</p>
-        )}
-        <FormField
-          id="email"
-          label="Email address"
-          error={errors.email}
-          errorId="email-error"
-          required
-        >
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            autoCapitalize="none"
-            spellCheck={false}
-            inputMode="email"
-            required
-            maxLength={REGISTRATION_LIMITS.emailMax}
-            placeholder="you@example.com"
-            value={fields.email}
-            onChange={(event) => updateField("email", event.target.value)}
-            onBlur={() => validateField("email")}
-            disabled={pending}
-            aria-invalid={Boolean(errors.email)}
-            aria-describedby={errors.email ? "email-error" : undefined}
-          />
-        </FormField>
-        <FormField
-          id="password"
-          label="Password"
-          error={errors.password}
-          errorId="password-error"
-          required
-          hint={
-            <>
-              Use {REGISTRATION_LIMITS.passwordMin}&ndash;
-              {REGISTRATION_LIMITS.passwordMax} characters.
-            </>
-          }
-        >
-          <div className="password-input">
-            <Input
-              id="password"
-              name="password"
-              type={showPasswords ? "text" : "password"}
-              autoComplete="new-password"
-              required
-              minLength={REGISTRATION_LIMITS.passwordMin}
-              maxLength={REGISTRATION_LIMITS.passwordMax}
-              value={fields.password}
-              onChange={(event) => updateField("password", event.target.value)}
-              onBlur={() => validateField("password")}
-              disabled={pending}
-              aria-invalid={Boolean(errors.password)}
-              aria-describedby={`password-hint${errors.password ? " password-error" : ""}`}
-            />
-            <Button
-              variant="ghost"
-              size="inherit"
-              className="password-toggle"
-              type="button"
-              aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
-              aria-pressed={showPasswords}
-              aria-controls="password confirmPassword"
-              disabled={pending}
-              onClick={() => setShowPasswords((current) => !current)}
-            >
-              {showPasswords ? (
-                <FiEyeOff aria-hidden="true" />
-              ) : (
-                <FiEye aria-hidden="true" />
-              )}
-            </Button>
-          </div>
-        </FormField>
-        <FormField
-          id="confirmPassword"
-          label="Confirm password"
-          error={errors.confirmPassword}
-          errorId="confirm-error"
-          required
-        >
-          <Input
-            id="confirmPassword"
-            name="confirmPassword"
-            type={showPasswords ? "text" : "password"}
-            autoComplete="new-password"
-            required
-            maxLength={REGISTRATION_LIMITS.passwordMax}
-            value={fields.confirmPassword}
-            onChange={(event) =>
-              updateField("confirmPassword", event.target.value)
-            }
-            onBlur={() => validateField("confirmPassword")}
-            disabled={pending}
-            aria-invalid={Boolean(errors.confirmPassword)}
-            aria-describedby={
-              errors.confirmPassword ? "confirm-error" : undefined
-            }
-          />
-        </FormField>
-        {formError && !verificationOpen && (
-          <InlineMessage ref={formErrorRef} tabIndex={-1}>
-            {formError}
-          </InlineMessage>
-        )}
-        {challenge.required && !verificationOpen && (
-          <BotChallenge
-            key={challenge.version}
-            action="register"
-            onToken={challenge.onToken}
-          />
-        )}
-        <Button
-          ref={mainActionRef}
-          variant="default"
-          size="inherit"
-          aria-busy={pending}
-          className="primary-button"
-          type="submit"
-          disabled={pending || (challenge.required && !challenge.token)}
-        >
-          {pending
-            ? "Creating account…"
-            : verificationRequested
-              ? "Continue verification"
-              : "Create account"}
-          {pending ? (
-            <FiLoader className="button-icon is-spinning" aria-hidden="true" />
-          ) : (
-            <FiArrowRight className="button-icon" aria-hidden="true" />
-          )}
-        </Button>
       </form>
 
       <Dialog
@@ -605,7 +762,10 @@ export function RegistrationForm({
                   type="button"
                   variant="link"
                   disabled={pending}
-                  onClick={() => setVerificationOpen(false)}
+                  onClick={() => {
+                    setVerificationOpen(false);
+                    moveStep(0);
+                  }}
                 >
                   Edit details
                 </Button>

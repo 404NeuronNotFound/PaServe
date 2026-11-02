@@ -4,6 +4,7 @@ import {
   type RegisterRequest,
 } from '@paserve/contracts';
 import { Transform } from 'class-transformer';
+import { RegistrationPolicyDto } from './registration-policy.dto.js';
 import {
   IsEmail,
   IsString,
@@ -13,7 +14,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 
-export class RegistrationNameDto {
+export class RegistrationNameDto extends RegistrationPolicyDto {
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )

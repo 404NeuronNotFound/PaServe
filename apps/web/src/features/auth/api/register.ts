@@ -1,4 +1,8 @@
-import type { RegisterRequest, RegisterResponse } from "@paserve/contracts";
+import type {
+  RegisterRequest,
+  RegisterResponse,
+  RegistrationPolicy,
+} from "@paserve/contracts";
 import { api, AUTH_REQUEST_TIMEOUT_MS } from "../../../lib/api/client";
 
 export async function registerAccount(
@@ -12,11 +16,12 @@ export async function registerAccount(
 
 export async function requestEmailCode(
   email: string,
+  policy: RegistrationPolicy,
   challengeToken?: string,
 ): Promise<{ message: string }> {
   const { data } = await api.post(
     "/auth/email-code",
-    { email, ...(challengeToken ? { challengeToken } : {}) },
+    { email, ...policy, ...(challengeToken ? { challengeToken } : {}) },
     {
       headers: { "X-PaServe-Client": "web" },
       timeout: AUTH_REQUEST_TIMEOUT_MS,

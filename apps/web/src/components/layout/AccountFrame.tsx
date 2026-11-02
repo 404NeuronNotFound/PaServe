@@ -30,6 +30,7 @@ import "./dashboard-sidebar.css";
 import "./dashboard-header.css";
 import "./dashboard-frame.css";
 import "./workspace-navigation.css";
+import "../../pages/public/legal.css";
 
 export function AccountFrame({
   children,
@@ -305,6 +306,11 @@ export function AccountFrame({
             </InlineMessage>
           )}
           {children}
+          <nav className="public-legal-links" aria-label="Account legal information">
+            <Link to="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link>
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer">Privacy Notice</Link>
+            <a href="mailto:keybeen.webdeveloper@gmail.com">Privacy requests</a>
+          </nav>
         </main>
       </div>
       {user?.id && <KeybeenWalkthrough user={user} />}

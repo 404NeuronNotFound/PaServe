@@ -47,13 +47,9 @@ export function RegisterPage() {
         </div>
       ) : (
         <>
-          <p className="section-label">Welcome to PaServe</p>
+          <p className="section-label registration-welcome">Your next chapter starts here</p>
           <h1 id="registration-heading">Create your account</h1>
-          <p className="form-intro">
-            {import.meta.env.VITE_GOOGLE_CLIENT_ID
-              ? "Add your details, then continue with email or Google."
-              : "Add your details. We will verify your email next."}
-          </p>
+          <p className="form-intro registration-intro">Your people. Your place. Let’s get you started.</p>
           <RegistrationForm
             onGoogleSuccess={() => {
               queryClient.clear();
@@ -63,12 +59,6 @@ export function RegisterPage() {
               setResult(result);
             }}
           />
-          <p className="account-note">
-            Already have an account? <Link to="/login">Sign in</Link>
-          </p>
-          <p className="account-note">
-            For owners and staff. Customers can order without an account.
-          </p>
         </>
       )}
     </AuthLayout>

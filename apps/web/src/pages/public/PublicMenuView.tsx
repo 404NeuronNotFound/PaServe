@@ -1,4 +1,5 @@
 import { RefreshButton } from "../../components/feedback/RefreshButton";
+import "./legal.css";
 import { Button } from "../../components/ui/button";
 import { SkipLink } from "../../components/layout/SkipLink";
 import { MediaImage } from "../../components/media/MediaImage";
@@ -262,6 +263,10 @@ export function PublicMenuView({
         <FiCoffee aria-hidden="true" />
         <span>{shop.name}</span>
         <span>Menu by PaServe</span>
+        <nav className="public-legal-links" aria-label="Legal information">
+          <a href="/terms" target="_blank" rel="noopener noreferrer">Terms</a>
+          <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
+        </nav>
       </footer>
       {selected && (
         <ProductDetailsDialog

@@ -62,7 +62,7 @@ it('normalizes email code requests and rejects unrelated fields', async () => {
   await request(app.getHttpServer())
     .post('/api/v1/auth/email-code')
     .set('X-PaServe-Client', 'web')
-    .send({ email: ' Owner@Example.com ' })
+    .send({ email: ' Owner@Example.com ', policyVersion: '2026-11-02', adultConfirmed: true, termsAccepted: true, privacyAcknowledged: true })
     .expect(200);
   expect(sendCode).toHaveBeenCalledWith('owner@example.com');
   await request(app.getHttpServer())

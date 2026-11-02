@@ -45,6 +45,10 @@ describe('cancelled auth native work', () => {
         auth[operation]({
           firstName: 'Ada',
           lastName: 'Lovelace',
+          policyVersion: '2026-11-02',
+          adultConfirmed: true,
+          termsAccepted: true,
+          privacyAcknowledged: true,
           verificationCode: '123456',
           email: 'fixture@example.invalid',
           password: 'fixture-only-password',

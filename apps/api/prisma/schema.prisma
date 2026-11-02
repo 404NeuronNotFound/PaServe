@@ -26,6 +26,10 @@ model User {
   email        String   @unique
   googleSubject String? @unique
   emailVerifiedAt DateTime?
+  registrationPolicyVersion String? @db.VarChar(24)
+  termsAcceptedAt DateTime?
+  privacyAcknowledgedAt DateTime?
+  adultDeclaredAt DateTime?
   passwordHash String
   isActive     Boolean  @default(true)
   firstName    String?

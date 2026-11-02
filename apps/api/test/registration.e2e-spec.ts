@@ -16,6 +16,10 @@ describe('POST /api/v1/auth/register', () => {
   const input = {
     firstName: 'Ada',
     lastName: 'Lovelace',
+    policyVersion: '2026-11-02',
+    adultConfirmed: true,
+    termsAccepted: true,
+    privacyAcknowledged: true,
     verificationCode: '123456',
     email: 'owner@example.com',
     password: 'a valid long passphrase',

@@ -9,6 +9,7 @@ import {
   Route,
 } from "react-router-dom";
 import { LandingPage } from "../../pages/public/LandingPage";
+import { LegalPage } from "../../pages/public/LegalPage";
 import { RegisterPage } from "../../pages/public/RegisterPage";
 import { PublicMenuPage } from "../../pages/public/PublicMenuPage";
 import { CustomerOrderPage } from "../../pages/public/CustomerOrderPage";
@@ -67,6 +68,8 @@ export function AppRouter() {
           element={<CustomerOrderPage />}
         />
         <Route path="/" element={<LandingPage />} />
+        <Route path="/terms" element={<LegalPage kind="terms" />} />
+        <Route path="/privacy" element={<LegalPage kind="privacy" />} />
         <Route path="/register" element={<AuthEntryRoute><RegisterPage /></AuthEntryRoute>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/login" element={<AuthEntryRoute><LoginPage /></AuthEntryRoute>} />

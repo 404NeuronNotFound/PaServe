@@ -8,14 +8,14 @@ import {
 } from '@nestjs/common';
 import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { REGISTRATION_LIMITS } from '@paserve/contracts';
-import { EmailCodeDto } from './dto/identity.dto.js';
+import { RecoveryEmailDto } from './dto/identity.dto.js';
 import { IdentityService } from './identity.service.js';
 import { PasswordRecoveryService } from './password-recovery.service.js';
 import { AuthOriginGuard } from './guards/auth-origin.guard.js';
 import { AuthWorkInterceptor } from './auth-abuse-protection.js';
 import { RateLimit } from '../../common/rate-limiting/rate-limit.policy.js';
 
-export class ResetPasswordDto extends EmailCodeDto {
+export class ResetPasswordDto extends RecoveryEmailDto {
   @IsString()
   @Matches(/^\d{6,8}$/u)
   code!: string;
@@ -39,7 +39,7 @@ export class PasswordRecoveryController {
   @Post('forgot-password')
   @HttpCode(200)
   @RateLimit('register')
-  request(@Body() input: EmailCodeDto) {
+  request(@Body() input: RecoveryEmailDto) {
     return this.identity.sendRecoveryCode(input.email);
   }
 

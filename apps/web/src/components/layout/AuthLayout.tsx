@@ -3,6 +3,7 @@ import { SkipLink } from "./SkipLink";
 import { Link, NavLink } from "react-router-dom";
 import { FiArrowUpRight, FiCoffee, FiLock } from "react-icons/fi";
 import { AppearanceToggle } from "./AppearanceToggle";
+import "../../pages/public/legal.css";
 
 export function AuthLayout({
   children,
@@ -135,7 +136,18 @@ export function AuthLayout({
             {children}
           </div>
           <footer className="form-footer">
-            <FiLock aria-hidden="true" /> Your space. Your people. Your PaServe.
+            <span className="auth-footer-signature">
+              <FiLock aria-hidden="true" /> Your space. Your people. Your
+              PaServe.
+            </span>
+            <nav className="public-legal-links" aria-label="Legal">
+              <Link to="/terms" target="_blank" rel="noopener noreferrer">
+                Terms
+              </Link>
+              <Link to="/privacy" target="_blank" rel="noopener noreferrer">
+                Privacy
+              </Link>
+            </nav>
           </footer>
         </section>
       </main>

@@ -2,6 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { invalidSession } from './tokens.service.js';
 import type { UpdateProfileRequest } from '@paserve/contracts';
+import { REGISTRATION_POLICY_VERSION } from '@paserve/contracts';
+
+function registrationPolicyRecord() {
+  const now = new Date();
+  return {
+    registrationPolicyVersion: REGISTRATION_POLICY_VERSION,
+    termsAcceptedAt: now,
+    privacyAcknowledgedAt: now,
+    adultDeclaredAt: now,
+  };
+}
 
 @Injectable()
 export class AuthRepository {
@@ -24,7 +35,12 @@ export class AuthRepository {
   findCredentialAccount(userId: string, sessionId: string) {
     return this.prisma.user.findFirst({
       where: this.liveAccount(userId, sessionId),
-      select: { id: true, email: true, passwordHash: true, googleSubject: true },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        googleSubject: true,
+      },
     });
   }
 
@@ -83,7 +99,13 @@ export class AuthRepository {
     // Supabase has verified email ownership before this conflict-safe insert.
     // Duplicate attempts preserve existing credentials and do not disclose users.
     return this.prisma.user.createMany({
-      data: { email, passwordHash, ...names, emailVerifiedAt: new Date() },
+      data: {
+        email,
+        passwordHash,
+        ...names,
+        emailVerifiedAt: new Date(),
+        ...registrationPolicyRecord(),
+      },
       skipDuplicates: true,
     });
   }
@@ -102,6 +124,7 @@ export class AuthRepository {
     await this.prisma.user.createMany({
       data: {
         googleSubject: subject,
+        ...registrationPolicyRecord(),
         email,
         passwordHash,
         ...names,
@@ -136,7 +159,12 @@ export class AuthRepository {
     // Lock the account and recheck the verified credential before issuing a
     // session, so an old-password login cannot race a credential change.
     return this.prisma.user.update({
-      where: { id: userId, isActive: true, passwordHash: verifiedPasswordHash, email: verifiedEmail },
+      where: {
+        id: userId,
+        isActive: true,
+        passwordHash: verifiedPasswordHash,
+        email: verifiedEmail,
+      },
       data: {
         updatedAt: new Date(),
         sessions: { create: { id, refreshTokenHash, expiresAt } },

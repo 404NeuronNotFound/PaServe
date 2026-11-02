@@ -90,6 +90,10 @@ describe('native hashing saturation HTTP contract', () => {
           password: 'valid fixture password',
           firstName: 'Fixture',
           lastName: 'Account',
+          policyVersion: '2026-11-02',
+          adultConfirmed: true,
+          termsAccepted: true,
+          privacyAcknowledged: true,
           verificationCode: '123456',
         })
         .expect(429);

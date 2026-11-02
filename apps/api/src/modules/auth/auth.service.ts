@@ -17,6 +17,7 @@ import { PasswordHashService } from './password-hash.service.js';
 import {
   SESSION_LIMITS,
   REGISTRATION_ACKNOWLEDGEMENT,
+  hasRegistrationPolicy,
 } from '@paserve/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
 import { AuthRepository } from './auth.repository.js';
@@ -110,6 +111,7 @@ export class AuthService {
     dto: GoogleLoginDto | GoogleRegisterDto,
     nonce: string | undefined,
   ) {
+    if ('firstName' in dto) this.requireRegistrationPolicy(dto);
     const identity = await this.identity.verifyGoogle(dto.credential, nonce);
     let account = await this.repository.findGoogleAccount(identity.subject);
     if (!account && 'firstName' in dto) {
@@ -279,6 +281,7 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto): Promise<RegisterResponse> {
+    this.requireRegistrationPolicy(dto);
     const email = dto.email.trim().toLowerCase();
     // Supabase owns challenge expiry, retry limits and single-use consumption.
     await this.identity.verifyEmail(email, dto.verificationCode);
@@ -290,6 +293,15 @@ export class AuthService {
       lastName: dto.lastName.trim(),
     });
     return { message: REGISTRATION_ACKNOWLEDGEMENT };
+  }
+
+  private requireRegistrationPolicy(dto: unknown) {
+    if (!hasRegistrationPolicy(dto))
+      throw new BadRequestException({
+        code: 'REGISTRATION_POLICY_REQUIRED',
+        message:
+          'Confirm you are 18 or older, accept the current Terms, and acknowledge the Privacy Notice.',
+      });
   }
 
   private emailConflict(): ConflictException {

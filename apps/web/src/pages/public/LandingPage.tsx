@@ -705,6 +705,8 @@ export function LandingPage() {
                   <h3>Pull up a chair</h3>
                   <Link to="/register">Create account <FiArrowUpRight aria-hidden="true" /></Link>
                   <Link to="/login">Sign in <FiArrowUpRight aria-hidden="true" /></Link>
+                  <Link to="/terms">Terms of Service <FiArrowUpRight aria-hidden="true" /></Link>
+                  <Link to="/privacy">Privacy Notice <FiArrowUpRight aria-hidden="true" /></Link>
                 </div>
               </nav>
               <div className="colophon-maker">

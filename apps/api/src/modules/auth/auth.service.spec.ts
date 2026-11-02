@@ -50,6 +50,10 @@ describe('AuthService registration', () => {
     const result = await service.register({
       firstName: ' Ada ',
       lastName: ' Lovelace ',
+      policyVersion: '2026-11-02',
+      adultConfirmed: true,
+      termsAccepted: true,
+      privacyAcknowledged: true,
       verificationCode: '123456',
       email: ' Owner@Example.com ',
       password,
@@ -65,6 +69,10 @@ describe('AuthService registration', () => {
       service.register({
         firstName: 'Ada',
         lastName: 'Lovelace',
+        policyVersion: '2026-11-02',
+        adultConfirmed: true,
+        termsAccepted: true,
+        privacyAcknowledged: true,
         verificationCode: '123456',
         email: 'owner@example.com',
         password: 'a long passphrase',
@@ -86,6 +94,10 @@ describe('AuthService registration', () => {
       service.register({
         firstName: 'Ada',
         lastName: 'Lovelace',
+        policyVersion: '2026-11-02',
+        adultConfirmed: true,
+        termsAccepted: true,
+        privacyAcknowledged: true,
         verificationCode: '123456',
         email: 'owner@example.com',
         password: 'a long passphrase',
@@ -159,7 +171,7 @@ describe('Supabase Google account sessions', () => {
     expect(repository.createSession).not.toHaveBeenCalled();
     repository.createGoogleAccount.mockResolvedValue(account);
     await service.google(
-      { credential: 'token', firstName: 'Ada', lastName: 'Lovelace' },
+      { credential: 'token', firstName: 'Ada', lastName: 'Lovelace', policyVersion: '2026-11-02', adultConfirmed: true, termsAccepted: true, privacyAcknowledged: true },
       'nonce',
     );
     expect(repository.createGoogleAccount).toHaveBeenCalledWith(
@@ -181,7 +193,7 @@ describe('Supabase Google account sessions', () => {
     repository.createGoogleAccount.mockResolvedValue(null);
     await expect(
       service.google(
-        { credential: 'token', firstName: 'Ada', lastName: 'Lovelace' },
+        { credential: 'token', firstName: 'Ada', lastName: 'Lovelace', policyVersion: '2026-11-02', adultConfirmed: true, termsAccepted: true, privacyAcknowledged: true },
         'nonce',
       ),
     ).rejects.toThrow();
@@ -205,6 +217,10 @@ describe('Supabase Google account sessions', () => {
         lastName: 'Lovelace',
         email: 'owner@example.com',
         password: 'long passphrase',
+        policyVersion: '2026-11-02',
+        adultConfirmed: true,
+        termsAccepted: true,
+        privacyAcknowledged: true,
         verificationCode: '123456',
       }),
     ).rejects.toThrow('invalid code');

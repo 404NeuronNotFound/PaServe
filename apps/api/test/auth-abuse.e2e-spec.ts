@@ -58,6 +58,10 @@ describe('login flood isolation', () => {
           ? {
               firstName: 'Ada',
               lastName: 'Lovelace',
+              policyVersion: '2026-11-02',
+              adultConfirmed: true,
+              termsAccepted: true,
+              privacyAcknowledged: true,
               verificationCode: '123456',
             }
           : {}),
@@ -147,12 +151,12 @@ describe('login flood isolation', () => {
   });
 
   it.each(['/auth/forgot-password', '/auth/reset-password'])(
-    'keeps unimplemented password recovery unavailable: %s',
+    'rejects password recovery without the trusted browser origin header: %s',
     async (path) => {
       await request(app.getHttpServer())
         .post(`/api/v1${path}`)
         .send({ email: 'owner@example.com' })
-        .expect(404);
+        .expect(403);
       expect(login).not.toHaveBeenCalled();
       expect(register).not.toHaveBeenCalled();
     },
